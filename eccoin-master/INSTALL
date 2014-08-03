@@ -1,0 +1,9 @@
+Building ECCoin
+
+See doc/readme-qt.rst for instructions on building ECCoin QT,
+the intended-for-end-users, nice-graphical-interface, reference
+implementation of ECCoin.
+
+See doc/build-*.txt for instructions on building ECCoind,
+the intended-for-services, no-graphical-interface, reference
+implementation of ECCoin.
