@@ -971,7 +971,15 @@ int64 GetProofOfStakeReward(int64 nCoinAge, unsigned int nBits, unsigned int nTi
 	if(nHeight < YEARLY_BLOCKCOUNT)
 		nRewardCoinYear = MAX_MINT_PROOF_OF_STAKE ;
 	else if(nHeight > YEARLY_BLOCKCOUNT)
-		nRewardCoinYear =  (3 * MAX_MINT_PROOF_OF_STAKE) - (nHeight / 1051200)  ;
+		supposid =  (3 * MAX_MINT_PROOF_OF_STAKE) - (nHeight / 1051200)  ;
+		if (supposid < 1)
+		{
+			nRewardCoinYear = 1;
+		}
+		else
+		{
+			nRewardCoinYear = supposid;
+		}
 
     int64 nSubsidy = nCoinAge * nRewardCoinYear / 365;
 	if (fDebug && GetBoolArg("-printcreation"))
