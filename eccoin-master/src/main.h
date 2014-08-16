@@ -36,6 +36,7 @@ static const int64 MAX_MONEY = 50000000000 * COIN;			// 50 bil
 static const int64 CIRCULATION_MONEY = MAX_MONEY;
 static const double TAX_PERCENTAGE = 0.0099;
 static const int64 MAX_MINT_PROOF_OF_STAKE = 0.01 * COIN;	// 1% annual interest
+static const int64 supposid = 1;
 
 static const int64 MIN_TXOUT_AMOUNT = MIN_TX_FEE;
 
