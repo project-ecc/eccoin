@@ -41,9 +41,9 @@ static CBigNum bnProofOfStakeLimit(~uint256(0) >> 20);
 static CBigNum bnProofOfWorkLimitTestNet(~uint256(0) >> 20);
 static CBigNum bnProofOfStakeLimitTestNet(~uint256(0) >> 20);
 
-unsigned int nStakeMinAge = 60 * 60 * 24 * 42;	// minimum age for coin age: 42d
-unsigned int nStakeMaxAge = 60 * 60 * 24 * 84;	// stake age of full weight: 84d
-unsigned int nStakeTargetSpacing = 45;			// 45 sec block spacing
+unsigned int nStakeMinAge = 60 * 60 * 8 ;	// minimum age for coin age: 8 hours
+unsigned int nStakeMaxAge = 60 * 60 * 24 * 7;	// stake age of full weight: 7 days
+unsigned int nStakeTargetSpacing = 30;			// 45 sec block spacing
 
 int64 nChainStartTime = 1393744287;
 int nCoinbaseMaturity = 30;
@@ -55,7 +55,7 @@ uint256 hashBestChain = 0;
 CBlockIndex* pindexBest = NULL;
 int64 nTimeBestReceived = 0;
 
-CMedianFilter<int> cPeerBlockCounts(5, 0); // Amount of blocks that other nodes claim to have
+CMedianFilter<int> cPeerBlockCounts(10, 0); // Amount of blocks that other nodes claim to have
 
 map<uint256, CBlock*> mapOrphanBlocks;
 multimap<uint256, CBlock*> mapOrphanBlocksByPrev;
@@ -962,18 +962,16 @@ int64 GetProofOfWorkReward(int nHeight, int64 nFees, uint256 prevHash)
 
 // miner's coin stake reward based on nBits and coin age spent (coin-days)
 // simple algorithm, not depend on the diff
-const int YEARLY_BLOCKCOUNT = 700800;	// 365 * 1920 
+const int YEARLY_BLOCKCOUNT = 1051200;	// 365 * 2880 
 int64 GetProofOfStakeReward(int64 nCoinAge, unsigned int nBits, unsigned int nTime, int nHeight)
 {
     int64 nRewardCoinYear;
 	nRewardCoinYear = MAX_MINT_PROOF_OF_STAKE;
 
 	if(nHeight < YEARLY_BLOCKCOUNT)
-		nRewardCoinYear = 2.5 * MAX_MINT_PROOF_OF_STAKE;
-	else if(nHeight < (2 * YEARLY_BLOCKCOUNT))
-		nRewardCoinYear = 1.5 * MAX_MINT_PROOF_OF_STAKE;
-	else if(nHeight > (9 * YEARLY_BLOCKCOUNT))
-		nRewardCoinYear = MAX_MINT_PROOF_OF_STAKE / 10;
+		nRewardCoinYear = MAX_MINT_PROOF_OF_STAKE ;
+	else if(nHeight > YEARLY_BLOCKCOUNT)
+		nRewardCoinYear =  (3 * MAX_MINT_PROOF_OF_STAKE) - (nHeight / 1051200)  ;
 
     int64 nSubsidy = nCoinAge * nRewardCoinYear / 365;
 	if (fDebug && GetBoolArg("-printcreation"))
