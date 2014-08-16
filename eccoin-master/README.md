@@ -6,7 +6,7 @@ ECCoin is an energy saving coin generating most of its coins through PoS blocks.
 ECCoin also adopts a variable PoS rate with the following annual interest rate formula:
 - 3% - (number of years * .1)
 
-Basically after 9 Years of generation of coins, the coin generation will be basically shut off, and the existing coins will be used for circulation.
+this rate cannot go lower than 1%.
 
 Specifications:
 
@@ -16,7 +16,7 @@ Specifications:
 
 PoS:
 - Variable interests
-- PoS Starts after 42 days of minimum holding
+- PoS Starts after 8 hours of minimum holding
 
 PoW: 
 - 45 sec block target
