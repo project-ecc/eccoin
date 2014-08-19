@@ -56,7 +56,7 @@ CBlockIndex* pindexBest = NULL;
 int64 nTimeBestReceived = 0;
 int64 supposid = 1;
 
-CMedianFilter<int> cPeerBlockCounts(10, 0); // Amount of blocks that other nodes claim to have
+CMedianFilter<int> cPeerBlockCounts(2, 0); // Amount of blocks that other nodes claim to have
 
 map<uint256, CBlock*> mapOrphanBlocks;
 multimap<uint256, CBlock*> mapOrphanBlocksByPrev;
