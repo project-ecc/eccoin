@@ -41,8 +41,8 @@ static CBigNum bnProofOfStakeLimit(~uint256(0) >> 20);
 static CBigNum bnProofOfWorkLimitTestNet(~uint256(0) >> 20);
 static CBigNum bnProofOfStakeLimitTestNet(~uint256(0) >> 20);
 
-unsigned int nStakeMinAge = 60 * 60 * 8 ;	// minimum age for coin age: 8 hours
-unsigned int nStakeMaxAge = 60 * 60 * 24 * 7;	// stake age of full weight: 7 days
+unsigned int nStakeMinAge = MinAge(nHeight);	// minimum age for coin age: 8 hours
+unsigned int nStakeMaxAge = MaxAge(nHeight);	// stake age of full weight: 7 days
 unsigned int nStakeTargetSpacing = 45;			// 45 sec block spacing
 
 int64 nChainStartTime = 1393744287;
@@ -934,7 +934,33 @@ int generateMTRandom(unsigned int s, int range)
     return dist(gen);
 }
 
+int64 MinAge(int nHeight)
+{
+	int64 nStakeMinAge = 60 * 60 * 24 * 42;
+	if (nHeight < 216000)
+	{
+		nStakeMinAge = 60 * 60 * 8;
+		return nStakeMinAge;
+	}
+	else
+	{
+		return nStakeMinAge; 
+	}
+}
 
+int64 MaxAge(int nHeight)
+{
+	int64 nStakeMaxAge = 60 * 60 * 24 * 84;
+	if (nHeight < 216000)
+	{
+		nStakeMaxAge = 60 * 60 * 24 * 7;
+		return nStakeMaxAge;
+	}
+	else
+	{
+		return nStakeMaxAge; 
+	}
+}
 
 static const int64 nMinSubsidy = 1 * COIN;
 static const int CUTOFF_HEIGHT = 86400;	// Height at the end of 45 days
@@ -963,16 +989,18 @@ int64 GetProofOfWorkReward(int nHeight, int64 nFees, uint256 prevHash)
 
 // miner's coin stake reward based on nBits and coin age spent (coin-days)
 // simple algorithm, not depend on the diff
-const int YEARLY_BLOCKCOUNT = 1051200;	// 365 * 2880 
+const int YEARLY_BLOCKCOUNT = 700800;	// 365 * 1920
 int64 GetProofOfStakeReward(int64 nCoinAge, unsigned int nBits, unsigned int nTime, int nHeight)
 {
     int64 nRewardCoinYear;
 	nRewardCoinYear = MAX_MINT_PROOF_OF_STAKE;
 
 	if(nHeight < YEARLY_BLOCKCOUNT)
-		nRewardCoinYear = MAX_MINT_PROOF_OF_STAKE ;
-	else if(nHeight > YEARLY_BLOCKCOUNT)
-		supposid =  (3 * MAX_MINT_PROOF_OF_STAKE) - (nHeight / 1051200)  ;
+		nRewardCoinYear = 2.5 * MAX_MINT_PROOF_OF_STAKE;
+	else if(nHeight < 216000)
+		nRewardCoinYear = 1.5 * MAX_MINT_PROOF_OF_STAKE;
+	else if(nHeight > 216000)
+		supposid =  (3 * (MAX_MINT_PROOF_OF_STAKE /10)) - (nHeight / 1051200)  ;
 		if (supposid < 1)
 		{
 			nRewardCoinYear = 1;
