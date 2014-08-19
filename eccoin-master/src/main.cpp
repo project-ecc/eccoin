@@ -41,8 +41,8 @@ static CBigNum bnProofOfStakeLimit(~uint256(0) >> 20);
 static CBigNum bnProofOfWorkLimitTestNet(~uint256(0) >> 20);
 static CBigNum bnProofOfStakeLimitTestNet(~uint256(0) >> 20);
 
-unsigned int nStakeMinAge = MinAge(nHeight);	// minimum age for coin age: 8 hours
-unsigned int nStakeMaxAge = MaxAge(nHeight);	// stake age of full weight: 7 days
+unsigned int nStakeMinAge = 60 *60 * 8;	// minimum age for coin age: 8 hours
+unsigned int nStakeMaxAge = 60 *60 * 24 * 7;	// stake age of full weight: 7 days
 unsigned int nStakeTargetSpacing = 45;			// 45 sec block spacing
 
 int64 nChainStartTime = 1393744287;
@@ -932,34 +932,6 @@ int generateMTRandom(unsigned int s, int range)
 	random::mt19937 gen(s);
     random::uniform_int_distribution<> dist(0, range);
     return dist(gen);
-}
-
-int64 MinAge(int nHeight)
-{
-	int64 nStakeMinAge = 60 * 60 * 24 * 42;
-	if (nHeight < 216000)
-	{
-		nStakeMinAge = 60 * 60 * 8;
-		return nStakeMinAge;
-	}
-	else
-	{
-		return nStakeMinAge; 
-	}
-}
-
-int64 MaxAge(int nHeight)
-{
-	int64 nStakeMaxAge = 60 * 60 * 24 * 84;
-	if (nHeight < 216000)
-	{
-		nStakeMaxAge = 60 * 60 * 24 * 7;
-		return nStakeMaxAge;
-	}
-	else
-	{
-		return nStakeMaxAge; 
-	}
 }
 
 static const int64 nMinSubsidy = 1 * COIN;
@@ -1922,6 +1894,7 @@ bool CTransaction::GetCoinAge(CTxDB& txdb, uint64& nCoinAge) const
         CBlock block;
         if (!block.ReadFromDisk(txindex.pos.nFile, txindex.pos.nBlockPos, false))
             return false; // unable to read block of previous transaction
+
         if (block.GetBlockTime() + nStakeMinAge > nTime)
             continue; // only count coins meeting min age requirement
 
