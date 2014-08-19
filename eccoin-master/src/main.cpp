@@ -961,26 +961,16 @@ int64 GetProofOfWorkReward(int nHeight, int64 nFees, uint256 prevHash)
 
 // miner's coin stake reward based on nBits and coin age spent (coin-days)
 // simple algorithm, not depend on the diff
-const int YEARLY_BLOCKCOUNT = 700800;	// 365 * 1920
+const int YEARLY_BLOCKCOUNT = 700800;	// 365 * 1920 
 int64 GetProofOfStakeReward(int64 nCoinAge, unsigned int nBits, unsigned int nTime, int nHeight)
 {
     int64 nRewardCoinYear;
 	nRewardCoinYear = MAX_MINT_PROOF_OF_STAKE;
 
-	if(nHeight < YEARLY_BLOCKCOUNT)
+	if(nHeight < 250000)
 		nRewardCoinYear = 2.5 * MAX_MINT_PROOF_OF_STAKE;
-	else if(nHeight < 216000)
-		nRewardCoinYear = 1.5 * MAX_MINT_PROOF_OF_STAKE;
-	else if(nHeight > 216000)
-		supposid =  (3 * (MAX_MINT_PROOF_OF_STAKE /10)) - (nHeight / 1051200)  ;
-		if (supposid < 1)
-		{
-			nRewardCoinYear = 1;
-		}
-		else
-		{
-			nRewardCoinYear = supposid;
-		}
+	else if(nHeight > 250000)
+		nRewardCoinYear = MAX_MINT_PROOF_OF_STAKE / 10;
 
     int64 nSubsidy = nCoinAge * nRewardCoinYear / 365;
 	if (fDebug && GetBoolArg("-printcreation"))
