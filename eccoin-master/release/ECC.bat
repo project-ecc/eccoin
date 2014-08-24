@@ -1,0 +1,1 @@
+eccoin-1.8.2.1.exe -listen -dnsseed -irc=0

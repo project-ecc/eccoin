@@ -13,8 +13,6 @@ using namespace boost;
 
 int nGotIRCAddresses = 0;
 
-void ThreadIRCSeed2(void* parg);
-
 
 
 
@@ -190,16 +188,6 @@ void ThreadIRCSeed(void* parg)
 {
     // Make this thread recognisable as the IRC seeding thread
     RenameThread("bitcoin-ircseed");
-
-    try
-    {
-        ThreadIRCSeed2(parg);
-    }
-    catch (std::exception& e) {
-        PrintExceptionContinue(&e, "ThreadIRCSeed()");
-    } catch (...) {
-        PrintExceptionContinue(NULL, "ThreadIRCSeed()");
-    }
     printf("ThreadIRCSeed exited\n");
 }
 
