@@ -9,6 +9,8 @@
 
 #include <sstream>
 #include <string>
+#include <QWidget>
+
 double getBlockHardness(int height)
 {
     const CBlockIndex* blockindex = getBlockIndex(height);

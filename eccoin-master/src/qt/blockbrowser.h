@@ -16,6 +16,7 @@
 #include <QMap>
 #include <QSettings>
 #include <QSlider>
+#include <QWidget>
 
 double getBlockHardness(int);
 double getTxTotalValue(std::string);

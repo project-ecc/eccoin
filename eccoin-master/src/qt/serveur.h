@@ -18,7 +18,7 @@
 #define SERVEUR_H
 
 #include <QtGui>
-#include <QtNetwork>
+#include <C:\Qt\4.8.6\include\QtNetwork\QtNetwork>
 #include <QTextEdit>
 #include <QListView>
 #include <QSystemTrayIcon>

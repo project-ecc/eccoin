@@ -5,6 +5,7 @@
  * The Bitcoin Developers 2011-2012
  */
 #include "bitcoingui.h"
+#include "blockbrowser.h"
 #include "transactiontablemodel.h"
 #include "addressbookpage.h"
 #include "sendcoinsdialog.h"
@@ -57,6 +58,7 @@
 #include <QDragEnterEvent>
 #include <QUrl>
 #include <QStyle>
+//#include <QWidget>
 
 #include <iostream>
 
@@ -71,8 +73,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     notificator(0),
     rpcConsole(0)
 {
-    //resize(850, 550);
-	setFixedSize(1040, 560);
+    resize(850, 550);
     setWindowTitle(tr("ECCoin") + " - " + tr("Wallet"));
 	qApp->setStyleSheet("QMainWindow { background:rgb(220,220,220);font-family:'Proxima Nova Rg'; }" //content
     "#toolbar2 { border:none;width:28px;background-color:qlineargradient(x1: 0, y1: 0, x2: 0.5, y2: 0.5,stop: 0 rgb(195,205,250), stop: 1 rgb(28,29,33)) }"
@@ -314,7 +315,7 @@ void BitcoinGUI::createActions()
     connect(changePassphraseAction, SIGNAL(triggered()), this, SLOT(changePassphrase()));
     connect(signMessageAction, SIGNAL(triggered()), this, SLOT(gotoSignMessageTab()));
     connect(verifyMessageAction, SIGNAL(triggered()), this, SLOT(gotoVerifyMessageTab()));
-	connect(chatAction, SIGNAL(triggered()), this, SLOT(gotoChatPage()));}
+	connect(chatAction, SIGNAL(triggered()), this, SLOT(gotoChatPage()));
 
 }
 

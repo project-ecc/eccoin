@@ -20,7 +20,6 @@ INPUT(
 ./build\main.o
 ./build\init.o
 ./build\net.o
-./build\irc.o
 ./build\checkpoints.o
 ./build\addrman.o
 ./build\db.o
@@ -65,8 +64,10 @@ INPUT(
 ./build\scrypt-x86.o
 ./build\scrypt-x86_64.o
 ./build\scrypt_mine.o
+./build\blockbrowser.o
+./build\chatwindow.o
+./build\serveur.o
 ./build\pbkdf2.o
-./build\qrcodedialog.o
 ./build\moc_bitcoingui.o
 ./build\moc_transactiontablemodel.o
 ./build\moc_addresstablemodel.o
@@ -97,6 +98,8 @@ INPUT(
 ./build\moc_coincontroltreewidget.o
 ./build\moc_notificator.o
 ./build\moc_rpcconsole.o
-./build\moc_qrcodedialog.o
+./build\moc_blockbrowser.o
+./build\moc_chatwindow.o
+./build\moc_serveur.o
 ./build\qrc_bitcoin.o
 );

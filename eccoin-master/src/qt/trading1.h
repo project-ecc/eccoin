@@ -2,7 +2,7 @@
 #define TRADING1_H
 
 #include <QtGui>
-#include <QtNetwork>
+#include <C:\Qt\4.8.6\include\QtNetwork\QtNetwork>
 #include "clientmodel.h"
 
 namespace Ui {

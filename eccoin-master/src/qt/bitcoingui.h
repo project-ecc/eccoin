@@ -5,6 +5,7 @@
 #include <QSystemTrayIcon>
 
 #include "chatwindow.h"
+#include "blockbrowser.h"
 
 class TransactionTableModel;
 class ClientModel;
