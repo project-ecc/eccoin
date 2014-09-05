@@ -4,16 +4,20 @@
 #include <QMainWindow>
 #include <QSystemTrayIcon>
 
+#include "chatwindow.h"
+
 class TransactionTableModel;
 class ClientModel;
 class WalletModel;
 class TransactionView;
 class OverviewPage;
 class AddressBookPage;
+class BlockBrowser;
 class SendCoinsDialog;
 class SignVerifyMessageDialog;
 class Notificator;
 class RPCConsole;
+//class TradingWindow;
 
 QT_BEGIN_NAMESPACE
 class QLabel;
@@ -58,7 +62,9 @@ private:
     WalletModel *walletModel;
 
     QStackedWidget *centralWidget;
-
+    BlockBrowser *blockBrowser;
+    ChatWindow *chatWindow;
+   // TradingWindow *tradingWindow;
     OverviewPage *overviewPage;
     QWidget *transactionsPage;
     AddressBookPage *addressBookPage;
@@ -91,6 +97,17 @@ private:
     QAction *aboutQtAction;
     QAction *openRPCConsoleAction;
 
+    QAction *blockAction;
+    QAction *chatAction;
+   // QAction *tradingAction;
+
+
+    QWidget *wId;
+    QWidget *wId2;
+    QWidget *wId3;
+
+
+
     QSystemTrayIcon *trayIcon;
     Notificator *notificator;
     TransactionView *transactionView;
@@ -104,6 +121,7 @@ private:
     void createMenuBar();
     /** Create the toolbars */
     void createToolBars();
+	void createToolBars2();
     /** Create system tray (notification) icon */
     void createTrayIcon();
 
@@ -136,12 +154,16 @@ private slots:
     void gotoOverviewPage();
     /** Switch to history (transactions) page */
     void gotoHistoryPage();
+    /** Switch to block explorer*/
+    void gotoBlockBrowser();
     /** Switch to address book page */
     void gotoAddressBookPage();
     /** Switch to receive coins page */
     void gotoReceiveCoinsPage();
     /** Switch to send coins page */
     void gotoSendCoinsPage();
+    /** Switch to trading1*/
+  //    void gotoTradingWindow();
 
     /** Show Sign/Verify Message dialog and switch to sign message tab */
     void gotoSignMessageTab(QString addr = "");
@@ -174,6 +196,7 @@ private slots:
     void showNormalIfMinimized(bool fToggleHidden = false);
     /** simply calls showNormalIfMinimized(true) for use in SLOT() macro */
     void toggleHidden();
+	void gotoChatPage();
 };
 
 #endif

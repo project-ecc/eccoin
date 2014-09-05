@@ -40,6 +40,13 @@
         <file alias="filesave">res/icons/filesave.png</file>
         <file alias="qrcode">res/icons/qrcode.png</file>
         <file alias="debugwindow">res/icons/debugwindow.png</file>
+        <file alias="trade1">res/icons/trade1.png</file>
+        <file alias="block">res/icons/block.png</file>
+      	<file alias="msg">res/icons/msg.png</file>
+        <file alias="social">res/icons/social.png</file>
+        <file alias="twitter">res/icons/TW.png</file>
+        <file alias="facebook">res/icons/face.png</file>
+        <file alias="rdx">res/icons/reddit.png</file>
     </qresource>
     <qresource prefix="/images">
         <file alias="about">res/images/about.png</file>
