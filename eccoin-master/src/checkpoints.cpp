@@ -22,7 +22,7 @@ namespace Checkpoints
     //    timestamp before)
     // + Contains no strange transactions
     //
-	static int MAX_NO_SYNC_CHECKPOINT = 197600;
+	static int MAX_NO_SYNC_CHECKPOINT = 84000;
 
     static MapCheckpoints mapCheckpoints =
         boost::assign::map_list_of
@@ -30,7 +30,10 @@ namespace Checkpoints
         (  1000, uint256("0x000000000df3f7a5f719c247782d7a43d75186ebc043341e2668320f9d940bcd"))
         ( 10000, uint256("0x00000000076d45a9579c879d46354dd81eeba7060a9a065e13c9dd1c28f474d1"))
         ( 50000, uint256("0x0000000001c770384cd12a74eb5456358425fc6a94a250c3466aaa2ca7460131"))
+		( 87000, uint256("0xbb069ba59aa5a6acc68413ef7c2d0c009b061daf160edf958738d197a059f11d"))
+		( 96500, uint256("0x13f0755045a3ae90d33c4bcf6ba1581025fc6e0caf46f7624063cb59dcc3d27c"))
         (100000, uint256("0x28a483386650a188c3346fd5e329e2c8cc137cf3557547e8525f5cdea601501a"))
+		(136500, uint256("0x7e4ec82a165762e8a324038ef1cdd0b83e603f4737ae6f9e5967b13b8b6ace5c"))
         (150000, uint256("0xfee6d00910e8d0aa2f0ca8a447b4de366a12f9df2521f77c5a97a5ae0af8834e"))
         (185000, uint256("0xce904504a0df58944c6a633b739abcec3bbb256b510a616b465c24525d564828"))
         (197712, uint256("0x7576d0f370b1efdce01075a9491fb8d2f98af485f78d170196270f1eb156ee40"))

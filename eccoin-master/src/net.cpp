@@ -1149,7 +1149,7 @@ void MapPort()
 // The first name is used as information source for addrman.
 // The second name should resolve to a list of seed addresses.
 static const char *strDNSSeed[][2] = {
-    {"192.99.141.216", "192.99.141.216"},
+    {"129.21.141.139", "129.21.141.139"},
 	{"38.93.234.100","38.93.234.100"},
 	{"54.72.236.49","54.72.236.49"}
 };
@@ -1843,19 +1843,19 @@ void StartNode(void* parg)
     // Start threads
     //
 
-/*
+
     if (!GetBoolArg("-dnsseed", true))
         printf("DNS seeding disabled\n");
     else
         if (!NewThread(ThreadDNSAddressSeed, NULL))
             printf("Error: NewThread(ThreadDNSAddressSeed) failed\n");
-*/
 
+/*
     if (!GetBoolArg("-dnsseed", false))
         printf("DNS seeding disabled\n");
     if (GetBoolArg("-dnsseed", false))
         printf("DNS seeding NYI\n");
-
+*/
     // Map ports with UPnP
     if (fUseUPnP)
         MapPort();

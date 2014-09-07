@@ -226,7 +226,7 @@ QString Serveur::parseCommande(QString comm, bool serveur) {
             comm.insert(0, ":");
         }
 
-        return "PRIVMSG " + destChan + " " + comm.replace(" ", "\x2e");
+        return "PRIVMSG " + destChan + " " + comm.replace(" ", "\u00A0");
         //\r\n
     } else {
         return "";

@@ -56,7 +56,7 @@ CBlockIndex* pindexBest = NULL;
 int64 nTimeBestReceived = 0;
 int64 supposid = 1;
 
-CMedianFilter<int> cPeerBlockCounts(2, 0); // Amount of blocks that other nodes claim to have
+CMedianFilter<int> cPeerBlockCounts(8, 0); // Amount of blocks that other nodes claim to have
 
 map<uint256, CBlock*> mapOrphanBlocks;
 multimap<uint256, CBlock*> mapOrphanBlocksByPrev;
@@ -970,6 +970,7 @@ int64 GetProofOfStakeReward(int64 nCoinAge, unsigned int nBits, unsigned int nTi
 	if(nHeight < 250000)
 		nRewardCoinYear = 2.5 * MAX_MINT_PROOF_OF_STAKE;
 	else if(nHeight > 250000)
+	{
 		if (nHeight < 14016000)
 		{
 			nRewardCoinYear = (3 * (MAX_MINT_PROOF_OF_STAKE / 10)) - ((nHeight / 700800) * (MAX_MINT_PROOF_OF_STAKE / 100));
@@ -978,7 +979,7 @@ int64 GetProofOfStakeReward(int64 nCoinAge, unsigned int nBits, unsigned int nTi
 		{
 			nRewardCoinYear = MAX_MINT_PROOF_OF_STAKE / 10;
 		}
-
+	}
     int64 nSubsidy = nCoinAge * nRewardCoinYear / 365;
 	if (fDebug && GetBoolArg("-printcreation"))
         printf("GetProofOfStakeReward(): create=%s nCoinAge=%"PRI64d" nBits=%d\n", FormatMoney(nSubsidy).c_str(), nCoinAge, nBits);
@@ -3216,8 +3217,8 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
         // Send the rest of the chain
         if (pindex)
             pindex = pindex->pnext;
-        int nLimit = 10000;
-        printf("getblocks %d to %s limit %d\n", (pindex ? pindex->nHeight : -1), hashStop.ToString().substr(0,20).c_str(), nLimit);
+        int nLimit = 25000;
+        printf("getblocks %d to %s limit %d \n", (pindex ? pindex->nHeight : -1), hashStop.ToString().substr(0,20).c_str(), nLimit);
         for (; pindex; pindex = pindex->pnext)
         {
             if (pindex->GetBlockHash() == hashStop)
