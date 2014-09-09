@@ -226,7 +226,7 @@ std::string HelpMessage()
         "  -datadir=<dir>         " + _("Specify data directory") + "\n" +
         "  -dbcache=<n>           " + _("Set database cache size in megabytes (default: 25)") + "\n" +
         "  -dblogsize=<n>         " + _("Set database disk log size in megabytes (default: 100)") + "\n" +
-        "  -timeout=<n>           " + _("Specify connection timeout in milliseconds (default: 5000)") + "\n" +
+        "  -timeout=<n>           " + _("Specify connection timeout in milliseconds (default: 50000)") + "\n" +
         "  -proxy=<ip:port>       " + _("Connect through socks proxy") + "\n" +
         "  -socks=<n>             " + _("Select the version of socks proxy to use (4-5, default: 5)") + "\n" +
         "  -tor=<ip:port>         " + _("Use proxy to reach tor hidden services (default: same as -proxy)") + "\n"
@@ -241,7 +241,7 @@ std::string HelpMessage()
         "  -discover              " + _("Discover own IP address (default: 1 when listening and no -externalip)") + "\n" +
         "  -listen                " + _("Accept connections from outside (default: 1 if no -proxy or -connect)") + "\n" +
         "  -bind=<addr>           " + _("Bind to given address. Use [host]:port notation for IPv6") + "\n" +
-        "  -dnsseed               " + _("Find peers using DNS lookup (default: 0)") + "\n" +
+        "  -dnsseed               " + _("Find peers using DNS lookup (default: 1)") + "\n" +
         "  -nosynccheckpoints     " + _("Disable sync checkpoints (default: 0)") + "\n" +
         "  -banscore=<n>          " + _("Threshold for disconnecting misbehaving peers (default: 100)") + "\n" +
         "  -bantime=<n>           " + _("Number of seconds to keep misbehaving peers from reconnecting (default: 86400)") + "\n" +
@@ -415,7 +415,7 @@ bool AppInit2()
 
     if (mapArgs.count("-timeout"))
     {
-        int nNewTimeout = GetArg("-timeout", 5000);
+        int nNewTimeout = GetArg("-timeout", 50000);
         if (nNewTimeout > 0 && nNewTimeout < 600000)
             nConnectTimeout = nNewTimeout;
     }
