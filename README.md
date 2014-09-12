@@ -16,7 +16,7 @@ Specifications:
 
 PoS:
 - Variable interests
-- PoS Starts after 8 hours of minimum holding
+- PoS Starts after 2 hours of minimum holding
 
 PoW: 
 - 45 sec block target
