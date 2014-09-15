@@ -934,6 +934,25 @@ int generateMTRandom(unsigned int s, int range)
     return dist(gen);
 }
 
+int64 MinAge(int nHeight)
+{
+	int64 nStakeMinAge = 60 * 60 * 2;
+	return nStakeMinAge;
+}
+
+int64 MaxAge(int nHeight)
+{
+	int64 nStakeMaxAge = 60 * 60 * 24 * 84;
+	if (nHeight > 250000)
+	{
+		nStakeMaxAge = 60 * 60 * 24;
+		return nStakeMaxAge;
+	}
+	else
+	{
+		return nStakeMaxAge; 
+	}
+}
 static const int64 nMinSubsidy = 1 * COIN;
 static const int CUTOFF_HEIGHT = 86400;	// Height at the end of 45 days
 // miner's coin base reward based on nBits
