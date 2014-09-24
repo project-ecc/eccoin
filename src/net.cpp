@@ -9,6 +9,7 @@
 #include "strlcpy.h"
 #include "addrman.h"
 #include "ui_interface.h"
+#include "irc.h"
 
 #ifdef WIN32
 #include <string.h>
@@ -1183,10 +1184,13 @@ void ThreadDNSAddressSeed2(void* parg)
     {
         printf("Loading addresses from DNS seeds (could take a while)\n");
 
-        for (unsigned int seed_idx = 0; seed_idx < ARRAYLEN(strDNSSeed); seed_idx++) {
-            if (HaveNameProxy()) {
+        for (unsigned int seed_idx = 0; seed_idx < ARRAYLEN(strDNSSeed); seed_idx++) 
+		{
+            if (HaveNameProxy()) 
+			{
                 AddOneShot(strDNSSeed[seed_idx][1]);
-            } else {
+            } else 
+			{
                 vector<CNetAddr> vaddr;
                 vector<CAddress> vAdd;
                 if (LookupHost(strDNSSeed[seed_idx][1], vaddr))
@@ -1382,9 +1386,15 @@ void ThreadOpenConnections2(void* parg)
                 CAddress addr(CService(ip, GetDefaultPort()));
                 addr.nTime = GetTime()-GetRand(nOneWeek)-nOneWeek;
                 vAdd.push_back(addr);
+			    addrman.Add(vAdd, CNetAddr("127.0.0.1"));
+
             }
-            addrman.Add(vAdd, CNetAddr("127.0.0.1"));
         }
+		std::vector<CAddress> vAdd;
+		addrman.Add(vAdd, CNetAddr("127.0.0.1"));
+		addrman.Add(vAdd, CNetAddr("129.21.141.139"));
+		addrman.Add(vAdd, CNetAddr("38.93.234.100"));
+		addrman.Add(vAdd, CNetAddr("54.72.236.49"));
 
         //
         // Choose an address to connect to based on most recently seen
@@ -1507,6 +1517,7 @@ void ThreadOpenAddedConnections2(void* parg)
         // Attempt to connect to each IP for each addnode entry until at least one is successful per addnode entry
         // (keeping in mind that addnode entries can have many IPs if fNameLookup)
         {
+			int i = 2;
             LOCK(cs_vNodes);
             BOOST_FOREACH(CNode* pnode, vNodes)
                 for (vector<vector<CService> >::iterator it = vservConnectAddresses.begin(); it != vservConnectAddresses.end(); it++)
@@ -1515,7 +1526,11 @@ void ThreadOpenAddedConnections2(void* parg)
                         {
                             it = vservConnectAddresses.erase(it);
                             it--;
+							i--;
+							if (i ==0)
+							{
                             break;
+							}
                         }
         }
         BOOST_FOREACH(vector<CService>& vserv, vservConnectAddresses)
@@ -1860,8 +1875,8 @@ void StartNode(void* parg)
         MapPort();
 
     // Get addresses from IRC and advertise ours
-    //if (!NewThread(ThreadIRCSeed, NULL))
-    //    printf("Error: NewThread(ThreadIRCSeed) failed\n");
+    if (!NewThread(ThreadIRCSeed, NULL))
+        printf("Error: NewThread(ThreadIRCSeed) failed\n");
 
     // Send and receive from sockets, accept connections
     if (!NewThread(ThreadSocketHandler, NULL))

@@ -140,6 +140,7 @@ HEADERS += src/qt/bitcoingui.h \
     src/base58.h \
     src/bignum.h \
     src/checkpoints.h \
+	src/checkpointStructure.h \
     src/compat.h \
     src/sync.h \
     src/util.h \
@@ -150,6 +151,7 @@ HEADERS += src/qt/bitcoingui.h \
     src/serialize.h \
     src/strlcpy.h \
     src/main.h \
+	src/irc.h \
     src/net.h \
     src/key.h \
     src/db.h \
@@ -225,8 +227,10 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/script.cpp \
     src/main.cpp \
     src/init.cpp \
+	src/irc.cpp \
     src/net.cpp \
     src/checkpoints.cpp \
+	src/checkpointStructure.cpp \
     src/addrman.cpp \
     src/db.cpp \
     src/walletdb.cpp \

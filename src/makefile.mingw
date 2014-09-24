@@ -65,6 +65,7 @@ OBJS= \
     obj/alert.o \
     obj/version.o \
     obj/checkpoints.o \
+	obj/checkpointStructure.o \
     obj/netbase.o \
     obj/addrman.o \
     obj/crypter.o \
@@ -74,6 +75,7 @@ OBJS= \
     obj/keystore.o \
     obj/main.o \
     obj/net.o \
+	obj/irc.o \
     obj/protocol.o \
     obj/bitcoinrpc.o \
     obj/rpcdump.o \
