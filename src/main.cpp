@@ -48,12 +48,12 @@ unsigned int nStakeTargetSpacing = 45;			// 45 sec block spacing
 int64 nChainStartTime = 1393744287;
 int nCoinbaseMaturity = 30;
 CBlockIndex* pindexGenesisBlock = NULL;
-int nBestHeight = -1;
 CBigNum bnBestChainTrust = 0;
 CBigNum bnBestInvalidTrust = 0;
 uint256 hashBestChain = 0;
 CBlockIndex* pindexBest = NULL;
 int64 nTimeBestReceived = 0;
+int nBestHeight = -1;
 
 CMedianFilter<int> cPeerBlockCounts(12, 0); // Amount of blocks that other nodes claim to have
 
