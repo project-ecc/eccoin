@@ -742,7 +742,7 @@ void ThreadSocketHandler2(void* parg)
         //
         struct timeval timeout;
         timeout.tv_sec  = 0;
-        timeout.tv_usec = 50000; // frequency to poll pnode->vSend
+        timeout.tv_usec = 10000; // frequency to poll pnode->vSend
 
         fd_set fdsetRecv;
         fd_set fdsetSend;
@@ -1189,7 +1189,8 @@ void ThreadDNSAddressSeed2(void* parg)
             if (HaveNameProxy()) 
 			{
                 AddOneShot(strDNSSeed[seed_idx][1]);
-            } else 
+            } 
+			else 
 			{
                 vector<CNetAddr> vaddr;
                 vector<CAddress> vAdd;
@@ -1370,7 +1371,7 @@ void ThreadOpenConnections2(void* parg)
         if (fShutdown)
             return;
 
-        // Add seed nodes if IRC isn't working
+        // Add seed nodes if IRC isn't working 
         if (addrman.size()==0 && (GetTime() - nStart > 60) && !fTestNet)
         {
             std::vector<CAddress> vAdd;
@@ -1390,11 +1391,6 @@ void ThreadOpenConnections2(void* parg)
 
             }
         }
-		std::vector<CAddress> vAdd;
-		addrman.Add(vAdd, CNetAddr("127.0.0.1"));
-		addrman.Add(vAdd, CNetAddr("129.21.141.139"));
-		addrman.Add(vAdd, CNetAddr("38.93.234.100"));
-		addrman.Add(vAdd, CNetAddr("54.72.236.49"));
 
         //
         // Choose an address to connect to based on most recently seen
@@ -1491,7 +1487,7 @@ void ThreadOpenAddedConnections2(void* parg)
                 Sleep(500);
             }
             vnThreadsRunning[THREAD_ADDEDCONNECTIONS]--;
-            Sleep(120000); // Retry every 2 minutes
+            Sleep(60000); // Retry every minute
             vnThreadsRunning[THREAD_ADDEDCONNECTIONS]++;
         }
         return;
@@ -1544,7 +1540,7 @@ void ThreadOpenAddedConnections2(void* parg)
         if (fShutdown)
             return;
         vnThreadsRunning[THREAD_ADDEDCONNECTIONS]--;
-        Sleep(120000); // Retry every 2 minutes
+        Sleep(60000); // Retry every minute
         vnThreadsRunning[THREAD_ADDEDCONNECTIONS]++;
         if (fShutdown)
             return;
