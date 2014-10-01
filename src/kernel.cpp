@@ -4,11 +4,14 @@
 
 #include <boost/assign/list_of.hpp>
 
+#include "main.h"
 #include "kernel.h"
 #include "db.h"
+#include "net.h"
 
 using namespace std;
 
+extern int nBestHeight;
 extern int nStakeMaxAge;
 extern int nStakeTargetSpacing;
 
@@ -17,18 +20,27 @@ extern int nStakeTargetSpacing;
 
 unsigned int nModifierInterval = MODIFIER_INTERVAL;
 
+// Get the stake modifier depending on the current block height
+static std::map<int, unsigned int> getStakeMod()
+{
+	if (nBestHeight < 260000)
+	{
+	return boost::assign::map_list_of
+		(     0, 0x0e00670bu )
+		(  1000, 0xd97d4595u )
+		( 10000, 0x1cf3438cu )
+		( 50000, 0x8b989994u )
+		(100000, 0x5ed74657u )
+		(150000, 0x2fd6a457u )
+		(185000, 0xa28ede88u )
+		(197712, 0x4dbd9ac4u )
+		;
+	}
+	return boost::assign::map_list_of (     0, 0x0e00670bu ) ;
+}
+
 // Hard checkpoints of stake modifiers to ensure they are deterministic
-static std::map<int, unsigned int> mapStakeModifierCheckpoints =
-    boost::assign::map_list_of
-    (     0, 0x0e00670bu )
-    (  1000, 0xd97d4595u )
-    ( 10000, 0x1cf3438cu )
-    ( 50000, 0x8b989994u )
-    (100000, 0x5ed74657u )
-    (150000, 0x2fd6a457u )
-    (185000, 0xa28ede88u )
-    (197712, 0x4dbd9ac4u )
-	;
+static std::map<int, unsigned int> mapStakeModifierCheckpoints = getStakeMod();
 
 // Get the last stake modifier and its generation time from a given block
 static bool GetLastStakeModifier(const CBlockIndex* pindex, uint64& nStakeModifier, int64& nModifierTime)
