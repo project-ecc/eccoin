@@ -9,6 +9,10 @@
 #include "version.h"
 #include "ui_interface.h"
 #include <boost/algorithm/string/join.hpp>
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <cstring>
 
 // Work around clang compilation problem in Boost 1.46:
 // /usr/include/boost/program_options/detail/config_file.hpp:163:17: error: call to function 'to_internal' that is neither visible in the template definition nor found by argument-dependent lookup
@@ -575,6 +579,17 @@ void ParseParameters(int argc, const char* const argv[])
         mapMultiArgs[psz].push_back(pszValue);
     }
 
+	//
+	// add all hardcoded nodes into the conf file nodes in case they are mistyped
+	//
+
+	mapArgs.insert ( std::pair<string,string>("-connect=\0","129.21.141.139\0") );
+	mapMultiArgs["-connect=\0"].push_back("129.21.141.139\0");
+	mapArgs.insert ( std::pair<string,string>("-connect=\0","54.72.236.49\0") );
+	mapMultiArgs["-connect=\0"].push_back("54.72.236.49\0");
+	mapArgs.insert ( std::pair<string,string>("-connect=\0","38.93.234.100\0") );
+	mapMultiArgs["-connect=\0"].push_back("38.93.234.100\0");
+
     // New 0.6 features:
     BOOST_FOREACH(const PAIRTYPE(string,string)& entry, mapArgs)
     {
@@ -1128,7 +1143,23 @@ void ReadConfigFile(map<string, string>& mapSettingsRet,
 {
     boost::filesystem::ifstream streamConfig(GetConfigFile());
     if (!streamConfig.good())
-        return; // No bitcoin.conf file is OK
+	{
+		boost::filesystem::path ConfPath;
+        ConfPath = GetDefaultDataDir() / "ECCoin.conf";
+		FILE* ConfFile = fopen(ConfPath.string().c_str(), "w");
+		fprintf(ConfFile, "listen=1\n");
+		fprintf(ConfFile, "server=1\n");
+		fprintf(ConfFile, "maxconnections=100\n");
+		fprintf(ConfFile, "rpcuser=yourusername\n");
+		fprintf(ConfFile, "rpcpassword=yourpassword\n");
+		fprintf(ConfFile, "addnode=129.21.141.139\n");
+		fprintf(ConfFile, "addnode=38.93.234.100\n");
+		fprintf(ConfFile, "addnode=54.72.236.49\n");
+		fprintf(ConfFile, "rpcport=19119\n");
+		fprintf(ConfFile, "rpcconnect=127.0.0.1\n");
+		fclose(ConfFile);
+	}
+		
 
     set<string> setOptions;
     setOptions.insert("*");
