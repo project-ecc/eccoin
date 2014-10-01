@@ -22,7 +22,6 @@ namespace Checkpoints
     //    timestamp before)
     // + Contains no strange transactions
     //
-	static int MAX_NO_SYNC_CHECKPOINT = 84000;
 
     static MapCheckpoints mapCheckpoints =
         boost::assign::map_list_of
@@ -48,6 +47,8 @@ namespace Checkpoints
 	(233855, uint256("0x77c1312f0b4ba0fc34cb7a0f3472012739bbd22c317add69edaa4908e83b00eb"))
 	(236850, uint256("0x139203f72c943433880c4f8d3581a4cb7ee0877f341639cd4c7810edc7fc7d80"))
 	(237000, uint256("0x70fdb4f39e571afff137c7bd40c4df98ccab32cec1d305074bac9fca30754bc0"))
+	(241130, uint256("0xdd900777cb9e2ea2cae0bf410ce2f2484a415c7bf7af59d9492868195583e3b2"))
+	(242150, uint256("0xba96de8da95ac53cedc7fd0cd3c17b32f5d3a04f33a544060606c095b28bf4c1"))
 		;
 
     static MapCheckpoints mapCheckpointsTestnet =
@@ -114,9 +115,6 @@ namespace Checkpoints
 
         CBlockIndex* pindexSyncCheckpoint = mapBlockIndex[hashSyncCheckpoint];
         CBlockIndex* pindexCheckpointRecv = mapBlockIndex[hashCheckpoint];
-
-		if(pindexCheckpointRecv->nHeight < MAX_NO_SYNC_CHECKPOINT)
-			return false;
 
         if (pindexCheckpointRecv->nHeight <= pindexSyncCheckpoint->nHeight)
         {
@@ -230,16 +228,11 @@ namespace Checkpoints
     {
         if (fTestNet) return true; // Testnet has no checkpoints
         int nHeight = pindexPrev->nHeight + 1;
-		if(nHeight < MAX_NO_SYNC_CHECKPOINT)
-			return true;
 
         LOCK(cs_hashSyncCheckpoint);
         // sync-checkpoint should always be accepted block
         assert(mapBlockIndex.count(hashSyncCheckpoint));
         const CBlockIndex* pindexSync = mapBlockIndex[hashSyncCheckpoint];
-
-		if(pindexSync->nHeight < MAX_NO_SYNC_CHECKPOINT)
-			return true;
 
         if (nHeight > pindexSync->nHeight)
         {
