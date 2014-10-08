@@ -942,9 +942,9 @@ int64 MinAge(int nHeight)
 int64 MaxAge(int nHeight)
 {
 	int64 nStakeMaxAge = 60 * 60 * 24 * 84;
-	if (nHeight > 250000)
+	if (nHeight >= 250000)
 	{
-		nStakeMaxAge = 60 * 60 * 24;
+		nStakeMaxAge = 60 * 60 * 24 * 7;
 		return nStakeMaxAge;
 	}
 	else
@@ -987,7 +987,7 @@ int64 GetProofOfStakeReward(int64 nCoinAge, unsigned int nBits, unsigned int nTi
 
 	if(nHeight < 250000)
 		nRewardCoinYear = 2.5 * MAX_MINT_PROOF_OF_STAKE;
-	else if(nHeight > 250000)
+	else if(nHeight >= 250000)
 	{
 		if (nHeight < 14016000)
 		{
