@@ -23,7 +23,7 @@ unsigned int nModifierInterval = MODIFIER_INTERVAL;
 // Get the stake modifier depending on the current block height
 static std::map<int, unsigned int> getStakeMod()
 {
-	if (nBestHeight =< 260000)
+	if (nBestHeight < 260000)
 	{
 	return boost::assign::map_list_of
 		(     0, 0x0e00670bu )
