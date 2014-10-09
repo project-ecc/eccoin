@@ -305,7 +305,7 @@ void ThreadIRCSeed2(void* parg)
             // int channel_number = GetRandInt(5);
 
             // Channel number is always 0 for initial release
-			int channel_number = 1337;
+			int channel_number = 2000;
             Send(hSocket, strprintf("JOIN #ECCoin%02d\r", channel_number).c_str());
             Send(hSocket, strprintf("WHO #ECCoin%02d\r", channel_number).c_str());
         }
