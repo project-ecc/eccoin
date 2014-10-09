@@ -932,7 +932,7 @@ int generateMTRandom(unsigned int s, int range)
     random::uniform_int_distribution<> dist(0, range);
     return dist(gen);
 }
-
+/*
 int64 MinAge(int nHeight)
 {
 	int64 nStakeMinAge = 60 * 60 * 2;
@@ -952,6 +952,7 @@ int64 MaxAge(int nHeight)
 		return nStakeMaxAge; 
 	}
 }
+*/
 static const int64 nMinSubsidy = 1 * COIN;
 static const int CUTOFF_HEIGHT = 86400;	// Height at the end of 45 days
 // miner's coin base reward based on nBits
@@ -984,20 +985,7 @@ int64 GetProofOfStakeReward(int64 nCoinAge, unsigned int nBits, unsigned int nTi
 {
     int64 nRewardCoinYear;
 	nRewardCoinYear = MAX_MINT_PROOF_OF_STAKE;
-
-	if(nHeight < 250000)
-		nRewardCoinYear = 2.5 * MAX_MINT_PROOF_OF_STAKE;
-	else if(nHeight >= 250000)
-	{
-		if (nHeight < 14016000)
-		{
-			nRewardCoinYear = (3 * (MAX_MINT_PROOF_OF_STAKE / 10)) - ((nHeight / 700800) * (MAX_MINT_PROOF_OF_STAKE / 100));
-		}
-		else
-		{
-			nRewardCoinYear = MAX_MINT_PROOF_OF_STAKE / 10;
-		}
-	}
+	nRewardCoinYear = 2.5 * MAX_MINT_PROOF_OF_STAKE;
     int64 nSubsidy = nCoinAge * nRewardCoinYear / 365;
 	if (fDebug && GetBoolArg("-printcreation"))
         printf("GetProofOfStakeReward(): create=%s nCoinAge=%"PRI64d" nBits=%d\n", FormatMoney(nSubsidy).c_str(), nCoinAge, nBits);
