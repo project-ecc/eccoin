@@ -245,8 +245,7 @@ protected:
 
 public:
 
-    IMPLEMENT_SERIALIZE
-    (({
+    IMPLEMENT_SERIALIZE(({
         // serialized format:
         // * version byte (currently 0)
         // * nKey

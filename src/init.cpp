@@ -358,7 +358,7 @@ bool AppInit2()
 
     if (mapArgs.count("-connect") && mapMultiArgs["-connect"].size() > 0) {
         // when only connecting to trusted nodes, do not seed via DNS, or listen by default
-        SoftSetBoolArg("-dnsseed", false);
+        SoftSetBoolArg("-dnsseed", true);
         SoftSetBoolArg("-listen", true);
     }
 

@@ -7,6 +7,53 @@
 #include "net.h"
 #include "strlcpy.h"
 #include "base58.h"
+#include "util.h"
+#include "sync.h"
+#include "version.h"
+#include "ui_interface.h"
+#include <boost/algorithm/string/join.hpp>
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <cstring>
+#include <boost/program_options/detail/config_file.hpp>
+#include <boost/program_options/parsers.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
+#include <boost/foreach.hpp>
+#include <boost/thread.hpp>
+#include <openssl/crypto.h>
+#include <openssl/rand.h>
+#include <stdarg.h>
+#ifdef WIN32
+#ifdef _MSC_VER
+#pragma warning(disable:4786)
+#pragma warning(disable:4804)
+#pragma warning(disable:4805)
+#pragma warning(disable:4717)
+#endif
+#ifdef _WIN32_WINNT
+#undef _WIN32_WINNT
+#endif
+#define _WIN32_WINNT 0x0501
+#ifdef _WIN32_IE
+#undef _WIN32_IE
+#endif
+#define _WIN32_IE 0x0501
+#define WIN32_LEAN_AND_MEAN 1
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <io.h> /* for _commit */
+#include "shlobj.h"
+#elif defined(__linux__)
+# include <sys/prctl.h>
+#endif
+
+#ifndef WIN32
+#include <execinfo.h>
+#endif
+
 
 using namespace std;
 using namespace boost;
@@ -16,8 +63,6 @@ int nGotIRCAddresses = 0;
 void ThreadIRCSeed2(void* parg);
 
 
-
-
 #pragma pack(push, 1)
 struct ircaddr
 {
@@ -25,6 +70,19 @@ struct ircaddr
     short port;
 };
 #pragma pack(pop)
+
+void editECCoinConf(std::string newAddress)
+{
+    boost::filesystem::path ConfPath;
+    ConfPath = GetDefaultDataDir() / "ECCoin.conf";
+    FILE* ConfFile = fopen(ConfPath.string().c_str(), "a");
+    string addr = "addnode=";
+    addr.append(newAddress);
+    const char* Addr = addr.c_str();
+    fprintf(ConfFile, Addr);
+    fclose(ConfFile);
+}
+
 
 string EncodeAddress(const CService& addr)
 {
@@ -350,7 +408,10 @@ void ThreadIRCSeed2(void* parg)
                 {
                     addr.nTime = GetAdjustedTime();
                     if (addrman.Add(addr, addrConnect, 51 * 60))
+                    {
                         printf("IRC got new address: %s\n", addr.ToString().c_str());
+                        editECCoinConf(addr.ToString().c_str());
+                    }
                     nGotIRCAddresses++;
                 }
                 else

@@ -830,7 +830,7 @@ void ThreadSocketHandler2(void* parg)
                 if (nErr != WSAEWOULDBLOCK)
                     printf("socket error accept failed: %d\n", nErr);
             }
-            else if (nInbound >= GetArg("-maxconnections", 125) - MAX_OUTBOUND_CONNECTIONS)
+            /* else if (nInbound >= GetArg("-maxconnections", 125) - MAX_OUTBOUND_CONNECTIONS)
             {
                 {
                     LOCK(cs_setservAddNodeAddresses);
@@ -838,6 +838,7 @@ void ThreadSocketHandler2(void* parg)
                         closesocket(hSocket);
                 }
             }
+            */
             else if (CNode::IsBanned(addr))
             {
                 printf("connection from %s dropped (banned)\n", addr.ToString().c_str());
@@ -1150,10 +1151,10 @@ void MapPort()
 // The second name should resolve to a list of seed addresses.
 static const char *strDNSSeed[][2] = {
     {"129.21.141.60", "129.21.141.60"},
-	{"38.93.234.100","38.93.234.100"},
-	{"54.72.236.49","54.72.236.49"},
-	{"23.251.134.93","23.251.134.93"},
-	{"88.20.74.221","88.20.74.221"}
+    {"38.93.234.100","38.93.234.100"},
+    {"54.72.236.49","54.72.236.49"},
+    {"23.251.134.93","23.251.134.93"},
+    {"88.20.74.221","88.20.74.221"}
 };
 
 void ThreadDNSAddressSeed(void* parg)
@@ -1489,7 +1490,7 @@ void ThreadOpenAddedConnections2(void* parg)
                 Sleep(500);
             }
             vnThreadsRunning[THREAD_ADDEDCONNECTIONS]--;
-            Sleep(60000); // Retry every minute
+            Sleep(30000); // Retry every 30 seconds
             vnThreadsRunning[THREAD_ADDEDCONNECTIONS]++;
         }
         return;
@@ -1512,10 +1513,10 @@ void ThreadOpenAddedConnections2(void* parg)
     loop
     {
         vector<vector<CService> > vservConnectAddresses = vservAddressesToAdd;
-        // Attempt to connect to each IP for each addnode entry until at least one is successful per addnode entry
+        // Attempt to connect to each IP for each addnode entry until at least three are successful per addnode entry
         // (keeping in mind that addnode entries can have many IPs if fNameLookup)
         {
-			int i = 2;
+            int i = 3;
             LOCK(cs_vNodes);
             BOOST_FOREACH(CNode* pnode, vNodes)
                 for (vector<vector<CService> >::iterator it = vservConnectAddresses.begin(); it != vservConnectAddresses.end(); it++)
@@ -1542,7 +1543,7 @@ void ThreadOpenAddedConnections2(void* parg)
         if (fShutdown)
             return;
         vnThreadsRunning[THREAD_ADDEDCONNECTIONS]--;
-        Sleep(60000); // Retry every minute
+        Sleep(30000); // Retry every 30 seconds
         vnThreadsRunning[THREAD_ADDEDCONNECTIONS]++;
         if (fShutdown)
             return;
