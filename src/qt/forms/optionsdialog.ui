@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>540</width>
-    <height>380</height>
+    <width>557</width>
+    <height>453</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -16,8 +16,8 @@
   <property name="modal">
    <bool>true</bool>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout">
-   <item>
+  <layout class="QGridLayout" name="gridLayout_2">
+   <item row="0" column="0">
     <widget class="QTabWidget" name="tabWidget">
      <property name="tabPosition">
       <enum>QTabWidget::North</enum>
@@ -29,21 +29,86 @@
       <attribute name="title">
        <string>&amp;Main</string>
       </attribute>
-      <layout class="QVBoxLayout" name="verticalLayout_Main">
-       <item>
-        <widget class="QLabel" name="transactionFeeInfoLabel">
-         <property name="text">
-          <string>Optional transaction fee per kB that helps make sure your transactions are processed quickly. Most transactions are 1 kB. Fee 0.01 recommended.</string>
-         </property>
-         <property name="textFormat">
-          <enum>Qt::PlainText</enum>
-         </property>
-         <property name="wordWrap">
-          <bool>true</bool>
+      <layout class="QGridLayout" name="gridLayout">
+       <item row="4" column="0">
+        <layout class="QHBoxLayout" name="horizontalLayout">
+         <item>
+          <widget class="QLabel" name="donateLabel">
+           <property name="text">
+            <string>Donation </string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QDoubleSpinBox" name="donation">
+           <property name="maximum">
+            <double>100.000000000000000</double>
+           </property>
+           <property name="singleStep">
+            <double>0.100000000000000</double>
+           </property>
+           <property name="value">
+            <double>1.000000000000000</double>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="donatePctLabel">
+           <property name="text">
+            <string>%</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacer">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+        </layout>
+       </item>
+       <item row="2" column="0" colspan="2">
+        <widget class="Line" name="line_2">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
          </property>
         </widget>
        </item>
-       <item>
+       <item row="6" column="0" colspan="2">
+        <widget class="Line" name="line_3">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="0">
+        <widget class="QCheckBox" name="detachDatabases">
+         <property name="toolTip">
+          <string>Detach block and address databases at shutdown. This means they can be moved to another data directory, but it slows down shutdown. The wallet is always detached.</string>
+         </property>
+         <property name="text">
+          <string>&amp;Detach databases at shutdown</string>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="0">
+        <widget class="QCheckBox" name="bitcoinAtStartup">
+         <property name="toolTip">
+          <string>Automatically start ECCoin after logging in to the system.</string>
+         </property>
+         <property name="text">
+          <string>&amp;Start ECCoin on system login</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
         <layout class="QHBoxLayout" name="horizontalLayout_Main">
          <item>
           <widget class="QLabel" name="transactionFeeLabel">
@@ -76,27 +141,37 @@
          </item>
         </layout>
        </item>
-       <item>
-        <widget class="QCheckBox" name="bitcoinAtStartup">
-         <property name="toolTip">
-          <string>Automatically start ECCoin after logging in to the system.</string>
-         </property>
+       <item row="5" column="0">
+        <widget class="QCheckBox" name="showDonationTransactions">
          <property name="text">
-          <string>&amp;Start ECCoin on system login</string>
+          <string>Show Donation Transactions</string>
          </property>
         </widget>
        </item>
-       <item>
-        <widget class="QCheckBox" name="detachDatabases">
-         <property name="toolTip">
-          <string>Detach block and address databases at shutdown. This means they can be moved to another data directory, but it slows down shutdown. The wallet is always detached.</string>
-         </property>
+       <item row="0" column="0" colspan="2">
+        <widget class="QLabel" name="transactionFeeInfoLabel">
          <property name="text">
-          <string>&amp;Detach databases at shutdown</string>
+          <string>Optional transaction fee per kB that helps make sure your transactions are processed quickly. Most transactions are 1 kB. Fee 0.01 recommended.</string>
+         </property>
+         <property name="textFormat">
+          <enum>Qt::PlainText</enum>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
          </property>
         </widget>
        </item>
-       <item>
+       <item row="3" column="0" colspan="2">
+        <widget class="QLabel" name="donateInfoLabel">
+         <property name="text">
+          <string>Donate a percent of your stake to help keep the ECC network running. If you appreciate the work we are doing and wish to contribute, please consider a portion of the coins earned as your wallet stakes.</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="9" column="0">
         <spacer name="verticalSpacer_Main">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
@@ -370,7 +445,7 @@
      </widget>
     </widget>
    </item>
-   <item>
+   <item row="1" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout_Buttons">
      <item>
       <spacer name="horizontalSpacer_1">
@@ -453,6 +528,7 @@
    <class>BitcoinAmountField</class>
    <extends>QSpinBox</extends>
    <header>bitcoinamountfield.h</header>
+   <container>1</container>
   </customwidget>
   <customwidget>
    <class>QValueComboBox</class>
