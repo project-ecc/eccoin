@@ -421,6 +421,7 @@ void BitcoinGUI::createToolBars2()
     QToolBar *toolbars = addToolBar(tr("Settings2"));
     addToolBar(Qt::RightToolBarArea,toolbars);
     toolbars->setOrientation(Qt::Horizontal);
+	toolbar->setContextMenuPolicy(Qt::PreventContextMenu);
     toolbars->setMovable( false );
     toolbars->setStyleSheet("QToolBar QToolButton {border:0px;margin-right:3px} QToolBar{ border:0px; }");
     toolbars->setIconSize(QSize(102,25));
