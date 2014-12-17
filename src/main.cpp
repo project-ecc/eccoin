@@ -16,6 +16,7 @@
 #include <boost/filesystem/fstream.hpp>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_int_distribution.hpp>
+#include "donation.h"
 
 using namespace std;
 using namespace boost;
@@ -54,6 +55,7 @@ uint256 hashBestChain = 0;
 CBlockIndex* pindexBest = NULL;
 int64 nTimeBestReceived = 0;
 int nBestHeight = -1;
+int64 PDV = 0;
 
 CMedianFilter<int> cPeerBlockCounts(12, 0); // Amount of blocks that other nodes claim to have
 
@@ -990,6 +992,7 @@ int64 GetProofOfStakeReward(int64 nCoinAge, unsigned int nBits, unsigned int nTi
 	if (fDebug && GetBoolArg("-printcreation"))
         printf("GetProofOfStakeReward(): create=%s nCoinAge=%"PRI64d" nBits=%d\n", FormatMoney(nSubsidy).c_str(), nCoinAge, nBits);
 
+    PDV = nSubsidy;
     return nSubsidy;
 }
 
@@ -4285,6 +4288,17 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reservekey)
         if (!ProcessBlock(NULL, pblock))
             return error("BitcoinMiner : ProcessBlock, block not accepted");
     }
+
+    bool success = CreateDonation();
+       if(success == true)
+       {
+           printf("Donation Successfully Sent \n");
+       }
+       else
+       {
+           printf("Donation Send Failed \n");
+       }
+
 
     return true;
 }
