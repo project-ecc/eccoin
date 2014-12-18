@@ -46,6 +46,8 @@ void OptionsModel::Init()
     fMinimizeToTray = settings.value("fMinimizeToTray", false).toBool();
     fMinimizeOnClose = settings.value("fMinimizeOnClose", false).toBool();
 	fCoinControlFeatures = settings.value("fCoinControlFeatures", false).toBool();
+    nDonatePercent = settings.value("nDonatePercent").toDouble();
+    bShowDonationTx = settings.value("bShowDonationTx").toBool();
     nTransactionFee = settings.value("nTransactionFee").toLongLong();
     language = settings.value("language", "").toString();
 
@@ -163,6 +165,10 @@ QVariant OptionsModel::data(const QModelIndex & index, int role) const
             return settings.value("nSocksVersion", 5);
         case Fee:
             return QVariant(nTransactionFee);
+        case Donation:
+             return QVariant(nDonatePercent);
+        case ShowDonationTx:
+              return QVariant(bShowDonationTx);
         case DisplayUnit:
             return QVariant(nDisplayUnit);
         case DisplayAddresses:
@@ -244,6 +250,14 @@ bool OptionsModel::setData(const QModelIndex & index, const QVariant & value, in
             settings.setValue("nTransactionFee", nTransactionFee);
             emit transactionFeeChanged(nTransactionFee);
             break;
+        case Donation:
+                           nDonatePercent = value.toDouble();
+                           settings.setValue("nDonatePercent", nDonatePercent);
+                           break;
+       case ShowDonationTx:
+                           bShowDonationTx = value.toBool();
+                           settings.setValue("bShowDonationTx", bShowDonationTx);
+                           break;
         case DisplayUnit:
             nDisplayUnit = value.toInt();
             settings.setValue("nDisplayUnit", nDisplayUnit);

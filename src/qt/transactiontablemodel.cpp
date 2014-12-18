@@ -7,6 +7,7 @@
 #include "optionsmodel.h"
 #include "addresstablemodel.h"
 #include "bitcoinunits.h"
+#include "donation.h"
 
 #include "wallet.h"
 #include "ui_interface.h"
@@ -18,7 +19,6 @@
 #include <QIcon>
 #include <QDateTime>
 #include <QtAlgorithms>
-
 // Amount column is right-aligned it contains numbers
 static int column_alignments[] = {
         Qt::AlignLeft|Qt::AlignVCenter,
@@ -81,7 +81,6 @@ public:
 
     /* Update our model of the wallet incrementally, to synchronize our model of the wallet
        with that of the core.
-
        Call with transaction that was added, removed or changed.
      */
     void updateWallet(const uint256 &hash, int status)
@@ -294,6 +293,9 @@ QString TransactionTableModel::formatTxStatus(const TransactionRecord *wtx) cons
     case TransactionStatus::HaveConfirmations:
         status = tr("Confirmed (%1 confirmations)").arg(wtx->status.depth);
         break;
+    case TransactionStatus::Conflicted:
+           status = tr("Conflicted");
+           break;
     }
     if(wtx->type == TransactionRecord::Generated  || wtx->type == TransactionRecord::StakeMint)
     {
@@ -315,6 +317,7 @@ QString TransactionTableModel::formatTxStatus(const TransactionRecord *wtx) cons
 
     return status;
 }
+
 
 QString TransactionTableModel::formatTxDate(const TransactionRecord *wtx) const
 {
@@ -359,7 +362,6 @@ QString TransactionTableModel::formatTxType(const TransactionRecord *wtx) const
         return tr("Sent to");
     case TransactionRecord::SendToSelf:
         return tr("Payment to yourself");
-    case TransactionRecord::StakeMint:
     case TransactionRecord::Generated:
         return tr("Mined");
     default:
@@ -372,11 +374,7 @@ QVariant TransactionTableModel::txAddressDecoration(const TransactionRecord *wtx
     switch(wtx->type)
     {
     case TransactionRecord::Generated:
-    case TransactionRecord::StakeMint:
-		{
-			QString str = BitcoinUnits::format(walletModel->getOptionsModel()->getDisplayUnit(), wtx->credit + wtx->debit);
-			return QIcon(":/icons/tx_mined");
-		}
+        return QIcon(":/icons/tx_mined");
     case TransactionRecord::RecvWithAddress:
     case TransactionRecord::RecvFromOther:
         return QIcon(":/icons/tx_input");
@@ -384,7 +382,7 @@ QVariant TransactionTableModel::txAddressDecoration(const TransactionRecord *wtx
     case TransactionRecord::SendToOther:
         return QIcon(":/icons/tx_output");
     default:
-        return QIcon(":/icons/tx_inout");
+        return QIcon(":/icons/tx_mined");
     }
     return QVariant();
 }
@@ -454,6 +452,8 @@ QVariant TransactionTableModel::txStatusDecoration(const TransactionRecord *wtx)
             }
         case TransactionStatus::Mature:
             return QIcon(":/icons/transaction_confirmed");
+        case TransactionStatus::Conflicted:
+                return QIcon(":/icons/transaction_conflicted");
         case TransactionStatus::MaturesWarning:
         case TransactionStatus::NotAccepted:
             return QIcon(":/icons/transaction_0");
@@ -548,7 +548,7 @@ QVariant TransactionTableModel::data(const QModelIndex &index, int role) const
     case Qt::TextAlignmentRole:
         return column_alignments[index.column()];
     case Qt::ForegroundRole:
-        // Non-confirmed transactions are grey
+        // Non-confirmed (but not immature) as transactions are grey
         if(!rec->status.confirmed)
         {
             return COLOR_UNCONFIRMED;
@@ -577,14 +577,17 @@ QVariant TransactionTableModel::data(const QModelIndex &index, int role) const
     case TxIDRole:
         return QString::fromStdString(rec->getTxID());
     case ConfirmedRole:
-        // Return True if transaction counts for balance
-        return rec->status.confirmed && !((rec->type == TransactionRecord::Generated || rec->type == TransactionRecord::StakeMint) &&
-                                          rec->status.maturity != TransactionStatus::Mature);
+           // Return True if transaction counts for balance
+           return rec->status.confirmed && !((rec->type == TransactionRecord::Generated || rec->type == TransactionRecord::StakeMint) &&
+                                             rec->status.maturity != TransactionStatus::Mature);
     case FormattedAmountRole:
-        return formatTxAmount(rec, false);
-    }
-    return QVariant();
-}
+           return formatTxAmount(rec, false);
+    case StatusRole:
+          return rec->status.status;
+       }
+       return QVariant();
+   }
+
 
 QVariant TransactionTableModel::headerData(int section, Qt::Orientation orientation, int role) const
 {

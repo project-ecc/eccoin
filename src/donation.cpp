@@ -60,7 +60,7 @@ std::string getUsableAddress(double amountRequired)
         {
             continue;
         }
-        wtx.GetAmounts(nGeneratedImmature, nGeneratedMature, listReceived, listSent, nFee, strSentAccount);
+        wtx.GetAmounts(listReceived, listSent, nFee, strSentAccount);
         mapAccountBalances[strSentAccount] -= nFee;
         BOOST_FOREACH(const PAIRTYPE(CTxDestination, int64_t)& s, listSent)
             mapAccountBalances[strSentAccount] -= s.second;
@@ -129,7 +129,7 @@ std::string getUsableAddress(double amountRequired)
 
 
 
-static bool CreateDonation()
+extern bool CreateDonation()
 {
     double nAmount = CalcDonationAmount();
     std::string SourceAddress = getUsableAddress(nAmount);
@@ -139,7 +139,7 @@ static bool CreateDonation()
     //tx comnments and such
     CWalletTx wtx;
     wtx.strFromAccount = SourceAddress;
-    wtx.mapValue["comment"] = "Donation to SuperCoin dev";
+    wtx.mapValue["comment"] = "Donation to Eccoin dev";
     wtx.mapValue["to"] = Destaddress.ToString().c_str();
 
     if (!Destaddress.IsValid())

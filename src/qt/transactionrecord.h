@@ -31,7 +31,8 @@ public:
         OpenUntilBlock,
         Offline,
         Unconfirmed,
-        HaveConfirmations
+        HaveConfirmations,
+        Conflicted         /**< Conflicts with other transaction or mempool **/
     };
 
     bool confirmed;

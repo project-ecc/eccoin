@@ -26,6 +26,8 @@ public:
         ProxyPort,         // int
         ProxySocksVersion, // int
         Fee,               // qint64
+        Donation,          // double
+        ShowDonationTx,    // bool
         DisplayUnit,       // BitcoinUnits::Unit
         DisplayAddresses,  // bool
         DetachDatabases,   // bool

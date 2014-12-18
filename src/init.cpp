@@ -9,6 +9,7 @@
 #include "init.h"
 #include "util.h"
 #include "ui_interface.h"
+#include "donation.h"
 #include "checkpoints.h"
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -420,6 +421,12 @@ bool AppInit2()
         if (nNewTimeout > 0 && nNewTimeout < 600000)
             nConnectTimeout = nNewTimeout;
     }
+
+    if (mapArgs.count("-donate"))
+           {
+               nDonatePercent = atof(mapArgs["-donate"].c_str());
+           }
+
 
     // Continue to put "/P2SH/" in the coinbase to monitor
     // BIP16 support.

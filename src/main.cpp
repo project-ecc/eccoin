@@ -77,7 +77,8 @@ int64 nHPSTimerStart;
 
 // Settings
 int64 nTransactionFee = MIN_TX_FEE;
-
+double nDonatePercent = 0.0;
+bool bShowDonationTx = false;
 
 //////////////////////////////////////////////////////////////////////////////
 //

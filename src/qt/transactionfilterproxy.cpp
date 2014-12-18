@@ -1,9 +1,11 @@
 #include "transactionfilterproxy.h"
 #include "transactiontablemodel.h"
-
+#include "transactionrecord.h"
 #include <QDateTime>
 
 #include <cstdlib>
+
+extern bool bShowDonationTx;
 
 // Earliest date that can be represented (far in the past)
 const QDateTime TransactionFilterProxy::MIN_DATE = QDateTime::fromTime_t(0);
@@ -30,7 +32,11 @@ bool TransactionFilterProxy::filterAcceptsRow(int sourceRow, const QModelIndex &
     QString address = index.data(TransactionTableModel::AddressRole).toString();
     QString label = index.data(TransactionTableModel::LabelRole).toString();
     qint64 amount = llabs(index.data(TransactionTableModel::AmountRole).toLongLong());
+     bool isdonation = index.data(TransactionTableModel::IsDonationTransmissionRole).toBool();
+    int status = index.data(TransactionTableModel::StatusRole).toInt();
 
+    if(!showInactive && (status == TransactionStatus::Conflicted || status == TransactionStatus::NotAccepted))
+            return false;
     if(!(TYPE(type) & typeFilter))
         return false;
     if(datetime < dateFrom || datetime > dateTo)
@@ -39,6 +45,8 @@ bool TransactionFilterProxy::filterAcceptsRow(int sourceRow, const QModelIndex &
         return false;
     if(amount < minAmount)
         return false;
+    if(!bShowDonationTx && isdonation)
+               return false;
 
     return true;
 }
@@ -72,6 +80,13 @@ void TransactionFilterProxy::setLimit(int limit)
 {
     this->limitRows = limit;
 }
+
+void TransactionFilterProxy::setShowInactive(bool showInactive)
+{
+    this->showInactive = showInactive;
+    invalidateFilter();
+}
+
 
 int TransactionFilterProxy::rowCount(const QModelIndex &parent) const
 {

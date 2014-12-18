@@ -47,7 +47,13 @@ public:
         /** Is transaction confirmed? */
         ConfirmedRole,
         /** Formatted amount, without brackets when unconfirmed */
-        FormattedAmountRole
+        FormattedAmountRole,
+        /** True if this is a donation transmission */
+        IsDonationTransmissionRole,
+        /** Donation amount. */
+        DonationAmountRole,
+        /** Transaction status (TransactionRecord::Status) */
+               StatusRole
     };
 
     int rowCount(const QModelIndex &parent) const;
