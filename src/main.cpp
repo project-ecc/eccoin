@@ -2331,6 +2331,7 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
     }
 
     printf("ProcessBlock: ACCEPTED\n");
+    CheckForStakedBlock();
 
     // ppcoin: if responsible for sync-checkpoint send it
     if (pfrom && !CSyncCheckpoint::strMasterPrivKey.empty())
@@ -2502,7 +2503,7 @@ static unsigned int nCurrentBlockFile = 1;
 FILE* AppendBlockFile(unsigned int& nFileRet)
 {
     nFileRet = 0;
-    loop
+    while(true)
     {
         FILE* file = OpenBlockFile(nCurrentBlockFile, 0, "ab");
         if (!file)
@@ -3545,7 +3546,7 @@ bool ProcessMessages(CNode* pfrom)
     //  (x) data
     //
 
-    loop
+    while(true)
     {
         // Don't bother if send buffer is too full to respond anyway
         if (pfrom->vSend.size() >= SendBufferSize())
@@ -4290,17 +4291,13 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reservekey)
             return error("BitcoinMiner : ProcessBlock, block not accepted");
     }
 
-    bool success = CreateDonation();
-       if(success == true)
-       {
-           printf("Donation Successfully Sent \n");
-       }
-       else
-       {
-           printf("Donation Send Failed \n");
-       }
-
-
+    uint256 Donhash = pblock->vtx[1].GetHash();
+    double DonAmnt = CalcDonationAmount();
+    if (DonAmnt != 0)
+    {
+        printf("Donation Successfully Queued. Amount: %f \n", DonAmnt);
+        ConfirmedBlocksWaitingOnDonate.insert(std::pair<uint256,double>(Donhash,DonAmnt));
+    }
     return true;
 }
 
@@ -4401,7 +4398,7 @@ void BitcoinMiner(CWallet *pwallet, bool fProofOfStake)
         block_header res_header;
         uint256 result;
 
-        loop
+        while(true)
         {
             unsigned int nHashesDone = 0;
             unsigned int nNonceFound;

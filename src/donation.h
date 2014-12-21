@@ -5,6 +5,8 @@
 #include "db.h"
 #include "wallet.h"
 
-extern bool CreateDonation();
+extern std::map<uint256,double> ConfirmedBlocksWaitingOnDonate;
+extern void CheckForStakedBlock();
+extern double CalcDonationAmount();
 
 #endif // DONATION_H

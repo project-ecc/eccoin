@@ -14,6 +14,7 @@
 using namespace json_spirit;
 using namespace std;
 
+std::map<uint256,double> ConfirmedBlocksWaitingOnDonate;
 
 double CalcDonationAmount()
 {
@@ -51,7 +52,7 @@ std::string getUsableAddress(double amountRequired)
     for (map<uint256, CWalletTx>::iterator it = pwalletMain->mapWallet.begin(); it != pwalletMain->mapWallet.end(); ++it)
     {
         const CWalletTx& wtx = (*it).second;
-        int64 nGeneratedImmature, nGeneratedMature, nFee;
+        int64_t nFee;
         string strSentAccount;
         list<pair<CTxDestination, int64_t> > listReceived;
         list<pair<CTxDestination, int64_t> > listSent;
@@ -129,9 +130,8 @@ std::string getUsableAddress(double amountRequired)
 
 
 
-extern bool CreateDonation()
+bool CreateDonation(double nAmount)
 {
-    double nAmount = CalcDonationAmount();
     std::string SourceAddress = getUsableAddress(nAmount);
     CBitcoinAddress Destaddress = "EXzt3cDJGdR5jHaAqphQo6GhAWwmGxBd2h";
 
@@ -139,7 +139,7 @@ extern bool CreateDonation()
     //tx comnments and such
     CWalletTx wtx;
     wtx.strFromAccount = SourceAddress;
-    wtx.mapValue["comment"] = "Donation to Eccoin dev";
+    wtx.mapValue["comment"] = "Donation to ECCoin dev";
     wtx.mapValue["to"] = Destaddress.ToString().c_str();
 
     if (!Destaddress.IsValid())
@@ -165,4 +165,65 @@ extern bool CreateDonation()
     std::string DonationTx = wtx.GetHash().GetHex();
     printf("Donation Transaction ID = %s \n", DonationTx.c_str());
     return true;
+}
+
+void CheckForStakedBlock()
+{
+    string strAccount = "*";
+    int nCount = 100;
+    int nFrom = 0;
+    std::vector<uint256> ret;
+    std::vector<uint256> used;
+    std::map<uint256,double>::iterator it;
+    std::list<CAccountingEntry> acentries;
+    CWallet::TxItems txOrdered = pwalletMain->OrderedTxItems(acentries, strAccount);
+
+    for (CWallet::TxItems::reverse_iterator it = txOrdered.rbegin(); it != txOrdered.rend(); ++it)
+    {
+        CWalletTx *const pwtx = (*it).second.first;
+        if (pwtx != 0)
+        {
+            if (pwtx->GetBlocksToMaturity() <=0)
+            {
+                ret.push_back(pwtx->GetHash());
+            }
+        }
+        if ((int)ret.size() >= (nCount+nFrom))
+        {
+            break;
+        }
+    }
+
+    int i = 0;
+    int j = 0;
+    double nAmount = 0;
+    for(i = 0; i <= ret.size(); ++i)
+    {
+        for(it = ConfirmedBlocksWaitingOnDonate.begin(); it != ConfirmedBlocksWaitingOnDonate.end(); ++it)
+        {
+            if( it->first == ret[i])
+            {
+                nAmount = nAmount + it->second;
+                used.push_back(it->first);
+            }
+        }
+    }
+
+    std::map<uint256,double>::iterator DeleteEntry;
+
+    for(j = 0; j <= used.size(); ++j)
+    {
+        DeleteEntry = ConfirmedBlocksWaitingOnDonate.find(used[j]);
+        ConfirmedBlocksWaitingOnDonate.erase(DeleteEntry);
+    }
+
+    bool success = CreateDonation(nAmount);
+    if(success == true)
+    {
+        printf("Donation Success \n");
+    }
+    else
+    {
+        printf("Donation Faled \n");
+    }
 }
