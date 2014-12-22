@@ -579,6 +579,7 @@ void ParseParameters(int argc, const char* const argv[])
         mapMultiArgs[psz].push_back(pszValue);
     }
 
+/*
     //
     // add all hardcoded nodes into the conf file nodes in case they are mistyped
     //
@@ -592,7 +593,7 @@ void ParseParameters(int argc, const char* const argv[])
     mapMultiArgs["-connect=\0"].push_back("88.20.74.221\0");
     mapArgs.insert ( std::pair<string,string>("-connect=\0","23.251.134.93\0") );
     mapMultiArgs["-connect=\0"].push_back("23.251.134.93\0");
-
+*/
 
 
     // New 0.6 features:
@@ -1158,7 +1159,7 @@ void ReadConfigFile(map<string, string>& mapSettingsRet,
         fprintf(ConfFile, "maxconnections=10000\n");
         fprintf(ConfFile, "rpcuser=yourusername\n");
         fprintf(ConfFile, "rpcpassword=yourpassword\n");
-        fprintf(ConfFile, "addnode=129.21.141.60\n");
+        fprintf(ConfFile, "addnode=129.21.141.135\n");
         fprintf(ConfFile, "addnode=38.93.234.100\n");
         fprintf(ConfFile, "addnode=54.72.236.49\n");
         fprintf(ConfFile, "addnode=88.20.74.221\n");

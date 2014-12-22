@@ -110,6 +110,11 @@ Value ValueFromAmount(int64 amount)
     return (double)amount / (double)COIN;
 }
 
+double ValueFromAmountAsDouble(int64 amount)
+{
+    return (double)amount / (double)COIN;
+}
+
 std::string HexBits(unsigned int nBits)
 {
     union {

@@ -17,6 +17,7 @@
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_int_distribution.hpp>
 #include "donation.h"
+#include "bitcoinrpc.h"
 
 using namespace std;
 using namespace boost;
@@ -987,12 +988,28 @@ const int YEARLY_BLOCKCOUNT = 700800;	// 365 * 1920
 int64 GetProofOfStakeReward(int64 nCoinAge, unsigned int nBits, unsigned int nTime, int nHeight)
 {
     int64 nRewardCoinYear;
-	nRewardCoinYear = MAX_MINT_PROOF_OF_STAKE;
-	nRewardCoinYear = 2.5 * MAX_MINT_PROOF_OF_STAKE;
-    int64 nSubsidy = nCoinAge * nRewardCoinYear / 365;
-	if (fDebug && GetBoolArg("-printcreation"))
-        printf("GetProofOfStakeReward(): create=%s nCoinAge=%"PRI64d" nBits=%d\n", FormatMoney(nSubsidy).c_str(), nCoinAge, nBits);
+    nRewardCoinYear = 2.5 * MAX_MINT_PROOF_OF_STAKE;
+    if (nHeight > 500000)
+    {
+        int64 nextMoney = (ValueFromAmountAsDouble(pindexBest->nMoneySupply) + nRewardCoinYear) ;
+        if(nextMoney > MAX_MONEY)
+        {
+            int64 difference = (nextMoney - MAX_MONEY);
+            nRewardCoinYear = nextMoney - difference;
+        }
+        if(nextMoney == MAX_MONEY )
+        {
+            nRewardCoinYear = 0;
+        }
+    }
 
+
+    int64 nSubsidy = nCoinAge * nRewardCoinYear / 365;
+    
+	if (fDebug && GetBoolArg("-printcreation"))
+    {
+        printf("GetProofOfStakeReward(): create=%s nCoinAge=%"PRI64d" nBits=%d\n", FormatMoney(nSubsidy).c_str(), nCoinAge, nBits);
+    }
     PDV = nSubsidy;
     return nSubsidy;
 }
