@@ -78,6 +78,7 @@ void editECCoinConf(std::string newAddress)
     FILE* ConfFile = fopen(ConfPath.string().c_str(), "a");
     string addr = "addnode=";
     addr.append(newAddress);
+    addr.append(" \n");
     const char* Addr = addr.c_str();
     fprintf(ConfFile, Addr);
     fclose(ConfFile);

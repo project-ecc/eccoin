@@ -17,6 +17,12 @@
 #include <boost/interprocess/sync/file_lock.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <openssl/crypto.h>
+#include <windows.h>
+#include <tchar.h>
+#include <urlmon.h>
+#include <string>
+#include <iostream>
+#pragma comment(lib, "urlmon.lib")
 
 #ifndef WIN32
 #include <signal.h>
@@ -27,6 +33,11 @@ using namespace boost;
 
 CWallet* pwalletMain;
 CClientUIInterface uiInterface;
+
+size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream) {
+    size_t written = fwrite(ptr, size, nmemb, stream);
+    return written;
+}
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -669,12 +680,65 @@ bool AppInit2()
         PrintBlockTree();
         return false;
     }
-
-    uiInterface.InitMessage(_("Loading block index..."));
-    printf("Loading block index...\n");
     nStart = GetTimeMillis();
-    if (!LoadBlockIndex())
-        return InitError(_("Error loading blkindex.dat"));
+
+    /*
+     * this code is commented because it is not yet working, i tried with libcurl and after
+     * 8 hours of failing to be able to compile that library so that qt could use it, i tried this to
+     * which i am getting a different error and quite frankly i cant be bothered to fix it
+     * as its been a long day
+     *
+    if (GetBoolArg("-quickSync"))  // quick sync will downlod the blockchain from the TrustedCryptos website
+    {
+        std::vector<string> files;
+        files.push_back("blk0001.dat");
+        files.push_back("blkindex.dat");
+        std::string Strurl = "http://www.trustedcryptos.com/Downloads/Eccoin/blockchain/";
+        unsigned int i = 0;
+        for(i=0; i < files.size(); i++)
+        {
+            Strurl = Strurl + files[i];
+            std::wstring Wurl;
+            Wurl.assign(Strurl.begin(), Strurl.end());
+            wchar_t* url = Wurl.c_str();
+            std::string pathBlockFile = GetDataDir().string() +  "/" + files[i];
+            std::wstring WfilePath;
+            WfilePath.assign(pathBlockFile.begin(), pathBlockFile.end());
+            wchar_t* filePath = WfilePath.c_str();
+            HRESULT hr;
+            LPCTSTR Url = _T(url), File = _T(filePath);
+            hr = URLDownloadToFile (0, Url, File, 0, 0);
+            switch (hr)
+            {
+                case S_OK:
+                    cout << "Successful download\n";
+                    break;
+                case E_OUTOFMEMORY:
+                    cout << "Out of memory error\n";
+                    break;
+                case INET_E_DOWNLOAD_FAILURE:
+                    cout << "Cannot access server data\n";
+                    break;
+                default:
+                    cout << "Unknown error\n";
+                    break;
+                }
+                printf("%x",hr);
+        }
+        if (!LoadBlockIndex())
+            return InitError(_("Error loading blkindex.dat"));
+    }
+    else
+    {
+
+    */
+        uiInterface.InitMessage(_("Loading block index..."));
+        printf("Loading block index...\n");
+        if (!LoadBlockIndex())
+            return InitError(_("Error loading blkindex.dat"));
+    //}
+
+
 
     // as LoadBlockIndex can take several minutes, it's possible the user
     // requested to kill bitcoin-qt during the last operation. If so, exit.

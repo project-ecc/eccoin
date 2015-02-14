@@ -1147,6 +1147,7 @@ boost::filesystem::path GetConfigFile()
 void ReadConfigFile(map<string, string>& mapSettingsRet,
                     map<string, vector<string> >& mapMultiSettingsRet)
 {
+    confStart:
     boost::filesystem::ifstream streamConfig(GetConfigFile());
     if (!streamConfig.good())
     {
@@ -1155,7 +1156,7 @@ void ReadConfigFile(map<string, string>& mapSettingsRet,
         FILE* ConfFile = fopen(ConfPath.string().c_str(), "w");
         fprintf(ConfFile, "listen=1\n");
         fprintf(ConfFile, "server=1\n");
-        fprintf(ConfFile, "daemon=1\n");
+        fprintf(ConfFile, "quickSync=1\n");
         fprintf(ConfFile, "maxconnections=10000\n");
         fprintf(ConfFile, "rpcuser=yourusername\n");
         fprintf(ConfFile, "rpcpassword=yourpassword\n");
@@ -1166,8 +1167,8 @@ void ReadConfigFile(map<string, string>& mapSettingsRet,
         fprintf(ConfFile, "addnode=23.251.134.93\n");
         fprintf(ConfFile, "rpcport=19119\n");
         fprintf(ConfFile, "rpcconnect=127.0.0.1\n");
-        fprintf(ConfFile, " ");
         fclose(ConfFile);
+        goto confStart;
 	}
 		
 

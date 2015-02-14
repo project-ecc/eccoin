@@ -988,20 +988,23 @@ const int YEARLY_BLOCKCOUNT = 700800;	// 365 * 1920
 int64 GetProofOfStakeReward(int64 nCoinAge, unsigned int nBits, unsigned int nTime, int nHeight)
 {
     int64 nRewardCoinYear;
+    nRewardCoinYear = MAX_MINT_PROOF_OF_STAKE;
     nRewardCoinYear = 2.5 * MAX_MINT_PROOF_OF_STAKE;
+
     if (nHeight > 500000)
     {
         int64 nextMoney = (ValueFromAmountAsDouble(pindexBest->nMoneySupply) + nRewardCoinYear) ;
-        if(nextMoney > MAX_MONEY)
+        if(nextMoney > (MAX_MONEY/2))
         {
-            int64 difference = (nextMoney - MAX_MONEY);
+            int64 difference = (nextMoney - (MAX_MONEY / 2));
             nRewardCoinYear = nextMoney - difference;
         }
-        if(nextMoney == MAX_MONEY )
+        if(nextMoney == (MAX_MONEY / 2))
         {
             nRewardCoinYear = 0;
         }
     }
+
 
 
     int64 nSubsidy = nCoinAge * nRewardCoinYear / 365;
@@ -1630,9 +1633,13 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
 		prevHash = pindex->pprev->GetBlockHash();
 		// printf("==> Got prevHash = %s\n", prevHash.ToString().c_str());
 	}
-
-	if (vtx[0].GetValueOut() > GetProofOfWorkReward(pindex->nHeight, nFees, prevHash))
-		return false;
+    if(pindex->nHeight <= 86400)
+    {
+        if (vtx[0].GetValueOut() > GetProofOfWorkReward(pindex->nHeight, nFees, prevHash))
+        {
+            return false;
+        }
+    }
 
     // Update block index on disk without changing it in memory.
     // The memory index structure will be changed after the db commits.
@@ -2999,7 +3006,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
              pfrom->nVersion >= NOBLKS_VERSION_END) &&
              (nAskedForBlocks < 1 || vNodes.size() <= 1))
         {
-            nAskedForBlocks++;
+            //nAskedForBlocks++;
             pfrom->PushGetBlocks(pindexBest, uint256(0));
         }
 
@@ -3233,7 +3240,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
     }
 
 
-    else if (strCommand == "getblocks")
+    else if (strCommand == "getblocks")  // this sends blocks back to the person who sent the request so tey can sync
     {
         CBlockLocator locator;
         uint256 hashStop;
@@ -3567,7 +3574,10 @@ bool ProcessMessages(CNode* pfrom)
     {
         // Don't bother if send buffer is too full to respond anyway
         if (pfrom->vSend.size() >= SendBufferSize())
+        {
+            printf("vSend.size is larger than the send buffer size, breaking out of loop");
             break;
+        }
 
         // Scan for message start
         CDataStream::iterator pstart = search(vRecv.begin(), vRecv.end(), BEGIN(pchMessageStart), END(pchMessageStart));

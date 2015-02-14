@@ -742,7 +742,7 @@ void ThreadSocketHandler2(void* parg)
         //
         struct timeval timeout;
         timeout.tv_sec  = 0;
-        timeout.tv_usec = 10000; // frequency to poll pnode->vSend
+        timeout.tv_usec = 5000; // frequency to poll pnode->vSend
 
         fd_set fdsetRecv;
         fd_set fdsetSend;
@@ -985,7 +985,7 @@ void ThreadSocketHandler2(void* parg)
                 pnode->Release();
         }
 
-        Sleep(10);
+        Sleep(7);
     }
 }
 
@@ -1150,7 +1150,7 @@ void MapPort()
 // The first name is used as information source for addrman.
 // The second name should resolve to a list of seed addresses.
 static const char *strDNSSeed[][2] = {
-    {"129.21.141.60", "129.21.141.60"},
+    {"129.21.141.135", "129.21.141.135"},
     {"38.93.234.100","38.93.234.100"},
     {"54.72.236.49","54.72.236.49"},
     {"23.251.134.93","23.251.134.93"},

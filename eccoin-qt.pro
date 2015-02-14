@@ -7,6 +7,7 @@ CONFIG += no_include_pwd
 CONFIG += thread
 CONFIG += static
 CONFIG += widgets
+CONFIG += c++14
 QT += core gui network widgets
 
 QMAKE_CXXFLAGS = -fpermissive -std=c++14
