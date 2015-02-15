@@ -17,12 +17,12 @@
 #include <boost/interprocess/sync/file_lock.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <openssl/crypto.h>
-#include <windows.h>
-#include <tchar.h>
-#include <urlmon.h>
+//#include <windows.h>
+//#include <tchar.h>
+//#include <urlmon.h>
 #include <string>
 #include <iostream>
-#pragma comment(lib, "urlmon.lib")
+//#pragma comment(lib, "urlmon.lib")
 
 #ifndef WIN32
 #include <signal.h>

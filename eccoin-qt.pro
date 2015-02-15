@@ -10,7 +10,7 @@ CONFIG += widgets
 CONFIG += c++14
 QT += core gui network widgets
 
-QMAKE_CXXFLAGS = -fpermissive -std=c++14
+QMAKE_CXXFLAGS = -fpermissive
 
 greaterThan(QT_MAJOR_VERSION, 4) {
     QT += widgets
