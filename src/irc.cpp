@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
+// CopyRight (c) 2014-2015 Griffith and the TrustedCryptos Team
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -315,7 +316,7 @@ void ThreadIRCSeed2(void* parg)
         if (!fNoListen && GetLocal(addrLocal, &addrIPv4) && nNameRetry<3)
             strMyName = EncodeAddress(GetLocalAddress(&addrConnect));
         if (strMyName == "")
-            strMyName = strprintf("x%"PRI64u"", GetRand(1000000000));
+            strMyName = strprintf("x%"PRIu64"", GetRand(1000000000));
 
         Send(hSocket, strprintf("NICK %s\r", strMyName.c_str()).c_str());
         Send(hSocket, strprintf("USER %s 8 * : %s\r", strMyName.c_str(), strMyName.c_str()).c_str());
@@ -364,12 +365,12 @@ void ThreadIRCSeed2(void* parg)
             // int channel_number = GetRandInt(5);
 
             // Channel number is always 0 for initial release
-			int channel_number = 2000;
+            int channel_number = 2000;
             Send(hSocket, strprintf("JOIN #ECCoin%02d\r", channel_number).c_str());
             Send(hSocket, strprintf("WHO #ECCoin%02d\r", channel_number).c_str());
         }
 
-        int64 nStart = GetTime();
+        int64_t nStart = GetTime();
         string strLine;
         strLine.reserve(10000);
         while (!fShutdown && RecvLineIRC(hSocket, strLine))

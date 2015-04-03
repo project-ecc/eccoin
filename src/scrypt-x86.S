@@ -22,7 +22,11 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 
-#if defined(__i386__)
+#if defined(OPTIMIZED_SALSA) &&  defined(__i386__)
+
+#if defined(__linux__) && defined(__ELF__)
+.section .note.GNU-stack,"",%progbits
+#endif
 
 #define gen_salsa8_core_quadround() \
 	movl	52(%esp), %ecx; \

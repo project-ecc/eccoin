@@ -5,7 +5,6 @@
  * The Bitcoin Developers 2011-2012
  */
 #include "bitcoingui.h"
-#include "blockbrowser.h"
 #include "transactiontablemodel.h"
 #include "addressbookpage.h"
 #include "sendcoinsdialog.h"
@@ -24,11 +23,9 @@
 #include "guiconstants.h"
 #include "askpassphrasedialog.h"
 #include "notificator.h"
-#include "blockbrowser.h"
-#include "chatwindow.h"
 #include "guiutil.h"
 #include "rpcconsole.h"
-#include "trading1.h"
+#include "wallet.h"
 
 #ifdef Q_OS_MAC
 #include "macdockiconhandler.h"
@@ -58,9 +55,12 @@
 #include <QDragEnterEvent>
 #include <QUrl>
 #include <QStyle>
-//#include <QWidget>
+#include <QWidget>
+#include <QMimeData>
 
 #include <iostream>
+
+
 
 BitcoinGUI::BitcoinGUI(QWidget *parent):
     QMainWindow(parent),
@@ -124,9 +124,6 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     receiveCoinsPage = new AddressBookPage(AddressBookPage::ForEditing, AddressBookPage::ReceivingTab);
 
     sendCoinsPage = new SendCoinsDialog(this);
-	blockBrowser = new BlockBrowser();
-    chatWindow = new ChatWindow(this);
-    //tradingWindow = new TradingWindow();
     signVerifyMessageDialog = new SignVerifyMessageDialog(this);
 
     centralWidget = new QStackedWidget(this);
@@ -135,9 +132,6 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
     centralWidget->addWidget(addressBookPage);
     centralWidget->addWidget(receiveCoinsPage);
     centralWidget->addWidget(sendCoinsPage);
-	centralWidget->addWidget(blockBrowser);
-    // centralWidget->addWidget(tradingWindow);
-    centralWidget->addWidget(chatWindow);
     setCentralWidget(centralWidget);
 
     // Create status bar
@@ -246,29 +240,8 @@ void BitcoinGUI::createActions()
     addressBookAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_5));
     tabGroup->addAction(addressBookAction);
 
-	chatAction = new QAction(QIcon(":/icons/social"), tr("&Social Networks "), this);
-    chatAction->setToolTip(tr("View chat"));
-    chatAction->setCheckable(true);
-    chatAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_6));
-    tabGroup->addAction(chatAction);
-
-    blockAction = new QAction(QIcon(":/icons/block"), tr("&Block Explorer"), this);
-    blockAction->setToolTip(tr("Explore the ECCoin Blockchain"));
-    blockAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_7));
-    blockAction->setCheckable(true);
-    tabGroup->addAction(blockAction);
-
-    //tradingAction = new QAction(QIcon(":/icons/trade1"), tr("&Trading"), this);
-    // tradingAction->setToolTip(tr("Trade from your wallet"));
-    //tradingAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_8));
-    //tradingAction->setCheckable(true);
-    // tabGroup->addAction(tradingAction);
-
-
     connect(overviewAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(overviewAction, SIGNAL(triggered()), this, SLOT(gotoOverviewPage()));
-	connect(blockAction, SIGNAL(triggered()), this, SLOT(gotoBlockBrowser()));
-    //connect(tradingAction, SIGNAL(triggered()), this, SLOT(gotoTradingWindow()));
     connect(sendCoinsAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(sendCoinsAction, SIGNAL(triggered()), this, SLOT(gotoSendCoinsPage()));
     connect(receiveCoinsAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
@@ -295,8 +268,6 @@ void BitcoinGUI::createActions()
     encryptWalletAction = new QAction(QIcon(":/icons/lock_closed"), tr("&Encrypt Wallet..."), this);
     encryptWalletAction->setToolTip(tr("Encrypt or decrypt wallet"));
     encryptWalletAction->setCheckable(true);
-    backupWalletAction = new QAction(QIcon(":/icons/filesave"), tr("&Backup Wallet..."), this);
-    backupWalletAction->setToolTip(tr("Backup wallet to another location"));
     changePassphraseAction = new QAction(QIcon(":/icons/key"), tr("&Change Passphrase..."), this);
     changePassphraseAction->setToolTip(tr("Change the passphrase used for wallet encryption"));
     unlockWalletAction = new QAction(QIcon(":/icons/lock_open"), tr("&Unlock Wallet..."), this);
@@ -317,14 +288,11 @@ void BitcoinGUI::createActions()
     connect(optionsAction, SIGNAL(triggered()), this, SLOT(optionsClicked()));
     connect(toggleHideAction, SIGNAL(triggered()), this, SLOT(toggleHidden()));
     connect(encryptWalletAction, SIGNAL(triggered(bool)), this, SLOT(encryptWallet(bool)));
-    connect(backupWalletAction, SIGNAL(triggered()), this, SLOT(backupWallet()));
     connect(changePassphraseAction, SIGNAL(triggered()), this, SLOT(changePassphrase()));
     connect(unlockWalletAction, SIGNAL(triggered()), this, SLOT(unlockWallet()));
     connect(lockWalletAction, SIGNAL(triggered()), this, SLOT(lockWallet()));
     connect(signMessageAction, SIGNAL(triggered()), this, SLOT(gotoSignMessageTab()));
     connect(verifyMessageAction, SIGNAL(triggered()), this, SLOT(gotoVerifyMessageTab()));
-	connect(chatAction, SIGNAL(triggered()), this, SLOT(gotoChatPage()));
-
 }
 
 void BitcoinGUI::createMenuBar()
@@ -339,7 +307,6 @@ void BitcoinGUI::createMenuBar()
 
     // Configure the menus
     QMenu *file = appMenuBar->addMenu(tr("&File"));
-    file->addAction(backupWalletAction);
     file->addAction(exportAction);
     file->addAction(signMessageAction);
     file->addAction(verifyMessageAction);
@@ -373,9 +340,6 @@ void BitcoinGUI::createToolBars()
     toolbar->addAction(receiveCoinsAction);
     toolbar->addAction(historyAction);
     toolbar->addAction(addressBookAction);
-    //toolbar->addAction(tradingAction);
-    toolbar->addAction(chatAction);
-    toolbar->addAction(blockAction);
 
     QToolBar *toolbar2 = addToolBar(tr("Actions toolbar"));
     toolbar2->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
@@ -401,9 +365,6 @@ void BitcoinGUI::createToolBars2()
     toolbar->addAction(receiveCoinsAction);
     toolbar->addAction(historyAction);
     toolbar->addAction(addressBookAction);
-    toolbar->addAction(blockAction);
-    toolbar->addAction(chatAction);
-    //toolbar->addAction(tradingAction);
     toolbar->addAction(optionsAction);
 
     QWidget* spacer = new QWidget();
@@ -503,7 +464,6 @@ void BitcoinGUI::setWalletModel(WalletModel *walletModel)
         receiveCoinsPage->setModel(walletModel->getAddressTableModel());
         sendCoinsPage->setModel(walletModel);
         signVerifyMessageDialog->setModel(walletModel);
-		blockBrowser->setModel(clientModel);
 
         setEncryptionStatus(walletModel->getEncryptionStatus());
         connect(walletModel, SIGNAL(encryptionStatusChanged(int)), this, SLOT(setEncryptionStatus(int)));
@@ -805,33 +765,6 @@ void BitcoinGUI::gotoOverviewPage()
     disconnect(exportAction, SIGNAL(triggered()), 0, 0);
 }
 
-void BitcoinGUI::gotoBlockBrowser()
-{
-    blockAction->setChecked(true);
-    centralWidget->setCurrentWidget(blockBrowser);
-
-    exportAction->setEnabled(false);
-    disconnect(exportAction, SIGNAL(triggered()), 0, 0);
-}
-
-void BitcoinGUI::gotoChatPage()
-{
-    chatAction->setChecked(true);
-    centralWidget->setCurrentWidget(chatWindow);
-    exportAction->setVisible(false);
-        exportAction->setEnabled(false);
-        disconnect(exportAction, SIGNAL(triggered()), 0, 0);
-}
-
-//void BitcoinGUI::gotoTradingWindow()
-//{
-//      tradingAction->setChecked(true);
-//      centralWidget->setCurrentWidget(tradingWindow);
-//     exportAction->setEnabled(false);
-//      disconnect(exportAction, SIGNAL(triggered()), 0, 0);
-//  }
-
-
 void BitcoinGUI::gotoHistoryPage()
 {
     historyAction->setChecked(true);
@@ -975,17 +908,6 @@ void BitcoinGUI::encryptWallet(bool status)
     dlg.exec();
 
     setEncryptionStatus(walletModel->getEncryptionStatus());
-}
-
-void BitcoinGUI::backupWallet()
-{
-    QString saveDir = QDesktopServices::storageLocation(QDesktopServices::DocumentsLocation);
-    QString filename = QFileDialog::getSaveFileName(this, tr("Backup Wallet"), saveDir, tr("Wallet Data (*.dat)"));
-    if(!filename.isEmpty()) {
-        if(!walletModel->backupWallet(filename)) {
-            QMessageBox::warning(this, tr("Backup Failed"), tr("There was an error trying to save the wallet data to the new location."));
-        }
-    }
 }
 
 void BitcoinGUI::changePassphrase()

@@ -7,57 +7,22 @@
 
 #include "checkpoints.h"
 
-#include "db.h"
+#include "txdb-leveldb.h"
 #include "main.h"
 #include "uint256.h"
 
 namespace Checkpoints
 {
-    typedef std::map<int, uint256> MapCheckpoints;
 
-    //
-    // What makes a good checkpoint block?
-    // + Is surrounded by blocks with reasonable timestamps
-    //   (no blocks before with a timestamp after, none after with
-    //    timestamp before)
-    // + Contains no strange transactions
-    //
 
-    static MapCheckpoints mapCheckpoints =
-        boost::assign::map_list_of
-    (     0, hashGenesisBlockOfficial )
-    (  1000, uint256("0x000000000df3f7a5f719c247782d7a43d75186ebc043341e2668320f9d940bcd"))
-    ( 10000, uint256("0x00000000076d45a9579c879d46354dd81eeba7060a9a065e13c9dd1c28f474d1"))
-    ( 50000, uint256("0x0000000001c770384cd12a74eb5456358425fc6a94a250c3466aaa2ca7460131"))
-    ( 86401, uint256("0x51bb1ac3ffd009c12791b9d4320dec0ba69e15c8b6d03d17889b0c09fb5b05a4"))
-    ( 86901, uint256("0xe769d38b7e140267b688f9d9cc6b58d38185427facb6a1aa719db60a0d54f3f7"))
-	( 87000, uint256("0xbb069ba59aa5a6acc68413ef7c2d0c009b061daf160edf958738d197a059f11d"))
-    ( 87101, uint256("0x1ffbfd2a70e626d5f848775851e6f89bee6f2225ed78131b16f9547449d2e2ee"))
-	( 96500, uint256("0x13f0755045a3ae90d33c4bcf6ba1581025fc6e0caf46f7624063cb59dcc3d27c"))
-    (100000, uint256("0x28a483386650a188c3346fd5e329e2c8cc137cf3557547e8525f5cdea601501a"))
-	(136500, uint256("0x7e4ec82a165762e8a324038ef1cdd0b83e603f4737ae6f9e5967b13b8b6ace5c"))
-    (150000, uint256("0xfee6d00910e8d0aa2f0ca8a447b4de366a12f9df2521f77c5a97a5ae0af8834e"))
-    (185000, uint256("0xce904504a0df58944c6a633b739abcec3bbb256b510a616b465c24525d564828"))
-    (197712, uint256("0x7576d0f370b1efdce01075a9491fb8d2f98af485f78d170196270f1eb156ee40"))
-	(200000, uint256("0x1f1ea51aee8a7456655e31857c7cd4a9f494556438485abd4c60d86cacf24b44"))
-	(205000, uint256("0x9e4528bc818bb1ee2cdf44ba7805e88b4fc85bbf496516f35d4d642c6812503e"))
-	(209762, uint256("0x49448f382f9ec8f126542244573e7349c7b07db0cbdc2ab8326942cbfff603b3"))
-	(209786, uint256("0x28558eedf7f5c049e9f2ea61da270fffc5b50310aafb29c7595840784e8b1d61"))
-	(215650, uint256("0xd7fb37df6be4bf2c5c9ea47ba4a14f9af35c326cd225122b03f61b74d1283d09"))
-    (215690, uint256("0x8af4d5450c238460a4775b19c94872eaf5664657f702bef53576bc9f77af319d"))
-	(220504, uint256("0x5781d160a46a6631a21e62a9a67932d0f9b8636c8f5241973b076db3854de405"))
-	(221000, uint256("0x51cd22cde58a3738e851f155a282b4624d3e18e84fbcb02de5006029dec8f7e3"))
-	(233855, uint256("0x77c1312f0b4ba0fc34cb7a0f3472012739bbd22c317add69edaa4908e83b00eb"))
-	(236850, uint256("0x139203f72c943433880c4f8d3581a4cb7ee0877f341639cd4c7810edc7fc7d80"))
-	(237000, uint256("0x70fdb4f39e571afff137c7bd40c4df98ccab32cec1d305074bac9fca30754bc0"))
-	(241130, uint256("0xdd900777cb9e2ea2cae0bf410ce2f2484a415c7bf7af59d9492868195583e3b2"))
-	(242150, uint256("0xba96de8da95ac53cedc7fd0cd3c17b32f5d3a04f33a544060606c095b28bf4c1"))
-		;
+// ppcoin: synchronized checkpoint (centrally broadcasted)
+uint256 hashSyncCheckpoint = 0;
+uint256 hashPendingCheckpoint = 0;
+CSyncCheckpoint checkpointMessage;
+CSyncCheckpoint checkpointMessagePending;
+uint256 hashInvalidCheckpoint = 0;
+CCriticalSection cs_hashSyncCheckpoint;
 
-    static MapCheckpoints mapCheckpointsTestnet =
-        boost::assign::map_list_of
-        ( 0, hashGenesisBlockTestNet )
-        ;
 
     bool CheckHardened(int nHeight, const uint256& hash)
     {
@@ -89,13 +54,7 @@ namespace Checkpoints
         return NULL;
     }
 
-    // ppcoin: synchronized checkpoint (centrally broadcasted)
-    uint256 hashSyncCheckpoint = 0;
-    uint256 hashPendingCheckpoint = 0;
-    CSyncCheckpoint checkpointMessage;
-    CSyncCheckpoint checkpointMessagePending;
-    uint256 hashInvalidCheckpoint = 0;
-    CCriticalSection cs_hashSyncCheckpoint;
+
 
     // ppcoin: get last synchronized checkpoint
     CBlockIndex* GetLastSyncCheckpoint()
@@ -127,7 +86,7 @@ namespace Checkpoints
             CBlockIndex* pindex = pindexSyncCheckpoint;
             while (pindex->nHeight > pindexCheckpointRecv->nHeight)
                 if (!(pindex = pindex->pprev))
-                    return error("ValidateSyncCheckpoint: pprev1 null - block index structure failure");
+                    return error("ValidateSyncCheckpoint: pprev null - block index structure failure");
             if (pindex->GetBlockHash() != hashCheckpoint)
             {
                 hashInvalidCheckpoint = hashCheckpoint;
@@ -162,7 +121,6 @@ namespace Checkpoints
         }
         if (!txdb.TxnCommit())
             return error("WriteSyncCheckpoint(): failed to commit to db sync checkpoint %s", hashCheckpoint.ToString().c_str());
-        txdb.Close();
 
         Checkpoints::hashSyncCheckpoint = hashCheckpoint;
         return true;
@@ -193,7 +151,6 @@ namespace Checkpoints
                     return error("AcceptPendingSyncCheckpoint: SetBestChain failed for sync checkpoint %s", hashPendingCheckpoint.ToString().c_str());
                 }
             }
-            txdb.Close();
 
             if (!WriteSyncCheckpoint(hashPendingCheckpoint))
                 return error("AcceptPendingSyncCheckpoint(): failed to write sync checkpoint %s", hashPendingCheckpoint.ToString().c_str());
@@ -215,14 +172,10 @@ namespace Checkpoints
     // Automatically select a suitable sync-checkpoint 
     uint256 AutoSelectSyncCheckpoint()
     {
-        // Proof-of-work blocks are immediately checkpointed
-        // to defend against 51% attack which rejects other miners block 
-
-        // Select the last proof-of-work block
-        const CBlockIndex *pindex = GetLastBlockIndex(pindexBest, false);
-        // Search forward for a block within max span and maturity window
-        while (pindex->pnext && (pindex->GetBlockTime() + CHECKPOINT_MAX_SPAN <= pindexBest->GetBlockTime() || pindex->nHeight + std::min(6, nCoinbaseMaturity - 20) <= pindexBest->nHeight))
-            pindex = pindex->pnext;
+        const CBlockIndex *pindex = pindexBest;
+        // Search backward for a block within max span and maturity window
+        while (pindex->pprev && (pindex->GetBlockTime() + CHECKPOINT_MAX_SPAN > pindexBest->GetBlockTime() || pindex->nHeight + 8 > pindexBest->nHeight))
+            pindex = pindex->pprev;
         return pindex->GetBlockHash();
     }
 
@@ -272,6 +225,7 @@ namespace Checkpoints
     {
         LOCK(cs_hashSyncCheckpoint);
         const uint256& hash = mapCheckpoints.rbegin()->second;
+        printf("mapCheckpoints.rbegin()-.second = %s \n",hash.ToString().c_str());
         if (mapBlockIndex.count(hash) && !mapBlockIndex[hash]->IsInMainChain())
         {
             // checkpoint block accepted but not yet in main chain
@@ -284,7 +238,6 @@ namespace Checkpoints
             {
                 return error("ResetSyncCheckpoint: SetBestChain failed for hardened checkpoint %s", hash.ToString().c_str());
             }
-            txdb.Close();
         }
         else if(!mapBlockIndex.count(hash))
         {
@@ -377,16 +330,6 @@ namespace Checkpoints
         return (nBestHeight >= pindexSync->nHeight + nCoinbaseMaturity ||
                 pindexSync->GetBlockTime() + nStakeMinAge < GetAdjustedTime());
     }
-
-    // Is the sync-checkpoint too old?
-    bool IsSyncCheckpointTooOld(unsigned int nSeconds)
-    {
-        LOCK(cs_hashSyncCheckpoint);
-        // sync-checkpoint should always be accepted block
-        assert(mapBlockIndex.count(hashSyncCheckpoint));
-        const CBlockIndex* pindexSync = mapBlockIndex[hashSyncCheckpoint];
-        return (pindexSync->GetBlockTime() + nSeconds < GetAdjustedTime());
-    }
 }
 
 // ppcoin: sync-checkpoint master key
@@ -450,7 +393,6 @@ bool CSyncCheckpoint::ProcessSyncCheckpoint(CNode* pfrom)
             return error("ProcessSyncCheckpoint: SetBestChain failed for sync checkpoint %s", hashCheckpoint.ToString().c_str());
         }
     }
-    txdb.Close();
 
     if (!Checkpoints::WriteSyncCheckpoint(hashCheckpoint))
         return error("ProcessSyncCheckpoint(): failed to write sync checkpoint %s", hashCheckpoint.ToString().c_str());

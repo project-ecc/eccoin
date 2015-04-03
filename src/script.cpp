@@ -2,8 +2,10 @@
 // Copyright (c) 2009-2012 The Bitcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
+#include <boost/tuple/tuple_comparison.hpp>
 
 using namespace std;
 using namespace boost;
@@ -248,6 +250,74 @@ const char* GetOpName(opcodetype opcode)
     default:
         return "OP_UNKNOWN";
     }
+}
+
+static bool IsCanonicalPubKey(const valtype &vchPubKey) {
+    if (vchPubKey.size() < 33)
+        return error("Non-canonical public key: too short");
+    if (vchPubKey[0] == 0x04) {
+        if (vchPubKey.size() != 65)
+            return error("Non-canonical public key: invalid length for uncompressed key");
+    } else if (vchPubKey[0] == 0x02 || vchPubKey[0] == 0x03) {
+        if (vchPubKey.size() != 33)
+            return error("Non-canonical public key: invalid length for compressed key");
+    } else {
+        return error("Non-canonical public key: compressed nor uncompressed");
+    }
+    return true;
+}
+
+static bool IsCanonicalSignature(const valtype &vchSig) {
+    // See https://bitcointalk.org/index.php?topic=8392.msg127623#msg127623
+    // A canonical signature exists of: <30> <total len> <02> <len R> <R> <02> <len S> <S> <hashtype>
+    // Where R and S are not negative (their first byte has its highest bit not set), and not
+    // excessively padded (do not start with a 0 byte, unless an otherwise negative number follows,
+    // in which case a single 0 byte is necessary and even required).
+    if (vchSig.size() < 9)
+        return error("Non-canonical signature: too short");
+    if (vchSig.size() > 73)
+        return error("Non-canonical signature: too long");
+    unsigned char nHashType = vchSig[vchSig.size() - 1] & (~(SIGHASH_ANYONECANPAY));
+    if (nHashType < SIGHASH_ALL || nHashType > SIGHASH_SINGLE)
+        return error("Non-canonical signature: unknown hashtype byte");
+    if (vchSig[0] != 0x30)
+        return error("Non-canonical signature: wrong type");
+    if (vchSig[1] != vchSig.size()-3)
+        return error("Non-canonical signature: wrong length marker");
+    unsigned int nLenR = vchSig[3];
+    if (5 + nLenR >= vchSig.size())
+        return error("Non-canonical signature: S length misplaced");
+    unsigned int nLenS = vchSig[5+nLenR];
+    if ((unsigned long)(nLenR+nLenS+7) != vchSig.size())
+        return error("Non-canonical signature: R+S length mismatch");
+
+    const unsigned char *R = &vchSig[4];
+    if (R[-2] != 0x02)
+        return error("Non-canonical signature: R value type mismatch");
+    if (nLenR == 0)
+        return error("Non-canonical signature: R length is zero");
+    if (R[0] & 0x80)
+        return error("Non-canonical signature: R value negative");
+    if (nLenR > 1 && (R[0] == 0x00) && !(R[1] & 0x80))
+        return error("Non-canonical signature: R value excessively padded");
+
+    const unsigned char *S = &vchSig[6+nLenR];
+    if (S[-2] != 0x02)
+        return error("Non-canonical signature: S value type mismatch");
+    if (nLenS == 0)
+        return error("Non-canonical signature: S length is zero");
+    if (S[0] & 0x80)
+        return error("Non-canonical signature: S value negative");
+    if (nLenS > 1 && (S[0] == 0x00) && !(S[1] & 0x80))
+        return error("Non-canonical signature: S value excessively padded");
+
+    // If the above rules hold, and the S data is 33 bytes (or more), then
+    // the S value is above 2^255, which isn't necessary (its negative
+    // modulo the order of the curve could have been used).
+    if (nLenS > 32)
+        return error("Non-canonical signature: S value is unnecessarily high");
+
+    return true;
 }
 
 bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, const CTransaction& txTo, unsigned int nIn, int nHashType)
@@ -940,8 +1010,9 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co
 
                     // Drop the signature, since there's no way for a signature to sign itself
                     scriptCode.FindAndDelete(CScript(vchSig));
+                    bool fSuccess;
 
-                    bool fSuccess = CheckSig(vchSig, vchPubKey, scriptCode, txTo, nIn, nHashType);
+                    fSuccess = CheckSig(vchSig, vchPubKey, scriptCode, txTo, nIn, nHashType);
 
                     popstack(stack);
                     popstack(stack);
@@ -1001,7 +1072,11 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co
                         valtype& vchPubKey = stacktop(-ikey);
 
                         // Check signature
-                        if (CheckSig(vchSig, vchPubKey, scriptCode, txTo, nIn, nHashType))
+                        bool fOk;
+
+                        fOk = CheckSig(vchSig, vchPubKey, scriptCode, txTo, nIn, nHashType);
+
+                        if (fOk)
                         {
                             isig++;
                             nSigsCount--;
@@ -1152,12 +1227,12 @@ public:
         // (~200 bytes per cache entry times 50,000 entries)
         // Since there are a maximum of 20,000 signature operations per block
         // 50,000 is a reasonable default.
-        int64 nMaxCacheSize = GetArg("-maxsigcachesize", 50000);
+        int64_t nMaxCacheSize = GetArg("-maxsigcachesize", 50000);
         if (nMaxCacheSize <= 0) return;
 
         LOCK(cs_sigcache);
 
-        while (static_cast<int64>(setValid.size()) > nMaxCacheSize)
+        while (static_cast<int64_t>(setValid.size()) > nMaxCacheSize)
         {
             // Evict a random entry. Random because that helps
             // foil would-be DoS attackers who might try to pre-generate
@@ -1257,7 +1332,7 @@ bool Solver(const CScript& scriptPubKey, txnouttype& typeRet, vector<vector<unsi
         // Compare
         CScript::const_iterator pc1 = script1.begin();
         CScript::const_iterator pc2 = script2.begin();
-        while(true)
+        while (true)
         {
             if (pc1 == script1.end() && pc2 == script2.end())
             {
@@ -1539,6 +1614,43 @@ bool ExtractDestination(const CScript& scriptPubKey, CTxDestination& addressRet)
     return false;
 }
 
+class CAffectedKeysVisitor : public boost::static_visitor<void> {
+private:
+    const CKeyStore &keystore;
+    std::vector<CKeyID> &vKeys;
+
+public:
+    CAffectedKeysVisitor(const CKeyStore &keystoreIn, std::vector<CKeyID> &vKeysIn) : keystore(keystoreIn), vKeys(vKeysIn) {}
+
+    void Process(const CScript &script) {
+        txnouttype type;
+        std::vector<CTxDestination> vDest;
+        int nRequired;
+        if (ExtractDestinations(script, type, vDest, nRequired)) {
+            BOOST_FOREACH(const CTxDestination &dest, vDest)
+                boost::apply_visitor(*this, dest);
+        }
+    }
+
+    void operator()(const CKeyID &keyId) {
+        if (keystore.HaveKey(keyId))
+            vKeys.push_back(keyId);
+    }
+
+    void operator()(const CScriptID &scriptId) {
+        CScript script;
+        if (keystore.GetCScript(scriptId, script))
+            Process(script);
+    }
+
+    void operator()(const CNoDestination &none) {}
+};
+
+
+void ExtractAffectedKeys(const CKeyStore &keystore, const CScript& scriptPubKey, std::vector<CKeyID> &vKeys) {
+    CAffectedKeysVisitor(keystore, vKeys).Process(scriptPubKey);
+}
+
 bool ExtractDestinations(const CScript& scriptPubKey, txnouttype& typeRet, vector<CTxDestination>& addressRet, int& nRequiredRet)
 {
     addressRet.clear();
@@ -1569,13 +1681,14 @@ bool ExtractDestinations(const CScript& scriptPubKey, txnouttype& typeRet, vecto
 }
 
 bool VerifyScript(const CScript& scriptSig, const CScript& scriptPubKey, const CTransaction& txTo, unsigned int nIn,
-                  bool fValidatePayToScriptHash, int nHashType)
+                  int nHashType)
 {
     vector<vector<unsigned char> > stack, stackCopy;
     if (!EvalScript(stack, scriptSig, txTo, nIn, nHashType))
         return false;
-    if (fValidatePayToScriptHash)
-        stackCopy = stack;
+
+    stackCopy = stack;
+
     if (!EvalScript(stack, scriptPubKey, txTo, nIn, nHashType))
         return false;
     if (stack.empty())
@@ -1585,7 +1698,7 @@ bool VerifyScript(const CScript& scriptSig, const CScript& scriptPubKey, const C
         return false;
 
     // Additional validation for spend-to-script-hash transactions:
-    if (fValidatePayToScriptHash && scriptPubKey.IsPayToScriptHash())
+    if (scriptPubKey.IsPayToScriptHash())
     {
         if (!scriptSig.IsPushOnly()) // scriptSig must be literals-only
             return false;            // or validation fails
@@ -1637,7 +1750,7 @@ bool SignSignature(const CKeyStore &keystore, const CScript& fromPubKey, CTransa
     }
 
     // Test solution
-    return VerifyScript(txin.scriptSig, fromPubKey, txTo, nIn, true, 0);
+    return VerifyScript(txin.scriptSig, fromPubKey, txTo, nIn, 0);
 }
 
 bool SignSignature(const CKeyStore &keystore, const CTransaction& txFrom, CTransaction& txTo, unsigned int nIn, int nHashType)
@@ -1651,7 +1764,7 @@ bool SignSignature(const CKeyStore &keystore, const CTransaction& txFrom, CTrans
     return SignSignature(keystore, txout.scriptPubKey, txTo, nIn, nHashType);
 }
 
-bool VerifySignature(const CTransaction& txFrom, const CTransaction& txTo, unsigned int nIn, bool fValidatePayToScriptHash, int nHashType)
+bool VerifySignature(const CTransaction& txFrom, const CTransaction& txTo, unsigned int nIn, int nHashType)
 {
     assert(nIn < txTo.vin.size());
     const CTxIn& txin = txTo.vin[nIn];
@@ -1662,7 +1775,7 @@ bool VerifySignature(const CTransaction& txFrom, const CTransaction& txTo, unsig
     if (txin.prevout.hash != txFrom.GetHash())
         return false;
 
-    return VerifyScript(txin.scriptSig, txout.scriptPubKey, txTo, nIn, fValidatePayToScriptHash, nHashType);
+    return VerifyScript(txin.scriptSig, txout.scriptPubKey, txTo, nIn, nHashType);
 }
 
 static CScript PushAll(const vector<valtype>& values)
@@ -1842,6 +1955,33 @@ bool CScript::IsPayToScriptHash() const
             this->at(0) == OP_HASH160 &&
             this->at(1) == 0x14 &&
             this->at(22) == OP_EQUAL);
+}
+
+bool CScript::HasCanonicalPushes() const
+{
+    const_iterator pc = begin();
+    while (pc < end())
+    {
+        opcodetype opcode;
+        std::vector<unsigned char> data;
+        if (!GetOp(pc, opcode, data))
+            return false;
+        if (opcode > OP_16)
+            continue;
+        if (opcode < OP_PUSHDATA1 && opcode > OP_0 && (data.size() == 1 && data[0] <= 16))
+            // Could have used an OP_n code, rather than a 1-byte push.
+            return false;
+        if (opcode == OP_PUSHDATA1 && data.size() < OP_PUSHDATA1)
+            // Could have used a normal n-byte push, rather than OP_PUSHDATA1.
+            return false;
+        if (opcode == OP_PUSHDATA2 && data.size() <= 0xFF)
+            // Could have used an OP_PUSHDATA1.
+            return false;
+        if (opcode == OP_PUSHDATA4 && data.size() <= 0xFFFF)
+            // Could have used an OP_PUSHDATA2.
+            return false;
+    }
+    return true;
 }
 
 class CScriptVisitor : public boost::static_visitor<bool>

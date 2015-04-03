@@ -1,16 +1,15 @@
-/*
- * W.J. van der Laan 2011-2012
- */
+
+// W.J. van der Laan 2011-2012
+
 #include "bitcoingui.h"
 #include "clientmodel.h"
-#include "walletmodel.h"
-#include "optionsmodel.h"
-#include "guiutil.h"
 #include "guiconstants.h"
-
-#include "init.h"
-#include "ui_interface.h"
+#include "guiutil.h"
+#include "optionsmodel.h"
 #include "qtipcserver.h"
+#include "txdb-leveldb.h"
+#include "ui_interface.h"
+#include "walletmodel.h"
 
 #include <QApplication>
 #include <QMessageBox>
@@ -19,6 +18,15 @@
 #include <QTranslator>
 #include <QSplashScreen>
 #include <QLibraryInfo>
+
+#include <thread>
+
+
+extern bool AppInit2();
+extern void StartShutdown();
+extern void Shutdown(void* parg);
+extern CWallet* pwalletMain;
+
 
 #if defined(BITCOIN_NEED_QT_PLUGINS) && !defined(_BITCOIN_QT_PLUGINS_INCLUDED)
 #define _BITCOIN_QT_PLUGINS_INCLUDED
@@ -57,7 +65,7 @@ static void ThreadSafeMessageBox(const std::string& message, const std::string& 
     }
 }
 
-static bool ThreadSafeAskFee(int64 nFeeRequired, const std::string& strCaption)
+static bool ThreadSafeAskFee(int64_t nFeeRequired, const std::string& strCaption)
 {
     if(!guiref)
         return false;
@@ -249,11 +257,11 @@ int main(int argc, char *argv[])
                 ipcInit(argc, argv);
 
                 app.exec();
-
                 window.hide();
                 window.setClientModel(0);
                 window.setWalletModel(0);
                 guiref = 0;
+
             }
             // Shutdown the core and its threads, but don't exit Bitcoin-Qt here
             Shutdown(NULL);
@@ -267,6 +275,7 @@ int main(int argc, char *argv[])
     } catch (...) {
         handleRunawayException(NULL);
     }
+
     return 0;
 }
 #endif // BITCOIN_QT_TEST

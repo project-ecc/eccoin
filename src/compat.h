@@ -23,9 +23,13 @@
 #include <net/if.h>
 #include <netinet/in.h>
 #include <ifaddrs.h>
+
+#ifndef _MSC_VER
+typedef u_int SOCKET;
+#endif
 #endif
 
-typedef u_int SOCKET;
+
 #ifdef WIN32
 #define MSG_NOSIGNAL        0
 #define MSG_DONTWAIT        0

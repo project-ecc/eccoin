@@ -4,7 +4,6 @@
 #include "addressbookpage.h"
 #include "base58.h"
 #include "guiutil.h"
-#include "init.h"
 #include "main.h"
 #include "optionsmodel.h"
 #include "walletmodel.h"
@@ -14,6 +13,8 @@
 #include <vector>
 
 #include <QClipboard>
+
+extern CWallet* pwalletMain;
 
 SignVerifyMessageDialog::SignVerifyMessageDialog(QWidget *parent) :
     QDialog(parent),

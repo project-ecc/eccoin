@@ -12,8 +12,6 @@ DEFS=-DBOOST_SPIRIT_THREADSAFE
 DEFS += $(addprefix -I,$(CURDIR) $(CURDIR)/obj $(BOOST_INCLUDE_PATH) $(BDB_INCLUDE_PATH) $(OPENSSL_INCLUDE_PATH))
 LIBS = $(addprefix -L,$(BOOST_LIB_PATH) $(BDB_LIB_PATH) $(OPENSSL_LIB_PATH))
 
-TESTDEFS = -DTEST_DATA_DIR=$(abspath test/data)
-
 LMODE = dynamic
 LMODE2 = dynamic
 ifdef STATIC
@@ -21,8 +19,6 @@ ifdef STATIC
 	ifeq (${STATIC}, all)
 		LMODE2 = static
 	endif
-else
-	TESTDEFS += -DBOOST_TEST_DYN_LINK
 endif
 
 # for boost 1.37, add -mt to the boost libraries
@@ -94,7 +90,7 @@ DEBUGFLAGS=-g
 
 # CXXFLAGS can be specified on the make command line, so we use xCXXFLAGS that only
 # adds some defaults in front. Unfortunately, CXXFLAGS=... $(CXXFLAGS) does not work.
-xCXXFLAGS=-O0 -msse2 -pthread -Wall -Wextra -Wformat -Wformat-security -Wno-unused-parameter \
+xCXXFLAGS=-O0 -msse2 -pthread -Wall -Wextra -Wno-ignored-qualifiers -Wformat -Wformat-security -Wno-unused-parameter \
     $(DEBUGFLAGS) $(DEFS) $(HARDENING) $(CXXFLAGS)
 
 # LDFLAGS can be specified on the make command line, so we use xLDFLAGS that only
@@ -111,8 +107,10 @@ OBJS= \
     obj/key.o \
     obj/db.o \
     obj/init.o \
+    obj/irc.o \
     obj/keystore.o \
     obj/main.o \
+    obj/miner.o \
     obj/net.o \
     obj/protocol.o \
     obj/bitcoinrpc.o \
@@ -130,22 +128,33 @@ OBJS= \
     obj/noui.o \
     obj/kernel.o \
     obj/pbkdf2.o \
-    obj/scrypt_mine.o \
+    obj/scrypt.o \
+    obj/scrypt-arm.o \
     obj/scrypt-x86.o \
     obj/scrypt-x86_64.o \
-	obj/irc.o \
-	obj/checkpointStructure.o  \
-	obj/donation.o
+    obj/zerocoin/Accumulator.o \
+    obj/zerocoin/AccumulatorProofOfKnowledge.o \
+    obj/zerocoin/Coin.o \
+    obj/zerocoin/CoinSpend.o \
+    obj/zerocoin/Commitment.o \
+    obj/zerocoin/ParamGeneration.o \
+    obj/zerocoin/Params.o \
+    obj/zerocoin/SerialNumberSignatureOfKnowledge.o \
+    obj/zerocoin/SpendMetaData.o \
+    obj/zerocoin/ZeroTest.o
 
+all: MultiWalletCoind
 
-all: eccoind
-
-test check: test_eccoin FORCE
-	./test_BottleCaps
+LIBS += $(CURDIR)/leveldb/libleveldb.a $(CURDIR)/leveldb/libmemenv.a
+DEFS += $(addprefix -I,$(CURDIR)/leveldb/include)
+DEFS += $(addprefix -I,$(CURDIR)/leveldb/helpers)
+OBJS += obj/txdb-leveldb.o
+leveldb/libleveldb.a:
+	@echo "Building LevelDB ..."; cd leveldb; make libleveldb.a libmemenv.a; cd ..;
+obj/txdb-leveldb.o: leveldb/libleveldb.a
 
 # auto-generated dependencies:
 -include obj/*.P
--include obj-test/*.P
 
 obj/build.h: FORCE
 	/bin/sh ../share/genbuild.sh obj/build.h
@@ -158,6 +167,9 @@ obj/scrypt-x86.o: scrypt-x86.S
 obj/scrypt-x86_64.o: scrypt-x86_64.S
 	$(CXX) -c $(xCXXFLAGS) -MMD -o $@ $<
 
+obj/scrypt-arm.o: scrypt-arm.S
+	$(CXX) -c $(xCXXFLAGS) -MMD -o $@ $<
+
 obj/%.o: %.cpp
 	$(CXX) -c $(xCXXFLAGS) -MMD -MF $(@:%.o=%.d) -o $@ $<
 	@cp $(@:%.o=%.d) $(@:%.o=%.P); \
@@ -165,27 +177,22 @@ obj/%.o: %.cpp
 	      -e '/^$$/ d' -e 's/$$/ :/' < $(@:%.o=%.d) >> $(@:%.o=%.P); \
 	  rm -f $(@:%.o=%.d)
 
-eccoind: $(OBJS:obj/%=obj/%)
-	$(LINK) $(xCXXFLAGS) -o $@ $^ $(xLDFLAGS) $(LIBS)
-
-TESTOBJS := $(patsubst test/%.cpp,obj-test/%.o,$(wildcard test/*.cpp))
-
-obj-test/%.o: test/%.cpp
-	$(CXX) -c $(TESTDEFS) $(xCXXFLAGS) -MMD -MF $(@:%.o=%.d) -o $@ $<
+obj/zerocoin/%.o: zerocoin/%.cpp
+	$(CXX) -c $(xCXXFLAGS) -MMD -MF $(@:%.o=%.d) -o $@ $<
 	@cp $(@:%.o=%.d) $(@:%.o=%.P); \
 	  sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
 	      -e '/^$$/ d' -e 's/$$/ :/' < $(@:%.o=%.d) >> $(@:%.o=%.P); \
 	  rm -f $(@:%.o=%.d)
 
-test_eccoin: $(TESTOBJS) $(filter-out obj/init.o,$(OBJS:obj/%=obj/%))
-	$(LINK) $(xCXXFLAGS) -o $@ $(LIBPATHS) $^ -Wl,-B$(LMODE) -lboost_unit_test_framework $(xLDFLAGS) $(LIBS)
+MultiWalletCoind: $(OBJS:obj/%=obj/%)
+	$(LINK) $(xCXXFLAGS) -o $@ $^ $(xLDFLAGS) $(LIBS)
 
 clean:
-	-rm -f eccoind test_eccoin
+	-rm -f MultiWalletCoind
 	-rm -f obj/*.o
-	-rm -f obj-test/*.o
+	-rm -f obj/zerocoin/*.o
 	-rm -f obj/*.P
-	-rm -f obj-test/*.P
+	-rm -f obj/zerocoin/*.P
 	-rm -f obj/build.h
 
 FORCE:

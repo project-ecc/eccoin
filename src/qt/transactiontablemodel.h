@@ -48,12 +48,8 @@ public:
         ConfirmedRole,
         /** Formatted amount, without brackets when unconfirmed */
         FormattedAmountRole,
-        /** True if this is a donation transmission */
-        IsDonationTransmissionRole,
-        /** Donation amount. */
-        DonationAmountRole,
         /** Transaction status (TransactionRecord::Status) */
-               StatusRole
+        StatusRole
     };
 
     int rowCount(const QModelIndex &parent) const;
@@ -61,6 +57,7 @@ public:
     QVariant data(const QModelIndex &index, int role) const;
     QVariant headerData(int section, Qt::Orientation orientation, int role) const;
     QModelIndex index(int row, int column, const QModelIndex & parent = QModelIndex()) const;
+    void refreshWallet();
 private:
     CWallet* wallet;
     WalletModel *walletModel;
@@ -86,6 +83,5 @@ public slots:
 
     friend class TransactionTablePriv;
 };
-
 #endif
 

@@ -8,8 +8,7 @@
 #include "transactionfilterproxy.h"
 #include "guiutil.h"
 #include "guiconstants.h"
-#include "askpassphrasedialog.h"
-#include "donation.h"
+//#include "askpassphrasedialog.h"
 
 #include <QAbstractItemDelegate>
 #include <QPainter>
@@ -44,7 +43,6 @@ public:
         QDateTime date = index.data(TransactionTableModel::DateRole).toDateTime();
         QString address = index.data(Qt::DisplayRole).toString();
         qint64 amount = index.data(TransactionTableModel::AmountRole).toLongLong();
-        qint64 donation = index.data(TransactionTableModel::DonationAmountRole).toLongLong();
 
 
         bool confirmed = index.data(TransactionTableModel::ConfirmedRole).toBool();
@@ -70,17 +68,6 @@ public:
         {
             foreground = option.palette.color(QPalette::Text);
         }
-        painter->setPen(foreground);
-                       QString amountText = BitcoinUnits::formatWithUnit(unit, amount-donation, true);
-                       if (donation > 0) {
-                           amountText = amountText + QString(" + ") + BitcoinUnits::format(unit, donation) + QString(" donation");
-                       }
-        if(!confirmed)
-        {
-            amountText = QString("[") + amountText + QString("]");
-        }
-        painter->drawText(amountRect, Qt::AlignRight|Qt::AlignVCenter, amountText);
-
         painter->setPen(option.palette.color(QPalette::Text));
         painter->drawText(amountRect, Qt::AlignLeft|Qt::AlignVCenter, GUIUtil::dateTimeStr(date));
 
@@ -109,17 +96,9 @@ OverviewPage::OverviewPage(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    // Recent transactions
-    ui->listTransactions->setItemDelegate(txdelegate);
-    ui->listTransactions->setIconSize(QSize(DECORATION_SIZE, DECORATION_SIZE));
-    ui->listTransactions->setMinimumHeight(NUM_ITEMS * (DECORATION_SIZE + 2));
-    ui->listTransactions->setAttribute(Qt::WA_MacShowFocusRect, false);
-
-    connect(ui->listTransactions, SIGNAL(clicked(QModelIndex)), this, SLOT(handleTransactionClicked(QModelIndex)));
 
     // init "out of sync" warning labels
     ui->labelWalletStatus->setText("(" + tr("out of sync") + ")");
-    ui->labelTransactionsStatus->setText("(" + tr("out of sync") + ")");
 
     // start with displaying the "out of sync" warnings
     showOutOfSyncWarning(true);
@@ -147,7 +126,6 @@ void OverviewPage::setBalance(qint64 balance, qint64 stake, qint64 unconfirmedBa
     ui->labelStake->setText(BitcoinUnits::formatWithUnit(unit, stake));
     ui->labelUnconfirmed->setText(BitcoinUnits::formatWithUnit(unit, unconfirmedBalance));
     ui->labelImmature->setText(BitcoinUnits::formatWithUnit(unit, immatureBalance));
-    ui->labelDonations->setText(("Donating " + QString::number(nDonatePercent) + "% of your stake rewards"));
    // ui->labelTotal->setText(BitcoinUnits::formatWithUnit(unit, balance + stake + unconfirmedBalance + immatureBalance));
     // only show immature (newly mined) balance if it's non-zero, so as not to complicate things
     // for the non-mining users
@@ -176,8 +154,6 @@ void OverviewPage::setModel(WalletModel *model)
         filter->setSortRole(Qt::EditRole);
         filter->sort(TransactionTableModel::Date, Qt::DescendingOrder);
 
-        ui->listTransactions->setModel(filter);
-        ui->listTransactions->setModelColumn(TransactionTableModel::ToAddress);
 
         // Keep up to date with wallet
         setBalance(model->getBalance(), model->getStake(), model->getUnconfirmedBalance(), model->getImmatureBalance());
@@ -204,12 +180,10 @@ void OverviewPage::updateDisplayUnit()
         // Update txdelegate->unit with the current unit
         txdelegate->unit = model->getOptionsModel()->getDisplayUnit();
 
-        ui->listTransactions->update();
     }
 }
 
 void OverviewPage::showOutOfSyncWarning(bool fShow)
 {
     ui->labelWalletStatus->setVisible(fShow);
-    ui->labelTransactionsStatus->setVisible(fShow);
 }

@@ -6,8 +6,11 @@
 #include "main.h"
 #include "wallet.h"
 #include "db.h"
+#include "txdb-leveldb.h"
 #include "ui_interface.h"
 #include "base58.h"
+
+#define int64 int64_t
 
 QString TransactionDesc::FormatTxStatus(const CWalletTx& wtx)
 {

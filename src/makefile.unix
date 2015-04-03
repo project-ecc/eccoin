@@ -6,13 +6,12 @@ USE_UPNP:=0
 USE_IPV6:=1
 
 LINK:=$(CXX)
+ARCH:=$(system lscpu | head -n 1 | awk '{print $2}')
 
 DEFS=-DBOOST_SPIRIT_THREADSAFE
 
 DEFS += $(addprefix -I,$(CURDIR) $(CURDIR)/obj $(BOOST_INCLUDE_PATH) $(BDB_INCLUDE_PATH) $(OPENSSL_INCLUDE_PATH))
 LIBS = $(addprefix -L,$(BOOST_LIB_PATH) $(BDB_LIB_PATH) $(OPENSSL_LIB_PATH))
-
-TESTDEFS = -DTEST_DATA_DIR=$(abspath test/data)
 
 LMODE = dynamic
 LMODE2 = dynamic
@@ -21,8 +20,6 @@ ifdef STATIC
 	ifeq (${STATIC}, all)
 		LMODE2 = static
 	endif
-else
-	TESTDEFS += -DBOOST_TEST_DYN_LINK
 endif
 
 # for boost 1.37, add -mt to the boost libraries
@@ -91,9 +88,15 @@ LIBS+= \
 
 DEBUGFLAGS=-g
 
+
+ifeq (${ARCH}, i686)
+    EXT_OPTIONS=-msse2
+endif
+
+
 # CXXFLAGS can be specified on the make command line, so we use xCXXFLAGS that only
 # adds some defaults in front. Unfortunately, CXXFLAGS=... $(CXXFLAGS) does not work.
-xCXXFLAGS=-O2 -msse2 -pthread -Wall -Wextra -Wformat -Wformat-security -Wno-unused-parameter \
+xCXXFLAGS=-O2 $(EXT_OPTIONS) -pthread -Wall -Wextra -Wno-ignored-qualifiers -Wformat -Wformat-security -Wno-unused-parameter \
     $(DEBUGFLAGS) $(DEFS) $(HARDENING) $(CXXFLAGS)
 
 # LDFLAGS can be specified on the make command line, so we use xLDFLAGS that only
@@ -101,6 +104,17 @@ xCXXFLAGS=-O2 -msse2 -pthread -Wall -Wextra -Wformat -Wformat-security -Wno-unus
 xLDFLAGS=$(LDHARDENING) $(LDFLAGS)
 
 OBJS= \
+   obj/groestl.o \
+    obj/blake.o \
+    obj/bmw.o \
+    obj/skein.o \
+    obj/keccak.o \
+    obj/shavite.o \
+    obj/jh.o \
+    obj/luffa.o \
+    obj/cubehash.o \
+    obj/echo.o \
+    obj/simd.o \
     obj/alert.o \
     obj/version.o \
     obj/checkpoints.o \
@@ -110,7 +124,9 @@ OBJS= \
     obj/key.o \
     obj/db.o \
     obj/init.o \
+    obj/irc.o \
     obj/keystore.o \
+    obj/miner.o \
     obj/main.o \
     obj/net.o \
     obj/protocol.o \
@@ -129,22 +145,23 @@ OBJS= \
     obj/noui.o \
     obj/kernel.o \
     obj/pbkdf2.o \
-    obj/scrypt_mine.o \
+    obj/scrypt.o \
+    obj/scrypt-arm.o \
     obj/scrypt-x86.o \
-	obj/irc.o \
-	obj/checkpointStructure.o \
     obj/scrypt-x86_64.o \
-	obj/donation.o
 
+all: MultiWalletCoind
 
-all: eccoind
-
-test check: test_eccoin FORCE
-	./test_eccoin
+LIBS += $(CURDIR)/leveldb/libleveldb.a $(CURDIR)/leveldb/libmemenv.a
+DEFS += $(addprefix -I,$(CURDIR)/leveldb/include)
+DEFS += $(addprefix -I,$(CURDIR)/leveldb/helpers)
+OBJS += obj/txdb-leveldb.o
+leveldb/libleveldb.a:
+	@echo "Building LevelDB ..."; cd leveldb; make libleveldb.a libmemenv.a; cd ..;
+obj/txdb-leveldb.o: leveldb/libleveldb.a
 
 # auto-generated dependencies:
 -include obj/*.P
--include obj-test/*.P
 
 obj/build.h: FORCE
 	/bin/sh ../share/genbuild.sh obj/build.h
@@ -157,6 +174,16 @@ obj/scrypt-x86.o: scrypt-x86.S
 obj/scrypt-x86_64.o: scrypt-x86_64.S
 	$(CXX) -c $(xCXXFLAGS) -MMD -o $@ $<
 
+obj/scrypt-arm.o: scrypt-arm.S
+	$(CXX) -c $(xCXXFLAGS) -MMD -o $@ $<
+	
+obj/%.o: %.c
+	$(CXX) -c $(xCXXFLAGS) -fpermissive -MMD -MF $(@:%.o=%.d) -o $@ $<
+	@cp $(@:%.o=%.d) $(@:%.o=%.P); \
+	  sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
+              -e '/^$$/ d' -e 's/$$/ :/' < $(@:%.o=%.d) >> $(@:%.o=%.P); \
+	      
+	rm -f $(@:%.o=%.d)
 obj/%.o: %.cpp
 	$(CXX) -c $(xCXXFLAGS) -MMD -MF $(@:%.o=%.d) -o $@ $<
 	@cp $(@:%.o=%.d) $(@:%.o=%.P); \
@@ -164,27 +191,15 @@ obj/%.o: %.cpp
 	      -e '/^$$/ d' -e 's/$$/ :/' < $(@:%.o=%.d) >> $(@:%.o=%.P); \
 	  rm -f $(@:%.o=%.d)
 
-eccoind: $(OBJS:obj/%=obj/%)
+MultiWalletCoind: $(OBJS:obj/%=obj/%)
 	$(LINK) $(xCXXFLAGS) -o $@ $^ $(xLDFLAGS) $(LIBS)
 
-TESTOBJS := $(patsubst test/%.cpp,obj-test/%.o,$(wildcard test/*.cpp))
-
-obj-test/%.o: test/%.cpp
-	$(CXX) -c $(TESTDEFS) $(xCXXFLAGS) -MMD -MF $(@:%.o=%.d) -o $@ $<
-	@cp $(@:%.o=%.d) $(@:%.o=%.P); \
-	  sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
-	      -e '/^$$/ d' -e 's/$$/ :/' < $(@:%.o=%.d) >> $(@:%.o=%.P); \
-	  rm -f $(@:%.o=%.d)
-
-test_eccoin: $(TESTOBJS) $(filter-out obj/init.o,$(OBJS:obj/%=obj/%))
-	$(LINK) $(xCXXFLAGS) -o $@ $(LIBPATHS) $^ -Wl,-B$(LMODE) -lboost_unit_test_framework $(xLDFLAGS) $(LIBS)
-
 clean:
-	-rm -f eccoind test_eccoin
+	-rm -f MultiWalletCoind
 	-rm -f obj/*.o
-	-rm -f obj-test/*.o
+	-rm -f obj/zerocoin/*.o
 	-rm -f obj/*.P
-	-rm -f obj-test/*.P
+	-rm -f obj/zerocoin/*.P
 	-rm -f obj/build.h
 
 FORCE:

@@ -24,10 +24,10 @@ private:
     CNetAddr source;
 
     // last successful connection by us
-    int64 nLastSuccess;
+    int64_t nLastSuccess;
 
     // last try whatsoever by us:
-    // int64 CAddress::nLastTry
+    // int64_t CAddress::nLastTry
 
     // connection attempts since last successful attempt
     int nAttempts;
@@ -86,10 +86,10 @@ public:
     }
 
     // Determine whether the statistics about this entry are bad enough so that it can just be deleted
-    bool IsTerrible(int64 nNow = GetAdjustedTime()) const;
+    bool IsTerrible(int64_t nNow = GetAdjustedTime()) const;
 
     // Calculate the relative chance this entry should be given when selecting nodes to connect to
-    double GetChance(int64 nNow = GetAdjustedTime()) const;
+    double GetChance(int64_t nNow = GetAdjustedTime()) const;
 
 };
 
@@ -220,13 +220,13 @@ protected:
     void MakeTried(CAddrInfo& info, int nId, int nOrigin);
 
     // Mark an entry "good", possibly moving it from "new" to "tried".
-    void Good_(const CService &addr, int64 nTime);
+    void Good_(const CService &addr, int64_t nTime);
 
     // Add an entry to the "new" table.
-    bool Add_(const CAddress &addr, const CNetAddr& source, int64 nTimePenalty);
+    bool Add_(const CAddress &addr, const CNetAddr& source, int64_t nTimePenalty);
 
     // Mark an entry as attempted to connect.
-    void Attempt_(const CService &addr, int64 nTime);
+    void Attempt_(const CService &addr, int64_t nTime);
 
     // Select an address to connect to.
     // nUnkBias determines how much to favor new addresses over tried ones (min=0, max=100)
@@ -241,11 +241,12 @@ protected:
     void GetAddr_(std::vector<CAddress> &vAddr);
 
     // Mark an entry as currently-connected-to.
-    void Connected_(const CService &addr, int64 nTime);
+    void Connected_(const CService &addr, int64_t nTime);
 
 public:
 
-    IMPLEMENT_SERIALIZE(({
+    IMPLEMENT_SERIALIZE
+    ({
         // serialized format:
         // * version byte (currently 0)
         // * nKey
@@ -279,7 +280,6 @@ public:
             {
                 int nUBuckets = ADDRMAN_NEW_BUCKET_COUNT;
                 READWRITE(nUBuckets);
-                std::map<int, int> mapUnkIds;
                 int nIds = 0;
                 for (std::map<int, CAddrInfo>::iterator it = am->mapInfo.begin(); it != am->mapInfo.end(); it++)
                 {
@@ -376,7 +376,7 @@ public:
                 }
             }
         }
-    });)
+    };)
 
     CAddrMan() : vRandom(0), vvTried(ADDRMAN_TRIED_BUCKET_COUNT, std::vector<int>(0)), vvNew(ADDRMAN_NEW_BUCKET_COUNT, std::set<int>())
     {
@@ -408,7 +408,7 @@ public:
     }
 
     // Add a single address.
-    bool Add(const CAddress &addr, const CNetAddr& source, int64 nTimePenalty = 0)
+    bool Add(const CAddress &addr, const CNetAddr& source, int64_t nTimePenalty = 0)
     {
         bool fRet = false;
         {
@@ -423,7 +423,7 @@ public:
     }
 
     // Add multiple addresses.
-    bool Add(const std::vector<CAddress> &vAddr, const CNetAddr& source, int64 nTimePenalty = 0)
+    bool Add(const std::vector<CAddress> &vAddr, const CNetAddr& source, int64_t nTimePenalty = 0)
     {
         int nAdd = 0;
         {
@@ -439,7 +439,7 @@ public:
     }
 
     // Mark an entry as accessible.
-    void Good(const CService &addr, int64 nTime = GetAdjustedTime())
+    void Good(const CService &addr, int64_t nTime = GetAdjustedTime())
     {
         {
             LOCK(cs);
@@ -450,7 +450,7 @@ public:
     }
 
     // Mark an entry as connection attempted to.
-    void Attempt(const CService &addr, int64 nTime = GetAdjustedTime())
+    void Attempt(const CService &addr, int64_t nTime = GetAdjustedTime())
     {
         {
             LOCK(cs);
@@ -488,7 +488,7 @@ public:
     }
 
     // Mark an entry as currently-connected-to.
-    void Connected(const CService &addr, int64 nTime = GetAdjustedTime())
+    void Connected(const CService &addr, int64_t nTime = GetAdjustedTime())
     {
         {
             LOCK(cs);

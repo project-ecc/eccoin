@@ -8,7 +8,7 @@
 #include <QPushButton>
 #include <QKeyEvent>
 
-extern bool fWalletUnlockMintOnly;
+//extern bool fWalletUnlockMintOnly;
 
 AskPassphraseDialog::AskPassphraseDialog(Mode mode, QWidget *parent) :
     QDialog(parent),
@@ -153,7 +153,7 @@ void AskPassphraseDialog::accept()
         }
         else
         {
-             fWalletUnlockMintOnly = ui->stakingCheckBox->isChecked();
+            //fWalletUnlockMintOnly = ui->stakingCheckBox->isChecked();
             QDialog::accept(); // Success
         }
         break;

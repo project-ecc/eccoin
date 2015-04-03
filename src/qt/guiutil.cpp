@@ -3,7 +3,6 @@
 #include "walletmodel.h"
 #include "bitcoinunits.h"
 #include "util.h"
-#include "init.h"
 
 #include <QString>
 #include <QDateTime>
@@ -21,6 +20,8 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
+
+extern std::string HelpMessage();
 
 #ifdef WIN32
 #ifdef _WIN32_WINNT

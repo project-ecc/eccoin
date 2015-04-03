@@ -4,9 +4,6 @@
 #include <QMainWindow>
 #include <QSystemTrayIcon>
 
-#include "chatwindow.h"
-#include "blockbrowser.h"
-
 class TransactionTableModel;
 class ClientModel;
 class WalletModel;
@@ -18,7 +15,6 @@ class SendCoinsDialog;
 class SignVerifyMessageDialog;
 class Notificator;
 class RPCConsole;
-//class TradingWindow;
 
 QT_BEGIN_NAMESPACE
 class QLabel;
@@ -52,6 +48,8 @@ public:
     */
     void setWalletModel(WalletModel *walletModel);
 
+    void updatedWalletModel(WalletModel *walletModel);
+
 protected:
     void changeEvent(QEvent *e);
     void closeEvent(QCloseEvent *event);
@@ -62,10 +60,8 @@ private:
     ClientModel *clientModel;
     WalletModel *walletModel;
 
+
     QStackedWidget *centralWidget;
-    BlockBrowser *blockBrowser;
-    ChatWindow *chatWindow;
-   // TradingWindow *tradingWindow;
     OverviewPage *overviewPage;
     QWidget *transactionsPage;
     AddressBookPage *addressBookPage;
@@ -93,16 +89,11 @@ private:
     QAction *toggleHideAction;
     QAction *exportAction;
     QAction *encryptWalletAction;
-    QAction *backupWalletAction;
     QAction *changePassphraseAction;
     QAction *unlockWalletAction;
-        QAction *lockWalletAction;
+    QAction *lockWalletAction;
     QAction *aboutQtAction;
     QAction *openRPCConsoleAction;
-
-    QAction *blockAction;
-    QAction *chatAction;
-   // QAction *tradingAction;
 
 
     QWidget *wId;
@@ -157,16 +148,13 @@ private slots:
     void gotoOverviewPage();
     /** Switch to history (transactions) page */
     void gotoHistoryPage();
-    /** Switch to block explorer*/
-    void gotoBlockBrowser();
     /** Switch to address book page */
     void gotoAddressBookPage();
     /** Switch to receive coins page */
     void gotoReceiveCoinsPage();
     /** Switch to send coins page */
     void gotoSendCoinsPage();
-    /** Switch to trading1*/
-  //    void gotoTradingWindow();
+
 
     /** Show Sign/Verify Message dialog and switch to sign message tab */
     void gotoSignMessageTab(QString addr = "");
@@ -188,8 +176,6 @@ private slots:
     void incomingTransaction(const QModelIndex & parent, int start, int end);
     /** Encrypt the wallet */
     void encryptWallet(bool status);
-    /** Backup the wallet */
-    void backupWallet();
     /** Change encrypted wallet passphrase */
     void changePassphrase();
     /** Ask for passphrase to unlock wallet temporarily */
@@ -200,7 +186,5 @@ private slots:
     void showNormalIfMinimized(bool fToggleHidden = false);
     /** simply calls showNormalIfMinimized(true) for use in SLOT() macro */
     void toggleHidden();
-	void gotoChatPage();
 };
-
 #endif

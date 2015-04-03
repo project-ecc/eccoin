@@ -1,5 +1,5 @@
 #ifndef COINCONTROL_H
-#define COINCONTROL_H 
+#define COINCONTROL_H
 
 /** Coin Control Features. */
 class CCoinControl

@@ -1,6 +1,5 @@
 #include "sendcoinsdialog.h"
 #include "ui_sendcoinsdialog.h"
-#include "init.h" 
 #include "walletmodel.h"
 #include "addresstablemodel.h"
 #include "addressbookpage.h"
@@ -12,6 +11,7 @@
 #include "askpassphrasedialog.h"
 #include "coincontrol.h"
 #include "coincontroldialog.h"
+#include "base58.h"
 
 #include <QMessageBox>
 #include <QLocale>

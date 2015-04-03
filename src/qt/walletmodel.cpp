@@ -3,7 +3,6 @@
 #include "optionsmodel.h"
 #include "addresstablemodel.h"
 #include "transactiontablemodel.h"
-#include "donation.h"
 
 #include "ui_interface.h"
 #include "wallet.h"
@@ -12,6 +11,8 @@
 
 #include <QSet>
 #include <QTimer>
+
+#define int64 int64_t
 
 WalletModel::WalletModel(CWallet *wallet, OptionsModel *optionsModel, QObject *parent) :
     QObject(parent), wallet(wallet), optionsModel(optionsModel), addressTableModel(0),
@@ -304,11 +305,6 @@ bool WalletModel::changePassphrase(const SecureString &oldPass, const SecureStri
         retval = wallet->ChangeWalletPassphrase(oldPass, newPass);
     }
     return retval;
-}
-
-bool WalletModel::backupWallet(const QString &filename)
-{
-    return BackupWallet(*wallet, filename.toLocal8Bit().data());
 }
 
 // Handlers for core signals
