@@ -580,21 +580,16 @@ bool CTxDB::LoadBlockIndex()
                 CBlockIndex* pindex = item.second;
                 pindex->nChainTrust = (pindex->pprev ? pindex->pprev->nChainTrust : 0) + pindex->GetBlockTrust();
         }
-    CBlockIndex* CurBest;
-    uint256 CurChain = 0;
-    BOOST_FOREACH(const PAIRTYPE(int, CBlockIndex*)& item, vSortedByHeight)
-        {
-                CBlockIndex* pindex = item.second;
-                pindex->nChainTrust = (pindex->pprev ? pindex->pprev->nChainTrust : 0) + pindex->GetBlockTrust();
-                if (pindex->nChainTrust > CurChain)
-                {
-                    CurBest = pindex;
-                }
-        }
-
-
-        pindexBest = mapBlockIndex[CurBest->GetBlockHash()];
-        printf("DEBUG: pindexBest hegith = %i\n",pindexBest->nHeight);
+    // Load hashBestChain pointer to end of best chain
+    if (!ReadHashBestChain(hashBestChain))
+    {
+        if (pindexGenesisBlock == NULL)
+            return true;
+        return error("CTxDB::LoadBlockIndex() : hashBestChain not loaded");
+    }
+    if (!mapBlockIndex.count(hashBestChain))
+        return error("CTxDB::LoadBlockIndex() : hashBestChain not found in the block index");
+    pindexBest = mapBlockIndex[hashBestChain];
         nBestHeight = pindexBest->nHeight;
         nBestChainTrust = pindexBest->nChainTrust;
 
