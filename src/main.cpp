@@ -2427,6 +2427,13 @@ bool CBlock::AcceptBlock(CBlock* pblock)
 
         // ppcoin: check pending sync-checkpoint
         Checkpoints::AcceptPendingSyncCheckpoint();
+        CTxDB txdb;
+
+        txdb.WriteHashBestChain(hash);
+        if (!txdb.TxnCommit())
+        {
+            return error("SetBestChain() : TxnCommit failed");
+        }
 
         return true;
 }
