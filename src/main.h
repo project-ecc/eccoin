@@ -58,7 +58,7 @@ static const int64_t COIN_YEAR_REWARD = 10 * CENT; // 10% per year
 static const int64_t MAX_MINT_PROOF_OF_STAKE = 0.1 * COIN;
 static const int MODIFIER_INTERVAL_SWITCH = 2500;
 extern int duplicate;
-extern const int64_t nMaxClockDrift;
+static const int64_t nMaxClockDrift = 2 * 60 * 60;        // two hours
 
 inline bool MoneyRange(int64_t nValue) { return (nValue >= 0 && nValue <= MAX_MONEY); }
 // Threshold for nLockTime: below this value it is interpreted as block number, otherwise as UNIX timestamp.

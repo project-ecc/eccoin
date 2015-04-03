@@ -439,7 +439,7 @@ bool CDB::Rewrite(const string& strFile, const char* pszSkip)
                 return fSuccess;
             }
         }
-        Sleep(100);
+        sleep(100);
     }
     return false;
 }

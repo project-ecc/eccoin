@@ -303,7 +303,7 @@ public:
         return setKeyPool.size();
     }
 
-    bool GetTransaction(const uint256 &hashTx, CWalletTx& wtx);
+    bool WGetTransaction(const uint256 &hashTx, CWalletTx& wtx);
 
     bool SetDefaultKey(const CPubKey &vchPubKey);
 

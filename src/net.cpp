@@ -170,7 +170,7 @@ bool RecvLine(SOCKET hSocket, string& strLine)
                     continue;
                 if (nErr == WSAEWOULDBLOCK || nErr == WSAEINTR || nErr == WSAEINPROGRESS)
                 {
-                    Sleep(100);
+                    sleep(100);
                     continue;
                 }
             }
@@ -977,7 +977,7 @@ void ThreadSocketHandler2(void* parg)
                 pnode->Release();
         }
 
-        MilliSleep(5000);
+        MilliSleep(100);
     }
 }
 

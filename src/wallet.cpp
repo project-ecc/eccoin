@@ -2360,7 +2360,7 @@ void CWallet::PrintWallet(const CBlock& block)
     printf("\n");
 }
 
-bool CWallet::GetTransaction(const uint256 &hashTx, CWalletTx& wtx)
+bool CWallet::WGetTransaction(const uint256 &hashTx, CWalletTx& wtx)
 {
     {
         LOCK(cs_wallet);
@@ -2831,7 +2831,7 @@ void CWallet::UpdatedTransactionBasedOnList(vector<CBlockIndex*> checklist)
         {
             return;
         }
-        Sleep(100);
+        sleep(100);
     }
     return;
 }

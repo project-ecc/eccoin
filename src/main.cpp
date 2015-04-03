@@ -84,7 +84,6 @@ int64_t nTransactionFee = MIN_TX_FEE;
 int64_t nMinimumInputValue = 0;
 
 extern enum Checkpoints::CPMode CheckpointsMode;
-static const int64_t nMaxClockDrift = 2 * 60 * 60;        // two hours
 static const int CUTOFF_HEIGHT = 86400;
 extern MapCheckpoints mapCheckpoints;
 
@@ -126,7 +125,7 @@ bool static IsFromMe(CTransaction& tx)
 bool static GetTransaction(const uint256& hashTx, CWalletTx& wtx)
 {
     BOOST_FOREACH(CWallet* pwallet, setpwalletRegistered)
-        if (pwallet->GetTransaction(hashTx,wtx))
+        if (pwallet->WGetTransaction(hashTx,wtx))
             return true;
     return false;
 }
@@ -1026,7 +1025,7 @@ bool CBlock::ReadFromDisk(const CBlockIndex* pindex, bool fReadTransactions)
     return true;
 }
 
-uint256 static GetOrphanRoot(const CBlock* pblock)
+uint256 GetOrphanRoot(const CBlock* pblock)
 {
     // Work back to the first block in the orphan chain
     while (mapOrphanBlocks.count(pblock->hashPrevBlock))
