@@ -2525,6 +2525,10 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
             if (pfrom)
             {
                 pfrom->PushGetBlocks(pindexBest, uint256(0));
+                if(!IsInitialBlockDownload())
+                {
+                    pfrom->AskFor(CInv(MSG_BLOCK,WantedByOrphan(pblock2)));
+                }
             }
             return true;
     }
