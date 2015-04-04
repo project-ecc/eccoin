@@ -558,6 +558,7 @@ bool CTxDB::LoadBlockIndex()
         //}
 
     delete iterator;
+    vDiskBlockIndex.clear();
 
     if (fRequestShutdown)
         return true;

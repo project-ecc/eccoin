@@ -46,7 +46,6 @@ extern uint32_t nTransactionsUpdated;
 
 #if defined(__x86_64__)
 
-#define SCRYPT_3WAY
 #define SCRYPT_BUFFER_SIZE (3 * 131072 + 63)
 
 extern "C" int scrypt_best_throughput();
@@ -54,6 +53,9 @@ extern "C" void scrypt_core(uint32_t *X, uint32_t *V);
 
 #elif defined(__i386__)
 
+#define SCRYPT_BUFFER_SIZE (131072 + 63)
+
+#endif
 
 static inline void xor_salsa8(unsigned int B[16], const unsigned int Bx[16])
 {
@@ -123,7 +125,6 @@ static inline void xor_salsa8(unsigned int B[16], const unsigned int Bx[16])
     B[15] += x15;
 }
 
-#define SCRYPT_BUFFER_SIZE (131072 + 63)
 
 static inline void scrypt_core(unsigned int *X, unsigned int *V)
 {
@@ -142,8 +143,6 @@ static inline void scrypt_core(unsigned int *X, unsigned int *V)
         xor_salsa8(&X[16], &X[0]);
     }
 }
-
-#endif
 
 
 void *scrypt_buffer_alloc() {

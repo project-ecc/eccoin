@@ -1867,7 +1867,8 @@ bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)
 
     if (pindexGenesisBlock == NULL && hash == (!fTestNet ? hashGenesisBlock : hashGenesisBlockTestNet))
     {
-        txdb.WriteHashBestChain(hash);
+        if(!txdb.WriteHashBestChain(hash))
+                printf("SetBestChain() : WriteHashBestChain failed\n");
         if (!txdb.TxnCommit())
             return error("SetBestChain() : TxnCommit failed");
         pindexGenesisBlock = pindexNew;
@@ -2427,13 +2428,6 @@ bool CBlock::AcceptBlock(CBlock* pblock)
 
         // ppcoin: check pending sync-checkpoint
         Checkpoints::AcceptPendingSyncCheckpoint();
-        CTxDB txdb;
-
-        txdb.WriteHashBestChain(hash);
-        if (!txdb.TxnCommit())
-        {
-            return error("SetBestChain() : TxnCommit failed");
-        }
 
         return true;
 }
