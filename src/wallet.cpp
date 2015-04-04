@@ -2811,7 +2811,10 @@ void CWallet::UpdatedTransactionBasedOnList(vector<CBlockIndex*> checklist)
         CBlockIndex* pindex = checklist[check];
         CBlock block;
         if (!block.ReadFromDisk(pindex))
-            return error("UpdatedTransactionBasedOnList : block.ReadFromDisk failed");
+        {
+            printf("UpdatedTransactionBasedOnList : block.ReadFromDisk failed");
+            return;
+        }
         // check level 1: verify block validity
         // check level 7: verify block signature too
         if (nCheckLevel>0 && !block.CheckBlock(true, true, (nCheckLevel>6)))

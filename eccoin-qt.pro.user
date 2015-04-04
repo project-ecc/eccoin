@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE QtCreatorProject>
-<!-- Written by QtCreator 3.3.0, 2015-04-03T18:03:20. -->
+<!-- Written by QtCreator 3.2.0, 2015-04-04T17:25:26. -->
 <qtcreator>
  <data>
   <variable>EnvironmentId</variable>
-  <value type="QByteArray">{39a2269a-3515-4422-95d1-b2b8bdcf682a}</value>
+  <value type="QByteArray">{5c70dbfe-3dbf-47d6-a78a-677d27674566}</value>
  </data>
  <data>
   <variable>ProjectExplorer.Project.ActiveTarget</variable>
@@ -58,14 +58,14 @@
  <data>
   <variable>ProjectExplorer.Project.Target.0</variable>
   <valuemap type="QVariantMap">
-   <value type="QString" key="ProjectExplorer.ProjectConfiguration.DefaultDisplayName">5.3 Correct Build [Use This One]</value>
-   <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName">5.3 Correct Build [Use This One]</value>
-   <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">{36ea74b5-4e12-4858-887b-2b4468607b60}</value>
+   <value type="QString" key="ProjectExplorer.ProjectConfiguration.DefaultDisplayName">Qt 4.8.6 (local)</value>
+   <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName">Qt 4.8.6 (local)</value>
+   <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">{1d093429-76a6-489b-9ac9-666f2ee7203d}</value>
    <value type="int" key="ProjectExplorer.Target.ActiveBuildConfiguration">1</value>
    <value type="int" key="ProjectExplorer.Target.ActiveDeployConfiguration">0</value>
    <value type="int" key="ProjectExplorer.Target.ActiveRunConfiguration">0</value>
    <valuemap type="QVariantMap" key="ProjectExplorer.Target.BuildConfiguration.0">
-    <value type="QString" key="ProjectExplorer.BuildConfiguration.BuildDirectory">C:/Users/-Lucy-/Documents/GitHub/build-eccoin-qt-5_3_Correct_Build_Use_This_One-Debug</value>
+    <value type="QString" key="ProjectExplorer.BuildConfiguration.BuildDirectory">/Users/michaeltammerijn/Documents/build-eccoin-qt-Qt_4_8_6_local-Debug</value>
     <valuemap type="QVariantMap" key="ProjectExplorer.BuildConfiguration.BuildStepList.0">
      <valuemap type="QVariantMap" key="ProjectExplorer.BuildStepList.Step.0">
       <value type="bool" key="ProjectExplorer.BuildStep.Enabled">true</value>
@@ -76,14 +76,16 @@
       <value type="bool" key="QtProjectManager.QMakeBuildStep.LinkQmlDebuggingLibraryAuto">true</value>
       <value type="QString" key="QtProjectManager.QMakeBuildStep.QMakeArguments"></value>
       <value type="bool" key="QtProjectManager.QMakeBuildStep.QMakeForced">false</value>
-      <value type="bool" key="QtProjectManager.QMakeBuildStep.UseQtQuickCompiler">false</value>
      </valuemap>
      <valuemap type="QVariantMap" key="ProjectExplorer.BuildStepList.Step.1">
       <value type="bool" key="ProjectExplorer.BuildStep.Enabled">true</value>
       <value type="QString" key="ProjectExplorer.ProjectConfiguration.DefaultDisplayName">Make</value>
       <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName"></value>
       <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">Qt4ProjectManager.MakeStep</value>
-      <valuelist type="QVariantList" key="Qt4ProjectManager.MakeStep.AutomaticallyAddedMakeArguments"/>
+      <valuelist type="QVariantList" key="Qt4ProjectManager.MakeStep.AutomaticallyAddedMakeArguments">
+       <value type="QString">-w</value>
+       <value type="QString">-r</value>
+      </valuelist>
       <value type="bool" key="Qt4ProjectManager.MakeStep.Clean">false</value>
       <value type="QString" key="Qt4ProjectManager.MakeStep.MakeArguments"></value>
       <value type="QString" key="Qt4ProjectManager.MakeStep.MakeCommand"></value>
@@ -99,7 +101,10 @@
       <value type="QString" key="ProjectExplorer.ProjectConfiguration.DefaultDisplayName">Make</value>
       <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName"></value>
       <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">Qt4ProjectManager.MakeStep</value>
-      <valuelist type="QVariantList" key="Qt4ProjectManager.MakeStep.AutomaticallyAddedMakeArguments"/>
+      <valuelist type="QVariantList" key="Qt4ProjectManager.MakeStep.AutomaticallyAddedMakeArguments">
+       <value type="QString">-w</value>
+       <value type="QString">-r</value>
+      </valuelist>
       <value type="bool" key="Qt4ProjectManager.MakeStep.Clean">true</value>
       <value type="QString" key="Qt4ProjectManager.MakeStep.MakeArguments">clean</value>
       <value type="QString" key="Qt4ProjectManager.MakeStep.MakeCommand"></value>
@@ -119,7 +124,7 @@
     <value type="bool" key="Qt4ProjectManager.Qt4BuildConfiguration.UseShadowBuild">true</value>
    </valuemap>
    <valuemap type="QVariantMap" key="ProjectExplorer.Target.BuildConfiguration.1">
-    <value type="QString" key="ProjectExplorer.BuildConfiguration.BuildDirectory">C:/Users/-Lucy-/Documents/GitHub/ECCoin</value>
+    <value type="QString" key="ProjectExplorer.BuildConfiguration.BuildDirectory">/Users/michaeltammerijn/Documents/build-eccoin-qt-Qt_4_8_6_local-Release</value>
     <valuemap type="QVariantMap" key="ProjectExplorer.BuildConfiguration.BuildStepList.0">
      <valuemap type="QVariantMap" key="ProjectExplorer.BuildStepList.Step.0">
       <value type="bool" key="ProjectExplorer.BuildStep.Enabled">true</value>
@@ -130,14 +135,16 @@
       <value type="bool" key="QtProjectManager.QMakeBuildStep.LinkQmlDebuggingLibraryAuto">true</value>
       <value type="QString" key="QtProjectManager.QMakeBuildStep.QMakeArguments"></value>
       <value type="bool" key="QtProjectManager.QMakeBuildStep.QMakeForced">false</value>
-      <value type="bool" key="QtProjectManager.QMakeBuildStep.UseQtQuickCompiler">false</value>
      </valuemap>
      <valuemap type="QVariantMap" key="ProjectExplorer.BuildStepList.Step.1">
       <value type="bool" key="ProjectExplorer.BuildStep.Enabled">true</value>
       <value type="QString" key="ProjectExplorer.ProjectConfiguration.DefaultDisplayName">Make</value>
       <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName"></value>
       <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">Qt4ProjectManager.MakeStep</value>
-      <valuelist type="QVariantList" key="Qt4ProjectManager.MakeStep.AutomaticallyAddedMakeArguments"/>
+      <valuelist type="QVariantList" key="Qt4ProjectManager.MakeStep.AutomaticallyAddedMakeArguments">
+       <value type="QString">-w</value>
+       <value type="QString">-r</value>
+      </valuelist>
       <value type="bool" key="Qt4ProjectManager.MakeStep.Clean">false</value>
       <value type="QString" key="Qt4ProjectManager.MakeStep.MakeArguments"></value>
       <value type="QString" key="Qt4ProjectManager.MakeStep.MakeCommand"></value>
@@ -153,7 +160,10 @@
       <value type="QString" key="ProjectExplorer.ProjectConfiguration.DefaultDisplayName">Make</value>
       <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName"></value>
       <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">Qt4ProjectManager.MakeStep</value>
-      <valuelist type="QVariantList" key="Qt4ProjectManager.MakeStep.AutomaticallyAddedMakeArguments"/>
+      <valuelist type="QVariantList" key="Qt4ProjectManager.MakeStep.AutomaticallyAddedMakeArguments">
+       <value type="QString">-w</value>
+       <value type="QString">-r</value>
+      </valuelist>
       <value type="bool" key="Qt4ProjectManager.MakeStep.Clean">true</value>
       <value type="QString" key="Qt4ProjectManager.MakeStep.MakeArguments">clean</value>
       <value type="QString" key="Qt4ProjectManager.MakeStep.MakeCommand"></value>
@@ -226,7 +236,7 @@
     <valuelist type="QVariantList" key="PE.EnvironmentAspect.Changes"/>
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.DefaultDisplayName">eccoin-qt</value>
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName"></value>
-    <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">Qt4ProjectManager.Qt4RunConfiguration:C:/Users/-Lucy-/Documents/GitHub/ECCoin/eccoin-qt.pro</value>
+    <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">Qt4ProjectManager.Qt4RunConfiguration:/Users/michaeltammerijn/Documents/ECCoin/eccoin-qt.pro</value>
     <value type="QString" key="Qt4ProjectManager.Qt4RunConfiguration.CommandLineArguments"></value>
     <value type="QString" key="Qt4ProjectManager.Qt4RunConfiguration.ProFile">eccoin-qt.pro</value>
     <value type="bool" key="Qt4ProjectManager.Qt4RunConfiguration.UseDyldImageSuffix">false</value>
@@ -248,10 +258,10 @@
  </data>
  <data>
   <variable>ProjectExplorer.Project.Updater.FileVersion</variable>
-  <value type="int">18</value>
+  <value type="int">16</value>
  </data>
  <data>
   <variable>Version</variable>
-  <value type="int">18</value>
+  <value type="int">16</value>
  </data>
 </qtcreator>

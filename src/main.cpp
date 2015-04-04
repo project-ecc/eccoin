@@ -122,7 +122,7 @@ bool static IsFromMe(CTransaction& tx)
 }
 
 // get the wallet transaction with the given hash (if it exists)
-bool static GetTransaction(const uint256& hashTx, CWalletTx& wtx)
+bool GetTransaction(const uint256& hashTx, CWalletTx& wtx)
 {
     BOOST_FOREACH(CWallet* pwallet, setpwalletRegistered)
         if (pwallet->WGetTransaction(hashTx,wtx))

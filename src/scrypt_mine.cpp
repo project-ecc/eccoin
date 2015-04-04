@@ -126,7 +126,7 @@ static inline void xor_salsa8(unsigned int B[16], const unsigned int Bx[16])
 }
 
 
-static inline void scrypt_core(unsigned int *X, unsigned int *V)
+inline void scrypt_core(unsigned int *X, unsigned int *V)
 {
     unsigned int i, j, k;
 

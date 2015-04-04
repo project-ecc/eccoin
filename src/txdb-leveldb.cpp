@@ -405,8 +405,10 @@ void CTxDB::FinishBlockIndex() // this is old and causes an error with allowing 
             round = round + 1;
             if(round >= 25000)
             {
-                std::thread loadTx (ThreadForReadingTx,checklist);     // spawn new thread
-                loadTx.detach();
+               /// this works on win but not on mac, not sure why, not used atm anyway so it is commented out
+               ///std::thread loadTx (ThreadForReadingTx,checklist);     // spawn new thread
+               ///loadTx.detach();
+               ///
                 round = 0;
                 checklist.clear();
             }
@@ -419,8 +421,12 @@ void CTxDB::FinishBlockIndex() // this is old and causes an error with allowing 
    }
    delete iterator;
    printf("DEBUG: FinishBlockIndex(): mapBlockIndex.size = %i \n", mapBlockIndex.size());
-   std::thread loadTx (ThreadForReadingTx,checklist);     // spawn new thread
-   loadTx.detach();
+
+   /// this works on win but not on mac, not sure why, not used atm anyway so it is commented out
+   ///std::thread loadTx (ThreadForReadingTx,checklist);     // spawn new thread
+   ///loadTx.detach();
+   ///
+
    round = 0;
    checklist.clear();
    printf("************************************ finished******************************************\n" );
