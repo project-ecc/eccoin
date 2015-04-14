@@ -192,7 +192,6 @@ HEADERS += \
     src/hashblock.h \
     src/init.h \
     src/irc.h \
-    src/kernel.h \
     src/key.h \
     src/keystore.h \
     src/limitedmap.h \
@@ -273,7 +272,8 @@ HEADERS += \
     src/json/json_spirit_reader_template.h \
     src/json/json_spirit_reader.h \
     src/json/json_spirit_error_position.h \
-    src/json/json_spirit.h
+    src/json/json_spirit.h \
+    src/scrypt_kernel.h
 #
 
 SOURCES += \
@@ -286,7 +286,6 @@ SOURCES += \
     src/hash.cpp \
     src/init.cpp \
     src/irc.cpp \
-    src/kernel.cpp \
     src/key.cpp \
     src/keystore.cpp \
     src/main.cpp \
@@ -345,7 +344,8 @@ SOURCES += \
     src/qt/signverifymessagedialog.cpp \
     src/qt/aboutdialog.cpp \
     src/qt/editaddressdialog.cpp \
-    src/qt/bitcoinaddressvalidator.cpp
+    src/qt/bitcoinaddressvalidator.cpp \
+    src/scrypt_kernel.cpp
 #
 
 SOURCES += \

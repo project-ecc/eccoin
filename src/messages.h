@@ -6,7 +6,7 @@
 #include "checkpoints.h"
 #include "db.h"
 #include "init.h"
-#include "kernel.h"
+#include "scrypt_kernel.h"
 #include "main.h"
 #include "net.h"
 #include "txdb-leveldb.h"

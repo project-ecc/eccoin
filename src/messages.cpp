@@ -179,6 +179,8 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
         // ppcoin: ask for pending sync-checkpoint if any
         if (!IsInitialBlockDownload())
             Checkpoints::AskForPendingSyncCheckpoint(pfrom);
+        // eccoin: be aggressive and ask for blocks so we start to get them in the order we need them
+        pfrom->PushGetBlocks(pindexBest,uint256(0));
     }
 
 

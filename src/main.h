@@ -57,7 +57,6 @@ static const int64_t MAX_MONEY = 50000000000 * COIN;
 static const int64_t COIN_YEAR_REWARD = 10 * CENT; // 10% per year
 static const int64_t MAX_MINT_PROOF_OF_STAKE = 0.1 * COIN;
 static const int MODIFIER_INTERVAL_SWITCH = 2500;
-extern int duplicate;
 static const int64_t nMaxClockDrift = 2 * 60 * 60;        // two hours
 
 inline bool MoneyRange(int64_t nValue) { return (nValue >= 0 && nValue <= MAX_MONEY); }
@@ -106,6 +105,7 @@ extern unsigned char pchMessageStart[4];
 extern void *scrypt_buffer_alloc();
 extern void scrypt_buffer_free(void *scratchpad);
 extern void scrypt_hash_mine(const void* input, size_t inputlen, uint32_t *res, void *scratchpad);
+extern map<uint256, uint256> mapProofOfStake;
 
 // Settings
 extern int64_t nTransactionFee;
@@ -616,7 +616,6 @@ public:
 
     int64_t GetMinFee(unsigned int nBlockSize=1, bool fAllowFree=false, enum GetMinFee_mode mode=GMF_BLOCK, unsigned int nBytes = 0) const;
     int64_t GetMinFee(unsigned int nBlockSize=1, enum GetMinFee_mode mode=GMF_BLOCK, unsigned int nBytes = 0) const;
-    int64_t GetMinScryptFee(unsigned int nBlockSize=1, bool fAllowFree=false, enum GetMinFee_mode mode=GMF_BLOCK, unsigned int nBytes = 0) const;
 
     bool ReadFromDisk(CDiskTxPos pos, FILE** pfileRet=NULL)
     {
@@ -957,12 +956,12 @@ public:
     void UpdateTime(const CBlockIndex* pindexPrev);
 
     // entropy bit for stake modifier if chosen by modifier
-    unsigned int GetStakeEntropyBit() const
+    unsigned int GetStakeEntropyBit(unsigned int nHeight) const
     {
         // Take last bit of block hash as entropy bit
         unsigned int nEntropyBit = static_cast<unsigned int>((GetHash().Get64()) & uint64_t(1));
         if (fDebug && GetBoolArg("-printstakemodifier"))
-            printf("GetStakeEntropyBit: hashBlock=%s nEntropyBit=%u\n", GetHash().ToString().c_str(), nEntropyBit);
+            printf("GetStakeEntropyBit: nHeight=%u, hashBlock=%s nEntropyBit=%u\n",nHeight, GetHash().ToString().c_str(), nEntropyBit);
         return nEntropyBit;
     }
 
@@ -1149,11 +1148,10 @@ public:
     bool ReadFromDisk(const CBlockIndex* pindex, bool fReadTransactions=true);
     bool SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew);
     bool AddToOrphanTracker(unsigned int nFile, unsigned int nBlockPos, const uint256& hashProofOfStake);
-    bool AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos, const uint256& hashProofOfStake);
+    bool AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos);
     bool CheckBlock(bool fCheckPOW=true, bool fCheckMerkleRoot=true, bool fCheckSig=true) const;
     bool AcceptBlock(CBlock* pblock);
     bool GetCoinAge(uint64_t& nCoinAge) const; // ppcoin: calculate total coin age spent in block
-    bool SignBlock(CWallet& keystore, int64_t nFees);
     bool SignScryptBlock(const CKeyStore& keystore);
     bool CheckBlockSignature() const;
 

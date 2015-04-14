@@ -91,12 +91,6 @@ unsigned short GetListenPort()
 
 void CNode::PushGetBlocks(CBlockIndex* pindexBegin, uint256 hashEnd)
 {
-    // Filter out duplicate requests
-    ///could filter out duplicates, but it is throwing away valid requests
-    //if (pindexBegin == pindexLastGetBlocksBegin && hashEnd == hashLastGetBlocksEnd)
-    //{
-    //    return;
-    //}
     pindexLastGetBlocksBegin = pindexBegin;
     hashLastGetBlocksEnd = hashEnd;
     printf("sending new getBlocks request from %s to %s \n", pindexLastGetBlocksBegin->GetBlockHash().ToString().c_str(), hashLastGetBlocksEnd.ToString().c_str());
