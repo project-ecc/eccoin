@@ -718,8 +718,8 @@ bool ProcessMessages(CNode* pfrom)
     CDataStream& vRecv = pfrom->vRecv;
     if (vRecv.empty())
         return true;
-    //if (fDebug)
-    //    printf("ProcessMessages(%u bytes)\n", vRecv.size());
+    if (fDebug)
+        printf("ProcessMessages(%u bytes)\n", vRecv.size());
 
     //
     // Message format
@@ -734,7 +734,9 @@ bool ProcessMessages(CNode* pfrom)
     {
         // Don't bother if send buffer is too full to respond anyway
         if (pfrom->vSend.size() >= SendBufferSize())
+        {
             break;
+        }
 
         // Scan for message start
         CDataStream::iterator pstart = search(vRecv.begin(), vRecv.end(), BEGIN(pchMessageStart), END(pchMessageStart));
@@ -991,8 +993,9 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
             pto->mapAskFor.erase(pto->mapAskFor.begin());
         }
         if (!vGetData.empty())
+        {
             pto->PushMessage("getdata", vGetData);
-
+        }
     }
     return true;
 }

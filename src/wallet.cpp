@@ -1609,9 +1609,6 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
                 txNew.nTime -= n;
                 txNew.vin.push_back(CTxIn(pcoin.first->GetHash(), pcoin.second));
                 nCredit += pcoin.first->vout[pcoin.second].nValue;
-
-                // printf(">> Wallet: CreateCoinStake: nCredit = %"PRI64d"\n", nCredit);
-
                 vwtxPrev.push_back(pcoin.first);
                 txNew.vout.push_back(CTxOut(0, scriptPubKeyOut));
                 if (block.GetBlockTime() + nStakeSplitAge > txNew.nTime)
@@ -1625,10 +1622,11 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
         }
         if (fKernelFound || fShutdown)
             break; // if kernel is found stop searching
+
     }
     if (nCredit == 0 || nCredit > nBalance - nReserveBalance)
     {
-        printf(">> Wallet: CreateCoinStake: nCredit = %"PRId64", nBalance = %"PRId64", nReserveBalance = %"PRId64"\n", nCredit, nBalance, nReserveBalance);
+        //printf(">> Wallet: CreateCoinStake: nCredit = %"PRId64", nBalance = %"PRId64", nReserveBalance = %"PRId64"\n", nCredit, nBalance, nReserveBalance);
         return false;
     }
 
@@ -1666,8 +1664,12 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
         const CBlockIndex* pIndex0 = GetLastBlockIndex(pindexBest, false);
 
         if (!txNew.GetCoinAge(txdb, nCoinAge))
+        {
             return error("CreateCoinStake : failed to calculate coin age");
-        nCredit += GetProofOfStakeReward(nCoinAge, nBits, txNew.nTime, pIndex0->nHeight,0);
+        }
+
+        int64_t nCreditReward = GetProofOfStakeReward(nCoinAge, nBits, txNew.nTime, pIndex0->nHeight,0);
+        nCredit = nCredit + (nCreditReward / 2);
     }
 
     int64_t nMinFee = 0;

@@ -830,7 +830,7 @@ bool AppInit2()
     if (pindexBest != pindexRescan && pindexBest && pindexRescan && pindexBest->nHeight > pindexRescan->nHeight)
     {
         uiInterface.InitMessage(_("Rescanning..."));
-        printf("DEBUG: pindexBest: %i, pindexRescan %i \n", pindexBest->nHeight, pindexRescan->nHeight);
+        printf("pindexBest: %i, pindexRescan %i \n", pindexBest->nHeight, pindexRescan->nHeight);
         printf("Rescanning last %i blocks (from block %i)...\n", pindexBest->nHeight - pindexRescan->nHeight, pindexRescan->nHeight);
         nStart = GetTimeMillis();
         pwalletMain->ScanForWalletTransactions(pindexRescan, true);

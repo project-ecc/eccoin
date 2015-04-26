@@ -844,7 +844,7 @@ int CMerkleTx::GetBlocksToMaturity() const
 {
     if (!(IsCoinBase() || IsCoinStake()))
         return 0;
-    return max(0, (nCoinbaseMaturity+10) - GetDepthInMainChain());
+    return max(0, (nCoinbaseMaturity + 20) - GetDepthInMainChain());
 }
 
 
@@ -1047,11 +1047,10 @@ int64_t GetProofOfStakeReward(int64_t nCoinAge, unsigned int nBits, unsigned int
     int64_t nRewardCoinYear;
     nRewardCoinYear = MAX_MINT_PROOF_OF_STAKE;
     nRewardCoinYear = 2.5 * MAX_MINT_PROOF_OF_STAKE;
-
     if (nHeight > 500000)
     {
         int64_t nextMoney = (ValueFromAmountAsDouble(pindexBest->nMoneySupply) + nRewardCoinYear) ;
-        if(nextMoney > (MAX_MONEY/2))
+        if(nextMoney > (MAX_MONEY / 2))
         {
             int64_t difference = (nextMoney - (MAX_MONEY / 2));
             nRewardCoinYear = nextMoney - difference;
@@ -1061,14 +1060,12 @@ int64_t GetProofOfStakeReward(int64_t nCoinAge, unsigned int nBits, unsigned int
             nRewardCoinYear = 0;
         }
     }
-
     int64_t nSubsidy = nCoinAge * nRewardCoinYear / 365;
-
     if (fDebug && GetBoolArg("-printcreation"))
     {
         printf("GetProofOfStakeReward(): create=%s nCoinAge=%"PRId64" nBits=%d\n", FormatMoney(nSubsidy).c_str(), nCoinAge, nBits);
     }
-    return nSubsidy;
+    return nSubsidy / 1000000;
 }
 
 //
@@ -1497,6 +1494,23 @@ bool CTransaction::ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTx
             nFees += nTxFee;
             if (!MoneyRange(nFees))
                 return DoS(100, error("ConnectInputs() : nFees out of range"));
+        }
+        else
+        {
+            // ppcoin: coin stake tx earns reward instead of paying fee
+            u_int64_t nCoinAge;
+            if (!GetCoinAge(txdb, nCoinAge))
+                return error("ConnectInputs() : %s unable to get coin age for coinstake", GetHash().ToString().substr(0,10).c_str());
+
+            int64_t nStakeReward = GetValueOut() - nValueIn;
+            if (nStakeReward > GetProofOfStakeReward(nCoinAge, pindexBlock->nBits, nTime, pindexBlock->nHeight, 0) - GetMinFee(1,false,GMF_BLOCK,0) + MIN_TX_FEE)
+            {
+                printf("nStakeReward = %i , CoinAge = %lu \n", nStakeReward, nCoinAge);
+                return DoS(100, error("ConnectInputs() : %s stake reward exceeded", GetHash().ToString().substr(0,10).c_str()));
+
+            }
+            //printf("nStakeReward = %i , CoinAge = %lu \n", nStakeReward, nCoinAge);
+
         }
     }
 
@@ -1954,7 +1968,49 @@ bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)
 // guaranteed to be in main chain by sync-checkpoint. This rule is
 // introduced to help nodes establish a consistent view of the coin
 // age (trust score) of competing branches.
-bool CTransaction::GetCoinAge(CTxDB& txdb, uint64_t& nCoinAge) const
+
+
+u_int64_t CTransaction::GetCoinAge(CTxDB& txdb, u_int64_t nCoinAge, bool byValue) const
+{
+    CBigNum bnCentSecond = 0;  // coin age in the unit of cent-seconds
+    nCoinAge = 0;
+
+    if (IsCoinBase())
+        return true;
+
+    BOOST_FOREACH(const CTxIn& txin, vin)
+    {
+        // First try finding the previous transaction in database
+        CTransaction txPrev;
+        CTxIndex txindex;
+        if (!txPrev.ReadFromDisk(txdb, txin.prevout, txindex))
+            continue;  // previous transaction not in main chain
+        if (nTime < txPrev.nTime)
+            return false;  // Transaction timestamp violation
+
+        // Read block header
+        CBlock block;
+        if (!block.ReadFromDisk(txindex.pos.nFile, txindex.pos.nBlockPos, false))
+            return false; // unable to read block of previous transaction
+        if (block.GetBlockTime() + nStakeMinAge > nTime)
+            continue; // only count coins meeting min age requirement
+
+        int64_t nValueIn = txPrev.vout[txin.prevout.n].nValue;
+        bnCentSecond += CBigNum(nValueIn) * (nTime-txPrev.nTime) / CENT;
+
+        if (fDebug && GetBoolArg("-printcoinage"))
+            printf("coin age nValueIn=%"PRId64" nTimeDiff=%d bnCentSecond=%s\n", nValueIn, nTime - txPrev.nTime, bnCentSecond.ToString().c_str());
+    }
+
+    CBigNum bnCoinDay = bnCentSecond * CENT / (24 * 60 * 60);
+    if (fDebug && GetBoolArg("-printcoinage"))
+        printf("coin age bnCoinDay=%s\n", bnCoinDay.ToString().c_str());
+    nCoinAge = bnCoinDay.getuint64();
+    return nCoinAge;
+}
+
+
+bool CTransaction::GetCoinAge(CTxDB& txdb, u_int64_t& nCoinAge) const
 {
     CBigNum bnCentSecond = 0;  // coin age in the unit of cent-seconds
     nCoinAge = 0;
@@ -2088,9 +2144,6 @@ bool CBlock::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos)
             return false;
         }
     }
-
-    txdb.Close();
-
     if (pindexNew == pindexBest)
     {
         // Notify UI to display prev block's coinbase if it was ours
@@ -2327,7 +2380,7 @@ bool CBlockIndex::IsSuperMajority(int minVersion, const CBlockIndex* pstart, uns
     return (nFound >= nRequired);
 }
 
-bool ProcessBlock(CNode* pfrom, CBlock* pblock) //is load is getting it from another node as opposed to being mined by this node
+bool ProcessBlock(CNode* pfrom, CBlock* pblock)
 {
     // Check for duplicate
     uint256 hash = pblock->GetHash();
@@ -2729,10 +2782,6 @@ bool LoadBlockIndex(bool fAllowNew)
         {
             return error("LoadBlockIndex() : failed to write new checkpoint master key to db");
         }
-        else
-        {
-            printf("WriteCheckpointPubKey of strMasterPubKey was a success \n");
-        }
         if (!txdb.TxnCommit())
             return error("LoadBlockIndex() : failed to commit new checkpoint master key to db");
         if ((!fTestNet) && !Checkpoints::ResetSyncCheckpoint())
@@ -2752,9 +2801,6 @@ void PrintBlockTree()
     {
         CBlockIndex* pindex = (*mi).second;
         mapNext[pindex->pprev].push_back(pindex);
-        // test
-        //while (rand() % 3 == 0)
-        //    mapNext[pindex->pprev].push_back(pindex);
     }
 
     vector<pair<int, CBlockIndex*> > vStack;
@@ -2825,7 +2871,8 @@ bool LoadExternalBlockFile(FILE* fileIn)
     int nLoaded = 0;
     {
         LOCK(cs_main);
-        try {
+        try
+        {
             CAutoFile blkdat(fileIn, SER_DISK, CLIENT_VERSION);
             unsigned int nPos = 0;
             while (nPos != (unsigned int)-1 && blkdat.good() && !fRequestShutdown)

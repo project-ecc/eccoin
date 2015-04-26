@@ -19,6 +19,8 @@
 using namespace std;
 using namespace boost;
 
+typedef unsigned long long u_int64_t;
+
 class CWallet;
 class CWalletTx;
 class CBlock;
@@ -725,6 +727,8 @@ public:
     bool CheckTransaction() const;
     bool AcceptToMemoryPool(CTxDB& txdb, bool fCheckInputs=true, bool* pfMissingInputs=NULL);
     bool GetCoinAge(CTxDB& txdb, uint64_t& nCoinAge) const;  // ppcoin: get transaction coin age
+    u_int64_t GetCoinAge(CTxDB& txdb, u_int64_t nCoinAge, bool byValue) const;
+
 
 
 protected:

@@ -337,7 +337,11 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
             if (!tx.FetchInputs(txdb, mapTestPoolTmp, false, true, mapInputs, fInvalid))
                 continue;
 
-            int64 nTxFees = tx.GetValueIn(mapInputs)-tx.GetValueOut();
+            int64_t nTxFees = 0;
+            nTxFees = tx.GetValueIn(mapInputs);
+            printf("nTxFee before value out = %"PRId64" \n", nTxFees);
+            nTxFees = nTxFees - tx.GetValueOut();
+            printf("nTxFees FINAL  = %"PRId64" (this should be amount miner is paid and this number should be negative) \n", nTxFees);
             if (nTxFees < nMinFee)
                 continue;
 
@@ -582,7 +586,7 @@ void ScryptMiner(CWallet *pwallet, bool fProofOfStake)
                 CheckWork(pblock.get(), *pwalletMain, reservekey);
                 SetThreadPriority(THREAD_PRIORITY_LOWEST);
             }
-            Sleep(500);
+            Sleep(1000); // 1 second delay
             continue;
         }
 
