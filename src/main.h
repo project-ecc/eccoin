@@ -53,8 +53,8 @@ static const unsigned int MAX_INV_SZ = 50000;
 static int64_t nBestTimeReceived;
 static const int64_t MIN_TX_FEE = 0.1;
 static const int64_t MIN_RELAY_TX_FEE = MIN_TX_FEE;
-static const int64_t MAX_MONEY = 50000000000 * COIN;
-static const int64_t COIN_YEAR_REWARD = 10 * CENT; // 10% per year
+static const int64_t MAX_MONEY = 20420000 * COIN;
+static const int64_t COIN_YEAR_REWARD = 2 * CENT; // 2% per year
 static const int64_t MAX_MINT_PROOF_OF_STAKE = 0.1 * COIN;
 static const int MODIFIER_INTERVAL_SWITCH = 2500;
 static const int64_t nMaxClockDrift = 2 * 60 * 60;        // two hours
