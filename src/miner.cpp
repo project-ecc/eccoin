@@ -339,9 +339,7 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
 
             int64_t nTxFees = 0;
             nTxFees = tx.GetValueIn(mapInputs);
-            printf("nTxFee before value out = %"PRId64" \n", nTxFees);
             nTxFees = nTxFees - tx.GetValueOut();
-            printf("nTxFees FINAL  = %"PRId64" (this should be amount miner is paid and this number should be negative) \n", nTxFees);
             if (nTxFees < nMinFee)
                 continue;
 
