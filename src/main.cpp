@@ -1065,7 +1065,7 @@ int64_t GetProofOfStakeReward(int64_t nCoinAge, unsigned int nBits, unsigned int
     {
         printf("GetProofOfStakeReward(): create=%s nCoinAge=%"PRId64" nBits=%d\n", FormatMoney(nSubsidy).c_str(), nCoinAge, nBits);
     }
-    return nSubsidy / 1000000;
+    return nSubsidy;
 }
 
 //
@@ -1430,6 +1430,7 @@ bool CTransaction::ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTx
                         return error("ConnectInputs() : tried to spend %s at depth %d", txPrev.IsCoinBase() ? "coinbase" : "coinstake", pindexBlock->nHeight - pindex->nHeight);
 
             // ppcoin: check transaction timestamp
+            // if (txPrev.nTime > FutureDrift(nTime))
             if (txPrev.nTime > nTime)
                 return DoS(100, error("ConnectInputs() : transaction timestamp earlier than input transaction"));
 
@@ -1494,23 +1495,6 @@ bool CTransaction::ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTx
             nFees += nTxFee;
             if (!MoneyRange(nFees))
                 return DoS(100, error("ConnectInputs() : nFees out of range"));
-        }
-        else
-        {
-            // ppcoin: coin stake tx earns reward instead of paying fee
-            u_int64_t nCoinAge;
-            if (!GetCoinAge(txdb, nCoinAge))
-                return error("ConnectInputs() : %s unable to get coin age for coinstake", GetHash().ToString().substr(0,10).c_str());
-
-            int64_t nStakeReward = GetValueOut() - nValueIn;
-            if (nStakeReward > GetProofOfStakeReward(nCoinAge, pindexBlock->nBits, nTime, pindexBlock->nHeight, 0) - GetMinFee(1,false,GMF_BLOCK,0) + MIN_TX_FEE)
-            {
-                printf("nStakeReward = %i , CoinAge = %lu \n", nStakeReward, nCoinAge);
-                return DoS(100, error("ConnectInputs() : %s stake reward exceeded", GetHash().ToString().substr(0,10).c_str()));
-
-            }
-            //printf("nStakeReward = %i , CoinAge = %lu \n", nStakeReward, nCoinAge);
-
         }
     }
 
