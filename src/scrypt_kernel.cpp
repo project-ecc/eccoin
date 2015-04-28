@@ -16,8 +16,6 @@ extern int nBestHeight;
 extern int nStakeMaxAge;
 extern int nStakeTargetSpacing;
 
-typedef unsigned long long u_int64_t;
-
 // Get the stake modifier depending on the current block height
 static std::map<int, unsigned int> getStakeMod()
 {
@@ -48,7 +46,7 @@ static std::map<int, unsigned int> getStakeMod()
 static std::map<int, unsigned int> mapStakeModifierCheckpoints = getStakeMod();
 
 // Get the last stake modifier and its generation time from a given block
-static bool GetLastStakeModifier(const CBlockIndex* pindex, u_int64_t& nStakeModifier, int64_t& nModifierTime)
+static bool GetLastStakeModifier(const CBlockIndex* pindex, uint64_t& nStakeModifier, int64_t& nModifierTime)
 {
     if (!pindex)
         return error("GetLastStakeModifier: null pindex");
@@ -86,7 +84,7 @@ static int64_t GetStakeModifierSelectionInterval()
 static bool SelectBlockFromCandidates(
     vector<pair<int64_t, uint256> >& vSortedByTimestamp,
     map<uint256, const CBlockIndex*>& mapSelectedBlocks,
-    int64_t nSelectionIntervalStop, u_int64_t nStakeModifierPrev,
+    int64_t nSelectionIntervalStop, uint64_t nStakeModifierPrev,
     const CBlockIndex** pindexSelected)
 {
     bool fSelected = false;
@@ -190,7 +188,7 @@ bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, uint64_t& nStakeMod
         if (!SelectBlockFromCandidates(vSortedByTimestamp, mapSelectedBlocks, nSelectionIntervalStop, nStakeModifier, &pindex))
             return error("ComputeNextStakeModifier: unable to select block at round %d", nRound);
         // write the entropy bit of the selected block
-        nStakeModifierNew |= (((u_int64_t)pindex->GetStakeEntropyBit()) << nRound);
+        nStakeModifierNew |= (((uint64_t)pindex->GetStakeEntropyBit()) << nRound);
         // add the selected block from candidates to selected list
         mapSelectedBlocks.insert(make_pair(pindex->GetBlockHash(), pindex));
         if (fDebug && GetBoolArg("-printstakemodifier"))
@@ -232,7 +230,7 @@ bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, uint64_t& nStakeMod
 
 // The stake modifier used to hash for a stake kernel is chosen as the stake
 // modifier about a selection interval later than the coin generating the kernel
-static bool GetKernelStakeModifier(uint256 hashBlockFrom, u_int64_t& nStakeModifier, int& nStakeModifierHeight, int64_t& nStakeModifierTime, bool fPrintProofOfStake)
+static bool GetKernelStakeModifier(uint256 hashBlockFrom, uint64_t& nStakeModifier, int& nStakeModifierHeight, int64_t& nStakeModifierTime, bool fPrintProofOfStake)
 {
     nStakeModifier = 0;
     if (!mapBlockIndex.count(hashBlockFrom))
@@ -314,7 +312,7 @@ bool CheckStakeKernelHashScrypt(unsigned int nBits, const CBlock& blockFrom, uns
     // printf(">>> CheckStakeKernelHash: nTimeWeight = %"PRI64d"\n", nTimeWeight);
     // Calculate hash
     CDataStream ss(SER_GETHASH, 0);
-    u_int64_t nStakeModifier = 0;
+    uint64_t nStakeModifier = 0;
     int nStakeModifierHeight = 0;
     int64_t nStakeModifierTime = 0;
 
