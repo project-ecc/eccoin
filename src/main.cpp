@@ -1496,8 +1496,23 @@ bool CTransaction::ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTx
             if (!MoneyRange(nFees))
                 return DoS(100, error("ConnectInputs() : nFees out of range"));
         }
-    }
+        else
+        {
+            // ppcoin: coin stake tx earns reward instead of paying fee
+            uint64_t nCoinAge;
+            if (!GetCoinAge(txdb, nCoinAge))
+                return error("ConnectInputs() : %s unable to get coin age for coinstake", GetHash().ToString().substr(0,10).c_str());
 
+            int64_t nStakeReward = GetValueOut() - nValueIn;
+            if (nStakeReward > GetProofOfStakeReward(GetCoinAge(txdb, nCoinAge, true), pindexBlock->nBits, nTime, pindexBlock->nHeight, 0) - GetMinFee(1,false,GMF_BLOCK,0) + MIN_TX_FEE)
+            {
+                printf("nStakeReward = %i , CoinAge = %lu \n", nStakeReward, nCoinAge);
+                return DoS(100, error("ConnectInputs() : %s stake reward exceeded", GetHash().ToString().substr(0,10).c_str()));
+
+            }
+            printf("END: nStakeReward = %i , CoinAge = %lu \n", nStakeReward, nCoinAge);
+        }
+    }
     return true;
 }
 
@@ -1954,7 +1969,7 @@ bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)
 // age (trust score) of competing branches.
 
 
-u_int64_t CTransaction::GetCoinAge(CTxDB& txdb, u_int64_t nCoinAge, bool byValue) const
+uint64_t CTransaction::GetCoinAge(CTxDB& txdb, uint64_t nCoinAge, bool byValue) const
 {
     CBigNum bnCentSecond = 0;  // coin age in the unit of cent-seconds
     nCoinAge = 0;
@@ -1986,7 +2001,7 @@ u_int64_t CTransaction::GetCoinAge(CTxDB& txdb, u_int64_t nCoinAge, bool byValue
             printf("coin age nValueIn=%"PRId64" nTimeDiff=%d bnCentSecond=%s\n", nValueIn, nTime - txPrev.nTime, bnCentSecond.ToString().c_str());
     }
 
-    CBigNum bnCoinDay = bnCentSecond * CENT / (24 * 60 * 60);
+    CBigNum bnCoinDay = bnCentSecond * CENT / COIN / (24 * 60 * 60);
     if (fDebug && GetBoolArg("-printcoinage"))
         printf("coin age bnCoinDay=%s\n", bnCoinDay.ToString().c_str());
     nCoinAge = bnCoinDay.getuint64();
@@ -1994,7 +2009,7 @@ u_int64_t CTransaction::GetCoinAge(CTxDB& txdb, u_int64_t nCoinAge, bool byValue
 }
 
 
-bool CTransaction::GetCoinAge(CTxDB& txdb, u_int64_t& nCoinAge) const
+bool CTransaction::GetCoinAge(CTxDB& txdb, uint64_t& nCoinAge) const
 {
     CBigNum bnCentSecond = 0;  // coin age in the unit of cent-seconds
     nCoinAge = 0;
@@ -2026,7 +2041,7 @@ bool CTransaction::GetCoinAge(CTxDB& txdb, u_int64_t& nCoinAge) const
             printf("coin age nValueIn=%"PRId64" nTimeDiff=%d bnCentSecond=%s\n", nValueIn, nTime - txPrev.nTime, bnCentSecond.ToString().c_str());
     }
 
-    CBigNum bnCoinDay = bnCentSecond * CENT / (24 * 60 * 60);
+    CBigNum bnCoinDay = bnCentSecond * CENT / COIN / (24 * 60 * 60);
     if (fDebug && GetBoolArg("-printcoinage"))
         printf("coin age bnCoinDay=%s\n", bnCoinDay.ToString().c_str());
     nCoinAge = bnCoinDay.getuint64();
