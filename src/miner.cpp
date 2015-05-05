@@ -311,7 +311,7 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
                 continue;
 
             // ppcoin: simplify transaction fee - allow free = false
-            int64_t nMinFee = tx.GetMinFee(nBlockSize, false, GMF_BLOCK);
+            int64_t nMinFee = tx.GetMinFee();
 
             // Skip free transactions if we're past the minimum block size:
             if (fSortedByFee && (dFeePerKb < nMinTxFee) && (nBlockSize + nTxSize >= nBlockMinSize))
@@ -339,7 +339,7 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
             nTxFees = tx.GetValueIn(mapInputs);
             nTxFees = nTxFees - tx.GetValueOut();
             if (nTxFees < nMinFee)
-                continue;
+                nTxFees = nMinFee;
 
             nTxSigOps += tx.GetP2SHSigOpCount(mapInputs);
             if (nBlockSigOps + nTxSigOps >= MAX_BLOCK_SIGOPS)

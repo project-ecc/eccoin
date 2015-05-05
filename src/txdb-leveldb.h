@@ -221,5 +221,5 @@ private:
 };
 
 void ThreadForFinishBlockIndex();
-static CBlockIndex *InsertBlockIndex(uint256 hash);
+CBlockIndex *InsertBlockIndex(uint256 hash);
 #endif // BITCOIN_DB_H

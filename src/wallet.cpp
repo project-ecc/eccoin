@@ -1699,9 +1699,9 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
             return error("CreateCoinStake : exceeded coinstake size limit");
 
         // Check enough fee is paid
-        if (nMinFee < txNew.GetMinFee(1,false,GMF_BLOCK,0) - MIN_TX_FEE)
+        if (nMinFee < txNew.GetMinFee() - MIN_TX_FEE)
         {
-            nMinFee = txNew.GetMinFee(1,false,GMF_BLOCK,0) - MIN_TX_FEE;
+            nMinFee = txNew.GetMinFee() - MIN_TX_FEE;
             continue; // try signing again
         }
         else

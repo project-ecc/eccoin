@@ -305,7 +305,7 @@ bool CTxDB::WriteCheckpointPubKey(const string& strPubKey)
     return Write(string("strCheckpointPubKey"), strPubKey);
 }
 
-static CBlockIndex *InsertBlockIndex(uint256 hash)
+CBlockIndex *InsertBlockIndex(uint256 hash)
 {
     if (hash == 0)
         return NULL;

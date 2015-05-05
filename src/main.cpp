@@ -517,35 +517,6 @@ bool CTransaction::CheckTransaction() const
     return true;
 }
 
-int64_t CTransaction::GetMinFee(unsigned int nBlockSize, bool fAllowFree,enum GetMinFee_mode mode, unsigned int nBytes) const
-{
-    // Base fee is either MIN_TX_FEE or MIN_RELAY_TX_FEE
-    int64_t nBaseFee = (mode == GMF_RELAY) ? MIN_RELAY_TX_FEE : MIN_TX_FEE;
-
-    unsigned int nNewBlockSize = nBlockSize + nBytes;
-    int64_t nMinFee = (1 + (int64_t)nBytes / 1000) * nBaseFee;
-
-    // To limit dust spam, require MIN_TX_FEE/MIN_RELAY_TX_FEE if any output is less than 0.01
-    if (nMinFee < nBaseFee)
-    {
-        BOOST_FOREACH(const CTxOut& txout, vout)
-            if (txout.nValue < CENT)
-                nMinFee = nBaseFee;
-    }
-
-    // Raise the price as the block approaches full
-    if (nBlockSize != 1 && nNewBlockSize >= MAX_BLOCK_SIZE_GEN/2)
-    {
-        if (nNewBlockSize >= MAX_BLOCK_SIZE_GEN)
-            return MAX_MONEY;
-        nMinFee *= MAX_BLOCK_SIZE_GEN / (MAX_BLOCK_SIZE_GEN - nNewBlockSize);
-    }
-
-    if (!MoneyRange(nMinFee))
-        nMinFee = MAX_MONEY;
-    return nMinFee;
-}
-
 int64_t CTransaction::GetMinFee(unsigned int nBlockSize, enum GetMinFee_mode mode, unsigned int nBytes) const
 {
     // Base fee is either MIN_TX_FEE or MIN_RELAY_TX_FEE
@@ -1504,7 +1475,7 @@ bool CTransaction::ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTx
                 return error("ConnectInputs() : %s unable to get coin age for coinstake", GetHash().ToString().substr(0,10).c_str());
 
             int64_t nStakeReward = GetValueOut() - nValueIn;
-            if (nStakeReward > GetProofOfStakeReward(GetCoinAge(txdb, nCoinAge, true), pindexBlock->nBits, nTime, pindexBlock->nHeight, 0) - GetMinFee(1,false,GMF_BLOCK,0) + MIN_TX_FEE)
+            if (nStakeReward > GetProofOfStakeReward(GetCoinAge(txdb, nCoinAge, true), pindexBlock->nBits, nTime, pindexBlock->nHeight, 0) - GetMinFee() + MIN_TX_FEE)
             {
                 printf("nStakeReward = %i , CoinAge = %lu \n", nStakeReward, nCoinAge);
                 return DoS(100, error("ConnectInputs() : %s stake reward exceeded", GetHash().ToString().substr(0,10).c_str()));
