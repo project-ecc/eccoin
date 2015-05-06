@@ -16,6 +16,8 @@
 
 using namespace std;
 
+extern unsigned char pchMessageStart[4];
+
 map<uint256, CAlert> mapAlerts;
 CCriticalSection cs_mapAlerts;
 

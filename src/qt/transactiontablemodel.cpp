@@ -532,13 +532,13 @@ QVariant TransactionTableModel::data(const QModelIndex &index, int role) const
         case Status:
             return QString::fromStdString(rec->status.sortKey);
         case Date:
-            return rec->time;
+            return (long long)(rec->time);
         case Type:
             return formatTxType(rec);
         case ToAddress:
             return formatTxToAddress(rec, true);
         case Amount:
-            return rec->credit + rec->debit;
+            return (long long)(rec->credit + rec->debit);
         }
         break;
     case Qt::ToolTipRole:
@@ -571,7 +571,7 @@ QVariant TransactionTableModel::data(const QModelIndex &index, int role) const
     case LabelRole:
         return walletModel->getAddressTableModel()->labelForAddress(QString::fromStdString(rec->address));
     case AmountRole:
-        return rec->credit + rec->debit;
+        return (long long)(rec->credit + rec->debit);
     case TxIDRole:
         return QString::fromStdString(rec->getTxID());
     case ConfirmedRole:

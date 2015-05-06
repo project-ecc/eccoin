@@ -12,6 +12,7 @@
 #include "init.h"
 #include "ui_interface.h"
 #include "scrypt_kernel.h"
+#include "scrypt_mine.h"
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_int_distribution.hpp>
@@ -82,7 +83,7 @@ int64_t nMinimumInputValue = 0;
 extern enum Checkpoints::CPMode CheckpointsMode;
 static const int CUTOFF_HEIGHT = 86400;
 extern MapCheckpoints mapCheckpoints;
-
+// 
 
 //////////////////////////////////////////////////////////////////////////////
 //

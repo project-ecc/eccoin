@@ -7,6 +7,7 @@
 #include "txdb-leveldb.h"
 #include "miner.h"
 #include "scrypt_kernel.h"
+#include "scrypt_mine.h"
 using namespace std;
 
 extern CWallet* pwalletMain;
@@ -515,7 +516,7 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reservekey)
     return true;
 }
 
-void static ThreadBitcoinMiner(void* parg);
+void ThreadBitcoinMiner(void* parg);
 
 static bool fGenerateBitcoins = false;
 static bool fLimitProcessors = false;
@@ -541,7 +542,7 @@ void ScryptMiner(CWallet *pwallet, bool fProofOfStake)
             return;
         while (vNodes.empty() || IsInitialBlockDownload())
         {
-            Sleep(1000);
+            sleep(1000);
             if (fShutdown)
                 return;
             if ((!fGenerateBitcoins) && !fProofOfStake)
@@ -551,7 +552,7 @@ void ScryptMiner(CWallet *pwallet, bool fProofOfStake)
         while (pwallet->IsLocked())
         {
             strMintWarning = strMintMessage;
-            Sleep(1000);
+            sleep(1000);
         }
         strMintWarning = "";
 
@@ -582,7 +583,7 @@ void ScryptMiner(CWallet *pwallet, bool fProofOfStake)
                 CheckWork(pblock.get(), *pwalletMain, reservekey);
                 SetThreadPriority(THREAD_PRIORITY_LOWEST);
             }
-            Sleep(1000); // 1 second delay
+            sleep(1000); // 1 second delay
             continue;
         }
 
@@ -752,7 +753,7 @@ void GenerateScryptCoins(bool fGenerate, CWallet* pwallet)
         {
             if (!NewThread(ThreadScryptMiner, pwallet))
                 printf("Error: NewThread(ThreadBitcoinMiner) failed\n");
-            Sleep(10);
+            sleep(10);
         }
     }
 }

@@ -11,8 +11,10 @@
 #include "script.h"
 #include "scrypt_mine.h"
 #include "hashblock.h"
-
+#include "scrypt_mine.h"
 #include <list>
+
+extern unsigned char pchMessageStart[4];
 
 using namespace std;
 using namespace boost;
@@ -99,10 +101,10 @@ extern int64_t nLastCoinStakeSearchInterval;
 extern const std::string strMessageMagic;
 extern CCriticalSection cs_setpwalletRegistered;
 extern std::set<CWallet*> setpwalletRegistered;
-extern unsigned char pchMessageStart[4];
 extern void *scrypt_buffer_alloc();
 extern void scrypt_buffer_free(void *scratchpad);
 extern void scrypt_hash_mine(const void* input, size_t inputlen, uint32_t *res, void *scratchpad);
+
 extern map<uint256, uint256> mapProofOfStake;
 
 // Settings

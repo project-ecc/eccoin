@@ -7,7 +7,6 @@
 #include "db.h"
 #include "init.h"
 #include "irc.h"
-#include "messages.h"
 #include "miner.h"
 #include "net.h"
 #include "strlcpy.h"
@@ -29,6 +28,11 @@ using namespace std;
 using namespace boost;
 
 static const int MAX_OUTBOUND_CONNECTIONS = 1000;
+
+extern unsigned char pchMessageStart[4];
+extern bool AlreadyHave(CTxDB& txdb, const CInv& inv);
+extern bool ProcessMessages(CNode* pfrom);
+extern bool SendMessages(CNode* pto, bool fSendTrickle);
 
 void ThreadMessageHandler2(void* parg);
 void ThreadSocketHandler2(void* parg);

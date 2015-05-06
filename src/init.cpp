@@ -15,8 +15,6 @@
 #include "wallet.h"
 #include "walletdb.h"
 
-#include "eccoininfo.h"
-
 #include <string>
 #include <string.h>
 #include <thread>

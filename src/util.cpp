@@ -1079,7 +1079,7 @@ boost::filesystem::path GetDefaultDataDir()
     return pathRet / "ECCoin";
 #else
     // Unix
-    return pathRet / (".ECCoin"));
+    return pathRet / (".ECCoin");
 #endif
 #endif
 }

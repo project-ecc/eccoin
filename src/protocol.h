@@ -21,7 +21,6 @@ static inline unsigned short GetDefaultPort(const bool testnet = fTestNet)
     return testnet ? 29118 : 19118;
 }
 
-
 extern unsigned char pchMessageStart[4];
 
 /** Message header.

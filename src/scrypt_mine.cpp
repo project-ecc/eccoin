@@ -37,6 +37,9 @@
 #include "util.h"
 #include "net.h"
 
+using namespace boost;
+using namespace std;
+
 extern bool fShutdown;
 extern bool fGenerateBitcoins;
 

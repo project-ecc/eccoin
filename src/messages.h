@@ -14,9 +14,9 @@
 #include "ui_interface.h"
 
 
-extern unsigned char pchMessageStart[4];///Scrypt
+unsigned char pchMessageStart[4] = { 0xce, 0xf1, 0xdb, 0xfa }; ///Scrypt
 
-bool static AlreadyHave(CTxDB& txdb, const CInv& inv);
+bool AlreadyHave(CTxDB& txdb, const CInv& inv);
 bool ProcessMessages(CNode* pfrom);
 bool SendMessages(CNode* pto, bool fSendTrickle);
 
