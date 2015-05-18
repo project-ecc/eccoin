@@ -1192,10 +1192,25 @@ boost::filesystem::path GetConfigFile()
 void ReadConfigFile(map<string, string>& mapSettingsRet,
                     map<string, vector<string> >& mapMultiSettingsRet)
 {
+    init:
     boost::filesystem::ifstream streamConfig(GetConfigFile());
     if (!streamConfig.good())
-        return;
-
+    {
+        boost::filesystem::path ConfPath;
+        ConfPath = GetDefaultDataDir() / "ECCoin.conf";
+        FILE* ConfFile = fopen(ConfPath.string().c_str(), "w");
+        fprintf(ConfFile, "listen=1\n");
+        fprintf(ConfFile, "server=1\n");
+        fprintf(ConfFile, "maxconnections=100\n");
+        fprintf(ConfFile, "rpcuser=yourusername\n");
+        fprintf(ConfFile, "rpcpassword=yourpassword\n");
+        fprintf(ConfFile, "addnode=129.21.141.135\n");
+        fprintf(ConfFile, "addnode=129.21.141.224\n");
+        fprintf(ConfFile, "rpcport=19119\n");
+        fprintf(ConfFile, "rpcconnect=127.0.0.1\n");
+        fclose(ConfFile);
+        goto init;
+    }
     set<string> setOptions;
     setOptions.insert("*");
 
