@@ -2376,7 +2376,6 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
         if (!CheckProofOfStake(pblock->vtx[1], pblock->nBits, hashProofOfStake))
         {
             printf("WARNING: ProcessBlock(): check proof-of-stake failed for block %s\n", hash.ToString().c_str());
-            pfrom->PushGetBlocks(pindexBest, uint256(0));
             return false; // do not error here as we expect this during initial block download
         }
         if (!mapProofOfStake.count(hash)) // add to mapProofOfStake
@@ -2384,6 +2383,7 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
     }
 
     CBlockIndex* pcheckpoint = Checkpoints::GetLastSyncCheckpoint();
+
     if (pcheckpoint && pblock->hashPrevBlock != hashBestChain && !Checkpoints::WantedByPendingSyncCheckpoint(hash))
     {
         // Extra checks to prevent "fill up memory by spamming with bogus blocks"
@@ -2399,8 +2399,17 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
 
         if (bnNewBlock > bnRequired)
         {
-            if (pfrom)
-                pfrom->Misbehaving(100);
+            if(!IsInitialBlockDownload()) // if it is in the initial download could be a mistake so no need to disconnect peer just reject block
+            {
+                if (pfrom)
+                {
+                    pfrom->Misbehaving(100);
+                }
+            }
+            else
+            {
+                pfrom->PushGetBlocks(pindexBest, uint256(0));
+            }
             return error("ProcessBlock() : block with too little %s", pblock->IsProofOfStake()? "proof-of-stake" : "proof-of-work");
         }
     }
