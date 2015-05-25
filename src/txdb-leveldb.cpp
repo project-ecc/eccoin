@@ -426,9 +426,6 @@ bool CTxDB::LoadBlockIndex()
         pindexNew->nBits            = diskindex.nBits;
         pindexNew->nNonce           = diskindex.nNonce;
 
-
-        mapProofOfStake.insert(make_pair(blockHash, pindexNew->hashProofOfStake));
-
         // Watch for genesis block
         if (pindexGenesisBlock == NULL && blockHash == (!fTestNet ? hashGenesisBlock : hashGenesisBlockTestNet))
             pindexGenesisBlock = pindexNew;

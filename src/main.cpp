@@ -39,7 +39,6 @@ map<uint256, CBlockIndex*> mapBlockIndex;
 map<uint256, CBlock*> mapOrphanBlocks;
 map<uint256, CTransaction> mapOrphanTransactions;
 map<uint256, set<uint256> > mapOrphanTransactionsByPrev;
-map<uint256, uint256> mapProofOfStake;
 multimap<uint256, CBlock*> mapOrphanBlocksByPrev;
 set<pair<COutPoint, unsigned int> > setStakeSeenOrphan;
 set<pair<COutPoint, unsigned int> > setStakeSeen;
@@ -2042,7 +2041,7 @@ bool CBlock::GetCoinAge(uint64_t& nCoinAge) const
     return true;
 }
 
-bool CBlock::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos)
+bool CBlock::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos, const uint256& hashProofOfStake)
 {
     // Check for duplicate
     uint256 hash = GetHash();
@@ -2069,12 +2068,7 @@ bool CBlock::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos)
         return error("AddToBlockIndex() : SetStakeEntropyBit() failed");
 
     // ppcoin: record proof-of-stake hash value    
-    if (pindexNew->IsProofOfStake())
-    {
-        if (!mapProofOfStake.count(hash))
-            return error("AddToBlockIndex() : hashProofOfStake not found in map");
-        pindexNew->hashProofOfStake = mapProofOfStake[hash];
-    }
+    pindexNew->hashProofOfStake = hashProofOfStake;
 
     // ppcoin: compute stake modifier
     uint64_t nStakeModifier = 0;
@@ -2219,6 +2213,16 @@ bool CBlock::AcceptBlock(CBlock* pblock)
     {
         printf("Block is Checkpoint~ Block: hash %s ; prevHash: %s \n",hash.ToString().substr(0,20).c_str() ,pblock->hashPrevBlock.ToString().substr(0,20).c_str());
 
+        uint256 hashProofOfStake = 0;
+        if (IsProofOfStake())
+        {
+            if (!CheckProofOfStake(vtx[1], nBits, hashProofOfStake))
+            {
+                printf("WARNING: ProcessBlock(): check proof-of-stake failed for block %s\n", hash.ToString().c_str());
+                return false; // do not error here as we expect this during initial block download
+            }
+        }
+
             // Write block to history file
             if (!CheckDiskSpace(::GetSerializeSize(*this, SER_DISK, CLIENT_VERSION)))
                 return error("AcceptBlock() : out of disk space");
@@ -2226,7 +2230,7 @@ bool CBlock::AcceptBlock(CBlock* pblock)
             unsigned int nBlockPos = 0;
             if (!WriteToDisk(nFile, nBlockPos))
                 return error("AcceptBlock() : WriteToDisk failed");
-            if (!AddToBlockIndex(nFile, nBlockPos))
+            if (!AddToBlockIndex(nFile, nBlockPos, hashProofOfStake))
                 return error("AcceptBlock() : AddToBlockIndex failed");
 
             // Relay inventory, but don't relay old inventory during initial block download
@@ -2293,6 +2297,17 @@ bool CBlock::AcceptBlock(CBlock* pblock)
             }
         }
 
+        // Verify hash target and signature of coinstake tx
+        uint256 hashProofOfStake = 0;
+        if (IsProofOfStake())
+        {
+            if (!CheckProofOfStake(vtx[1], nBits, hashProofOfStake))
+            {
+                printf("WARNING: ProcessBlock(): check proof-of-stake failed for block %s\n", hash.ToString().c_str());
+                return false; // do not error here as we expect this during initial block download
+            }
+        }
+
         // Reject block.nVersion < 3 blocks since 95% threshold on mainNet and always on testNet:
         if (nVersion < 3 && ((!fTestNet && nHeight > 14060) || (fTestNet && nHeight > 0)))
             return error("CheckBlock() : rejected nVersion < 3 block");
@@ -2309,7 +2324,7 @@ bool CBlock::AcceptBlock(CBlock* pblock)
         unsigned int nBlockPos = 0;
         if (!WriteToDisk(nFile, nBlockPos))
             return error("AcceptBlock() : WriteToDisk failed");
-        if (!AddToBlockIndex(nFile, nBlockPos))
+        if (!AddToBlockIndex(nFile, nBlockPos, hashProofOfStake))
             return error("AcceptBlock() : AddToBlockIndex failed");
 
         // Relay inventory, but don't relay old inventory during initial block download
@@ -2370,20 +2385,7 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
     if (!pblock->CheckBlock())
         return error("ProcessBlock() : CheckBlock FAILED");
 
-    if (pblock->IsProofOfStake() )
-    {
-        uint256 hashProofOfStake = 0;
-        if (!CheckProofOfStake(pblock->vtx[1], pblock->nBits, hashProofOfStake))
-        {
-            printf("WARNING: ProcessBlock(): check proof-of-stake failed for block %s\n", hash.ToString().c_str());
-            return false; // do not error here as we expect this during initial block download
-        }
-        if (!mapProofOfStake.count(hash)) // add to mapProofOfStake
-            mapProofOfStake.insert(make_pair(hash, hashProofOfStake));
-    }
-
     CBlockIndex* pcheckpoint = Checkpoints::GetLastSyncCheckpoint();
-
     if (pcheckpoint && pblock->hashPrevBlock != hashBestChain && !Checkpoints::WantedByPendingSyncCheckpoint(hash))
     {
         // Extra checks to prevent "fill up memory by spamming with bogus blocks"
@@ -2443,7 +2445,7 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
             // Ask this guy to fill in what we're missing from the last block we have
             if (pfrom)
             {
-                pfrom->PushGetBlocks(pindexBest, uint256(0));
+                pfrom->PushGetBlocks(pindexBest, GetOrphanRoot(pblock2));
                 if(!IsInitialBlockDownload())
                 {
                     pfrom->AskFor(CInv(MSG_BLOCK,WantedByOrphan(pblock2)));
@@ -2483,15 +2485,6 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
     if (pfrom && !CSyncCheckpoint::strMasterPrivKey.empty())
         Checkpoints::SendSyncCheckpoint(Checkpoints::AutoSelectSyncCheckpoint());
 
-    map<uint256,uint256>::iterator cleanup;
-    for(cleanup = mapProofOfStake.begin(); cleanup != mapProofOfStake.end(); cleanup++)
-    {
-        uint256 cleanupHash = cleanup->first;
-        if(mapBlockIndex.count(cleanupHash) != 0) // saves memory
-        {
-            mapProofOfStake.erase(hash);
-        }
-    }
     return true;
 }
 
@@ -2738,12 +2731,15 @@ bool LoadBlockIndex(bool fAllowNew)
         assert(block.GetHash() == (!fTestNet ? hashGenesisBlock : hashGenesisBlockTestNet));
         assert(block.CheckBlock());
 
+        // Verify hash target and signature of coinstake tx
+        uint256 hashProofOfStake = 0;
+
         // Start new block file
         unsigned int nFile;
         unsigned int nBlockPos;
         if (!block.WriteToDisk(nFile, nBlockPos))
             return error("LoadBlockIndex() : writing genesis block to disk failed");
-        if (!block.AddToBlockIndex(nFile, nBlockPos))
+        if (!block.AddToBlockIndex(nFile, nBlockPos, hashProofOfStake))
             return error("LoadBlockIndex() : genesis block not accepted");
 
         // ppcoin: initialize synchronized checkpoint

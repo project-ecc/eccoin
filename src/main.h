@@ -105,8 +105,6 @@ extern void *scrypt_buffer_alloc();
 extern void scrypt_buffer_free(void *scratchpad);
 extern void scrypt_hash_mine(const void* input, size_t inputlen, uint32_t *res, void *scratchpad);
 
-extern map<uint256, uint256> mapProofOfStake;
-
 // Settings
 extern int64_t nTransactionFee;
 extern int64_t nMinimumInputValue;
@@ -1148,7 +1146,7 @@ public:
     bool ReadFromDisk(const CBlockIndex* pindex, bool fReadTransactions=true);
     bool SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew);
     bool AddToOrphanTracker(unsigned int nFile, unsigned int nBlockPos, const uint256& hashProofOfStake);
-    bool AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos);
+    bool AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos, const uint256& hashProofOfStake);
     bool CheckBlock(bool fCheckPOW=true, bool fCheckMerkleRoot=true, bool fCheckSig=true) const;
     bool AcceptBlock(CBlock* pblock);
     bool GetCoinAge(uint64_t& nCoinAge) const; // ppcoin: calculate total coin age spent in block
