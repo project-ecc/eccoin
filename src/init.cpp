@@ -814,7 +814,7 @@ bool AppInit2()
     RegisterWallet(pwalletMain);
 
     CBlockIndex* pindexRescan = pindexBest;
-/*
+
     if (GetBoolArg("-rescan"))
         pindexRescan = pindexGenesisBlock;
     else
@@ -822,9 +822,9 @@ bool AppInit2()
         CWalletDB walletdb(strWalletFileName);
         CBlockLocator locator;
         if (walletdb.ReadBestBlock(locator))
-            pindexRescan = locator.GetBlockIndex();
+            pindexRescan = pindexBest;
     }
-*/
+
     if (pindexBest != pindexRescan && pindexBest && pindexRescan && pindexBest->nHeight > pindexRescan->nHeight)
     {
         uiInterface.InitMessage(_("Rescanning..."));
