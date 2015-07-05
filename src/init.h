@@ -7,7 +7,6 @@
 #define BITCOIN_INIT_H
 
 #include "util.h"
-#include "coinobject.h"
 #include "wallet.h"
 
 extern CWallet* pwalletMain;

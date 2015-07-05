@@ -11,8 +11,6 @@
 #include <map>
 #include <string>
 #include <vector>
-#include <thread>
-
 
 #include <leveldb/db.h>
 #include <leveldb/write_batch.h>

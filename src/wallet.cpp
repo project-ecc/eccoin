@@ -12,7 +12,6 @@
 #include "scrypt_kernel.h"
 #include "coincontrol.h"
 #include <boost/algorithm/string/replace.hpp>
-#include <mutex>          // std::mutex, std::try_lock
 #include <exception>
 
 

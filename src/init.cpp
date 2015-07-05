@@ -5,7 +5,6 @@
 
 #include "bitcoinrpc.h"
 #include "checkpoints.h"
-#include "coinobject.h"
 #include "init.h"
 #include "net.h"
 #include "txdb-leveldb.h"
@@ -17,7 +16,6 @@
 
 #include <string>
 #include <string.h>
-#include <thread>
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -94,7 +92,7 @@ void Shutdown(void* parg)
     {
         fShutdown = true;
         nTransactionsUpdated++;
-//        CTxDB().Close();
+        CTxDB().Close();
         bitdb.Flush(false);
         StopNode();
         bitdb.Flush(true);

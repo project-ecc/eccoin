@@ -14,8 +14,6 @@
 #include <leveldb/filter_policy.h>
 #include <memenv/memenv.h>
 
-#include <thread>
-
 #include "checkpoints.h"
 #include "scrypt_kernel.h"
 #include "main.h"
