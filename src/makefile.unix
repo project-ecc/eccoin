@@ -6,7 +6,7 @@ USE_UPNP:=0
 USE_IPV6:=1
 
 LINK:=$(CXX)
-ARCH:=$(system lscpu | head -n 1 | awk '{print $2}')
+ARCH:=$(shell uname -m)
 
 DEFS=-DBOOST_SPIRIT_THREADSAFE
 
@@ -85,12 +85,15 @@ LIBS+= \
     HARDENING+=-D_FORTIFY_SOURCE=2
 #
 
-
 DEBUGFLAGS=-g
-
 
 ifeq (${ARCH}, i686)
     EXT_OPTIONS=-msse2
+endif
+
+# Check if we have an armv7l device
+ifeq (${ARCH}, armv7l)
+    EXT_OPTIONS=-DNOSSE
 endif
 
 
@@ -147,6 +150,7 @@ OBJS= \
     obj/pbkdf2.o \
     obj/scrypt-x86.o \
     obj/scrypt-x86_64.o \
+	obj/scrypt-arm.o \
     obj/messages.o \
     obj/scrypt_mine.o
 
@@ -178,6 +182,9 @@ obj/scrypt-x86.o: scrypt-x86.S
 	$(CXX) -c $(xCXXFLAGS) -MMD -o $@ $<
 
 obj/scrypt-x86_64.o: scrypt-x86_64.S
+	$(CXX) -c $(xCXXFLAGS) -MMD -o $@ $<
+	
+obj/scrypt-arm.o: scrypt-arm.S
 	$(CXX) -c $(xCXXFLAGS) -MMD -o $@ $<
 	      
 	rm -f $(@:%.o=%.d)
