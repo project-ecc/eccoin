@@ -889,6 +889,16 @@ bool AppInit2()
     printf("mapWallet.size() = %"PRIszu"\n",       pwalletMain->mapWallet.size());
     printf("mapAddressBook.size() = %"PRIszu"\n",  pwalletMain->mapAddressBook.size());
 
+    ///set the bestCheckpoint
+    std::map<int, uint256>::iterator iter;
+    for(iter = mapCheckpoints.begin(); iter != mapCheckpoints.end(); iter++) {
+        int keyval = iter->first;
+        if(keyval > nBestCheckpointHeight)
+        {
+            nBestCheckpointHeight = keyval;
+        }
+    }
+
     if (!NewThread(StartNode, NULL))
         InitError(_("Error: could not start node"));
 

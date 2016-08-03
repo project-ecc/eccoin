@@ -176,6 +176,7 @@ public:
     std::string addrName;
     CService addrLocal;
     int nVersion;
+    bool fastMessaging;
     std::string strSubVer;
     bool fOneShot;
     bool fClient;
@@ -227,6 +228,7 @@ public:
         addr = addrIn;
         addrName = addrNameIn == "" ? addr.ToStringIPPort() : addrNameIn;
         nVersion = 0;
+        fastMessaging = false;
         strSubVer = "";
         fOneShot = false;
         fClient = false; // set by version message

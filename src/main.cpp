@@ -67,6 +67,7 @@ uint256 nBestInvalidTrust = 0;
 
 uint256 hashBestChain = 0;
 CBlockIndex* pindexBest = NULL;
+int nBestCheckpointHeight = 0;
 
 CMedianFilter<int> cPeerBlockCounts(12, 0); // Amount of blocks that other nodes claim to have
 

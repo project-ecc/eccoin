@@ -78,6 +78,11 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
             return false;
         }
 
+        if(pfrom->nVersion >= 60015)
+        {
+            pfrom->fastMessaging = true;
+        }
+
         if (pfrom->nVersion == 10300)
             pfrom->nVersion = 300;
         if (!vRecv.empty())
@@ -402,28 +407,36 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
         printf("getblocks %d to %s limit %d\n", (pindex ? pindex->nHeight : -1), hashStop.ToString().substr(0,20).c_str(), nLimit);
         for (; pindex; pindex = pindex->pnext)
         {
-            if (pindex->GetBlockHash() == hashStop)
+            if(pindex->nHeight < nBestCheckpointHeight)
             {
-                printf("  getblocks stopping at %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString().substr(0,20).c_str());
-                // ppcoin: tell downloading node about the latest block if it's
-                // without risk being rejected due to stake connection check
-                if (hashStop != hashBestChain && pindex->GetBlockTime() + nStakeMinAge > pindexBest->GetBlockTime())
-                    pfrom->PushInventory(CInv(MSG_BLOCK, hashBestChain));
-                break;
+                map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(pindex->GetBlockHash());
+                if (mi != mapBlockIndex.end())
+                {
+                    CBlock block;
+                    block.ReadFromDisk((*mi).second);
+                    pfrom->PushMessage("block", block);
+                }
             }
-            pfrom->PushInventory(CInv(MSG_BLOCK, pindex->GetBlockHash()));
-            if (--nLimit <= 0)
+            else
             {
-                // When this block is requested, we'll send an inv that'll make them
-                // getblocks the next batch of inventory.
-                printf("  getblocks stopping at limit %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString().substr(0,20).c_str());
-
-                /// ECCoin:I see the reasoning for this, but if a request is made at a specific blokc index for hash to 0000 then
-                /// we wont send them the section they want because this hashcontinue is after the specified starting point.
-                ///
-                ///pfrom->hashContinue = pindex->GetBlockHash();
-                ///
-                break;
+                if (pindex->GetBlockHash() == hashStop)
+                {
+                    printf("  getblocks stopping at %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString().substr(0,20).c_str());
+                    // ppcoin: tell downloading node about the latest block if it's
+                    // without risk being rejected due to stake connection check
+                    if (hashStop != hashBestChain && pindex->GetBlockTime() + nStakeMinAge > pindexBest->GetBlockTime())
+                        pfrom->PushInventory(CInv(MSG_BLOCK, hashBestChain));
+                    break;
+                }
+                pfrom->PushInventory(CInv(MSG_BLOCK, pindex->GetBlockHash()));
+                if (--nLimit <= 0)
+                {
+                    // When this block is requested, we'll send an inv that'll make them
+                    // getblocks the next batch of inventory.
+                    printf("  getblocks stopping at limit %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString().substr(0,20).c_str());
+                    pfrom->hashContinue = pindex->GetBlockHash();
+                    break;
+                }
             }
         }
     }

@@ -104,6 +104,7 @@ extern std::set<CWallet*> setpwalletRegistered;
 extern void *scrypt_buffer_alloc();
 extern void scrypt_buffer_free(void *scratchpad);
 extern void scrypt_hash_mine(const void* input, size_t inputlen, uint32_t *res, void *scratchpad);
+extern int nBestCheckpointHeight;
 
 // Settings
 extern int64_t nTransactionFee;
