@@ -31,6 +31,8 @@ static std::map<int, unsigned int> mapStakeModifierCheckpoints =
 // MODIFIER_INTERVAL: time to elapse before new modifier is computed
 static const unsigned int MODIFIER_INTERVAL = 6 * 60 * 60;
 extern unsigned int nModifierInterval;
+extern unsigned int nModifierIntervalSecond;
+
 
 // MODIFIER_INTERVAL_RATIO:
 // ratio of group interval length between the last group and the first group
