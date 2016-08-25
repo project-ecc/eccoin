@@ -53,7 +53,8 @@ unsigned int nStakeTargetSpacing = 45;
 unsigned int nTargetSpacing = 45;
 unsigned int nStakeMinAge = 60*60*2; // 2 hours
 unsigned int nStakeMaxAge = 60*60*24*84;           //84 days
-unsigned int nModifierInterval = 6*60*60; // time to elapse before new modifier is computed
+unsigned int nModifierInterval = 6*60*60;
+unsigned int nModifierIntervalSecond = 6*60*60;
 
 int nCoinbaseMaturity = 30;
 CBlockIndex* pindexGenesisBlock = NULL;
@@ -1014,14 +1015,13 @@ int64_t GetProofOfWorkReward(int64_t nFees, const int nHeight, uint256 prevHash)
 
 const int YEARLY_BLOCKCOUNT = 700800;
 // miner's coin stake reward based on coin age spent (coin-days)
-int64_t GetProofOfStakeReward(int64_t nCoinAge, unsigned int nBits, unsigned int nTime, int nHeight, int64_t nFees)
+int64_t GetProofOfStakeReward(int64_t nCoinAge, int nHeight)
 {
-    int64_t nRewardCoinYear;
-    nRewardCoinYear = MAX_MINT_PROOF_OF_STAKE;
-    nRewardCoinYear = 2.5 * MAX_MINT_PROOF_OF_STAKE;
-    if (nHeight > 500000)
+    int64_t nRewardCoinYear = 2.5 * MAX_MINT_PROOF_OF_STAKE;
+    int64_t CMS = pindexBest->nMoneySupply;
+    if (nHeight > 500000 && nHeight < 1005000)
     {
-        int64_t nextMoney = (ValueFromAmountAsDouble(pindexBest->nMoneySupply) + nRewardCoinYear) ;
+        int64_t nextMoney = (ValueFromAmountAsDouble(CMS) + nRewardCoinYear) ;
         if(nextMoney > (MAX_MONEY / 2))
         {
             int64_t difference = (nextMoney - (MAX_MONEY / 2));
@@ -1031,11 +1031,27 @@ int64_t GetProofOfStakeReward(int64_t nCoinAge, unsigned int nBits, unsigned int
         {
             nRewardCoinYear = 0;
         }
+        int64_t nSubsidy = nCoinAge * nRewardCoinYear / 365;
+        return nSubsidy;
     }
+    nRewardCoinYear = 25 * CENT; // 25%
     int64_t nSubsidy = nCoinAge * nRewardCoinYear / 365;
+    if(nHeight >= 1005000)
+    {
+        int64_t nextMoney = CMS + nSubsidy;
+        if(nextMoney > (MAX_MONEY / 2))
+        {
+            int64_t difference = (nextMoney - (MAX_MONEY / 2));
+            nSubsidy = nextMoney - difference;
+        }
+        if(nextMoney == (MAX_MONEY / 2))
+        {
+            nSubsidy = 0;
+        }
+    }
     if (fDebug && GetBoolArg("-printcreation"))
     {
-        printf("GetProofOfStakeReward(): create=%s nCoinAge=%"PRId64" nBits=%d\n", FormatMoney(nSubsidy).c_str(), nCoinAge, nBits);
+        printf("GetProofOfStakeReward(): create=%s nCoinAge=%"PRId64"\n", FormatMoney(nSubsidy).c_str(), nCoinAge);
     }
     return nSubsidy;
 }
@@ -1476,7 +1492,7 @@ bool CTransaction::ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTx
                 return error("ConnectInputs() : %s unable to get coin age for coinstake", GetHash().ToString().substr(0,10).c_str());
 
             int64_t nStakeReward = GetValueOut() - nValueIn;
-            if (nStakeReward > GetProofOfStakeReward(GetCoinAge(txdb, nCoinAge, true), pindexBlock->nBits, nTime, pindexBlock->nHeight, 0) - GetMinFee() + MIN_TX_FEE)
+            if (nStakeReward > GetProofOfStakeReward(GetCoinAge(txdb, nCoinAge, true), pindexBlock->nHeight) - GetMinFee() + MIN_TX_FEE)
             {
                 printf("nStakeReward = %i , CoinAge = %lu \n", nStakeReward, nCoinAge);
                 return DoS(100, error("ConnectInputs() : %s stake reward exceeded", GetHash().ToString().substr(0,10).c_str()));
