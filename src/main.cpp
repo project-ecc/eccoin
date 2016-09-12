@@ -54,7 +54,7 @@ unsigned int nTargetSpacing = 45;
 unsigned int nStakeMinAge = 60*60*2; // 2 hours
 unsigned int nStakeMaxAge = 60*60*24*84;           //84 days
 unsigned int nModifierInterval = 6*60*60;
-unsigned int nModifierIntervalSecond = 6*60*60;
+unsigned int nModifierIntervalSecond = 60*60;
 
 int nCoinbaseMaturity = 30;
 CBlockIndex* pindexGenesisBlock = NULL;
