@@ -178,6 +178,7 @@ public:
     int nVersion;
     bool fastMessaging;
     std::string strSubVer;
+    bool fOneShot;
     bool fClient;
     bool fInbound;
     bool fNetworkNode;
@@ -229,6 +230,7 @@ public:
         nVersion = 0;
         fastMessaging = false;
         strSubVer = "";
+        fOneShot = false;
         fClient = false; // set by version message
         fInbound = fInboundIn;
         fNetworkNode = false;
