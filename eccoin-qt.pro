@@ -192,7 +192,6 @@ HEADERS += \
     src/hash.h \
     src/hashblock.h \
     src/init.h \
-    src/irc.h \
     src/key.h \
     src/keystore.h \
     src/limitedmap.h \
@@ -286,7 +285,6 @@ SOURCES += \
     src/db.cpp \
     src/hash.cpp \
     src/init.cpp \
-    src/irc.cpp \
     src/key.cpp \
     src/keystore.cpp \
     src/main.cpp \

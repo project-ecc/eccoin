@@ -6,7 +6,6 @@
 #include "addrman.h"
 #include "db.h"
 #include "init.h"
-#include "irc.h"
 #include "miner.h"
 #include "net.h"
 #include "strlcpy.h"
@@ -1832,10 +1831,6 @@ void StartNode(void* parg)
         // Map ports with UPnP
         if (fUseUPnP)
             MapPort();
-
-        // Get addresses from IRC and advertise ours
-        if (!NewThread(ThreadIRCSeed, NULL))
-            printf("Error: NewThread(ThreadIRCSeed) failed\n");
 
         // Send and receive from sockets, accept connections
         if (!NewThread(ThreadSocketHandler, NULL))
