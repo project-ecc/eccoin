@@ -59,7 +59,7 @@ Value getstakinginfo(const Array& params, bool fHelp)
             "getstakinginfo\n"
             "Returns an object containing staking-related information.");
 
-    uint64_t nMinWeight = 0, nMaxWeight = 0, nWeight = 0;
+    uint64_t nWeight = 0;
     //pwalletMain->GetStakeWeight(*pwalletMain, nMinWeight, nMaxWeight, nWeight);
 
     uint64_t nNetworkWeight = GetPoSKernelPS();

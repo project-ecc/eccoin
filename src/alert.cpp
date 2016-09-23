@@ -56,10 +56,10 @@ std::string CUnsignedAlert::ToString() const
     BOOST_FOREACH(std::string str, setSubVer)
         strSetSubVer += "\"" + str + "\" ";
     return strprintf(
-        "CAlert(\n"
+        "    CAlert(\n"
         "    nVersion     = %d\n"
-        "    nRelayUntil  = %"PRId64"\n"
-        "    nExpiration  = %"PRId64"\n"
+        "    nRelayUntil  = %I64d\n"
+        "    nExpiration  = %I64d\n"
         "    nID          = %d\n"
         "    nCancel      = %d\n"
         "    setCancel    = %s\n"

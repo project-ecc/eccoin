@@ -72,9 +72,6 @@ void LogStackTrace();
   #define PRIpdx    "Ix"
   #define PRIpdu    "Iu"
   #define PRIpdd    "Id"
-  #define PRId64	"I64d"
-  #define PRIx64	"I64x"
-  #define PRIu64  "I64u"
 #else /* C99 standard */
   #define PRIszx    "zx"
   #define PRIszu    "zu"
@@ -247,7 +244,7 @@ void runCommand(std::string strCommand);
 
 inline std::string i64tostr(int64_t n)
 {
-    return strprintf("%"PRId64, n);
+    return strprintf("%I64d", n);
 }
 
 inline std::string itostr(int n)
