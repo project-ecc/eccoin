@@ -183,7 +183,7 @@ bool Wait(int nSeconds)
     {
         if (fShutdown)
             return false;
-        sleep(1000);
+        Sleep(1000);
     }
     return true;
 }
@@ -340,7 +340,7 @@ void ThreadIRCSeed2(void* parg)
                 return;
         }
         nNameRetry = 0;
-        sleep(500);
+        Sleep(500);
 
         // Get our external IP from the IRC server and re-nick before joining the channel
         CNetAddr addrFromIRC;
