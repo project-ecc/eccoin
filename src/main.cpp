@@ -227,8 +227,7 @@ bool AddOrphanTx(const CTransaction& tx)
     BOOST_FOREACH(const CTxIn& txin, tx.vin)
         mapOrphanTransactionsByPrev[txin.prevout.hash].insert(hash);
 
-    printf("stored orphan tx %s (mapsz %" PRIszu ")\n", hash.ToString().substr(0,10).c_str(),
-        mapOrphanTransactions.size());
+    printf("stored orphan tx %s (mapsz %" PRIszu ")\n", hash.ToString().substr(0,10).c_str(), mapOrphanTransactions.size());
     return true;
 }
 
@@ -1495,11 +1494,11 @@ bool CTransaction::ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTx
             int64_t nStakeReward = GetValueOut() - nValueIn;
             if (nStakeReward > GetProofOfStakeReward(GetCoinAge(txdb, nCoinAge, true), pindexBlock->nHeight) - GetMinFee() + MIN_TX_FEE)
             {
-                printf("nStakeReward = %i , CoinAge = %I64u \n", nStakeReward, nCoinAge);
+                printf("nStakeReward = %I64d , CoinAge = %I64u \n", nStakeReward, nCoinAge);
                 return DoS(100, error("ConnectInputs() : %s stake reward exceeded", GetHash().ToString().substr(0,10).c_str()));
 
             }
-            printf("END: nStakeReward = %i , CoinAge = %I64u \n", nStakeReward, nCoinAge);
+            printf("END: nStakeReward = %I64d , CoinAge = %I64u \n", nStakeReward, nCoinAge);
         }
     }
     return true;
