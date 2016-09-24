@@ -13,6 +13,8 @@ extern map<uint256, CAlert> mapAlerts;
 extern CCriticalSection cs_mapAlerts;
 
 
+bool messageDebug = false;
+
 bool AlreadyHave(CTxDB& txdb, const CInv& inv)
 {
     switch (inv.type)
@@ -47,7 +49,7 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
 {
     static map<CService, CPubKey> mapReuseKey;
     RandAddSeedPerfmon();
-    //if (fDebug)
+    if(messageDebug)
         printf("received: %s (%" PRIszu " bytes)\n", strCommand.c_str(), vRecv.size());
     if (mapArgs.count("-dropmessagestest") && GetRand(atoi(mapArgs["-dropmessagestest"])) == 0)
     {
@@ -281,13 +283,13 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
         for (unsigned int nInv = 0; nInv < vInv.size(); nInv++)
         {
             const CInv &inv = vInv[nInv];
-
+            printf("inv hash type = %s \n", inv.GetCommand());
             if (fShutdown)
                 return true;
             pfrom->AddInventoryKnown(inv);
 
             bool fAlreadyHave = AlreadyHave(txdb, inv);
-            if (fDebug)
+            if(messageDebug)
                 printf("  got inventory: %s  %s\n", inv.ToString().c_str(), fAlreadyHave ? "have" : "new");
 
             if (!fAlreadyHave)
@@ -304,7 +306,7 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
                 // the last block in an inv bundle sent in response to getblocks. Try to detect
                 // this situation and push another getblocks to continue.
                 pfrom->PushGetBlocks(mapBlockIndex[inv.hash], uint256(0));
-                if (fDebug)
+                if (messageDebug)
                     printf("force request: %s\n", inv.ToString().c_str());
             }
 
@@ -329,7 +331,7 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
         {
             if (fShutdown)
                 return true;
-            if (fDebugNet || (vInv.size() == 1))
+            if (messageDebug || (vInv.size() == 1))
                 printf("received getdata for: %s\n", inv.ToString().c_str());
 
             if (inv.type == MSG_BLOCK)
@@ -390,36 +392,18 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
         printf("getblocks %d to %s limit %d\n", (pindex ? pindex->nHeight : -1), hashStop.ToString().substr(0,20).c_str(), nLimit);
         for (; pindex; pindex = pindex->pnext)
         {
-            if(pindex->nHeight < nBestCheckpointHeight)
+            map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(pindex->GetBlockHash());
+            if (mi != mapBlockIndex.end())
             {
-                map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(pindex->GetBlockHash());
-                if (mi != mapBlockIndex.end())
-                {
-                    CBlock block;
-                    block.ReadFromDisk((*mi).second);
-                    pfrom->PushMessage("block", block);
-                }
-            }
-            else
-            {
-                /*
-                if (pindex->GetBlockHash() == hashStop)
-                {
-                    printf("  getblocks stopping at %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString().substr(0,20).c_str());
-                    // ppcoin: tell downloading node about the latest block if it's
-                    // without risk being rejected due to stake connection check
-                    if (hashStop != hashBestChain && pindex->GetBlockTime() + nStakeMinAge > pindexBest->GetBlockTime())
-                        pfrom->PushInventory(CInv(MSG_BLOCK, hashBestChain));
-                    break;
-                }
-                pfrom->PushInventory(CInv(MSG_BLOCK, pindex->GetBlockHash()));
-                */
+                CBlock block;
+                block.ReadFromDisk((*mi).second);
+                pfrom->PushMessage("block", block);
 
                 if (--nLimit <= 0)
                 {
                     // When this block is requested, we'll send an inv that'll make them
                     // getblocks the next batch of inventory.
-                    printf("  getblocks stopping at limit %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString().substr(0,20).c_str());
+                    printf("getblocks stopping at limit %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString().substr(0,20).c_str());
                     pfrom->hashContinue = pindex->GetBlockHash();
                     break;
                 }
@@ -717,7 +701,7 @@ bool ProcessMessages(CNode* pfrom)
     CDataStream& vRecv = pfrom->vRecv;
     if (vRecv.empty())
         return true;
-    if (fDebug)
+    if (messageDebug)
         printf("ProcessMessages(%u bytes)\n", vRecv.size());
 
     //
@@ -944,7 +928,7 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
             const CInv& inv = (*pto->mapAskFor.begin()).second;
             if (!AlreadyHave(txdb, inv))
             {
-                if (fDebugNet)
+                if (messageDebug)
                     printf("sending getdata: %s\n", inv.ToString().c_str());
                 vGetData.push_back(inv);
                 if (vGetData.size() >= 1000)
