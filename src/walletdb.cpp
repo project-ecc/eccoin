@@ -548,7 +548,7 @@ void ThreadFlushWalletDB(void* parg)
     int64_t nLastWalletUpdate = GetTime();
     while (!fShutdown)
     {
-        sleep(500);
+        MilliSleep(500);
 
         if (nLastSeen != nWalletDBUpdated)
         {

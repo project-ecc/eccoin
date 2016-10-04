@@ -167,7 +167,7 @@ bool RecvLine(SOCKET hSocket, string& strLine)
                     continue;
                 if (nErr == WSAEWOULDBLOCK || nErr == WSAEINTR || nErr == WSAEINPROGRESS)
                 {
-                    sleep(100);
+                    MilliSleep(100);
                     continue;
                 }
             }

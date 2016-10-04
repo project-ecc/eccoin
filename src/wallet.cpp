@@ -2363,7 +2363,7 @@ void CWallet::UpdatedTransactionBasedOnList(vector<CBlockIndex*> checklist)
         {
             return;
         }
-        sleep(100);
+        MilliSleep(100);
     }
     return;
 }

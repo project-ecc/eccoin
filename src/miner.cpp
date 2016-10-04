@@ -542,7 +542,7 @@ void ScryptMiner(CWallet *pwallet, bool fProofOfStake)
             return;
         while (vNodes.empty() || IsInitialBlockDownload())
         {
-            sleep(1000);
+            MilliSleep(1000);
             if (fShutdown)
                 return;
             if ((!fGenerateBitcoins) && !fProofOfStake)
@@ -552,7 +552,7 @@ void ScryptMiner(CWallet *pwallet, bool fProofOfStake)
         while (pwallet->IsLocked())
         {
             strMintWarning = strMintMessage;
-            sleep(1000);
+            MilliSleep(1000);
         }
         strMintWarning = "";
 
@@ -583,7 +583,7 @@ void ScryptMiner(CWallet *pwallet, bool fProofOfStake)
                 CheckWork(pblock.get(), *pwalletMain, reservekey);
                 SetThreadPriority(THREAD_PRIORITY_LOWEST);
             }
-            sleep(1000); // 1 second delay
+            MilliSleep(1000); // 1 second delay
             continue;
         }
 
@@ -753,7 +753,7 @@ void GenerateScryptCoins(bool fGenerate, CWallet* pwallet)
         {
             if (!NewThread(ThreadScryptMiner, pwallet))
                 printf("Error: NewThread(ThreadBitcoinMiner) failed\n");
-            sleep(10);
+            MilliSleep(10);
         }
     }
 }
