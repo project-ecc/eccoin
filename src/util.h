@@ -152,6 +152,7 @@ extern bool fTestNet;
 extern bool fNoListen;
 extern bool fLogTimestamps;
 extern bool fReopenDebugLog;
+extern bool messageDebug;
 class CBlock;
 
 void RandAddSeed();

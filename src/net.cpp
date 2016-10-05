@@ -96,7 +96,10 @@ void CNode::PushGetBlocks(CBlockIndex* pindexBegin, uint256 hashEnd)
 {
     pindexLastGetBlocksBegin = pindexBegin;
     hashLastGetBlocksEnd = hashEnd;
-    printf("sending new getBlocks request from %s to %s \n", pindexLastGetBlocksBegin->GetBlockHash().ToString().c_str(), hashLastGetBlocksEnd.ToString().c_str());
+    if(messageDebug)
+    {
+        printf("sending new getBlocks request from %s to %s \n", pindexLastGetBlocksBegin->GetBlockHash().ToString().c_str(), hashLastGetBlocksEnd.ToString().c_str());
+    }
     PushMessage("getblocks", CBlockLocator(pindexBegin), hashEnd);
 }
 
@@ -484,9 +487,8 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest)
 
 
     /// debug print
-    printf("trying connection %s lastseen=%.1fhrs\n",
-        pszDest ? pszDest : addrConnect.ToString().c_str(),
-        pszDest ? 0 : (double)(GetAdjustedTime() - addrConnect.nTime)/3600.0);
+    if(messageDebug)
+        printf("trying connection %s lastseen=%.1fhrs\n", pszDest ? pszDest : addrConnect.ToString().c_str(), pszDest ? 0 : (double)(GetAdjustedTime() - addrConnect.nTime)/3600.0);
 
     // Connect
     SOCKET hSocket;

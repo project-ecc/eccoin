@@ -286,6 +286,7 @@ std::string HelpMessage()
         "  -debugnet              " + _("Output extra network debugging information") + "\n" +
         "  -logtimestamps         " + _("Prepend debug output with timestamp") + "\n" +
         "  -shrinkdebugfile       " + _("Shrink debug.log file on client startup (default: 1 when no -debug)") + "\n" +
+        "  -messagedebug          " + _("Print messaging debug statements to log file (default: 0 (will not do it unless it is enabled)") + "\n" +
         "  -printtoconsole        " + _("Send trace/debug info to console instead of debug.log file") + "\n" +
 #ifdef WIN32
         "  -printtodebugger       " + _("Send trace/debug info to debugger") + "\n" +
@@ -524,6 +525,7 @@ bool AppInit2()
 
     if (GetBoolArg("-shrinkdebugfile", !fDebug))
         ShrinkDebugFile();
+
     printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
     printf("ECCoin version %s (%s)\n", FormatFullVersion().c_str(), CLIENT_DATE.c_str());
     printf("Using OpenSSL version %s\n", SSLeay_version(SSLEAY_VERSION));
@@ -531,6 +533,13 @@ bool AppInit2()
         printf("Startup time: %s\n", DateTimeStrFormat("%x %H:%M:%S", GetTime()).c_str());
     printf("Default data directory %s\n", GetDefaultDataDir().string().c_str());
     printf("Used data directory %s\n", strDataDir.c_str());
+
+    if (GetBoolArg("-messagedebug", false))
+    {
+        printf("messageDebug Enabled \n");
+        messageDebug = true;
+    }
+
     std::ostringstream strErrors;
 
     if (fDaemon)

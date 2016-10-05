@@ -13,8 +13,6 @@ extern map<uint256, CAlert> mapAlerts;
 extern CCriticalSection cs_mapAlerts;
 
 
-bool messageDebug = false;
-
 bool AlreadyHave(CTxDB& txdb, const CInv& inv)
 {
     switch (inv.type)
@@ -278,14 +276,19 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
         for (unsigned int nInv = 0; nInv < vInv.size(); nInv++)
         {
             const CInv &inv = vInv[nInv];
-            printf("inv hash type = %s \n", inv.GetCommand());
+            if(messageDebug)
+            {
+                printf("inv hash type = %s \n", inv.GetCommand());
+            }
             if (fShutdown)
                 return true;
             pfrom->AddInventoryKnown(inv);
 
             bool fAlreadyHave = AlreadyHave(txdb, inv);
             if(messageDebug)
+            {
                 printf("  got inventory: %s  %s\n", inv.ToString().c_str(), fAlreadyHave ? "have" : "new");
+            }
 
             if (!fAlreadyHave)
             {
@@ -302,7 +305,9 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
                 // this situation and push another getblocks to continue.
                 pfrom->PushGetBlocks(mapBlockIndex[inv.hash], uint256(0));
                 if (messageDebug)
+                {
                     printf("force request: %s\n", inv.ToString().c_str());
+                }
             }
 
             // Track requests for our stuff
@@ -327,7 +332,9 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
             if (fShutdown)
                 return true;
             if (messageDebug || (vInv.size() == 1))
-                printf("received getdata for: %s\n", inv.ToString().c_str());
+            {
+               printf("received getdata for: %s\n", inv.ToString().c_str());
+            }
 
             if (inv.type == MSG_BLOCK)
             {
@@ -384,7 +391,10 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
         if (pindex)
             pindex = pindex->pnext;
         int nLimit = 500;
-        printf("getblocks %d to %s limit %d\n", (pindex ? pindex->nHeight : -1), hashStop.ToString().substr(0,20).c_str(), nLimit);
+        if(messageDebug)
+        {
+            printf("getblocks %d to %s limit %d\n", (pindex ? pindex->nHeight : -1), hashStop.ToString().substr(0,20).c_str(), nLimit);
+        }
         for (; pindex; pindex = pindex->pnext)
         {
             map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(pindex->GetBlockHash());
@@ -398,7 +408,10 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
                 {
                     // When this block is requested, we'll send an inv that'll make them
                     // getblocks the next batch of inventory.
-                    printf("getblocks stopping at limit %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString().substr(0,20).c_str());
+                    if(messageDebug)
+                    {
+                        printf("getblocks stopping at limit %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString().substr(0,20).c_str());
+                    }
                     pfrom->hashContinue = pindex->GetBlockHash();
                     break;
                 }
@@ -446,7 +459,10 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
 
         vector<CBlock> vHeaders;
         int nLimit = 2000;
-        printf("getheaders %d to %s\n", (pindex ? pindex->nHeight : -1), hashStop.ToString().substr(0,20).c_str());
+        if(messageDebug)
+        {
+            printf("getheaders %d to %s\n", (pindex ? pindex->nHeight : -1), hashStop.ToString().substr(0,20).c_str());
+        }
         for (; pindex; pindex = pindex->pnext)
         {
             vHeaders.push_back(pindex->GetBlockHeader());
@@ -503,7 +519,10 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
                     {
                         // invalid orphan
                         vEraseQueue.push_back(orphanTxHash);
-                        printf("   removed invalid orphan tx %s\n", orphanTxHash.ToString().substr(0,10).c_str());
+                        if(messageDebug)
+                        {
+                            printf("   removed invalid orphan tx %s\n", orphanTxHash.ToString().substr(0,10).c_str());
+                        }
                     }
                 }
             }
@@ -713,7 +732,8 @@ bool ProcessMessages(CNode* pfrom)
         // Don't bother if send buffer is too full to respond anyway
         if (pfrom->vSend.size() >= SendBufferSize())
         {
-            printf("send buffer to full to respond, breaking \n");
+            if(messageDebug)
+                printf("send buffer to full to respond, breaking \n");
             break;
         }
 
@@ -724,13 +744,17 @@ bool ProcessMessages(CNode* pfrom)
         {
             if ((int)vRecv.size() > nHeaderSize)
             {
-                printf("\n\nPROCESSMESSAGE MESSAGESTART NOT FOUND\n\n");
+                if(messageDebug)
+                    printf("\n\nPROCESSMESSAGE MESSAGESTART NOT FOUND\n\n");
                 vRecv.erase(vRecv.begin(), vRecv.end() - nHeaderSize);
             }
             break;
         }
         if (pstart - vRecv.begin() > 0)
-            printf("\n\nPROCESSMESSAGE SKIPPED %" PRIpdd " BYTES\n\n", pstart - vRecv.begin());
+        {
+            if(messageDebug)
+                printf("\n\nPROCESSMESSAGE SKIPPED %" PRIpdd " BYTES\n\n", pstart - vRecv.begin());
+        }
         vRecv.erase(vRecv.begin(), pstart);
 
         // Read header
@@ -739,7 +763,8 @@ bool ProcessMessages(CNode* pfrom)
         vRecv >> hdr;
         if (!hdr.IsValid())
         {
-            printf("\n\nPROCESSMESSAGE: ERRORS IN HEADER %s\n\n\n", hdr.GetCommand().c_str());
+            if(messageDebug)
+                printf("\n\nPROCESSMESSAGE: ERRORS IN HEADER %s\n\n\n", hdr.GetCommand().c_str());
             continue;
         }
         string strCommand = hdr.GetCommand();
@@ -748,7 +773,8 @@ bool ProcessMessages(CNode* pfrom)
         unsigned int nMessageSize = hdr.nMessageSize;
         if (nMessageSize > MAX_SIZE)
         {
-            printf("ProcessMessages(%s, %u bytes) : nMessageSize > MAX_SIZE\n", strCommand.c_str(), nMessageSize);
+            if(messageDebug)
+                printf("ProcessMessages(%s, %u bytes) : nMessageSize > MAX_SIZE\n", strCommand.c_str(), nMessageSize);
             continue;
         }
         if (nMessageSize > vRecv.size())
@@ -764,8 +790,10 @@ bool ProcessMessages(CNode* pfrom)
         memcpy(&nChecksum, &hash, sizeof(nChecksum));
         if (nChecksum != hdr.nChecksum)
         {
-            printf("ProcessMessages(%s, %u bytes) : CHECKSUM ERROR nChecksum=%08x hdr.nChecksum=%08x\n",
-               strCommand.c_str(), nMessageSize, nChecksum, hdr.nChecksum);
+            if(messageDebug)
+            {
+                printf("ProcessMessages(%s, %u bytes) : CHECKSUM ERROR nChecksum=%08x hdr.nChecksum=%08x\n", strCommand.c_str(), nMessageSize, nChecksum, hdr.nChecksum);
+            }
             continue;
         }
 
@@ -789,12 +817,14 @@ bool ProcessMessages(CNode* pfrom)
             if (strstr(e.what(), "end of data"))
             {
                 // Allow exceptions from under-length message on vRecv
-                printf("ProcessMessages(%s, %u bytes) : Exception '%s' caught, normally caused by a message being shorter than its stated length\n", strCommand.c_str(), nMessageSize, e.what());
+                if(messageDebug)
+                    printf("ProcessMessages(%s, %u bytes) : Exception '%s' caught, normally caused by a message being shorter than its stated length\n", strCommand.c_str(), nMessageSize, e.what());
             }
             else if (strstr(e.what(), "size too large"))
             {
                 // Allow exceptions from over-long size
-                printf("ProcessMessages(%s, %u bytes) : Exception '%s' caught\n", strCommand.c_str(), nMessageSize, e.what());
+                if(messageDebug)
+                    printf("ProcessMessages(%s, %u bytes) : Exception '%s' caught\n", strCommand.c_str(), nMessageSize, e.what());
             }
             else
             {
@@ -808,7 +838,10 @@ bool ProcessMessages(CNode* pfrom)
         }
 
         if (!fRet)
-            printf("ProcessMessage(%s, %u bytes) FAILED\n", strCommand.c_str(), nMessageSize);
+        {
+            if(messageDebug)
+                printf("ProcessMessage(%s, %u bytes) FAILED\n", strCommand.c_str(), nMessageSize);
+        }
     }
 
     vRecv.Compact();
