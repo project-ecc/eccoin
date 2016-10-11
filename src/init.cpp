@@ -372,6 +372,9 @@ bool AppInit2()
 
     // ********************************************************* Step 2: parameter interactions
 
+    int64_t test = 0.1;
+    printf("test = %I64d \n", test);
+
     nNodeLifespan = GetArg("-addrlifespan", 7);
     fUseFastIndex = GetBoolArg("-fastindex", true);
     nMinerSleep = GetArg("-minersleep", 500);

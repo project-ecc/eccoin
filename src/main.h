@@ -51,8 +51,12 @@ static const unsigned int MAX_ORPHAN_TRANSACTIONS = MAX_BLOCK_SIZE/100;
 static const unsigned int MAX_INV_SZ = 50000;
 
 extern int64_t nBestTimeReceived;
-static const int64_t MIN_TX_FEE = 0.1;
-static const int64_t MIN_RELAY_TX_FEE = MIN_TX_FEE;
+
+
+int64_t getMinFee(int64_t nTime);
+#ifndef MIN_TX_FEE
+#define MIN_TX_FEE getMinFee
+#endif
 static const int64_t MAX_MONEY = 50000000000 * COIN;
 static const int64_t COIN_YEAR_REWARD = 10 * CENT; // 10% per year
 static const int64_t MAX_MINT_PROOF_OF_STAKE = 0.1 * COIN;

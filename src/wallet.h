@@ -282,8 +282,6 @@ public:
 
     vector<uint256> getTxBasedOnBlock();
 
-    void UpdatedTransactionBasedOnList(vector<CBlockIndex*> checklist);
-
     void PrintWallet(const CBlock& block);
 
     void Inventory(const uint256 &hash)

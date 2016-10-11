@@ -1411,9 +1411,9 @@ bool CWallet::CreateTransaction(const vector<pair<CScript, int64_t> >& vecSend, 
                 // if sub-cent change is required, the fee must be raised to at least MIN_TX_FEE
                 // or until nChange becomes zero
                 // NOTE: this depends on the exact behaviour of GetMinFee
-                if (nFeeRet < MIN_TX_FEE && nChange > 0 && nChange < CENT)
+                if (nFeeRet < MIN_TX_FEE(wtxNew.nTime) && nChange > 0 && nChange < CENT)
                 {
-                    int64_t nMoveToFee = min(nChange, MIN_TX_FEE - nFeeRet);
+                    int64_t nMoveToFee = min(nChange, MIN_TX_FEE(wtxNew.nTime) - nFeeRet);
                     nChange -= nMoveToFee;
                     nFeeRet += nMoveToFee;
                 }
@@ -1505,7 +1505,7 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
     const CBlockIndex* pIndex0 = GetLastBlockIndex(pindexBest, false);
     int64_t nCombineThreshold = 0;
     if(pIndex0->pprev)
-        nCombineThreshold = GetProofOfWorkReward(pIndex0->nHeight, MIN_TX_FEE, pIndex0->pprev->GetBlockHash()) / 3;
+        nCombineThreshold = GetProofOfWorkReward(pIndex0->nHeight, MIN_TX_FEE(txNew.nTime), pIndex0->pprev->GetBlockHash()) / 3;
 
     CBigNum bnTargetPerCoinDay;
     bnTargetPerCoinDay.SetCompact(nBits);
@@ -1698,9 +1698,9 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
             return error("CreateCoinStake : exceeded coinstake size limit");
 
         // Check enough fee is paid
-        if (nMinFee < txNew.GetMinFee() - MIN_TX_FEE)
+        if (nMinFee < txNew.GetMinFee() - MIN_TX_FEE(txNew.nTime))
         {
-            nMinFee = txNew.GetMinFee() - MIN_TX_FEE;
+            nMinFee = txNew.GetMinFee() - MIN_TX_FEE(txNew.nTime);
             continue; // try signing again
         }
         else
@@ -2329,43 +2329,6 @@ void CWallet::GetAllReserveKeys(set<CKeyID>& setAddress) const
             throw runtime_error("GetAllReserveKeyHashes() : unknown key in key pool");
         setAddress.insert(keyID);
     }
-}
-
-void CWallet::UpdatedTransactionBasedOnList(vector<CBlockIndex*> checklist)
-{
-    unsigned int check;
-    int nCheckLevel = 2;
-    for(check = 0; check < checklist.size(); check++)
-    {
-        CBlockIndex* pindex = checklist[check];
-        CBlock block;
-        if (!block.ReadFromDisk(pindex))
-        {
-            printf("UpdatedTransactionBasedOnList : block.ReadFromDisk failed");
-            return;
-        }
-        // check level 1: verify block validity
-        // check level 7: verify block signature too
-        if (nCheckLevel>0 && !block.CheckBlock(true, true, (nCheckLevel>6)))
-        {
-            printf("LoadBlockIndex() : *** found bad block at %d, hash=%s\n", pindex->nHeight, pindex->GetBlockHash().ToString().c_str());
-        }
-        // check level 2: verify transaction index validity
-        if (nCheckLevel>1)
-        {
-            pair<unsigned int, unsigned int> pos = make_pair(pindex->nFile, pindex->nBlockPos);
-            BOOST_FOREACH(const CTransaction &tx, block.vtx)
-            {
-                pwalletMain->UpdatedTransaction(tx.GetHash());
-            }
-        }
-        if(fShutdown)
-        {
-            return;
-        }
-        MilliSleep(100);
-    }
-    return;
 }
 
 void CWallet::UpdatedTransaction(const uint256 &hashTx)
