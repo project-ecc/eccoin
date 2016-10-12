@@ -181,16 +181,13 @@ HEADERS += \
     src/base58.h \
     src/bignum.h \
     src/bitcoinrpc.h \
-    src/bloom.h \
     src/checkpoints.h \
-    src/checkqueue.h \
     src/clientversion.h \
     src/coincontrol.h \
     src/compat.h \
     src/crypter.h \
     src/db.h \
     src/hash.h \
-    src/hashblock.h \
     src/init.h \
     src/key.h \
     src/keystore.h \
@@ -206,18 +203,6 @@ HEADERS += \
     src/script.h \
     src/scrypt_mine.h \
     src/serialize.h \
-    src/sph_blake.h \
-    src/sph_bmw.h \
-    src/sph_cubehash.h \
-    src/sph_echo.h \
-    src/sph_groestl.h \
-    src/sph_jh.h \
-    src/sph_keccak.h \
-    src/sph_luffa.h \
-    src/sph_shavite.h \
-    src/sph_simd.h \
-    src/sph_skein.h \
-    src/sph_types.h \
     src/strlcpy.h \
     src/sync.h \
     src/threadsafety.h \
@@ -348,19 +333,6 @@ SOURCES += \
 #
 
 SOURCES += \
-    src/bloom.cpp \
-    src/aes_helper.c \
-    src/blake.c \
-    src/bmw.c \
-    src/cubehash.c \
-    src/echo.c \
-    src/groestl.c \
-    src/jh.c \
-    src/keccak.c \
-    src/luffa.c \
-    src/shavite.c \
-    src/simd.c \
-    src/skein.c \
     src/txdb-leveldb.cpp
  
 RESOURCES += \

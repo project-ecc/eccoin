@@ -10,8 +10,6 @@
 #include "net.h"
 #include "script.h"
 #include "scrypt_mine.h"
-#include "hashblock.h"
-#include "scrypt_mine.h"
 #include <list>
 
 extern unsigned char pchMessageStart[4];
@@ -32,17 +30,12 @@ class CInv;
 class CRequestTracker;
 class CNode;
 
-//extern CoinObject* CoinInstance;
-
 static const int LAST_POW_BLOCK = 86400;
-
-
 
 extern CBigNum bnProofOfWorkLimit;
 extern CBigNum bnProofOfStakeLimit;
 extern CBigNum bnProofOfWorkLimitTestNet;
 extern CBigNum bnProofOfStakeLimitTestNet;
-
 
 static const unsigned int MAX_BLOCK_SIZE = 1000000;
 static const unsigned int MAX_BLOCK_SIZE_GEN = MAX_BLOCK_SIZE/2;
