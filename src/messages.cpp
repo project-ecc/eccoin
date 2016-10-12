@@ -395,28 +395,37 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
         {
             printf("getblocks %d to %s limit %d\n", (pindex ? pindex->nHeight : -1), hashStop.ToString().substr(0,20).c_str(), nLimit);
         }
-        for (; pindex; pindex = pindex->pnext)
-        {
-            map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(pindex->GetBlockHash());
-            if (mi != mapBlockIndex.end())
-            {
-                CBlock block;
-                block.ReadFromDisk((*mi).second);
-                pfrom->PushMessage("block", block);
 
-                if (--nLimit <= 0)
+        if(pindex->GetBlockHash() == pindexBest->GetBlockHash())
+        {
+            pfrom->readyToReceiveMore = false;
+        }
+        else
+        {
+            for (; pindex; pindex = pindex->pnext)
+            {
+                map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(pindex->GetBlockHash());
+                if (mi != mapBlockIndex.end())
                 {
-                    // When this block is requested, we'll send an inv that'll make them
-                    // getblocks the next batch of inventory.
-                    if(messageDebug)
+                    CBlock block;
+                    block.ReadFromDisk((*mi).second);
+                    pfrom->PushMessage("block", block);
+                    nLimit--;
+                    if (--nLimit <= 0)
                     {
-                        printf("getblocks stopping at limit %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString().substr(0,20).c_str());
+                        // When this block is requested, we'll send an inv that'll make them
+                        // getblocks the next batch of inventory.
+                        if(messageDebug)
+                        {
+                            printf("getblocks stopping at limit %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString().substr(0,20).c_str());
+                        }
+                        pfrom->hashContinue = pindex->GetBlockHash();
+                        break;
                     }
-                    pfrom->hashContinue = pindex->GetBlockHash();
-                    break;
                 }
             }
         }
+        pfrom->askedIfReady = false;
     }
     else if (strCommand == "checkpoint")
     {
@@ -432,46 +441,6 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
                 checkpoint.RelayTo(pnode);
         }
     }
-
-    /// this command is never used in the code, although it would be a better way to sync outside of the guarentee blocks
-    else if (strCommand == "getheaders")
-    {
-        CBlockLocator locator;
-        uint256 hashStop;
-        vRecv >> locator >> hashStop;
-
-        CBlockIndex* pindex = NULL;
-        if (locator.IsNull())
-        {
-            // If locator is null, return the hashStop block
-            map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(hashStop);
-            if (mi == mapBlockIndex.end())
-                return true;
-            pindex = (*mi).second;
-        }
-        else
-        {
-            // Find the last block the caller has in the main chain
-            pindex = locator.GetBlockIndex();
-            if (pindex)
-                pindex = pindex->pnext;
-        }
-
-        vector<CBlock> vHeaders;
-        int nLimit = 2000;
-        if(messageDebug)
-        {
-            printf("getheaders %d to %s\n", (pindex ? pindex->nHeight : -1), hashStop.ToString().substr(0,20).c_str());
-        }
-        for (; pindex; pindex = pindex->pnext)
-        {
-            vHeaders.push_back(pindex->GetBlockHeader());
-            if (--nLimit <= 0 || pindex->GetBlockHash() == hashStop)
-                break;
-        }
-        pfrom->PushMessage("headers", vHeaders);
-    }
-
 
     else if (strCommand == "tx")
     {
@@ -692,6 +661,18 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
                 pfrom->Misbehaving(10);
             }
         }
+    }
+
+    else if(strCommand == "askReady")
+    {
+        /// if we dont request more blocks, know that they are ready to send more blocks
+        /// so record the status of that node as readyToSend, and then ask for some when we are ready
+
+        pfrom->PushMessage("getblocks", pindexBest->GetBlockHash(), uint256(0));
+
+        if(messageDebug)
+            printf("setting readyToSendMore to true in askReady \n");
+        pfrom->readyToReceiveMore = true;
     }
 
 
@@ -971,6 +952,23 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
         if (!vGetData.empty())
         {
             pto->PushMessage("getdata", vGetData);
+        }
+        if(pto->fastMessaging)
+        {
+            if(pto->hashContinue != 0 && pto->askedIfReady == false)
+            {
+                if(messageDebug)
+                    printf("sending askReady \n");
+                pto->PushMessage("askReady");
+                pto->askedIfReady = true;
+            }
+            if(pto->readyToReceiveMore == true)
+            {
+                if(messageDebug)
+                    printf("sending block request \n");
+                pto->PushMessage("getblocks",pindexBest->GetBlockHash(), uint256(0));
+                pto->readyToReceiveMore = false;
+            }
         }
     }
     return true;

@@ -177,6 +177,8 @@ public:
     CService addrLocal;
     int nVersion;
     bool fastMessaging;
+    bool readyToReceiveMore; /// we are ready to be sent more blocks to sync the chain from this peer
+    bool askedIfReady; /// asked this peer if they are ready to recieve more blocks
     std::string strSubVer;
     bool fClient;
     bool fInbound;
@@ -228,6 +230,8 @@ public:
         addrName = addrNameIn == "" ? addr.ToStringIPPort() : addrNameIn;
         nVersion = 0;
         fastMessaging = false;
+        readyToReceiveMore = false;
+        askedIfReady = false;
         strSubVer = "";
         fClient = false; // set by version message
         fInbound = fInboundIn;
