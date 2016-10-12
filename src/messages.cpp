@@ -78,7 +78,7 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
             return false;
         }
 
-        if(pfrom->nVersion >= 60015)
+        if(pfrom->nVersion >= 60026)
         {
             pfrom->fastMessaging = true;
         }
