@@ -148,18 +148,10 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
         if (pfrom->nStartingHeight > (nBestHeight - 144))
         {
             if(messageDebug)
+            {
                 printf("peer has more blocks than us \n");
-            if(pfrom->nVersion < NOBLKS_VERSION_START || pfrom->nVersion >= NOBLKS_VERSION_END)
-            {
-                if(messageDebug)
-                    printf("peer is someone to request blocks from, asking... \n");
-                pfrom->PushGetBlocks(pindexBest, uint256(0));
             }
-            else
-            {
-                if(messageDebug)
-                    printf("peer is not someone we request blocks from \n");
-            }
+            pfrom->PushGetBlocks(pindexBest, uint256(0));
         }
         else
         {
