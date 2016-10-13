@@ -111,8 +111,6 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
         if (pfrom->fInbound)
             pfrom->PushVersion();
 
-        pfrom->fClient = !(pfrom->nServices & NODE_NETWORK);
-
         AddTimeData(pfrom->addr, nTime);
 
         // Change version
@@ -146,9 +144,9 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
             }
         }
 
+        ///2.4.7.2 NOTE: this message isnt being sent on connect
         // Ask a peer with more blocks than us for missing blocks
-        if (!pfrom->fClient && (pfrom->nStartingHeight > (nBestHeight - 144)) &&
-            (pfrom->nVersion < NOBLKS_VERSION_START || pfrom->nVersion >= NOBLKS_VERSION_END))
+        if (pfrom->nStartingHeight > (nBestHeight - 144) && (pfrom->nVersion < NOBLKS_VERSION_START || pfrom->nVersion >= NOBLKS_VERSION_END))
         {
             pfrom->PushGetBlocks(pindexBest, uint256(0));
         }
@@ -396,7 +394,7 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
             printf("getblocks %d to %s limit %d\n", (pindex ? pindex->nHeight : -1), hashStop.ToString().substr(0,20).c_str(), nLimit);
         }
 
-        if(pindex->GetBlockHash() == pindexBest->GetBlockHash())
+        if(pindex->GetBlockHash() == pindexBest->GetBlockHash() && pfrom->fastMessaging)
         {
             pfrom->readyToReceiveMore = false;
         }
@@ -425,7 +423,10 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
                 }
             }
         }
-        pfrom->askedIfReady = false;
+        if(pfrom->fastMessaging)
+        {
+            pfrom->askedIfReady = false;
+        }
     }
     else if (strCommand == "checkpoint")
     {

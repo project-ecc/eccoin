@@ -180,7 +180,6 @@ public:
     bool readyToReceiveMore; /// we are ready to be sent more blocks to sync the chain from this peer
     bool askedIfReady; /// asked this peer if they are ready to recieve more blocks
     std::string strSubVer;
-    bool fClient;
     bool fInbound;
     bool fNetworkNode;
     bool fSuccessfullyConnected;
@@ -233,7 +232,6 @@ public:
         readyToReceiveMore = false;
         askedIfReady = false;
         strSubVer = "";
-        fClient = false; // set by version message
         fInbound = fInboundIn;
         fNetworkNode = false;
         fSuccessfullyConnected = false;
