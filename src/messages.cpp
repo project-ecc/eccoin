@@ -677,7 +677,7 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
         /// if we dont request more blocks, know that they are ready to send more blocks
         /// so record the status of that node as readyToSend, and then ask for some when we are ready
 
-        pfrom->PushMessage("getblocks", pindexBest->GetBlockHash(), uint256(0));
+        pfrom->PushGetBlocks(pindexBest, uint256(0));
 
         if(messageDebug)
             printf("setting readyToSendMore to true in askReady \n");
@@ -975,7 +975,7 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
             {
                 if(messageDebug)
                     printf("sending block request \n");
-                pto->PushMessage("getblocks",pindexBest->GetBlockHash(), uint256(0));
+                pto->PushGetBlocks(pindexBest, uint256(0));
                 pto->readyToReceiveMore = false;
             }
         }
