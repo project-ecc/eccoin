@@ -144,11 +144,27 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
             }
         }
 
-        ///2.4.7.2 NOTE: this message isnt being sent on connect
         // Ask a peer with more blocks than us for missing blocks
-        if (pfrom->nStartingHeight > (nBestHeight - 144) && (pfrom->nVersion < NOBLKS_VERSION_START || pfrom->nVersion >= NOBLKS_VERSION_END))
+        if (pfrom->nStartingHeight > (nBestHeight - 144))
         {
-            pfrom->PushGetBlocks(pindexBest, uint256(0));
+            if(messageDebug)
+                printf("peer has more blocks than us \n");
+            if(pfrom->nVersion < NOBLKS_VERSION_START || pfrom->nVersion >= NOBLKS_VERSION_END)
+            {
+                if(messageDebug)
+                    printf("peer is someone to request blocks from, asking... \n");
+                pfrom->PushGetBlocks(pindexBest, uint256(0));
+            }
+            else
+            {
+                if(messageDebug)
+                    printf("peer is not someone we request blocks from \n");
+            }
+        }
+        else
+        {
+            if(messageDebug)
+                printf("peer does not have more blocks than us \n");
         }
 
         // Relay alerts
