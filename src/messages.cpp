@@ -407,28 +407,25 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
             {
                 printf("getblocks %d to %s limit %d\n", (pindex ? pindex->nHeight : -1), hashStop.ToString().substr(0,20).c_str(), nLimit);
             }
-            else
+            for (; pindex; pindex = pindex->pnext)
             {
-                for (; pindex; pindex = pindex->pnext)
+                map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(pindex->GetBlockHash());
+                if (mi != mapBlockIndex.end())
                 {
-                    map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(pindex->GetBlockHash());
-                    if (mi != mapBlockIndex.end())
+                    CBlock block;
+                    block.ReadFromDisk((*mi).second);
+                    pfrom->PushMessage("block", block);
+                    nLimit--;
+                    if (--nLimit <= 0)
                     {
-                        CBlock block;
-                        block.ReadFromDisk((*mi).second);
-                        pfrom->PushMessage("block", block);
-                        nLimit--;
-                        if (--nLimit <= 0)
+                        // When this block is requested, we'll send an inv that'll make them
+                        // getblocks the next batch of inventory.
+                        if(messageDebug)
                         {
-                            // When this block is requested, we'll send an inv that'll make them
-                            // getblocks the next batch of inventory.
-                            if(messageDebug)
-                            {
-                                printf("getblocks stopping at limit %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString().substr(0,20).c_str());
-                            }
-                            pfrom->hashContinue = pindex->GetBlockHash();
-                            break;
+                            printf("getblocks stopping at limit %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString().substr(0,20).c_str());
                         }
+                        pfrom->hashContinue = pindex->GetBlockHash();
+                        break;
                     }
                 }
             }
@@ -981,7 +978,7 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
                 pto->PushMessage("askReady");
                 pto->askedIfReady = true;
             }
-            else if(pto->hashContinue != 0 && pto->askedIfReady == false && pto->noReadyActive == false)
+            else if(pto->hashContinue != 0 && pto->askedIfReady == false && pto->noReadyActive == true)
             {
                 if(pto->readyIn < GetTime())
                 {
