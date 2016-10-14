@@ -674,7 +674,7 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
     else if(strCommand == "askReady")
     {        
         /// give us 5 seconds to process all the blocks we already got from this node. if we processed them all before 5 seconds, ask for more
-        if(pindexBest->nHeight >= pfrom->highestAsked || (GetTime() >= (pfrom->lastAsked + 5000)))
+        if(pindexBest->nHeight >= pfrom->highestAsked || (GetTime() >= (pfrom->lastAsked + 5)))
         {
             pfrom->PushGetBlocks(pindexBest, uint256(0));
             pfrom->highestAsked = pindexBest->nHeight + 500;
@@ -688,7 +688,7 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
 
     else if(strCommand == "noReady")
     {
-        pfrom->readyIn = (GetTime() + 5000);
+        pfrom->readyIn = (GetTime() + 5);
         pfrom->noReadyActive = true;
         pfrom->askedIfReady = false;
     }
