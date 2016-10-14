@@ -392,41 +392,43 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
 
         // Find the last block the caller has in the main chain
         CBlockIndex* pindex = locator.GetBlockIndex();
-
-        // Send the rest of the chain
-        if (pindex)
-            pindex = pindex->pnext;
-        int nLimit = 500;
-        if(messageDebug)
+        if(pindex == pindexBest)
         {
-            printf("getblocks %d to %s limit %d\n", (pindex ? pindex->nHeight : -1), hashStop.ToString().substr(0,20).c_str(), nLimit);
-        }
-
-        if(pindex->GetBlockHash() == pindexBest->GetBlockHash() && pfrom->fastMessaging)
-        {
-            pfrom->readyToReceiveMore = false;
+            /// set ask if ready to true so we stop asking because peer is as synced as we are
+            pfrom->askedIfReady = true;
         }
         else
         {
-            for (; pindex; pindex = pindex->pnext)
+            // Send the rest of the chain
+            if (pindex)
+                pindex = pindex->pnext;
+            int nLimit = 500;
+            if(messageDebug)
             {
-                map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(pindex->GetBlockHash());
-                if (mi != mapBlockIndex.end())
+                printf("getblocks %d to %s limit %d\n", (pindex ? pindex->nHeight : -1), hashStop.ToString().substr(0,20).c_str(), nLimit);
+            }
+            else
+            {
+                for (; pindex; pindex = pindex->pnext)
                 {
-                    CBlock block;
-                    block.ReadFromDisk((*mi).second);
-                    pfrom->PushMessage("block", block);
-                    nLimit--;
-                    if (--nLimit <= 0)
+                    map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(pindex->GetBlockHash());
+                    if (mi != mapBlockIndex.end())
                     {
-                        // When this block is requested, we'll send an inv that'll make them
-                        // getblocks the next batch of inventory.
-                        if(messageDebug)
+                        CBlock block;
+                        block.ReadFromDisk((*mi).second);
+                        pfrom->PushMessage("block", block);
+                        nLimit--;
+                        if (--nLimit <= 0)
                         {
-                            printf("getblocks stopping at limit %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString().substr(0,20).c_str());
+                            // When this block is requested, we'll send an inv that'll make them
+                            // getblocks the next batch of inventory.
+                            if(messageDebug)
+                            {
+                                printf("getblocks stopping at limit %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString().substr(0,20).c_str());
+                            }
+                            pfrom->hashContinue = pindex->GetBlockHash();
+                            break;
                         }
-                        pfrom->hashContinue = pindex->GetBlockHash();
-                        break;
                     }
                 }
             }
@@ -673,17 +675,25 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
     }
 
     else if(strCommand == "askReady")
-    {
-        /// if we dont request more blocks, know that they are ready to send more blocks
-        /// so record the status of that node as readyToSend, and then ask for some when we are ready
-
-        pfrom->PushGetBlocks(pindexBest, uint256(0));
-
-        if(messageDebug)
-            printf("setting readyToSendMore to true in askReady \n");
-        pfrom->readyToReceiveMore = true;
+    {        
+        /// give us 5 seconds to process all the blocks we already got from this node. if we processed them all before 5 seconds, ask for more
+        if(pindexBest->nHeight >= pfrom->highestAsked || (GetTime() >= (pfrom->lastAsked + 5000)))
+        {
+            pfrom->PushGetBlocks(pindexBest, uint256(0));
+            pfrom->highestAsked = pindexBest->nHeight + 500;
+            pfrom->lastAsked = GetTime();
+        }
+        else
+        {
+            pfrom->PushMessage("noReady");
+        }
     }
 
+    else if(strCommand == "noReady")
+    {
+        pfrom->readyIn = (GetTime() + 5000);
+        pfrom->noReadyActive = true;
+    }
 
     else
     {
@@ -964,19 +974,23 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
         }
         if(pto->fastMessaging)
         {
-            if(pto->hashContinue != 0 && pto->askedIfReady == false)
+            if(pto->hashContinue != 0 && pto->askedIfReady == false && pto->noReadyActive = false)
             {
                 if(messageDebug)
                     printf("sending askReady \n");
                 pto->PushMessage("askReady");
                 pto->askedIfReady = true;
             }
-            if(pto->readyToReceiveMore == true)
+            else if(pto->hashContinue != 0 && pto->askedIfReady == false && pto->noReadyActive = false)
             {
-                if(messageDebug)
-                    printf("sending block request \n");
-                pto->PushGetBlocks(pindexBest, uint256(0));
-                pto->readyToReceiveMore = false;
+                if(pto->readyIn < GetTime())
+                {
+                    if(messageDebug)
+                        printf("sending askReady \n");
+                    pto->PushMessage("askReady");
+                    pto->askedIfReady = true;
+                    pto->noReadyActive = false;
+                }
             }
         }
     }

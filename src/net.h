@@ -177,8 +177,11 @@ public:
     CService addrLocal;
     int nVersion;
     bool fastMessaging;
-    bool readyToReceiveMore; /// we are ready to be sent more blocks to sync the chain from this peer
     bool askedIfReady; /// asked this peer if they are ready to recieve more blocks
+    int highestAsked;
+    int64_t lastAsked; /// last time we were asked if we were ready
+    int64_t readyIn; /// time until peer is next ready
+    bool noReadyActive;
     std::string strSubVer;
     bool fInbound;
     bool fNetworkNode;
@@ -229,8 +232,11 @@ public:
         addrName = addrNameIn == "" ? addr.ToStringIPPort() : addrNameIn;
         nVersion = 0;
         fastMessaging = false;
-        readyToReceiveMore = false;
         askedIfReady = false;
+        highestAsked = 0;
+        lastAsked = 0; // last time we were asked if we were ready
+        readyIn = 0; // the next time a peer is ready in
+        noReadyActive = false;
         strSubVer = "";
         fInbound = fInboundIn;
         fNetworkNode = false;
