@@ -690,6 +690,7 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
     {
         pfrom->readyIn = (GetTime() + 5000);
         pfrom->noReadyActive = true;
+        pfrom->askedIfReady = false;
     }
 
     else
