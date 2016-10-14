@@ -415,7 +415,6 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
                     CBlock block;
                     block.ReadFromDisk((*mi).second);
                     pfrom->PushMessage("block", block);
-                    nLimit--;
                     if (--nLimit <= 0)
                     {
                         // When this block is requested, we'll send an inv that'll make them
