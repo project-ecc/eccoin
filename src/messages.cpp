@@ -974,14 +974,14 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
         }
         if(pto->fastMessaging)
         {
-            if(pto->hashContinue != 0 && pto->askedIfReady == false && pto->noReadyActive = false)
+            if(pto->hashContinue != 0 && pto->askedIfReady == false && pto->noReadyActive == false)
             {
                 if(messageDebug)
                     printf("sending askReady \n");
                 pto->PushMessage("askReady");
                 pto->askedIfReady = true;
             }
-            else if(pto->hashContinue != 0 && pto->askedIfReady == false && pto->noReadyActive = false)
+            else if(pto->hashContinue != 0 && pto->askedIfReady == false && pto->noReadyActive == false)
             {
                 if(pto->readyIn < GetTime())
                 {
