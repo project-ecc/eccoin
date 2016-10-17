@@ -392,7 +392,7 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
 
         // Find the last block the caller has in the main chain
         CBlockIndex* pindex = locator.GetBlockIndex();
-        if(pindex == pindexBest)
+        if(pindex == pindexBest || pfrom->hashContinue == 0 || pfrom->hashContinue == pindexBest->GetBlockHash())
         {
             /// set ask if ready to true so we stop asking because peer is as synced as we are
             pfrom->askedIfReady = true;
@@ -428,10 +428,10 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
                     }
                 }
             }
-        }
-        if(pfrom->fastMessaging)
-        {
-            pfrom->askedIfReady = false;
+            if(pfrom->fastMessaging)
+            {
+                pfrom->askedIfReady = false;
+            }
         }
     }
     else if (strCommand == "checkpoint")
