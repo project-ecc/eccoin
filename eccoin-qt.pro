@@ -176,7 +176,6 @@ DEPENDPATH += src src/json src/qt
 
 HEADERS += \
     src/addrman.h \
-    src/alert.h \
     src/allocators.h \
     src/base58.h \
     src/bignum.h \
@@ -258,12 +257,11 @@ HEADERS += \
     src/json/json_spirit_reader.h \
     src/json/json_spirit_error_position.h \
     src/json/json_spirit.h \
-    src/scrypt_kernel.h
+    src/kernel.h
 #
 
 SOURCES += \
     src/addrman.cpp \
-    src/alert.cpp \
     src/bitcoinrpc.cpp \
     src/checkpoints.cpp \
     src/crypter.cpp \
@@ -329,7 +327,7 @@ SOURCES += \
     src/qt/aboutdialog.cpp \
     src/qt/editaddressdialog.cpp \
     src/qt/bitcoinaddressvalidator.cpp \
-    src/scrypt_kernel.cpp
+    src/kernel.cpp
 #
 
 SOURCES += \

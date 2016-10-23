@@ -6,7 +6,7 @@
 
 #include "txdb-leveldb.h"
 #include "miner.h"
-#include "scrypt_kernel.h"
+#include "kernel.h"
 #include "scrypt_mine.h"
 using namespace std;
 
@@ -387,7 +387,7 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
         nLastBlockSize = nBlockSize;
 
         if (fDebug && GetBoolArg("-printpriority"))
-            printf("CreateNewBlock(): total size %I64u\n", nBlockSize);
+            printf("CreateNewBlock(): total size %" PRIu64 "\n", nBlockSize);
 
         if (pblock->IsProofOfWork())
             pblock->vtx[0].vout[0].nValue = GetProofOfWorkReward(pindexPrev->nHeight+1, nFees, pindexPrev->GetBlockHash());

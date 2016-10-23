@@ -1143,7 +1143,7 @@ void MapPort()
 // The first name is used as information source for addrman.
 // The second name should resolve to a list of seed addresses.
 static const char* strDNSSeed[][2] = {
-    {"129.21.141.135", "129.21.141.135"}
+    {"", ""}
 };
 
 void ThreadDNSAddressSeed(void* parg)
@@ -1213,10 +1213,7 @@ void ThreadDNSAddressSeed2(void* parg)
 
 unsigned int pnSeed[] =
 {
-    0x8a07975e, 0xaa402115, 0x780e02b1, 0x34e95ba1, 0xcd715db6, 0x68e3f2dd, 0xb775f92a,
-    0x9d104aa8, 0x37f9d24d, 0x1fdc371b, 0x952d72cc, 0xb8b35c09, 0xc91b33a9, 0xd0f25776,
-    0x8b9763f3, 0xdf07110, 0xf5efe7de, 0x55ff01ab, 0x38e45e62, 0xd033eb86, 0xce892d64,
-    0x2b76a5df, 0x2c938346, 0x8b6d3ff0, 0xc07d324f,
+    0
 };
 
 void DumpAddresses()
@@ -1226,7 +1223,7 @@ void DumpAddresses()
     CAddrDB adb;
     adb.Write(addrman);
 
-    printf("Flushed %d addresses to peers.dat  %I64d ms\n",
+    printf("Flushed %d addresses to peers.dat  %" PRId64 " ms\n",
            addrman.size(), GetTimeMillis() - nStart);
 }
 
@@ -1317,9 +1314,18 @@ void static ThreadStakeMinter_Scrypt(void* parg)
     printf("ThreadStakeMinter exiting, %d threads remaining\n", vnThreadsRunning[THREAD_MINTER]);
 }
 
+unsigned int GetNumSeeds()
+{
+    if(pnSeed[0] == 0)
+    {
+        return 0;
+    }
+    return ARRAYLEN(pnSeed);
+}
+
 std::pair<const unsigned int*, size_t> GetSeeds()
 {
-  return std::make_pair(pnSeed, ARRAYLEN(pnSeed));
+    return std::make_pair(pnSeed, ARRAYLEN(pnSeed));
 }
 
 void ThreadOpenConnections2(void* parg)
@@ -1804,7 +1810,7 @@ void static Discover()
 
 void StartNode(void* parg)
 {
-            printf("NodeStarted\n");
+        printf("NodeStarted\n");
         // Make this thread recognisable as the startup thread
         RenameThread("ECCoin-start");
 
@@ -1905,7 +1911,6 @@ bool StopNode()
     if (vnThreadsRunning[THREAD_DNSSEED] > 0) printf("ThreadDNSAddressSeed still running\n");
     if (vnThreadsRunning[THREAD_ADDEDCONNECTIONS] > 0) printf("ThreadOpenAddedConnections still running\n");
     if (vnThreadsRunning[THREAD_DUMPADDRESS] > 0) printf("ThreadDumpAddresses still running\n");
-    if (vnThreadsRunning[THREAD_STAKE_MINER] > 0) printf("ThreadStakeMiner_X11 still running\n");
     if (vnThreadsRunning[THREAD_MINTER] > 0) printf("ThreadStakeMinter_Scrypt still running\n");
     while (vnThreadsRunning[THREAD_MESSAGEHANDLER] > 0 || vnThreadsRunning[THREAD_RPCHANDLER] > 0)
         MilliSleep(20);

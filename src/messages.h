@@ -1,12 +1,11 @@
 #ifndef MESSAGES_H
 #define MESSAGES_H
 
-#include "alert.h"
 #include "bitcoinrpc.h"
 #include "checkpoints.h"
 #include "db.h"
 #include "init.h"
-#include "scrypt_kernel.h"
+#include "kernel.h"
 #include "main.h"
 #include "net.h"
 #include "txdb-leveldb.h"

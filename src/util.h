@@ -245,7 +245,7 @@ void runCommand(std::string strCommand);
 
 inline std::string i64tostr(int64_t n)
 {
-    return strprintf("%I64d", n);
+    return strprintf("%" PRId64 "", n);
 }
 
 inline std::string itostr(int n)

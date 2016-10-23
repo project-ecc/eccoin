@@ -15,7 +15,7 @@
 #include <memenv/memenv.h>
 
 #include "checkpoints.h"
-#include "scrypt_kernel.h"
+#include "kernel.h"
 #include "main.h"
 #include "scrypt_mine.h"
 #include "txdb-leveldb.h"
