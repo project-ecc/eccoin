@@ -1213,7 +1213,7 @@ void ThreadDNSAddressSeed2(void* parg)
 
 unsigned int pnSeed[] =
 {
-    0
+    0x811583D5
 };
 
 void DumpAddresses()
@@ -1312,15 +1312,6 @@ void static ThreadStakeMinter_Scrypt(void* parg)
         PrintException(NULL, "ThreadStakeMinter()");
     }
     printf("ThreadStakeMinter exiting, %d threads remaining\n", vnThreadsRunning[THREAD_MINTER]);
-}
-
-unsigned int GetNumSeeds()
-{
-    if(pnSeed[0] == 0)
-    {
-        return 0;
-    }
-    return ARRAYLEN(pnSeed);
 }
 
 std::pair<const unsigned int*, size_t> GetSeeds()

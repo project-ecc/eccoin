@@ -1120,11 +1120,10 @@ const boost::filesystem::path &GetDataDir(bool fNetSpecific)
     return path;
 }
 std::pair<const unsigned int*, size_t> GetSeeds();
-unsigned int GetNumSeeds();
 std::vector<AddrInfo>& GetInfo()
 {
   static std::vector<AddrInfo> result;
-  if (result.empty() && GetNumSeeds() != 0)
+  if (result.empty())
   {
     std::pair<const unsigned int*, size_t> seeds = GetSeeds();
     AddrInfo val;
