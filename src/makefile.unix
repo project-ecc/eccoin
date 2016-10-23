@@ -104,7 +104,6 @@ xCXXFLAGS=-O2 $(EXT_OPTIONS) -pthread -w -Wextra -Wno-ignored-qualifiers -Wforma
 xLDFLAGS=$(LDHARDENING) $(LDFLAGS)
 
 OBJS= \
-    obj/alert.o \
     obj/version.o \
     obj/checkpoints.o \
     obj/netbase.o \
@@ -131,7 +130,7 @@ OBJS= \
     obj/wallet.o \
     obj/walletdb.o \
     obj/noui.o \
-    obj/scrypt_kernel.o \
+    obj/kernel.o \
     obj/pbkdf2.o \
     obj/scrypt-x86.o \
     obj/scrypt-x86_64.o \
