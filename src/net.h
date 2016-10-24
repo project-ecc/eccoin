@@ -212,9 +212,6 @@ public:
     uint256 hashCheckpointKnown; // ppcoin: known sent sync-checkpoint
 
     // inventory based relay
-    mruset<CInv> setInventoryKnown;
-    std::vector<CInv> vInventoryToSend;
-    CCriticalSection cs_inventory;
     std::multimap<int64_t, CInv> mapAskFor;
 
     CNode(SOCKET hSocketIn, CAddress addrIn, std::string addrNameIn = "", bool fInboundIn=false) : vSend(SER_NETWORK, MIN_PROTO_VERSION), vRecv(SER_NETWORK, MIN_PROTO_VERSION)
@@ -249,7 +246,6 @@ public:
         fGetAddr = false;
         nMisbehavior = 0;
         hashCheckpointKnown = 0;
-        setInventoryKnown.max_size(SendBufferSize() / 1000);
 
         // Be shy and don't send version until we hear
         if (hSocket != INVALID_SOCKET && !fInbound)
@@ -302,24 +298,6 @@ public:
         // after addresses were pushed.
         if (addr.IsValid() && !setAddrKnown.count(addr))
             vAddrToSend.push_back(addr);
-    }
-
-
-    void AddInventoryKnown(const CInv& inv)
-    {
-        {
-            LOCK(cs_inventory);
-            setInventoryKnown.insert(inv);
-        }
-    }
-
-    void PushInventory(const CInv& inv)
-    {
-        {
-            LOCK(cs_inventory);
-            if (!setInventoryKnown.count(inv))
-                vInventoryToSend.push_back(inv);
-        }
     }
 
     void AskFor(const CInv& inv)
