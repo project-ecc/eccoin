@@ -635,7 +635,11 @@ inline void RelayInventory(const CInv& inv)
     {
         LOCK(cs_vNodes);
         BOOST_FOREACH(CNode* pnode, vNodes)
-            pnode->PushInventory(inv);
+        {
+            std::vector<CInv> vInv;
+            vInv.push_back(inv);
+            pnode->PushMessage("inv", vInv);
+        }
     }
 }
 

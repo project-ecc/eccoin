@@ -2260,8 +2260,14 @@ bool CBlock::AcceptBlock(CBlock* pblock)
             {
                 LOCK(cs_vNodes);
                 BOOST_FOREACH(CNode* pnode, vNodes)
+                {
                     if (nBestHeight > (pnode->nStartingHeight != -1 ? pnode->nStartingHeight - 2000 : nBlockEstimate))
-                        pnode->PushInventory(CInv(MSG_BLOCK, hash));
+                    {
+                        std::vector<CInv> vInv;
+                        vInv.push_back(CInv(MSG_BLOCK, hash));
+                        pnode->PushMessage("inv", vInv);
+                    }
+                }
             }
 
             // ppcoin: check pending sync-checkpoint
@@ -2354,8 +2360,14 @@ bool CBlock::AcceptBlock(CBlock* pblock)
         {
             LOCK(cs_vNodes);
             BOOST_FOREACH(CNode* pnode, vNodes)
+            {
                 if (nBestHeight > (pnode->nStartingHeight != -1 ? pnode->nStartingHeight - 2000 : nBlockEstimate))
-                    pnode->PushInventory(CInv(MSG_BLOCK, hash));
+                {
+                    std::vector<CInv> vInv;
+                    vInv.push_back(CInv(MSG_BLOCK, hash));
+                    pnode->PushMessage("inv", vInv);
+                }
+            }
         }
 
         // ppcoin: check pending sync-checkpoint

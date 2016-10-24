@@ -711,9 +711,7 @@ void ThreadSocketHandler2(void* parg)
                                 TRY_LOCK(pnode->cs_mapRequests, lockReq);
                                 if (lockReq)
                                 {
-                                    TRY_LOCK(pnode->cs_inventory, lockInv);
-                                    if (lockInv)
-                                        fDelete = true;
+                                    fDelete = true;
                                 }
                             }
                         }

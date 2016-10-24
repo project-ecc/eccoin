@@ -277,8 +277,6 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
             }
             if (fShutdown)
                 return true;
-            pfrom->AddInventoryKnown(inv);
-
             bool fAlreadyHave = AlreadyHave(txdb, inv);
             if(messageDebug)
             {
@@ -456,7 +454,6 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
         vRecv >> tx;
 
         CInv inv(MSG_TX, tx.GetHash());
-        pfrom->AddInventoryKnown(inv);
 
         bool fMissingInputs = false;
         if (tx.AcceptToMemoryPool(txdb, true, &fMissingInputs))
@@ -526,7 +523,6 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
         // block.print();
 
         CInv inv(MSG_BLOCK, hashBlock);
-        pfrom->AddInventoryKnown(inv);
 
         if(ProcessBlock(pfrom, &block))
         {
@@ -884,29 +880,6 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
             if (!vAddr.empty())
                 pto->PushMessage("addr", vAddr);
         }
-
-
-        //
-        // Message: inventory
-        //
-        vector<CInv> vInv;
-        {
-            LOCK(pto->cs_inventory);
-            vInv.reserve(pto->vInventoryToSend.size());
-            BOOST_FOREACH(const CInv& inv, pto->vInventoryToSend)
-            {
-                vInv.push_back(inv);
-                if (vInv.size() >= 1000)
-                {
-                    pto->PushMessage("inv", vInv);
-                }
-            }
-        }
-        if (!vInv.empty())
-        {
-            pto->PushMessage("inv", vInv);
-        }
-
 
         //
         // Message: getdata
