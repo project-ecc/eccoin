@@ -381,17 +381,12 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
 
         // Find the last block the caller has in the main chain
         CBlockIndex* pindex = locator.GetBlockIndex();
-        if(pindex == pindexBest || pfrom->hashContinue == 0 || pfrom->hashContinue == pindexBest->GetBlockHash())
-        {
-            /// set ask if ready to true so we stop asking because peer is as synced as we are
-            pfrom->askedIfReady = true;
-        }
-        else
         {
             // Send the rest of the chain
             if (pindex)
                 pindex = pindex->pnext;
             int nLimit = 500;
+            bool hitSync = false;
             if(messageDebug)
             {
                 printf("getblocks %d to %s limit %d\n", (pindex ? pindex->nHeight : -1), hashStop.ToString().substr(0,20).c_str(), nLimit);
@@ -404,6 +399,11 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
                     CBlock block;
                     block.ReadFromDisk((*mi).second);
                     pfrom->PushMessage("block", block);
+                    if(block.GetHash() == pindexBest->GetBlockHash())
+                    {
+                        /// if we detect that they are synced, store this information
+                        hitSync = true;
+                    }
                     if (--nLimit <= 0)
                     {
                         // When this block is requested, we'll send an inv that'll make them
@@ -419,7 +419,15 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
             }
             if(pfrom->fastMessaging)
             {
-                pfrom->askedIfReady = false;
+                if(hitSync == true)
+                {
+                    /// set ask if ready to true so we stop asking because peer is as synced as we are
+                    pfrom->askedIfReady = true;
+                }
+                else
+                {
+                    pfrom->askedIfReady = false;
+                }
             }
         }
     }
