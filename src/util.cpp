@@ -1205,8 +1205,8 @@ void ReadConfigFile(map<string, string>& mapSettingsRet,
         fprintf(ConfFile, "maxconnections=100\n");
         fprintf(ConfFile, "rpcuser=yourusername\n");
         fprintf(ConfFile, "rpcpassword=yourpassword\n");
-        fprintf(ConfFile, "addnode=129.21.141.135\n");
-        fprintf(ConfFile, "addnode=129.21.141.224\n");
+        fprintf(ConfFile, "addnode=wallet01.cryptounited.io\n");
+        fprintf(ConfFile, "addnode=wallet02.cryptounited.io\n");
         fprintf(ConfFile, "rpcport=19119\n");
         fprintf(ConfFile, "rpcconnect=127.0.0.1\n");
         fclose(ConfFile);
