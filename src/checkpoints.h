@@ -93,13 +93,25 @@ static MapCheckpoints mapCheckpointsTestnet = boost::assign::map_list_of
         ( 0, uint256("0xa60ac43c88dbc44b826cf315352a8a7b373d2af8b6e1c4c4a0638859c5e9ecd1"))
         ;
 
-
+extern uint256 hashSyncCheckpoint;
+extern CSyncCheckpoint checkpointMessage;
+extern uint256 hashInvalidCheckpoint;
+extern CCriticalSection cs_hashSyncCheckpoint;
+bool WriteSyncCheckpoint(const uint256& hashCheckpoint);
 
 /** Block-chain checkpoints are compiled-in sanity checks.
  * They are updated every release or three.
  */
-namespace Checkpoints
+class Checkpoints
 {
+
+    // Returns last CBlockIndex* in mapBlockIndex that is a checkpoint
+    CBlockIndex* GetLastCheckpoint(const std::map<uint256, CBlockIndex*>& mapBlockIndex);
+
+
+    bool IsMatureSyncCheckpoint();
+
+public:
     /** Checkpointing mode */
     enum CPMode
     {
@@ -110,33 +122,24 @@ namespace Checkpoints
         // Permissive checkpoints policy, don't perform any checking
         PERMISSIVE = 2
     };
-
-    // Returns true if block passes checkpoint checks
-    bool CheckHardened(int nHeight, const uint256& hash);
+    bool SetCheckpointPrivKey(std::string strPrivKey);
+    enum CPMode CheckpointsMode;
 
     // Return conservative estimate of total number of blocks, 0 if unknown
     int GetTotalBlocksEstimate();
-
-    // Returns last CBlockIndex* in mapBlockIndex that is a checkpoint
-    CBlockIndex* GetLastCheckpoint(const std::map<uint256, CBlockIndex*>& mapBlockIndex);
-
-    extern uint256 hashSyncCheckpoint;
-    extern CSyncCheckpoint checkpointMessage;
-    extern uint256 hashInvalidCheckpoint;
-    extern CCriticalSection cs_hashSyncCheckpoint;
-
     CBlockIndex* GetLastSyncCheckpoint();
-    bool WriteSyncCheckpoint(const uint256& hashCheckpoint);
-    bool AcceptPendingSyncCheckpoint();
-    uint256 AutoSelectSyncCheckpoint();
-    bool CheckSync(const uint256& hashBlock, const CBlockIndex* pindexPrev);
     bool WantedByPendingSyncCheckpoint(uint256 hashBlock);
     bool ResetSyncCheckpoint();
     void AskForPendingSyncCheckpoint(CNode* pfrom);
-    bool SetCheckpointPrivKey(std::string strPrivKey);
+    uint256 AutoSelectSyncCheckpoint();
     bool SendSyncCheckpoint(uint256 hashCheckpoint);
-    bool IsMatureSyncCheckpoint();
-}
+    // Returns true if block passes checkpoint checks
+    bool CheckHardened(int nHeight, const uint256& hash);
+    bool AcceptPendingSyncCheckpoint();
+    bool CheckSync(const uint256& hashBlock, const CBlockIndex* pindexPrev);
+
+
+};
 
 // ppcoin: synchronized checkpoint
 class CUnsignedSyncCheckpoint

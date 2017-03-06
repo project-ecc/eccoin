@@ -32,6 +32,7 @@ using namespace std;
 using namespace boost;
 
 CWallet* pwalletMain;
+Checkpoints* pcheckpointMain;
 
 CClientUIInterface uiInterface;
 
@@ -42,7 +43,6 @@ unsigned int nNodeLifespan;
 unsigned int nDerivationMethodIndex;
 unsigned int nMinerSleep;
 bool fUseFastIndex;
-enum Checkpoints::CPMode CheckpointsMode;
 
 using namespace std;
 
@@ -372,21 +372,22 @@ bool AppInit2()
 
     // ********************************************************* Step 2: parameter interactions
 
+    pcheckpointMain = new Checkpoints();
     nNodeLifespan = GetArg("-addrlifespan", 7);
     fUseFastIndex = GetBoolArg("-fastindex", true);
     nMinerSleep = GetArg("-minersleep", 500);
 
-    CheckpointsMode = Checkpoints::STRICT_X;
+    pcheckpointMain->CheckpointsMode = Checkpoints::STRICT_X;
     std::string strCpMode = GetArg("-cppolicy", "strict");
 
     if(strCpMode == "strict")
-        CheckpointsMode = Checkpoints::STRICT_X;
+        pcheckpointMain->CheckpointsMode = Checkpoints::STRICT_X;
 
     if(strCpMode == "advisory")
-        CheckpointsMode = Checkpoints::ADVISORY;
+        pcheckpointMain->CheckpointsMode = Checkpoints::ADVISORY;
 
     if(strCpMode == "permissive")
-        CheckpointsMode = Checkpoints::PERMISSIVE;
+        pcheckpointMain->CheckpointsMode = Checkpoints::PERMISSIVE;
 
     nDerivationMethodIndex = 0;
 
@@ -686,7 +687,7 @@ bool AppInit2()
 
     if (mapArgs.count("-checkpointkey")) // ppcoin: checkpoint master priv key
     {
-        if (!Checkpoints::SetCheckpointPrivKey(GetArg("-checkpointkey", "")))
+        if (! pcheckpointMain->SetCheckpointPrivKey(GetArg("-checkpointkey", "")))
             InitError(_("Unable to sign checkpoint, wrong checkpointkey?\n"));
     }
 
@@ -705,8 +706,7 @@ bool AppInit2()
 
     if (GetBoolArg("-loadblockindextest"))
     {
-        CTxDB txdb("r");
-        txdb.LoadBlockIndex();
+        LoadBlockIndexInternal();
         PrintBlockTree();
         return false;
     }
