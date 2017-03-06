@@ -10,12 +10,12 @@
 #include "net.h"
 #include "script.h"
 #include "scrypt_mine.h"
+#include "global.h"
+
 
 using namespace std;
 
 extern int nBestHeight;
-extern int nStakeMaxAge;
-extern int nStakeTargetSpacing;
 
 // Get the last stake modifier and its generation time from a given block
 static bool GetLastStakeModifier(const CBlockIndex* pindex, uint64_t& nStakeModifier, int64_t& nModifierTime)
@@ -27,7 +27,7 @@ static bool GetLastStakeModifier(const CBlockIndex* pindex, uint64_t& nStakeModi
     if (!pindex->GeneratedStakeModifier())
         return error("GetLastStakeModifier: no generation at genesis block");
     nStakeModifier = pindex->nStakeModifier;
-    nModifierTime = pindex->GetBlockTime();
+    nModifierTime = pindex->GetBlockIndexTime();
     return true;
 }
 
@@ -75,7 +75,7 @@ static bool SelectBlockFromCandidates(
         if (!mapBlockIndex.count(item.second))
             return error("SelectBlockFromCandidates: failed to find block index for candidate block %s", item.second.ToString().c_str());
         const CBlockIndex* pindex = mapBlockIndex[item.second];
-        if (fSelected && pindex->GetBlockTime() > nSelectionIntervalStop)
+        if (fSelected && pindex->GetBlockIndexTime() > nSelectionIntervalStop)
             break;
         if (mapSelectedBlocks.count(pindex->GetBlockHash()) > 0)
             continue;
@@ -140,12 +140,12 @@ bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, uint64_t& nStakeMod
     }
     if(pindexPrev->nHeight >= 1005000)
     {
-        if (nModifierTime / nModifierIntervalSecond >= pindexPrev->GetBlockTime() / nModifierIntervalSecond)
+        if (nModifierTime / nModifierIntervalSecond >= pindexPrev->GetBlockIndexTime() / nModifierIntervalSecond)
             return true;
     }
     else
     {
-        if (nModifierTime / nModifierInterval >= pindexPrev->GetBlockTime() / nModifierInterval)
+        if (nModifierTime / nModifierInterval >= pindexPrev->GetBlockIndexTime() / nModifierInterval)
             return true;
     }
 
@@ -163,16 +163,16 @@ bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, uint64_t& nStakeMod
     int64_t nSelectionIntervalStart = 0;
     if(pindexPrev->nHeight >= 1005000)
     {
-        nSelectionIntervalStart = (pindexPrev->GetBlockTime() / nModifierIntervalSecond) * nModifierIntervalSecond - nSelectionInterval;
+        nSelectionIntervalStart = (pindexPrev->GetBlockIndexTime() / nModifierIntervalSecond) * nModifierIntervalSecond - nSelectionInterval;
     }
     else
     {
-        nSelectionIntervalStart = (pindexPrev->GetBlockTime() / nModifierInterval) * nModifierInterval - nSelectionInterval;
+        nSelectionIntervalStart = (pindexPrev->GetBlockIndexTime() / nModifierInterval) * nModifierInterval - nSelectionInterval;
     }
     const CBlockIndex* pindex = pindexPrev;
-    while (pindex && pindex->GetBlockTime() >= nSelectionIntervalStart)
+    while (pindex && pindex->GetBlockIndexTime() >= nSelectionIntervalStart)
     {
-        vSortedByTimestamp.push_back(make_pair(pindex->GetBlockTime(), pindex->GetBlockHash()));
+        vSortedByTimestamp.push_back(make_pair(pindex->GetBlockIndexTime(), pindex->GetBlockHash()));
         pindex = pindex->pprev;
     }
     int nHeightFirstCandidate = pindex ? (pindex->nHeight + 1) : 0;
@@ -223,7 +223,7 @@ bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, uint64_t& nStakeMod
     }
     if (fDebug)
     {
-        printf("ComputeNextI64xodifier: new modifier=0x%016I64x time=%s\n", nStakeModifierNew, DateTimeStrFormat(pindexPrev->GetBlockTime()).c_str());
+        printf("ComputeNextI64xodifier: new modifier=0x%016I64x time=%s\n", nStakeModifierNew, DateTimeStrFormat(pindexPrev->GetBlockIndexTime()).c_str());
     }
 
     nStakeModifier = nStakeModifierNew;
@@ -240,16 +240,16 @@ static bool GetKernelStakeModifier(uint256 hashBlockFrom, uint64_t& nStakeModifi
         return error("GetKernelStakeModifier() : block not indexed");
     const CBlockIndex* pindexFrom = mapBlockIndex[hashBlockFrom];
     nStakeModifierHeight = pindexFrom->nHeight;
-    nStakeModifierTime = pindexFrom->GetBlockTime();
+    nStakeModifierTime = pindexFrom->GetBlockIndexTime();
     int64_t nStakeModifierSelectionInterval = GetStakeModifierSelectionInterval(pindexFrom->nHeight);
     const CBlockIndex* pindex = pindexFrom;
 
     // loop to find the stake modifier later by a selection interval
-    while (nStakeModifierTime < pindexFrom->GetBlockTime() + nStakeModifierSelectionInterval)
+    while (nStakeModifierTime < pindexFrom->GetBlockIndexTime() + nStakeModifierSelectionInterval)
     {
         if (!pindex->pnext)
         {   // reached best block; may happen if node is behind on block chain
-            if (fPrintProofOfStake || (pindex->GetBlockTime() + nStakeMinAge - nStakeModifierSelectionInterval > GetAdjustedTime()))
+            if (fPrintProofOfStake || (pindex->GetBlockIndexTime() + nStakeMinAge - nStakeModifierSelectionInterval > GetAdjustedTime()))
                 return error("GetKernelStakeModifier() : reached best block %s at height %d from block %s",
                     pindex->GetBlockHash().ToString().c_str(), pindex->nHeight, hashBlockFrom.ToString().c_str());
             else
@@ -263,7 +263,7 @@ static bool GetKernelStakeModifier(uint256 hashBlockFrom, uint64_t& nStakeModifi
         if (pindex->GeneratedStakeModifier())
         {
             nStakeModifierHeight = pindex->nHeight;
-            nStakeModifierTime = pindex->GetBlockTime();
+            nStakeModifierTime = pindex->GetBlockIndexTime();
         }
     }
     nStakeModifier = pindex->nStakeModifier;

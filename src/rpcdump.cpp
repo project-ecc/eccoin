@@ -9,6 +9,7 @@
 #include "bitcoinrpc.h"
 #include "ui_interface.h"
 #include "base58.h"
+#include "global.h"
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/variant/get.hpp>

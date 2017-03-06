@@ -306,24 +306,3 @@ uint256 scryptX(const void* data, size_t datalen, const void* salt, size_t saltl
 
     return result;
 }
-
-uint256 scrypt_salted_hash(const void* input, size_t inputlen, const void* salt, size_t saltlen)
-{
-    unsigned char scratchpad[SCRYPT_BUFFER_SIZE];
-    return scryptX(input, inputlen, salt, saltlen, scratchpad);
-}
-
-
-uint256 scrypt_salted_multiround_hash(const void* input, size_t inputlen, const void* salt, size_t saltlen, const unsigned int nRounds)
-{
-    uint256 resultHash = scrypt_salted_hash(input, inputlen, salt, saltlen);
-    uint256 transitionalHash = resultHash;
-
-    for(unsigned int i = 1; i < nRounds; i++)
-    {
-        resultHash = scrypt_salted_hash(input, inputlen, (const void*)&transitionalHash, 32);
-        transitionalHash = resultHash;
-    }
-
-    return resultHash;
-}

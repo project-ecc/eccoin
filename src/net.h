@@ -23,13 +23,11 @@
 #include "netbase.h"
 #include "protocol.h"
 #include "addrman.h"
+#include "transaction.h"
 
 class CRequestTracker;
 class CNode;
 class CBlockIndex;
-extern int nBestHeight;
-
-
 
 inline unsigned int ReceiveBufferSize() { return 1000*GetArg("-maxreceivebuffer", 5*1000); }
 inline unsigned int SendBufferSize() { return 1000*GetArg("-maxsendbuffer", 1*1000); }
@@ -643,7 +641,6 @@ inline void RelayInventory(const CInv& inv)
     }
 }
 
-class CTransaction;
 void RelayTransaction(const CTransaction& tx, const uint256& hash);
 void RelayTransaction(const CTransaction& tx, const uint256& hash, const CDataStream& ss);
 

@@ -5,12 +5,14 @@
 
 #include "main.h"
 #include "bitcoinrpc.h"
+#include "mempool.h"
+#include "global.h"
+#include "init.h"
 
 using namespace json_spirit;
 using namespace std;
 
 extern void TxToJSON(const CTransaction& tx, const uint256 hashBlock, json_spirit::Object& entry);
-extern enum Checkpoints::CPMode CheckpointsMode;
 
 double GetDifficulty(const CBlockIndex* blockindex)
 {
@@ -58,7 +60,7 @@ double GetPoWMHashPS()
     {
         if (pindex->IsProofOfWork())
         {
-            int64_t nActualSpacingWork = pindex->GetBlockTime() - pindexPrevWork->GetBlockTime();
+            int64_t nActualSpacingWork = pindex->GetBlockIndexTime() - pindexPrevWork->GetBlockIndexTime();
             nTargetSpacingWork = ((nPoWInterval - 1) * nTargetSpacingWork + nActualSpacingWork + nActualSpacingWork) / (nPoWInterval + 1);
             nTargetSpacingWork = max(nTargetSpacingWork, nTargetSpacingWorkMin);
             pindexPrevWork = pindex;
@@ -286,19 +288,19 @@ Value getcheckpoint(const Array& params, bool fHelp)
     Object result;
     CBlockIndex* pindexCheckpoint;
 
-    result.push_back(Pair("synccheckpoint", Checkpoints::hashSyncCheckpoint.ToString().c_str()));
-    pindexCheckpoint = mapBlockIndex[Checkpoints::hashSyncCheckpoint];
+    result.push_back(Pair("synccheckpoint", hashSyncCheckpoint.ToString().c_str()));
+    pindexCheckpoint = mapBlockIndex[hashSyncCheckpoint];
     result.push_back(Pair("height", pindexCheckpoint->nHeight));
-    result.push_back(Pair("timestamp", DateTimeStrFormat(pindexCheckpoint->GetBlockTime()).c_str()));
+    result.push_back(Pair("timestamp", DateTimeStrFormat(pindexCheckpoint->GetBlockIndexTime()).c_str()));
 
     // Check that the block satisfies synchronized checkpoint
-    if (CheckpointsMode == Checkpoints::STRICT_X)
+    if (pcheckpointMain->CheckpointsMode == Checkpoints::STRICT_X)
         result.push_back(Pair("policy", "strict"));
 
-    if (CheckpointsMode == Checkpoints::ADVISORY)
+    if (pcheckpointMain->CheckpointsMode == Checkpoints::ADVISORY)
         result.push_back(Pair("policy", "advisory"));
 
-    if (CheckpointsMode == Checkpoints::PERMISSIVE)
+    if (pcheckpointMain->CheckpointsMode == Checkpoints::PERMISSIVE)
         result.push_back(Pair("policy", "permissive"));
 
     if (mapArgs.count("-checkpointkey"))

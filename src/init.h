@@ -8,8 +8,11 @@
 
 #include "util.h"
 #include "wallet.h"
+#include "checkpoints.h"
 
 extern CWallet* pwalletMain;
+extern Checkpoints* pcheckpointMain;
+
 
 extern std::string strWalletFileName;
 void StartShutdown();
@@ -17,6 +20,6 @@ void Shutdown(void* parg);
 bool AppInit2();
 std::string HelpMessage();
 
-
+extern bool fEnforceCanonical;
 
 #endif

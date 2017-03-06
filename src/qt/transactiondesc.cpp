@@ -9,6 +9,8 @@
 #include "txdb-leveldb.h"
 #include "ui_interface.h"
 #include "base58.h"
+#include "global.h"
+
 
 #define int64 int64_t
 

@@ -11,9 +11,12 @@
 #include "base58.h"
 #include "kernel.h"
 #include "coincontrol.h"
+#include "mempool.h"
+#include "global.h"
+
+
 #include <boost/algorithm/string/replace.hpp>
 #include <exception>
-
 
 using namespace std;
 extern unsigned int nStakeMaxAge;
@@ -835,6 +838,33 @@ bool CWalletTx::WriteToDisk()
 {
     return CWalletDB(pwallet->strWalletFile).WriteTx(GetHash(), *this);
 }
+
+bool CWalletTx::AcceptWalletTransaction(CTxDB& txdb, bool fCheckInputs)
+{
+
+    {
+        LOCK(mempool.cs);
+        // Add previous supporting transactions first
+        BOOST_FOREACH(CMerkleTx& tx, vtxPrev)
+        {
+            if (!(tx.IsCoinBase() || tx.IsCoinStake()))
+            {
+                uint256 hash = tx.GetHash();
+                if (!mempool.exists(hash) && !txdb.ContainsTx(hash))
+                    tx.AcceptToMemoryPool(txdb, fCheckInputs);
+            }
+        }
+        return AcceptToMemoryPool(txdb, fCheckInputs);
+    }
+    return false;
+}
+
+bool CWalletTx::AcceptWalletTransaction()
+{
+    CTxDB txdb("r");
+    return AcceptWalletTransaction(txdb);
+}
+
 
 // Scan the block chain (starting in pindexStart) for transactions
 // from or to us. If fUpdate is true, found transactions that already

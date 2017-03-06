@@ -49,7 +49,7 @@ int ClientModel::getNumBlocksAtStartup()
 
 QDateTime ClientModel::getLastBlockDate() const
 {
-    return QDateTime::fromTime_t(pindexBest->GetBlockTime());
+    return QDateTime::fromTime_t(pindexBest->GetBlockIndexTime());
 }
 
 void ClientModel::updateTimer()

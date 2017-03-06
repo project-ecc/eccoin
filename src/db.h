@@ -5,6 +5,7 @@
 #ifndef BITCOIN_DB_H
 #define BITCOIN_DB_H
 
+#include "global.h"
 #include "main.h"
 
 #include <map>
@@ -15,7 +16,6 @@
 
 class CAddress;
 class CAddrMan;
-class CBlockLocator;
 class CDiskBlockIndex;
 class CDiskTxPos;
 class CMasterKey;

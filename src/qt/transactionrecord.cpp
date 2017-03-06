@@ -1,5 +1,5 @@
 #include "transactionrecord.h"
-
+#include "global.h"
 #include "wallet.h"
 #include "base58.h"
 

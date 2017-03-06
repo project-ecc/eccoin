@@ -9,6 +9,8 @@
 #include "init.h"
 #include "miner.h"
 #include "bitcoinrpc.h"
+#include "mempool.h"
+
 
 using namespace json_spirit;
 using namespace std;

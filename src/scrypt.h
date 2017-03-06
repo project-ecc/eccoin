@@ -1,5 +1,5 @@
-#ifndef SCRYPT_MINE_H
-#define SCRYPT_MINE_H
+#ifndef SCRYPT_H
+#define SCRYPT_H
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -12,4 +12,4 @@ uint256 scrypt_salted_hash(const void* input, size_t inputlen, const void* salt,
 uint256 scrypt_hash(const void* input, size_t inputlen);
 uint256 scrypt_blockhash(const void* input);
 
-#endif // SCRYPT_MINE_H
+#endif // SCRYPT_H

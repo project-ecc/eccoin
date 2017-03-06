@@ -6,15 +6,23 @@
 #ifndef BITCOIN_LEVELDB_H
 #define BITCOIN_LEVELDB_H
 
-#include "main.h"
-
 #include <map>
 #include <string>
 #include <vector>
 
+#include "uint256.h"
+#include "serialize.h"
+#include "bignum.h"
+
+#include "blockindex.h"
+#include "transaction.h"
+
 #include <leveldb/db.h>
 #include <leveldb/write_batch.h>
 
+class CDiskBlockIndex;
+class CTxIndex;
+class CBlockIndex;
 
 // Class that provides access to a LevelDB. Note that this class is frequently
 // instantiated on the stack and then destroyed again, so instantiation has to
@@ -170,7 +178,6 @@ protected:
         return status.IsNotFound() == false;
     }
 
-
 public:
     bool TxnBegin();
     bool TxnCommit();
@@ -192,6 +199,11 @@ public:
         return Write(std::string("version"), nVersion);
     }
 
+    leveldb::DB* getInternalPointer()
+    {
+        return pdb;  // Points to the global instance.
+    }
+
     bool ReadTxIndex(uint256 hash, CTxIndex& txindex);
     bool UpdateTxIndex(uint256 hash, const CTxIndex& txindex);
     bool AddTxIndex(const CTransaction& tx, const CDiskTxPos& pos, int nHeight);
@@ -210,14 +222,10 @@ public:
     bool WriteSyncCheckpoint(uint256 hashCheckpoint);
     bool ReadCheckpointPubKey(std::string& strPubKey);
     bool WriteCheckpointPubKey(const std::string& strPubKey);
-    bool LoadBlockIndex();
-    void FinishBlockIndex();
-    void BlockIndexFromBack();
-    void BlockIndexFromStart();
-private:
-    bool LoadBlockIndexGuts();
+    bool WriteUpgrade(std::string& upgraded);
+    bool ReadUpgrade(std::string& upgraded);
 };
 
-void ThreadForFinishBlockIndex();
 CBlockIndex *InsertBlockIndex(uint256 hash);
+bool LoadBlockIndexInternal();
 #endif // BITCOIN_DB_H

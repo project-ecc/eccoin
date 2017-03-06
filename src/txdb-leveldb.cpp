@@ -22,6 +22,11 @@
 #include "util.h"
 #include "init.h"
 #include "wallet.h"
+#include "global.h"
+#include "batchscanner.h"
+#include "chain.h"
+
+
 
 using namespace std;
 using namespace boost;
@@ -150,31 +155,6 @@ bool CTxDB::TxnCommit()
     return true;
 }
 
-class CBatchScanner : public leveldb::WriteBatch::Handler {
-public:
-    std::string needle;
-    bool *deleted;
-    std::string *foundValue;
-    bool foundEntry;
-
-    CBatchScanner() : foundEntry(false) {}
-
-    virtual void Put(const leveldb::Slice& key, const leveldb::Slice& value) {
-        if (key.ToString() == needle) {
-            foundEntry = true;
-            *deleted = false;
-            *foundValue = value.ToString();
-        }
-    }
-
-    virtual void Delete(const leveldb::Slice& key) {
-        if (key.ToString() == needle) {
-            foundEntry = true;
-            *deleted = true;
-        }
-    }
-};
-
 // When performing a read, if we have an active batch we need to check it first
 // before reading from the database, as the rest of the code assumes that once
 // a database transaction begins reads are consistent with it. It would be good
@@ -260,7 +240,17 @@ bool CTxDB::ReadDiskTx(COutPoint outpoint, CTransaction& tx)
 
 bool CTxDB::WriteBlockIndex(const CDiskBlockIndex& blockindex)
 {
-    return Write(make_pair(string("blockindex"), blockindex.GetBlockHashScrypt()), blockindex);
+    return Write(make_pair(string("blockindex"), blockindex.GetBlockHash()), blockindex);
+}
+
+bool CTxDB::WriteUpgrade(string& upgraded)
+{
+    return Write(string("databaseUpgraded"), upgraded);
+}
+
+bool CTxDB::ReadUpgrade(string& upgraded)
+{
+    return Read(string("databaseUpgraded"), upgraded);
 }
 
 bool CTxDB::ReadHashBestChain(uint256& hashBestChain)
@@ -323,24 +313,20 @@ CBlockIndex *InsertBlockIndex(uint256 hash)
     return pindexNew;
 }
 
-bool CTxDB::LoadBlockIndex()
+bool LoadBlockIndexInternal()
 {
+
+    CTxDB itxdb("cr+");
+    CHeaderChainDB hcdb("cr+");
+
     // The block index is an in-memory structure that maps hashes to on-disk
     // locations where the contents of the block can be found. Here, we scan it
     // out of the DB and into mapBlockIndex.
-    leveldb::Iterator *SmallIterator = pdb->NewIterator(leveldb::ReadOptions());
+    leveldb::Iterator *SmallIterator = itxdb.getInternalPointer()->NewIterator(leveldb::ReadOptions());
     // Seek to start key.
     CDataStream smallStartKey(SER_DISK, CLIENT_VERSION);
     smallStartKey << make_pair(string("blockindex"), uint256(0));
     SmallIterator->Seek(smallStartKey.str());
-
-    /// load only the blocks until the last checkpoint
-    /// as the chain gets longer it will become less and less likely
-    /// that we will need the whole chain to validate something
-    /// so only load the last 25k blocks. if there is a reorg
-    /// larger than 25k then something is obviously wrong anyway
-    /// also we load the rest in a seperate thread later
-
 
     //get the total number of blocks we have on the disk
     unsigned int TotalNumBlocks = 0;
@@ -358,8 +344,7 @@ bool CTxDB::LoadBlockIndex()
     }
     delete SmallIterator;
 
-    leveldb::Iterator *iterator = pdb->NewIterator(leveldb::ReadOptions());
-
+    printf("total number of blocks = %d \n", TotalNumBlocks);
     ///this code reduces rescan time
 
     unsigned int bestCheckpoint = 0;
@@ -376,66 +361,144 @@ bool CTxDB::LoadBlockIndex()
             bestCheckpoint = currentBest;
         }
     }
-    CDataStream ssStartKey(SER_DISK, CLIENT_VERSION);
-    ssStartKey << make_pair(string("blockindex"), uint256(0));
-    iterator->Seek(ssStartKey.str());
-    std::vector<CDiskBlockIndex> vDiskBlockIndex;
-    while (iterator->Valid())
-    {
-        // Unpack keys and values.
-        CDataStream ssKey(SER_DISK, CLIENT_VERSION);
-        ssKey.write(iterator->key().data(), iterator->key().size());
-        CDataStream ssValue(SER_DISK, CLIENT_VERSION);
-        ssValue.write(iterator->value().data(), iterator->value().size());
-        string strType;
-        ssKey >> strType;
-        // Did we reach the end of the data to read?
-        if (fRequestShutdown || strType != "blockindex")
-            break;
-        CDiskBlockIndex diskindex;
-        ssValue >> diskindex;
-        vDiskBlockIndex.push_back(diskindex);
-        iterator->Next();
-    }
     int64_t nStartMapping = GetTimeMillis();
-    for(unsigned int i = 0; i < vDiskBlockIndex.size(); i++)
+    std::string upgraded;
+    bool readUpgrade = itxdb.ReadUpgrade(upgraded);
+    if(upgraded == "true" && readUpgrade == true)
     {
-        CDiskBlockIndex diskindex = vDiskBlockIndex[i];
+        leveldb::Iterator *iterator = hcdb.getInternalPointer()->NewIterator(leveldb::ReadOptions());
+        CDataStream ssStartKey(SER_DISK, CLIENT_VERSION);
+        ssStartKey << make_pair(string("indexheader"), uint256(0));
+        iterator->Seek(ssStartKey.str());
+        while (iterator->Valid())
+        {
+            // Unpack keys and values.
+            CDataStream ssKey(SER_DISK, CLIENT_VERSION);
+            ssKey.write(iterator->key().data(), iterator->key().size());
+            CDataStream ssValue(SER_DISK, CLIENT_VERSION);
+            ssValue.write(iterator->value().data(), iterator->value().size());
+            string strType;
+            ssKey >> strType;
+            // Did we reach the end of the data to read?
+            if (fRequestShutdown || strType != "indexheader")
+                break;
+            CDiskBlockIndex diskindex;
+            ssValue >> diskindex;
 
-        uint256 blockHash = diskindex.GetBlockHash();
+            uint256 blockHash = diskindex.GetBlockHash();
 
-        // Construct block index object
-        CBlockIndex* pindexNew      = InsertBlockIndex(blockHash);
-        pindexNew->pprev            = InsertBlockIndex(diskindex.hashPrev);
-        pindexNew->pnext            = InsertBlockIndex(diskindex.hashNext);
-        pindexNew->nFile            = diskindex.nFile;
-        pindexNew->nBlockPos        = diskindex.nBlockPos;
-        pindexNew->nHeight          = diskindex.nHeight;
-        pindexNew->nMint            = diskindex.nMint;
-        pindexNew->nMoneySupply     = diskindex.nMoneySupply;
-        pindexNew->nFlags           = diskindex.nFlags;
-        pindexNew->nStakeModifier   = diskindex.nStakeModifier;
-        pindexNew->prevoutStake     = diskindex.prevoutStake;
-        pindexNew->nStakeTime       = diskindex.nStakeTime;
-        pindexNew->hashProofOfStake = diskindex.hashProofOfStake;
-        pindexNew->nVersion         = diskindex.nVersion;
-        pindexNew->hashMerkleRoot   = diskindex.hashMerkleRoot;
-        pindexNew->nTime            = diskindex.nTime;
-        pindexNew->nBits            = diskindex.nBits;
-        pindexNew->nNonce           = diskindex.nNonce;
+            // Construct block index object
+            CBlockIndex* pindexNew      = InsertBlockIndex(blockHash);
+            pindexNew->pprev            = InsertBlockIndex(diskindex.hashPrev);
+            pindexNew->pnext            = InsertBlockIndex(diskindex.hashNext);
+            pindexNew->nFile            = diskindex.nFile;
+            pindexNew->nBlockPos        = diskindex.nBlockPos;
+            pindexNew->nHeight          = diskindex.nHeight;
+            pindexNew->nMint            = diskindex.nMint;
+            pindexNew->nMoneySupply     = diskindex.nMoneySupply;
+            pindexNew->nFlags           = diskindex.nFlags;
+            pindexNew->nStakeModifier   = diskindex.nStakeModifier;
+            pindexNew->prevoutStake     = diskindex.prevoutStake;
+            pindexNew->nStakeTime       = diskindex.nStakeTime;
+            pindexNew->hashProofOfStake = diskindex.hashProofOfStake;
+            pindexNew->nVersion         = diskindex.nVersion;
+            pindexNew->hashMerkleRoot   = diskindex.hashMerkleRoot;
+            pindexNew->nTime            = diskindex.nTime;
+            pindexNew->nBits            = diskindex.nBits;
+            pindexNew->nNonce           = diskindex.nNonce;
 
-        // Watch for genesis block
-        if (pindexGenesisBlock == NULL && blockHash == (!fTestNet ? hashGenesisBlock : hashGenesisBlockTestNet))
-            pindexGenesisBlock = pindexNew;
+            // Watch for genesis block
+            if (pindexGenesisBlock == NULL && blockHash == (!fTestNet ? hashGenesisBlock : hashGenesisBlockTestNet))
+                pindexGenesisBlock = pindexNew;
 
-        // NovaCoin: build setStakeSeen
-        if (pindexNew->IsProofOfStake())
-            setStakeSeen.insert(make_pair(pindexNew->prevoutStake, pindexNew->nStakeTime));
+            // NovaCoin: build setStakeSeen
+            if (pindexNew->IsProofOfStake())
+                setStakeSeen.insert(make_pair(pindexNew->prevoutStake, pindexNew->nStakeTime));
+
+            iterator->Next();
+        }
+        delete iterator;
     }
-    delete iterator;
-    vDiskBlockIndex.clear();
+    else
+    {
+        leveldb::Iterator *iterator = itxdb.getInternalPointer()->NewIterator(leveldb::ReadOptions());
+        CDataStream ssStartKey(SER_DISK, CLIENT_VERSION);
+        ssStartKey << make_pair(string("blockindex"), uint256(0));
+        iterator->Seek(ssStartKey.str());
+        while (iterator->Valid())
+        {
+            // Unpack keys and values.
+            CDataStream ssKey(SER_DISK, CLIENT_VERSION);
+            ssKey.write(iterator->key().data(), iterator->key().size());
+            CDataStream ssValue(SER_DISK, CLIENT_VERSION);
+            ssValue.write(iterator->value().data(), iterator->value().size());
+            string strType;
+            ssKey >> strType;
+            // Did we reach the end of the data to read?
+            if (fRequestShutdown || strType != "blockindex")
+                break;
+            CDiskBlockIndex diskindex;
+            ssValue >> diskindex;
 
-    printf("Time To Map Block Index: %15I64d ms\n", GetTimeMillis() - nStartMapping);
+            uint256 blockHash = diskindex.GetBlockHash();
+
+            // Construct block index object
+            CBlockIndex* pindexNew      = InsertBlockIndex(blockHash);
+            pindexNew->pprev            = InsertBlockIndex(diskindex.hashPrev);
+            pindexNew->pnext            = InsertBlockIndex(diskindex.hashNext);
+            pindexNew->nFile            = diskindex.nFile;
+            pindexNew->nBlockPos        = diskindex.nBlockPos;
+            pindexNew->nHeight          = diskindex.nHeight;
+            pindexNew->nMint            = diskindex.nMint;
+            pindexNew->nMoneySupply     = diskindex.nMoneySupply;
+            pindexNew->nFlags           = diskindex.nFlags;
+            pindexNew->nStakeModifier   = diskindex.nStakeModifier;
+            pindexNew->prevoutStake     = diskindex.prevoutStake;
+            pindexNew->nStakeTime       = diskindex.nStakeTime;
+            pindexNew->hashProofOfStake = diskindex.hashProofOfStake;
+            pindexNew->nVersion         = diskindex.nVersion;
+            pindexNew->hashMerkleRoot   = diskindex.hashMerkleRoot;
+            pindexNew->nTime            = diskindex.nTime;
+            pindexNew->nBits            = diskindex.nBits;
+            pindexNew->nNonce           = diskindex.nNonce;
+
+            // Watch for genesis block
+            if (pindexGenesisBlock == NULL && blockHash == (!fTestNet ? hashGenesisBlock : hashGenesisBlockTestNet))
+                pindexGenesisBlock = pindexNew;
+
+            // NovaCoin: build setStakeSeen
+            if (pindexNew->IsProofOfStake())
+                setStakeSeen.insert(make_pair(pindexNew->prevoutStake, pindexNew->nStakeTime));
+
+            iterator->Next();
+
+        }
+        delete iterator;
+        int rewritten = 0;
+        /// need to create the new index so this one isnt used next time
+        {
+            printf("running update to move block index loading to the new metachain folder \n");
+            BOOST_FOREACH(const PAIRTYPE(uint256, CBlockIndex*)& item, mapBlockIndex)
+            {
+                CBlockIndex* pindex = item.second;
+                hcdb.WriteIndexHeader(CDiskBlockIndex(pindex));
+                rewritten = rewritten + 1;
+            }
+        }
+        std::string completed = "true";
+        itxdb.WriteUpgrade(completed);
+        printf("total blocks moved in upgrade = %d \n", rewritten);
+        if(!hcdb.TxnCommit())
+        {
+            printf("UPGRADE FAILED, CRITICAL ERROR! \n");
+            assert(false);
+        }
+    }
+    printf("Time To Map Block Index: %I64d ms\n", GetTimeMillis() - nStartMapping);
+
+
+
+
 
 
     if (fRequestShutdown)
@@ -464,11 +527,11 @@ bool CTxDB::LoadBlockIndex()
          return error("CTxDB::LoadBlockIndex() : Failed stake modifier checkpoint height=%d, checksum=%08x, correct checksum=%08x, nflags = %i, modifier=0x%016I64x  hashproofofstake = %s", pindex->nHeight, pindex->nStakeModifierChecksum, mapStakeModifierCheckpoints[pindex->nHeight], pindex->nFile, pindex->nStakeModifier, pindex->hashProofOfStake.ToString().c_str());
     }
 
-    printf("Time To Makechecksums: %15I64d ms\n", GetTimeMillis() - nStartChecksums);
+    printf("Time To Makechecksums: %I64d ms\n", GetTimeMillis() - nStartChecksums);
 
 
     // Load hashBestChain pointer to end of best chain
-    if (!ReadHashBestChain(hashBestChain))
+    if (!itxdb.ReadHashBestChain(hashBestChain))
     {
         if (pindexGenesisBlock == NULL)
             return true;
@@ -485,22 +548,22 @@ bool CTxDB::LoadBlockIndex()
     if( bestCheckpoint != 0 )
     {
         uint256 CheckpointBlock = mapCheckpoints.find(bestCheckpoint)->second;
-        if (!Checkpoints::WriteSyncCheckpoint(CheckpointBlock))
+        if (!WriteSyncCheckpoint(CheckpointBlock))
             return error("LoadBlockIndex() : failed to init sync checkpoint");
     }
     else
     {
-        if (!Checkpoints::WriteSyncCheckpoint((!fTestNet ? hashGenesisBlock : hashGenesisBlockTestNet)))
+        if (!WriteSyncCheckpoint((!fTestNet ? hashGenesisBlock : hashGenesisBlockTestNet)))
             return error("LoadBlockIndex() : failed to init sync checkpoint");
     }
     // NovaCoin: load hashSyncCheckpoint
-    if (!ReadSyncCheckpoint(Checkpoints::hashSyncCheckpoint))
+    if (!itxdb.ReadSyncCheckpoint(hashSyncCheckpoint))
         return error("CTxDB::LoadBlockIndex() : hashSyncCheckpoint not loaded");
-    printf("LoadBlockIndex(): synchronized checkpoint %s\n", Checkpoints::hashSyncCheckpoint.ToString().c_str());
+    printf("LoadBlockIndex(): synchronized checkpoint %s\n", hashSyncCheckpoint.ToString().c_str());
 
     // Load bnBestInvalidTrust, OK if it doesn't exist
     CBigNum bnBestInvalidTrust;
-    ReadBestInvalidTrust(bnBestInvalidTrust);
+    itxdb.ReadBestInvalidTrust(bnBestInvalidTrust);
     nBestInvalidTrust = bnBestInvalidTrust.getuint256();
 
     // Verify blocks in the best chain
@@ -536,7 +599,7 @@ bool CTxDB::LoadBlockIndex()
             {
                 uint256 hashTx = tx.GetHash();
                 CTxIndex txindex;
-                if (ReadTxIndex(hashTx, txindex))
+                if (itxdb.ReadTxIndex(hashTx, txindex))
                 {
                     // check level 3: checker transaction hashes
                     if (nCheckLevel>2 || pindex->nFile != txindex.pos.nFile || pindex->nBlockPos != txindex.pos.nBlockPos)
@@ -607,7 +670,7 @@ bool CTxDB::LoadBlockIndex()
                      BOOST_FOREACH(const CTxIn &txin, tx.vin)
                      {
                           CTxIndex txindex;
-                          if (ReadTxIndex(txin.prevout.hash, txindex))
+                          if (itxdb.ReadTxIndex(txin.prevout.hash, txindex))
                           {
                               if (txindex.vSpent.size()-1 < txin.prevout.n || txindex.vSpent[txin.prevout.n].IsNull())
                               {
@@ -628,7 +691,7 @@ bool CTxDB::LoadBlockIndex()
         if (!block.ReadFromDisk(pindexFork))
             return error("LoadBlockIndex() : block.ReadFromDisk failed");
         CTxDB txdb;
-        block.SetBestChain(txdb, pindexFork);
+        block.SetBestChain(txdb, hcdb, pindexFork);
     }
 
     printf("best block loaded: %s\n", pindexBest->ToString().c_str());
