@@ -8,6 +8,9 @@
 #include "miner.h"
 #include "kernel.h"
 #include "scrypt_mine.h"
+#include "global.h"
+#include "mempool.h"
+
 using namespace std;
 
 extern CWallet* pwalletMain;
@@ -179,7 +182,7 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
             // printf(">>> OK1\n");
             if (pwallet->CreateCoinStake(*pwallet, pblock->nBits, nSearchTime-nLastCoinStakeSearchTime, txCoinStake))
             {
-                if (txCoinStake.nTime >= max(pindexPrev->GetMedianTimePast()+1, pindexPrev->GetBlockTime() - nMaxClockDrift))
+                if (txCoinStake.nTime >= max(pindexPrev->GetMedianTimePast()+1, pindexPrev->GetBlockIndexTime() - nMaxClockDrift))
                 {   // make sure coinstake would meet timestamp protocol
                     // as it would be the same as the block timestamp
                     pblock->vtx[0].vout[0].SetEmpty();
@@ -398,13 +401,13 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
         {
             pblock->nTime      = pblock->vtx[1].nTime; //same as coinstake timestamp
             pblock->nTime      = max(pindexPrev->GetMedianTimePast()+1, pblock->GetMaxTransactionTime());
-            pblock->nTime      = max(pblock->GetBlockTime(), pindexPrev->GetBlockTime() - nMaxClockDrift);
+            pblock->nTime      = max(pblock->GetBlockTime(), pindexPrev->GetBlockIndexTime() - nMaxClockDrift);
 
         }
         else
         {
             pblock->nTime          = max(pindexPrev->GetMedianTimePast()+1, pblock->GetMaxTransactionTime());
-            pblock->nTime          = max(pblock->GetBlockTime(), pindexPrev->GetBlockTime() - nMaxClockDrift);
+            pblock->nTime          = max(pblock->GetBlockTime(), pindexPrev->GetBlockIndexTime() - nMaxClockDrift);
         }
         if (pblock->IsProofOfWork())
             pblock->UpdateTime(pindexPrev);
@@ -562,7 +565,7 @@ void ScryptMiner(CWallet *pwallet, bool fProofOfStake)
         unsigned int nTransactionsUpdatedLast = nTransactionsUpdated;
         CBlockIndex* pindexPrev = pindexBest;
 
-        auto_ptr<CBlock> pblock(CreateNewBlock(pwallet, fProofOfStake));
+        unique_ptr<CBlock> pblock(CreateNewBlock(pwallet, fProofOfStake));
         if (!pblock.get())
             return;
         IncrementExtraNonce(pblock.get(), pindexPrev, nExtraNonce);
@@ -696,7 +699,7 @@ void ScryptMiner(CWallet *pwallet, bool fProofOfStake)
 
             // Update nTime every few seconds
             pblock->nTime = max(pindexPrev->GetMedianTimePast()+1, pblock->GetMaxTransactionTime());
-            pblock->nTime = max(pblock->GetBlockTime(), pindexPrev->GetBlockTime() - nMaxClockDrift);
+            pblock->nTime = max(pblock->GetBlockTime(), pindexPrev->GetBlockIndexTime() - nMaxClockDrift);
             pblock->UpdateTime(pindexPrev);
             nBlockTime = ByteReverse(pblock->nTime);
 
