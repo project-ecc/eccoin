@@ -29,7 +29,14 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+
+// Here, we need to check if we're compiling for an ARM processor. If we are, we
+// need to make sure we don't try to use SSE instructions
+extern "C" {
+#ifndef NOSSE
 #include <xmmintrin.h>
+#endif
+}
 
 #include "scrypt_mine.h"
 #include "pbkdf2.h"
@@ -46,6 +53,16 @@ extern bool fGenerateBitcoins;
 extern CBlockIndex* pindexBest;
 extern uint32_t nTransactionsUpdated;
 
+// Here, we need to check to see what type of processor we're using
+// because x86 and x64 have different buffer size requirements.
+// We're assuming ARM processors fall in with i386 processors
+// because I can't think of a good reason to automatically go with a
+// larger buffer, given the lower RAM and swap file sizes for ARM boards 
+// compared to x86 boards.
+// In case this is an issue, see the following URL for help determining
+// a good buffer size:
+// https://github.com/pooler/cpuminer/blob/4611186cb88eec76f22a88565675473b2eeade28/scrypt.c#L502-510
+// It basically recommends SCRYPT_BUFFER_SIZE = (sizeof(int) * SCRYPT_MAX_WAYS * 128 + 63)
 
 #if defined(__x86_64__)
 
@@ -54,7 +71,7 @@ extern uint32_t nTransactionsUpdated;
 extern "C" int scrypt_best_throughput();
 extern "C" void scrypt_core(uint32_t *X, uint32_t *V);
 
-#elif defined(__i386__)
+#elif ( defined(__i386__)||defined(__arm__) )
 
 #define SCRYPT_BUFFER_SIZE (131072 + 63)
 

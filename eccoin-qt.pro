@@ -9,6 +9,7 @@ CONFIG += static
 CONFIG += widgets
 CONFIG += c++11
 QT += core gui network widgets
+ARCH = $$QMAKE_HOST.arch
 
 QMAKE_CXXFLAGS = -fpermissive
 
@@ -161,6 +162,17 @@ contains(USE_O3, 1) {
     QMAKE_CFLAGS += -O3
 }
 
+# If we have an arm device, we can't use sse2, so define as thumb
+# Because of scrypt_mine.cpp, we also have to add a compile
+#     flag that states we *really* don't have SSE
+# Otherwise, assume sse2 exists
+equals(ARCH, "armv7l") {
+    message(FOUND host = $$QMAKE_HOST.arch)
+    QMAKE_CXXFLAGS += -DNOSSE
+    QMAKE_CFLAGS += -DNOSSE
+}
+#endif
+
 *-g++-32 {
     message("32 platform, adding -msse2 flag")
 
@@ -285,6 +297,7 @@ SOURCES += \
     src/rpcrawtransaction.cpp \
     src/rpcwallet.cpp \
     src/script.cpp \
+	src/scrypt-arm.S \
     src/scrypt_mine.cpp \
     src/sync.cpp \
     src/util.cpp \
