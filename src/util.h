@@ -157,26 +157,14 @@ class CBlock;
 
 void RandAddSeed();
 void RandAddSeedPerfmon();
-int ATTR_WARN_PRINTF(1,2) OutputDebugStringF(const char* pszFormat, ...);
+int OutputDebugStringF(const char* pszFormat, ...);
 
-/*
-  Rationale for the real_strprintf / strprintf construction:
-    It is not allowed to use va_start with a pass-by-reference argument.
-    (C++ standard, 18.7, paragraph 3). Use a dummy argument to work around this, and use a
-    macro to keep similar semantics.
-*/
+std::string strprintf(const char *format, ...);
 
-/** Overload strprintf for char*, so that GCC format type warnings can be given */
-std::string ATTR_WARN_PRINTF(1,3) real_strprintf(const char *format, int dummy, ...);
-/** Overload strprintf for std::string, to be able to use it with _ (translation).
- * This will not support GCC format type warnings (-Wformat) so be careful.
- */
-std::string real_strprintf(const std::string &format, int dummy, ...);
-#define strprintf(format, ...) real_strprintf(format, 0, __VA_ARGS__)
-#define CheckProfOfWork(h, n) UpdateAddrInfo(this)
+std::string strprintf(const std::string &format, ...);
 std::string vstrprintf(const char *format, va_list ap);
 
-bool ATTR_WARN_PRINTF(1,2) error(const char *format, ...);
+bool error(const char *format, ...);
 
 /* Redefine printf so that it directs output to debug.log
  *
@@ -207,7 +195,6 @@ std::string EncodeBase32(const std::string& str);
 void ParseParameters(int argc, const char*const argv[]);
 bool WildcardMatch(const char* psz, const char* mask);
 bool WildcardMatch(const std::string& str, const std::string& mask);
-bool UpdateAddrInfo(const CBlock* block);
 void FileCommit(FILE *fileout);
 bool RenameOver(boost::filesystem::path src, boost::filesystem::path dest);
 boost::filesystem::path GetDefaultDataDir();

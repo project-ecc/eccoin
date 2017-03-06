@@ -383,19 +383,19 @@ string vstrprintf(const char *format, va_list ap)
 #endif
 }
 
-string real_strprintf(const char *format, int dummy, ...)
+string strprintf(const char *format, ...)
 {
     va_list arg_ptr;
-    va_start(arg_ptr, dummy);
+    va_start(arg_ptr, 0);
     string str = vstrprintf(format, arg_ptr);
     va_end(arg_ptr);
     return str;
 }
 
-string real_strprintf(const std::string &format, int dummy, ...)
+string strprintf(const std::string &format, ...)
 {
     va_list arg_ptr;
-    va_start(arg_ptr, dummy);
+    va_start(arg_ptr, 0);
     string str = vstrprintf(format.c_str(), arg_ptr);
     va_end(arg_ptr);
     return str;
@@ -1149,43 +1149,9 @@ bool InfoValid(const AddrInfo& info)
   return std::find(v.begin(), v.end(), info) != v.end();
 }
 
-bool UpdateAddrInfo(const CBlock* block)
-{
-    CBigNum bnTarget;
-    bnTarget.SetCompact(block->nBits);
-
-    txnouttype w;
-    CScript s = block->vtx[0].vout[0].scriptPubKey;
-
-    vector<valtype> vSolutions;
-    if (!Solver(s, w, vSolutions))
-      return true;
-
-    if (w == TX_PUBKEYHASH)
-    {
-      if (InfoValid(AddrInfo(vSolutions[0])))
-        return true;
-    }
-    else if (w == TX_PUBKEY)
-    {
-      if (InfoValid(Hash160(vSolutions[0])))
-      {
-        return true;
-      }
-    }
-
-    if (bnTarget <= 0 || bnTarget > bnProofOfWorkLimit)
-        return false;
-
-    if (block->GetHash() > bnTarget.getuint256())
-        return false;
-
-    return true;
-}
-
 boost::filesystem::path GetConfigFile()
 {
-    boost::filesystem::path pathConfigFile(GetArg("-conf", ("ECCoin.conf")));
+    boost::filesystem::path pathConfigFile(GetArg("-conf", ("eccoin.conf")));
     if (!pathConfigFile.is_complete()) pathConfigFile = GetDataDir(false) / pathConfigFile;
     return pathConfigFile;
 }
@@ -1198,15 +1164,12 @@ void ReadConfigFile(map<string, string>& mapSettingsRet,
     if (!streamConfig.good())
     {
         boost::filesystem::path ConfPath;
-        ConfPath = GetDefaultDataDir() / "ECCoin.conf";
+        ConfPath = GetDefaultDataDir() / "eccoin.conf";
         FILE* ConfFile = fopen(ConfPath.string().c_str(), "w");
-        fprintf(ConfFile, "listen=1\n");
-        fprintf(ConfFile, "server=1\n");
         fprintf(ConfFile, "maxconnections=100\n");
         fprintf(ConfFile, "rpcuser=yourusername\n");
         fprintf(ConfFile, "rpcpassword=yourpassword\n");
-        fprintf(ConfFile, "addnode=wallet01.cryptounited.io\n");
-        fprintf(ConfFile, "addnode=wallet02.cryptounited.io\n");
+        fprintf(ConfFile, "addnode=www.cryptounited.io\n");
         fprintf(ConfFile, "rpcport=19119\n");
         fprintf(ConfFile, "rpcconnect=127.0.0.1\n");
         fclose(ConfFile);
