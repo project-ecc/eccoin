@@ -11,7 +11,7 @@
 #include "init.h"
 #include "ui_interface.h"
 #include "kernel.h"
-#include "scrypt_mine.h"
+#include "scrypt.h"
 #include "mempool.h"
 #include "global.h"
 #include <boost/algorithm/string/replace.hpp>

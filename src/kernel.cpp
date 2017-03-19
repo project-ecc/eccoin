@@ -9,7 +9,7 @@
 #include "txdb-leveldb.h"
 #include "net.h"
 #include "script.h"
-#include "scrypt_mine.h"
+#include "scrypt.h"
 #include "global.h"
 
 

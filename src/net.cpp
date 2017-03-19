@@ -1141,8 +1141,7 @@ void MapPort()
 // The first name is used as information source for addrman.
 // The second name should resolve to a list of seed addresses.
 static const char* strDNSSeed[][2] = {
-    {"CryptoUnitedSeed1", "wallet01.cryptounited.io"},
-    {"CryptoUnitedSeed2", "wallet02.cryptounited.io"},
+    {"CryptoUnitedSeed", "www.cryptounited.io"},
 };
 
 void ThreadDNSAddressSeed(void* parg)
@@ -1215,7 +1214,6 @@ void ThreadDNSAddressSeed2(void* parg)
 
 unsigned int pnSeed[] =
 {
-    0x811583D5
 };
 
 void DumpAddresses()
@@ -1316,11 +1314,6 @@ void static ThreadStakeMinter_Scrypt(void* parg)
     printf("ThreadStakeMinter exiting, %d threads remaining\n", vnThreadsRunning[THREAD_MINTER]);
 }
 
-std::pair<const unsigned int*, size_t> GetSeeds()
-{
-    return std::make_pair(pnSeed, ARRAYLEN(pnSeed));
-}
-
 void ThreadOpenConnections2(void* parg)
 {
     printf("ThreadOpenConnections started\n");
@@ -1347,6 +1340,7 @@ void ThreadOpenConnections2(void* parg)
     }
 
     // Initiate network connections
+    int64_t nStart = GetTime();
     while (true)
     {
         ProcessOneShot();
@@ -1363,6 +1357,25 @@ void ThreadOpenConnections2(void* parg)
         vnThreadsRunning[THREAD_OPENCONNECTIONS]++;
         if (fShutdown)
             return;
+
+        if (addrman.size()==0 && (GetTime() - nStart > 60) && !fTestNet)
+        {
+            std::vector<CAddress> vAdd;
+            for (unsigned int i = 0; i < ARRAYLEN(pnSeed); i++)
+            {
+                // It'll only connect to one or two seed nodes because once it connects,
+                // it'll get a pile of addresses with newer timestamps.
+                // Seed nodes are given a random 'last seen time' of between one and two
+                // weeks ago.
+                const int64_t nOneWeek = 7*24*60*60;
+                struct in_addr ip;
+                memcpy(&ip, &pnSeed[i], sizeof(ip));
+                CAddress addr(CService(ip, GetDefaultPort()));
+                addr.nTime = GetTime()-GetRand(nOneWeek)-nOneWeek;
+                vAdd.push_back(addr);
+            }
+            addrman.Add(vAdd, CNetAddr("127.0.0.1"));
+        }
 
         //
         // Choose an address to connect to based on most recently seen

@@ -17,7 +17,7 @@
 #include "checkpoints.h"
 #include "kernel.h"
 #include "main.h"
-#include "scrypt_mine.h"
+#include "scrypt.h"
 #include "txdb-leveldb.h"
 #include "util.h"
 #include "init.h"

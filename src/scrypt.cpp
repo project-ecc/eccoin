@@ -164,6 +164,24 @@ uint256 scrypt(const void* data, size_t datalen, const void* salt, size_t saltle
     return result;
 }
 
+/* cpu and memory intensive function to transform a 80 byte buffer into a 32 byte output
+   scratchpad size needs to be at least 63 + (128 * r * p) + (256 * r + 64) + (128 * r * N) bytes
+   r = 1, p = 1, N = 1024
+ */
+
+void scrypt(const void* input, size_t inputlen, uint32_t *res, void *scratchpad)
+{
+    uint32_t *V;
+    uint32_t X[32];
+    V = (uint32_t *)(((uintptr_t)(scratchpad) + 63) & ~ (uintptr_t)(63));
+
+    PBKDF2_SHA256((const uint8_t*)input, inputlen, (const uint8_t*)input, sizeof(block_header), 1, (uint8_t *)X, 128);
+
+    scrypt_core(X, V);
+
+    PBKDF2_SHA256((const uint8_t*)input, inputlen, (uint8_t *)X, 128, 1, (uint8_t*)res, 32);
+}
+
 uint256 scrypt_hash(const void* input, size_t inputlen)
 {
     unsigned char scratchpad[SCRYPT_BUFFER_SIZE];
@@ -194,5 +212,96 @@ uint256 scrypt_blockhash(const void* input)
 {
     unsigned char scratchpad[SCRYPT_BUFFER_SIZE];
     return scrypt_nosalt(input, 80, scratchpad);
+}
+
+unsigned int scanhash_scrypt(block_header *pdata, void *scratchbuf,
+    uint32_t max_nonce, uint32_t &hash_count,
+    void *result, block_header *res_header)
+{
+    hash_count = 0;
+    block_header data = *pdata;
+    uint32_t hash[8];
+    unsigned char *hashc = (unsigned char *) &hash;
+
+#ifdef SCRYPT_3WAY
+    block_header data2 = *pdata;
+    uint32_t hash2[8];
+    unsigned char *hashc2 = (unsigned char *) &hash2;
+
+    block_header data3 = *pdata;
+    uint32_t hash3[8];
+    unsigned char *hashc3 = (unsigned char *) &hash3;
+
+    int throughput = scrypt_best_throughput();
+#endif
+
+    uint32_t n = 0;
+
+    while (true) {
+
+        data.nonce = n++;
+
+#ifdef SCRYPT_3WAY
+        if (throughput >= 2 && n < max_nonce) {
+            data2.nonce = n++;
+            if(throughput >= 3)
+            {
+                data3.nonce = n++;
+                scrypt_3way(&data, &data2, &data3, 80, 80, 80, hash, hash2, hash3, scratchbuf);
+                hash_count += 3;
+
+                if (hashc3[31] == 0 && hashc3[30] == 0) {
+                    memcpy(result, hash3, 32);
+                    *res_header = data3;
+
+                    return data3.nonce;
+                }
+            }
+            else
+            {
+                scrypt_2way(&data, &data2, 80, 80, hash, hash2, scratchbuf);
+                hash_count += 2;
+            }
+
+            if (hashc2[31] == 0 && hashc2[30] == 0) {
+                memcpy(result, hash2, 32);
+
+                return data2.nonce;
+            }
+        } else {
+            scrypt(&data, 80, hash, scratchbuf);
+            hash_count += 1;
+        }
+#else
+        scrypt(&data, 80, hash, scratchbuf);
+        hash_count += 1;
+#endif
+        if (hashc[31] == 0 && hashc[30] == 0) {
+            memcpy(result, hash, 32);
+
+            return data.nonce;
+        }
+
+        if (n >= max_nonce) {
+            hash_count = 0xffff + 1;
+            break;
+        }
+    }
+
+    return (unsigned int) -1;
+}
+
+void *scrypt_buffer_alloc() {
+    return malloc(SCRYPT_BUFFER_SIZE);
+}
+
+void scrypt_buffer_free(void *scratchpad)
+{
+    free(scratchpad);
+}
+
+void scrypt_hash_mine(const void* input, size_t inputlen, uint32_t *res, void *scratchpad)
+{
+    return scrypt(input, inputlen, res, scratchpad);
 }
 

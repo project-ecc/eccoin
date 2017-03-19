@@ -7,7 +7,7 @@
 #include "txdb-leveldb.h"
 #include "miner.h"
 #include "kernel.h"
-#include "scrypt_mine.h"
+#include "scrypt.h"
 #include "global.h"
 #include "mempool.h"
 

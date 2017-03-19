@@ -189,6 +189,7 @@ public:
 ///     CBlockIndex chain in memory. This map does however store the theorectical
 ///     height each of a block index
 ///
+/// it is not currently in use. it will be implented and replace the normal blockchain index map when the map starts to use too much memory for most clients (cut off is 900 MB)
 class CHeaderChain
 {
 public:

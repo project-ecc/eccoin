@@ -11,6 +11,16 @@ class COutPoint;
 class CBlockIndex;
 class CHeaderChainDB;
 
+typedef struct block_header_s
+{
+    unsigned int version;
+    uint256 prev_block;
+    uint256 merkle_root;
+    unsigned int timestamp;
+    unsigned int bits;
+    unsigned int nonce;
+
+} block_header;
 
 /** Nodes collect new transactions into a block, hash them into a hash tree,
  * and scan through nonce values to make the block's hash satisfy proof-of-work

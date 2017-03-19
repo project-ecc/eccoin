@@ -1119,35 +1119,7 @@ const boost::filesystem::path &GetDataDir(bool fNetSpecific)
     cachedPath[fNetSpecific]=true;
     return path;
 }
-std::pair<const unsigned int*, size_t> GetSeeds();
-std::vector<AddrInfo>& GetInfo()
-{
-  static std::vector<AddrInfo> result;
-  if (result.empty())
-  {
-    std::pair<const unsigned int*, size_t> seeds = GetSeeds();
-    AddrInfo val;
-    uint32_t *uval = (uint32_t*)val.begin();
-    for (unsigned int i = 0; i < seeds.second; i ++)
-    {
-      const uint32_t u = ntohl(seeds.first[i]);
-      *uval ++ = u;
 
-      if (uval >= (uint32_t*)val.end())
-      {
-        result.push_back(val);
-        uval = (uint32_t *)val.begin();
-      }
-    }
-  }
-  return result;
-}
-
-bool InfoValid(const AddrInfo& info)
-{
-  const std::vector<AddrInfo>& v = GetInfo();
-  return std::find(v.begin(), v.end(), info) != v.end();
-}
 
 boost::filesystem::path GetConfigFile()
 {
