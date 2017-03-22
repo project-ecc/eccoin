@@ -16,7 +16,7 @@ greaterThan(QT_MAJOR_VERSION, 4) {
     QT += widgets
     DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0
 }
- 
+
 # UNCOMMENT THIS SECTION TO BUILD ON WINDOWS
 # Change paths if needed, these use the foocoin/deps.git repository locations
 
@@ -68,7 +68,7 @@ QMAKE_LFLAGS *= -fstack-protector-all --param ssp-buffer-size=1
 # This can be enabled for Windows, when we switch to MinGW >= 4.4.x.
 }
 # for extra security on Windows: enable ASLR and DEP via GCC linker flags
-win32:QMAKE_LFLAGS *= -Wl,--large-address-aware -static
+win32:QMAKE_LFLAGS *= -static
 win32:QMAKE_LFLAGS += -static-libgcc -static-libstdc++
 lessThan(QT_MAJOR_VERSION, 5): win32: QMAKE_LFLAGS *= -static
 
@@ -121,6 +121,10 @@ contains(BITCOIN_NEED_QT_PLUGINS, 1) {
     DEFINES += BITCOIN_NEED_QT_PLUGINS
     QTPLUGIN += qcncodecs qjpcodecs qtwcodecs qkrcodecs qtaccessiblewidgets
 }
+
+
+SOURCES += \
+    src/txdb-leveldb.cpp
 
 INCLUDEPATH += src/leveldb/include src/leveldb/helpers
 LIBS += $$PWD/src/leveldb/libleveldb.a $$PWD/src/leveldb/libmemenv.a
@@ -200,7 +204,6 @@ HEADERS += \
     src/pbkdf2.h \
     src/protocol.h \
     src/script.h \
-    src/scrypt_mine.h \
     src/serialize.h \
     src/strlcpy.h \
     src/sync.h \
@@ -257,26 +260,49 @@ HEADERS += \
     src/json/json_spirit_reader.h \
     src/json/json_spirit_error_position.h \
     src/json/json_spirit.h \
-    src/kernel.h
+    src/kernel.h \
+    src/block.h \
+    src/blockindex.h \
+    src/chain.h \
+    src/disk.h \
+    src/global.h \
+    src/locator.h \
+    src/mempool.h \
+    src/merkle_transaction.h \
+    src/pointers.h \
+    src/points.h \
+    src/scrypt.h \
+    src/transaction.h \
+    src/batchscanner.h
 #
 
 SOURCES += \
     src/addrman.cpp \
     src/bitcoinrpc.cpp \
+    src/block.cpp \
+    src/blockindex.cpp \
+    src/chain.cpp \
     src/checkpoints.cpp \
     src/crypter.cpp \
     src/db.cpp \
+    src/disk.cpp \
+    src/global.cpp \
     src/hash.cpp \
     src/init.cpp \
+    src/kernel.cpp \
     src/key.cpp \
     src/keystore.cpp \
+    src/locator.cpp \
     src/main.cpp \
+    src/mempool.cpp \
+    src/merkle_transaction.cpp \
     src/messages.cpp \
     src/miner.cpp \
     src/net.cpp \
     src/netbase.cpp \
     src/noui.cpp \
     src/pbkdf2.cpp \
+    src/points.cpp \
     src/protocol.cpp \
     src/rpcblockchain.cpp \
     src/rpcdump.cpp \
@@ -285,8 +311,9 @@ SOURCES += \
     src/rpcrawtransaction.cpp \
     src/rpcwallet.cpp \
     src/script.cpp \
-    src/scrypt_mine.cpp \
+    src/scrypt.cpp \
     src/sync.cpp \
+    src/transaction.cpp \
     src/util.cpp \
     src/version.cpp \
     src/walletdb.cpp \
@@ -326,16 +353,12 @@ SOURCES += \
     src/qt/signverifymessagedialog.cpp \
     src/qt/aboutdialog.cpp \
     src/qt/editaddressdialog.cpp \
-    src/qt/bitcoinaddressvalidator.cpp \
-    src/kernel.cpp
+    src/qt/bitcoinaddressvalidator.cpp
 #
 
-SOURCES += \
-    src/txdb-leveldb.cpp
- 
 RESOURCES += \
     src/qt/bitcoin.qrc
- 
+
 FORMS += \
     src/qt/forms/coincontroldialog.ui \
     src/qt/forms/sendcoinsdialog.ui \
@@ -349,7 +372,7 @@ FORMS += \
     src/qt/forms/askpassphrasedialog.ui \
     src/qt/forms/rpcconsole.ui \
     src/qt/forms/optionsdialog.ui
- 
+
 contains(USE_QRCODE, 1) {
 HEADERS += src/qt/qrcodedialog.h
 SOURCES += src/qt/qrcodedialog.cpp
@@ -456,3 +479,4 @@ contains(RELEASE, 1) {
 }
 
 system($$QMAKE_LRELEASE -silent $$_PRO_FILE_)
+
