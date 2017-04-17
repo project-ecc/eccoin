@@ -159,6 +159,10 @@ bool static Reorganize(CTxDB& txdb, CHeaderChainDB& hcdb, CBlockIndex* pindexNew
     if (!txdb.TxnCommit())
         return error("Reorganize() : TxnCommit failed");
 
+    // Make sure it's successfully written to disk before changing memory structure
+    if (!hcdb.TxnCommit())
+        return error("Reorganize() : hcbd.TxnCommit failed");
+
     // Disconnect shorter branch
     BOOST_FOREACH(CBlockIndex* pindex, vDisconnect)
         if (pindex->pprev)
@@ -594,7 +598,10 @@ bool CBlock::SetBestChainInner(CTxDB& txdb, CHeaderChainDB& hcdb, CBlockIndex *p
         return false;
     }
     if (!txdb.TxnCommit())
-        return error("SetBestChain() : TxnCommit failed");
+        return error("SetBestChain() : txdb.TxnCommit failed");
+
+    if (!hcdb.TxnCommit())
+        return error("SetBestChain() : hcdb.TxnCommit failed");
 
     // Add to current best branch
     pindexNew->pprev->pnext = pindexNew;
@@ -612,6 +619,9 @@ bool CBlock::SetBestChain(CTxDB& txdb, CHeaderChainDB& hcdb, CBlockIndex* pindex
 
     if (!txdb.TxnBegin())
         return error("SetBestChain() : TxnBegin failed");
+
+    if (!hcdb.TxnBegin())
+        return error("SetBestChain() : hcdb.TxnBegin failed");
 
     if (pindexGenesisBlock == NULL && hash == (!fTestNet ? hashGenesisBlock : hashGenesisBlockTestNet))
     {
@@ -649,6 +659,7 @@ bool CBlock::SetBestChain(CTxDB& txdb, CHeaderChainDB& hcdb, CBlockIndex* pindex
         if (!Reorganize(txdb, hcdb, pindexIntermediate))
         {
             txdb.TxnAbort();
+            hcdb.TxnAbort();
             InvalidChainFound(pindexNew);
             return error("SetBestChain() : Reorganize failed");
         }
@@ -666,6 +677,12 @@ bool CBlock::SetBestChain(CTxDB& txdb, CHeaderChainDB& hcdb, CBlockIndex* pindex
                 printf("SetBestChain() : TxnBegin 2 failed\n");
                 break;
             }
+
+            if (!hcdb.TxnBegin()) {
+                printf("SetBestChain() : TxnBegin 2 failed\n");
+                break;
+            }
+
             // errors now are not fatal, we still did a reorganisation to a new chain in a valid way
             if (!block.SetBestChainInner(txdb, hcdb, pindex))
                 break;

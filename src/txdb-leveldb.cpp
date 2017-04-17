@@ -322,7 +322,7 @@ bool LoadBlockIndexInternal()
     // The block index is an in-memory structure that maps hashes to on-disk
     // locations where the contents of the block can be found. Here, we scan it
     // out of the DB and into mapBlockIndex.
-    leveldb::Iterator *SmallIterator = itxdb.getInternalPointer()->NewIterator(leveldb::ReadOptions());
+    leveldb::Iterator *SmallIterator = hcdb.getInternalPointer()->NewIterator(leveldb::ReadOptions());
     // Seek to start key.
     CDataStream smallStartKey(SER_DISK, CLIENT_VERSION);
     smallStartKey << make_pair(string("blockindex"), uint256(0));
@@ -338,7 +338,7 @@ bool LoadBlockIndexInternal()
         ssKey.write(SmallIterator->key().data(), SmallIterator->key().size());
         string strType;
         ssKey >> strType;
-        if (fRequestShutdown || strType != "blockindex")
+        if (fRequestShutdown || strType != "indexheader")
             break;
         SmallIterator->Next();
     }

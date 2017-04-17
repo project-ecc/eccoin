@@ -13,6 +13,7 @@
 #include "util.h"
 #include "wallet.h"
 #include "walletdb.h"
+#include "chain.h"
 
 #include <string>
 #include <string.h>
@@ -93,6 +94,7 @@ void Shutdown(void* parg)
         fShutdown = true;
         nTransactionsUpdated++;
         CTxDB().Close();
+        CHeaderChainDB().Close();
         bitdb.Flush(false);
         StopNode();
         bitdb.Flush(true);
