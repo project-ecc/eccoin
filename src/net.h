@@ -150,6 +150,8 @@ public:
 
 
 
+extern int highestAskedFor;
+extern bool isSynced;
 
 
 /** Information about a peer */
@@ -175,8 +177,6 @@ public:
     int nVersion;
     bool fastMessaging;
     bool askedIfReady; /// asked this peer if they are ready to recieve more blocks
-    int highestAsked;
-    int64_t lastAsked; /// last time we were asked if we were ready
     int64_t readyIn; /// time until peer is next ready
     bool noReadyActive;
     std::string strSubVer;
@@ -198,8 +198,6 @@ public:
     std::map<uint256, CRequestTracker> mapRequests;
     CCriticalSection cs_mapRequests;
     uint256 hashContinue;
-    CBlockIndex* pindexLastGetBlocksBegin;
-    uint256 hashLastGetBlocksEnd;
     int nStartingHeight;
 
     // flood relay
@@ -227,8 +225,6 @@ public:
         nVersion = 0;
         fastMessaging = false;
         askedIfReady = false;
-        highestAsked = 0;
-        lastAsked = 0; // last time we were asked if we were ready
         readyIn = 0; // the next time a peer is ready in
         noReadyActive = false;
         strSubVer = "";
@@ -238,8 +234,6 @@ public:
         fDisconnect = false;
         nRefCount = 0;
         hashContinue = 0;
-        pindexLastGetBlocksBegin = 0;
-        hashLastGetBlocksEnd = 0;
         nStartingHeight = -1;
         fGetAddr = false;
         nMisbehavior = 0;

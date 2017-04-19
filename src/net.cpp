@@ -54,6 +54,8 @@ struct LocalServiceInfo {
 bool fClient = false;
 bool fDiscover = true;
 bool fUseUPnP = false;
+int highestAskedFor = 0;
+bool isSynced = false;
 uint64_t nLocalServices = (fClient ? 0 : NODE_NETWORK);
 static CCriticalSection cs_mapLocalHost;
 static map<CNetAddr, LocalServiceInfo> mapLocalHost;
@@ -94,11 +96,9 @@ unsigned short GetListenPort()
 
 void CNode::PushGetBlocks(CBlockIndex* pindexBegin, uint256 hashEnd)
 {
-    pindexLastGetBlocksBegin = pindexBegin;
-    hashLastGetBlocksEnd = hashEnd;
     if(messageDebug)
     {
-        printf("sending new getBlocks request from %s to %s \n", pindexLastGetBlocksBegin->GetBlockHash().ToString().c_str(), hashLastGetBlocksEnd.ToString().c_str());
+        printf("sending new getBlocks request from %s to %s \n", pindexBegin->GetBlockHash().ToString().c_str(), hashEnd.ToString().c_str());
     }
     PushMessage("getblocks", CBlockLocator(pindexBegin), hashEnd);
 }

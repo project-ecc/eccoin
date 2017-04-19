@@ -32,6 +32,14 @@ bool AlreadyHave(CTxDB& txdb, const CInv& inv)
     return true;
 }
 
+bool checkSynced()
+{
+    if(pindexBest->GetBlockIndexTime() < GetTime() - (60 * 2)) // last block more than 2 minutes ago
+    {
+        return false;
+    }
+    return true;
+}
 
 
 
@@ -68,8 +76,6 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
         vRecv >> pfrom->nVersion >> pfrom->nServices >> nTime >> addrMe;
         if (pfrom->nVersion < MIN_PROTO_VERSION)
         {
-            // Since February 20, 2012, the protocol is initiated at version 209,
-            // and earlier versions are no longer supported
             printf("partner %s using obsolete version %i; disconnecting\n", pfrom->addr.ToString().c_str(), pfrom->nVersion);
             pfrom->fDisconnect = true;
             return false;
@@ -149,6 +155,7 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
                 printf("peer has more blocks than us \n");
             }
             pfrom->PushGetBlocks(pindexBest, uint256(0));
+            highestAskedFor = pindexBest->nHeight;
         }
         else
         {
@@ -371,7 +378,6 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
         }
     }
 
-
     else if (strCommand == "getblocks")
     {
         CBlockLocator locator;
@@ -380,6 +386,18 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
 
         // Find the last block the caller has in the main chain
         CBlockIndex* pindex = locator.GetBlockIndex();
+        if(pfrom->hashContinue != 0)
+        {
+            map<uint256, CBlockIndex*>::iterator iter = mapBlockIndex.find(pfrom->hashContinue);
+            if (iter != mapBlockIndex.end())
+            {
+                CBlockIndex* pindexLast = iter->second;
+                if(pindexLast->nHeight > pindex->nHeight)
+                {
+                    pindex = pindexLast;
+                }
+            }
+        }
         {
             // Send the rest of the chain
             if (pindex)
@@ -634,17 +652,27 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
     }
 
     else if(strCommand == "askReady")
-    {        
-        /// give us 5 seconds to process all the blocks we already got from this node. if we processed them all before 5 seconds, ask for more
-        if(pindexBest->nHeight >= pfrom->highestAsked || (GetTime() >= (pfrom->lastAsked + 5)))
+    {
+        /// once we are synced, we no longer need to do anything in terms of ready to sync, we will just get the most recent block as it is broadcast
+        if(isSynced == false)
         {
-            pfrom->PushGetBlocks(pindexBest, uint256(0));
-            pfrom->highestAsked = pindexBest->nHeight + 500;
-            pfrom->lastAsked = GetTime();
-        }
-        else
-        {
-            pfrom->PushMessage("noReady");
+            isSynced = checkSynced(); // if we arent synced we should re-evaluate
+            if(isSynced == false)
+            {
+                if(pindexBest->nHeight <= highestAskedFor  + 500 && pindexBest->nHeight >= highestAskedFor + 475)
+                {
+                    pfrom->PushGetBlocks(pindexBest, uint256(0));
+                    highestAskedFor = pindexBest->nHeight + 500;
+                }
+                else
+                {
+                    pfrom->PushMessage("noReady");
+                }
+            }
+            else
+            {
+                pfrom->PushMessage("noReady");
+            }
         }
     }
 
@@ -663,10 +691,12 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
 
     // Update the last seen time for this node's address
     if (pfrom->fNetworkNode)
-        if (strCommand == "version" || strCommand == "addr" || strCommand == "inv" || strCommand == "getdata" || strCommand == "ping")
+    {
+     if (strCommand == "version" || strCommand == "addr" || strCommand == "inv" || strCommand == "getdata" || strCommand == "ping")
+        {
             AddressCurrentlyConnected(pfrom->addr);
-
-
+        }
+    }
     return true;
 }
 
