@@ -96,7 +96,7 @@ endif
 
 # CXXFLAGS can be specified on the make command line, so we use xCXXFLAGS that only
 # adds some defaults in front. Unfortunately, CXXFLAGS=... $(CXXFLAGS) does not work.
-xCXXFLAGS=-O2 $(EXT_OPTIONS) -pthread -w -Wextra -Wno-ignored-qualifiers -Wformat -Wformat-security -Wno-unused-parameter -std=c++11\
+xCXXFLAGS=-O2 $(EXT_OPTIONS) -pthread -w -Wextra -Wno-ignored-qualifiers -Wformat -Wformat-security -Wno-unused-parameter -std=c++11 -fpermissive\
     $(DEBUGFLAGS) $(DEFS) $(HARDENING) $(CXXFLAGS)
 
 # LDFLAGS can be specified on the make command line, so we use xLDFLAGS that only
@@ -132,10 +132,18 @@ OBJS= \
     obj/noui.o \
     obj/kernel.o \
     obj/pbkdf2.o \
-    obj/scrypt-x86.o \
-    obj/scrypt-x86_64.o \
     obj/messages.o \
-    obj/scrypt_mine.o
+	 obj/block.o \
+	 obj/global.o \
+	 obj/points.o \
+	 obj/chain.o \
+	 obj/blockindex.o \
+	 obj/hash.o \
+	 obj/locator.o \
+	 obj/transaction.o \
+	 obj/merkle_transaction.o \
+	 obj/mempool.o \
+	 obj/scrypt.o 
 
 all: ECCoind
 
