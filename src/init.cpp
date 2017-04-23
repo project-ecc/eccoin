@@ -34,7 +34,7 @@ using namespace boost;
 
 CWallet* pwalletMain;
 Checkpoints* pcheckpointMain;
-
+ServiceFlags nLocalServices = NODE_NETWORK;
 CClientUIInterface uiInterface;
 
 std::string strWalletFileName;

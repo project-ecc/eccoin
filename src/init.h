@@ -12,6 +12,7 @@
 
 extern CWallet* pwalletMain;
 extern Checkpoints* pcheckpointMain;
+extern ServiceFlags nLocalServices;
 
 
 extern std::string strWalletFileName;
