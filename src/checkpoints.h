@@ -105,10 +105,6 @@ bool WriteSyncCheckpoint(const uint256& hashCheckpoint);
 class Checkpoints
 {
 
-    // Returns last CBlockIndex* in mapBlockIndex that is a checkpoint
-    CBlockIndex* GetLastCheckpoint(const std::map<uint256, CBlockIndex*>& mapBlockIndex);
-
-
     bool IsMatureSyncCheckpoint();
 
 public:
@@ -125,6 +121,8 @@ public:
     bool SetCheckpointPrivKey(std::string strPrivKey);
     enum CPMode CheckpointsMode;
 
+    // Returns last CBlockIndex* in mapBlockIndex that is a checkpoint
+    CBlockIndex* GetLastCheckpoint(const std::map<uint256, CBlockIndex*>& mapBlockIndex);
     // Return conservative estimate of total number of blocks, 0 if unknown
     int GetTotalBlocksEstimate();
     CBlockIndex* GetLastSyncCheckpoint();
