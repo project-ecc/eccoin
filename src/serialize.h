@@ -370,7 +370,6 @@ inline void Unserialize(Stream& is, T& a, long nType, int nVersion)
 
 
 
-
 //
 // string
 //

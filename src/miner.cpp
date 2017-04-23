@@ -613,7 +613,7 @@ void ScryptMiner(CWallet *pwallet, bool fProofOfStake)
         uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
 
         unsigned int max_nonce = 0xffff0000;
-        block_header res_header;
+        CBlockHeader res_header;
         uint256 result;
 
         while(true)
@@ -622,7 +622,7 @@ void ScryptMiner(CWallet *pwallet, bool fProofOfStake)
             unsigned int nNonceFound;
 
             nNonceFound = scanhash_scrypt(
-                        (block_header *)&pblock->nVersion,
+                        (CBlockHeader *)&pblock->nVersion,
                         scratchbuf,
                         max_nonce,
                         nHashesDone,
