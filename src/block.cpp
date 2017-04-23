@@ -189,15 +189,48 @@ bool static Reorganize(CTxDB& txdb, CHeaderChainDB& hcdb, CBlockIndex* pindexNew
 }
 
 
+uint256 CBlockHeader::GetHash() const
+{
+    uint256 thash;
+    void * scratchbuff = scrypt_buffer_alloc();
+
+    scrypt_hash_mine(CVOIDBEGIN(nVersion), sizeof(CBlockHeader), UINTBEGIN(thash), scratchbuff);
+
+    scrypt_buffer_free(scratchbuff);
+
+    return thash;
+}
+
+CBlockIndex* CBlockHeader::AddHeaderToBlockIndex()
+{
+    // Check for duplicate
+    uint256 hash = this->GetHash();
+    std::map<uint256, CBlockIndex*>::iterator it = mapBlockIndex.find(hash);
+    if (it != mapBlockIndex.end())
+        return it->second;
+
+    // Construct new block index object
+    CBlockIndex* pindexNew = new CBlockIndex(*this);
+    assert(pindexNew);
+    std::map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.insert(std::make_pair(hash, pindexNew)).first;
+    pindexNew->phashBlock = &((*mi).first);
+    std::map<uint256, CBlockIndex*>::iterator miPrev = mapBlockIndex.find(this->hashPrevBlock);
+    if (miPrev != mapBlockIndex.end())
+    {
+        pindexNew->pprev = (*miPrev).second;
+        pindexNew->nHeight = pindexNew->pprev->nHeight + 1;
+    }
+    pindexNew->nTime = (pindexNew->pprev ? std::max(pindexNew->pprev->nTime, pindexNew->nTime) : pindexNew->nTime);
+    if (pindexBestHeader == NULL)
+        pindexBestHeader = pindexNew;
+
+    return pindexNew;
+}
+
 
 void CBlock::SetNull()
 {
-    nVersion = CBlock::CURRENT_VERSION;
-    hashPrevBlock = 0;
-    hashMerkleRoot = 0;
-    nTime = 0;
-    nBits = 0;
-    nNonce = 0;
+    CBlockHeader::SetNull();
     vtx.clear();
     vchBlockSig.clear();
     vMerkleTree.clear();
@@ -207,18 +240,6 @@ void CBlock::SetNull()
 bool CBlock::IsNull() const
 {
     return (nBits == 0);
-}
-
-uint256 CBlock::GetHash() const
-{
-    uint256 thash;
-    void * scratchbuff = scrypt_buffer_alloc();
-
-    scrypt_hash_mine(CVOIDBEGIN(nVersion), sizeof(block_header), UINTBEGIN(thash), scratchbuff);
-    scrypt_buffer_free(scratchbuff);
-
-    return thash;
-
 }
 
 int64_t CBlock::GetBlockTime() const
@@ -715,25 +736,6 @@ bool CBlock::SetBestChain(CTxDB& txdb, CHeaderChainDB& hcdb, CBlockIndex* pindex
       nBestBlockTrust.Get64(),
       DateTimeStrFormat("%x %H:%M:%S", pindexBest->GetBlockIndexTime()).c_str());
 
-
-    // Check the version of the last 100 blocks to see if we need to upgrade:
-    if (!fIsInitialDownload)
-    {
-        int nUpgraded = 0;
-        const CBlockIndex* pindex = pindexBest;
-        for (int i = 0; i < 100 && pindex != NULL; i++)
-        {
-            if (pindex->nVersion > CBlock::CURRENT_VERSION)
-                ++nUpgraded;
-            pindex = pindex->pprev;
-        }
-        if (nUpgraded > 0)
-            printf("SetBestChain: %d of last 100 blocks above version %d\n", nUpgraded, CBlock::CURRENT_VERSION);
-        if (nUpgraded > 100/2)
-            // strMiscWarning is read by GetWarnings(), called by Qt and the JSON-RPC code to warn the user:
-            strMiscWarning = ("Warning: This version is obsolete, upgrade required!");
-    }
-
     std::string strCmd = GetArg("-blocknotify", "");
 
     if (!fIsInitialDownload && !strCmd.empty())
@@ -1192,4 +1194,17 @@ bool CBlock::CheckBlockSignature() const
         }
         return false;
 }
+
+CBlockHeader CBlock::GetBlockHeader() const
+{
+    CBlockHeader block;
+    block.nVersion       = nVersion;
+    block.hashPrevBlock  = hashPrevBlock;
+    block.hashMerkleRoot = hashMerkleRoot;
+    block.nTime          = nTime;
+    block.nBits          = nBits;
+    block.nNonce         = nNonce;
+    return block;
+}
+
 
