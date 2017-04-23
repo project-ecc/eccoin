@@ -273,7 +273,8 @@ HEADERS += \
     src/points.h \
     src/scrypt.h \
     src/transaction.h \
-    src/batchscanner.h
+    src/batchscanner.h \
+    src/validation.h
 #
 
 SOURCES += \

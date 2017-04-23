@@ -32,6 +32,7 @@ extern unsigned char pchMessageStart[4];
 extern bool AlreadyHave(CTxDB& txdb, const CInv& inv);
 extern bool ProcessMessages(CNode* pfrom);
 extern bool SendMessages(CNode* pto, bool fSendTrickle);
+extern void InitializeNode(CNode *pnode);
 
 void ThreadMessageHandler2(void* parg);
 void ThreadSocketHandler2(void* parg);
@@ -56,7 +57,9 @@ bool fDiscover = true;
 bool fUseUPnP = false;
 int highestAskedFor = 0;
 bool isSynced = false;
-uint64_t nLocalServices = (fClient ? 0 : NODE_NETWORK);
+
+std::atomic<NodeId> nLastNodeId(0);
+
 static CCriticalSection cs_mapLocalHost;
 static map<CNetAddr, LocalServiceInfo> mapLocalHost;
 static bool vfReachable[NET_MAX] = {};
@@ -87,6 +90,11 @@ void AddOneShot(string strDest)
 {
     LOCK(cs_vOneShots);
     vOneShots.push_back(strDest);
+}
+
+NodeId GetNewNodeId()
+{
+    return nLastNodeId.fetch_add(1, std::memory_order_relaxed);
 }
 
 unsigned short GetListenPort()
@@ -510,7 +518,8 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest)
 #endif
 
         // Add node
-        CNode* pnode = new CNode(hSocket, addrConnect, pszDest ? pszDest : "", false);
+        NodeId id = GetNewNodeId();
+        CNode* pnode = new CNode(id, nLocalServices, hSocket, addrConnect, pszDest ? pszDest : "", false);
         pnode->AddRef();
 
         {
@@ -526,6 +535,13 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest)
         return NULL;
     }
 }
+
+CNode::~CNode()
+{
+    closesocket(hSocket);
+}
+
+
 
 void CNode::CloseSocketDisconnect()
 {
@@ -607,6 +623,21 @@ bool CNode::Misbehaving(int howmuch)
     } else
         printf("Misbehaving: %s (%d -> %d)\n", addr.ToString().c_str(), nMisbehavior-howmuch, nMisbehavior);
     return false;
+}
+
+void CNode::SetAddrLocal(const CService& addrLocalIn) {
+    LOCK(cs_addrLocal);
+    if (addrLocal.IsValid()) {
+        error("Addr local already set for node: %i. Refusing to change from %s to %s", id, addrLocal.ToString().c_str(), addrLocalIn.ToString().c_str());
+    } else {
+        addrLocal = addrLocalIn;
+    }
+}
+
+
+CService CNode::GetAddrLocal() const {
+    LOCK(cs_addrLocal);
+    return addrLocal;
 }
 
 #undef X
@@ -836,7 +867,9 @@ void ThreadSocketHandler2(void* parg)
             else
             {
                 printf("accepted connection %s\n", addr.ToString().c_str());
-                CNode* pnode = new CNode(hSocket, addr, "", true);
+                NodeId id = GetNewNodeId();
+                CNode* pnode = new CNode(id, nLocalServices, hSocket, addr, "", true);
+                InitializeNode(pnode);
                 pnode->AddRef();
                 {
                     LOCK(cs_vNodes);
@@ -1553,6 +1586,8 @@ bool OpenNetworkConnection(const CAddress& addrConnect, CSemaphoreGrant *grantOu
     if (grantOutbound)
         grantOutbound->MoveTo(pnode->grantOutbound);
     pnode->fNetworkNode = true;
+    InitializeNode(pnode);
+
 
     return true;
 }
@@ -1828,7 +1863,10 @@ void StartNode(void* parg)
         }
 
         if (pnodeLocalHost == NULL)
-            pnodeLocalHost = new CNode(INVALID_SOCKET, CAddress(CService("127.0.0.1", 0), nLocalServices));
+        {
+            NodeId id = GetNewNodeId();
+            pnodeLocalHost = new CNode(id, nLocalServices ,INVALID_SOCKET, CAddress(CService("127.0.0.1", 0), nLocalServices));
+        }
 
         Discover();
 

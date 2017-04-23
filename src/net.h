@@ -14,6 +14,7 @@
 #include <boost/array.hpp>
 #include <boost/foreach.hpp>
 #include <openssl/rand.h>
+#include <atomic>
 
 #ifndef WIN32
 #include <arpa/inet.h>
@@ -44,6 +45,26 @@ unsigned short GetListenPort();
 bool BindListenPort(const CService &bindAddr, std::string& strError=REF(std::string()));
 void StartNode(void* parg);
 bool StopNode();
+
+/** Maximum length of strSubVer in `version` message */
+static const unsigned int MAX_SUBVERSION_LENGTH = 256;
+
+typedef int64_t NodeId;
+
+/** Maximum number of unconnecting headers announcements before DoS score */
+static const int MAX_UNCONNECTING_HEADERS = 10;
+
+static const ServiceFlags REQUIRED_SERVICES = NODE_NETWORK;
+
+/** Number of headers sent in one getheaders result. We rely on the assumption that if a peer sends
+ *  less than this number, we reached its tip. Changing this value is a protocol upgrade. */
+static const unsigned int MAX_HEADERS_RESULTS = 2000;
+
+/** Maximum number of headers to announce when relaying blocks with headers message.*/
+static const unsigned int MAX_BLOCKS_TO_ANNOUNCE = 8;
+
+/** Number of blocks that can be requested at any given time from a single peer. */
+static const int MAX_BLOCKS_IN_TRANSIT_PER_PEER = 16;
 
 enum
 {
@@ -117,7 +138,7 @@ enum threadId
 extern bool fClient;
 extern bool fDiscover;
 extern bool fUseUPnP;
-extern uint64_t nLocalServices;
+extern ServiceFlags nLocalServices;
 extern uint64_t nLocalHostNonce;
 extern CAddress addrSeenByPeer;
 extern boost::array<int, THREAD_MAX> vnThreadsRunning;
@@ -136,6 +157,7 @@ extern std::map<CInv, int64_t> mapAlreadyAskedFor;
 class CNodeStats
 {
 public:
+    NodeId nodeid;
     uint64_t nServices;
     int64_t nLastSend;
     int64_t nLastRecv;
@@ -159,7 +181,6 @@ class CNode
 {
 public:
     // socket
-    uint64_t nServices;
     SOCKET hSocket;
     CDataStream vSend;
     CDataStream vRecv;
@@ -173,19 +194,35 @@ public:
     unsigned int nMessageStart;
     CAddress addr;
     std::string addrName;
+
+    mutable CCriticalSection cs_addrLocal;
     CService addrLocal;
+
     int nVersion;
-    bool fastMessaging;
-    bool askedIfReady; /// asked this peer if they are ready to recieve more blocks
-    int64_t readyIn; /// time until peer is next ready
-    bool noReadyActive;
     std::string strSubVer;
+    std::string cleanSubVer;
+    CCriticalSection cs_SubVer; // used for both cleanSubVer and strSubVer
     bool fInbound;
     bool fNetworkNode;
     bool fSuccessfullyConnected;
     bool fDisconnect;
     CSemaphoreGrant grantOutbound;
     int nRefCount;
+    const NodeId id;
+    std::atomic<ServiceFlags> nServices;
+    ServiceFlags nServicesExpected;
+    std::atomic<int64_t> nTimeOffset;
+    std::deque<CInv> vRecvGetData;
+    std::atomic<int64_t> nLastBlockTime;
+
+
+
+    /// Deprecated, to be removed in the future when headersync replaces full block sync
+    bool askedIfReady; /// asked this peer if they are ready to recieve more blocks
+    int64_t readyIn; /// time until peer is next ready
+    bool noReadyActive;
+
+
 protected:
 
     // Denial-of-service detection/prevention
@@ -210,9 +247,65 @@ public:
     // inventory based relay
     std::multimap<int64_t, CInv> mapAskFor;
 
-    CNode(SOCKET hSocketIn, CAddress addrIn, std::string addrNameIn = "", bool fInboundIn=false) : vSend(SER_NETWORK, MIN_PROTO_VERSION), vRecv(SER_NETWORK, MIN_PROTO_VERSION)
+    // Ping time measurement:
+    // The pong reply we're expecting, or 0 if no pong expected.
+    std::atomic<uint64_t> nPingNonceSent;
+    // Time (in usec) the last ping was sent, or 0 if no ping was ever sent.
+    std::atomic<int64_t> nPingUsecStart;
+    // Last measured round-trip time.
+    std::atomic<int64_t> nPingUsecTime;
+    // Best measured round-trip time.
+    std::atomic<int64_t> nMinPingUsecTime;
+
+    // Set of transaction ids we still have to announce.
+    // They are sorted by the mempool before relay, so the order is not important.
+    std::set<uint256> setInventoryTxToSend;
+    // List of block ids we still have announce.
+    // There is no final sorting before sending, as they are always sent immediately
+    // and in the order requested.
+    mruset<CInv> setInventoryKnown;
+    std::vector<CInv> vInventoryToSend;
+
+    CCriticalSection cs_inventory;
+    std::set<uint256> setAskFor;
+    int64_t nNextInvSend;
+    // Used for headers announcements - unfiltered blocks to relay
+    // Also protected by cs_inventory
+    std::vector<uint256> vBlockHashesToAnnounce;
+
+    // TXN accept times
+    std::atomic<int64_t> nLastTXTime;
+
+    CNode(NodeId idIn, ServiceFlags nLocalServicesIn, SOCKET hSocketIn, CAddress addrIn, std::string addrNameIn = "", bool fInboundIn=false) :
+      vSend(SER_NETWORK, MIN_PROTO_VERSION),
+      vRecv(SER_NETWORK, MIN_PROTO_VERSION),
+      nTimeConnected(GetTime()),
+      addr(addrIn),
+      fInbound(fInboundIn),
+      id(idIn)
     {
-        nServices = 0;
+        nServices = NODE_NONE;
+        nServicesExpected = NODE_NONE;
+        hSocket = hSocketIn;
+        nLastSend = 0;
+        nLastRecv = 0;
+        nTimeOffset = 0;
+        addrName = addrNameIn == "" ? addr.ToStringIPPort() : addrNameIn;
+        nVersion = 0;
+        strSubVer = "";
+        fSuccessfullyConnected = false;
+        fDisconnect = false;
+        nRefCount = 0;
+        hashContinue = uint256();
+        nStartingHeight = -1;
+        fGetAddr = false;
+        nNextInvSend = 0;
+        nLastBlockTime = 0;
+        nLastTXTime = 0;
+        nPingNonceSent = 0;
+        nPingUsecStart = 0;
+        nPingUsecTime = 0;
+        nMinPingUsecTime = std::numeric_limits<int64_t>::max();
         hSocket = hSocketIn;
         nLastSend = 0;
         nLastRecv = 0;
@@ -223,7 +316,6 @@ public:
         addr = addrIn;
         addrName = addrNameIn == "" ? addr.ToStringIPPort() : addrNameIn;
         nVersion = 0;
-        fastMessaging = false;
         askedIfReady = false;
         readyIn = 0; // the next time a peer is ready in
         noReadyActive = false;
@@ -242,22 +334,28 @@ public:
         // Be shy and don't send version until we hear
         if (hSocket != INVALID_SOCKET && !fInbound)
             PushVersion();
+
+        printf("Added connection to %s peer=%d\n", addrName.c_str(), id);
     }
 
-    ~CNode()
-    {
-        if (hSocket != INVALID_SOCKET)
-        {
-            closesocket(hSocket);
-            hSocket = INVALID_SOCKET;
-        }
-    }
+    ~CNode();
 
 private:
     CNode(const CNode&);
     void operator=(const CNode&);
 public:
 
+    void SetAddrLocal(const CService& addrLocalIn);
+    CService GetAddrLocal() const;
+
+    void AddAddressKnown(const CAddress& addr)
+    {
+        setAddrKnown.insert(addr);
+    }
+
+    NodeId GetId() const {
+      return id;
+    }
 
     int GetRefCount()
     {
@@ -276,11 +374,9 @@ public:
         nRefCount--;
     }
 
-
-
-    void AddAddressKnown(const CAddress& addr)
+    ServiceFlags GetLocalServices() const
     {
-        setAddrKnown.insert(addr);
+        return nLocalServices;
     }
 
     void PushAddress(const CAddress& addr)
@@ -290,6 +386,30 @@ public:
         // after addresses were pushed.
         if (addr.IsValid() && !setAddrKnown.count(addr))
             vAddrToSend.push_back(addr);
+    }
+
+
+    void AddInventoryKnown(const CInv& inv)
+    {
+        {
+            LOCK(cs_inventory);
+            setInventoryKnown.insert(inv);
+        }
+    }
+
+    void PushInventory(const CInv& inv)
+    {
+        {
+            LOCK(cs_inventory);
+            if (!setInventoryKnown.count(inv))
+                vInventoryToSend.push_back(inv);
+        }
+    }
+
+    void PushBlockHash(const uint256 &hash)
+    {
+        LOCK(cs_inventory);
+        vBlockHashesToAnnounce.push_back(hash);
     }
 
     void AskFor(const CInv& inv)
