@@ -7,7 +7,36 @@
 #include <map>
 
 CBlockIndex* pindexBest = NULL;
+CBlockIndex *pindexBestHeader = NULL;
 
+
+void CBlockIndex::SetNull()
+{
+    pnext = NULL;
+    nBlockPos = 0;
+    nChainTrust = 0;
+
+    nMint = 0;
+    nMoneySupply = 0;
+    nStakeModifier = 0;
+    nStakeModifierChecksum = 0;
+
+    // proof-of-stake specific fields
+    prevoutStake.SetNull();
+    nStakeTime = 0;
+    hashProofOfStake.SetNull();
+
+    phashBlock = NULL;
+    pprev = NULL;
+    nHeight = 0;
+    nFile = 0;
+
+    nVersion       = 0;
+    hashMerkleRoot = uint256();
+    nTime          = 0;
+    nBits          = 0;
+    nNonce         = 0;
+}
 
 CBlockIndex::CBlockIndex()
 {
@@ -32,6 +61,17 @@ CBlockIndex::CBlockIndex()
     nTime          = 0;
     nBits          = 0;
     nNonce         = 0;
+}
+
+CBlockIndex::CBlockIndex(const CBlockHeader& block)
+{
+    SetNull();
+
+    nVersion       = block.nVersion;
+    hashMerkleRoot = block.hashMerkleRoot;
+    nTime          = block.nTime;
+    nBits          = block.nBits;
+    nNonce         = block.nNonce;
 }
 
 CBlockIndex::CBlockIndex(unsigned int nFileIn, unsigned int nBlockPosIn, CBlock& block)

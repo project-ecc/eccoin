@@ -5,7 +5,9 @@
 #include "util.h"
 #include "points.h"
 
+
 class COutPoint;
+class CBlockHeader;
 
 extern bool fUseFastIndex;
 
@@ -55,8 +57,12 @@ public:
     unsigned int nBits;
     unsigned int nNonce;
 
+    void SetNull();
+
     CBlockIndex();
     CBlockIndex(unsigned int nFileIn, unsigned int nBlockPosIn, CBlock& block);
+    CBlockIndex(const CBlockHeader& block);
+
     CBlock GetBlockHeader() const;
     uint256 GetBlockHash() const;
     int64_t GetBlockIndexTime() const;
@@ -152,5 +158,6 @@ public:
 };
 
 extern CBlockIndex* pindexBest;
+extern CBlockIndex *pindexBestHeader;
 
 #endif // CBLOCKINDEX_H
