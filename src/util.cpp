@@ -82,7 +82,7 @@ bool fNoListen = false;
 bool fLogTimestamps = false;
 CMedianFilter<int64_t> vTimeOffsets(200,0);
 bool fReopenDebugLog = false;
-bool messageDebug = false;
+bool messageDebug = true;
 
 // Init OpenSSL library multithreading support
 static CCriticalSection** ppmutexOpenSSL;
@@ -191,6 +191,17 @@ long hex2long(const char* hexString)
     }
 
     return ret;
+}
+
+std::string SanitizeString(const std::string& str, int rule)
+{
+    std::string strResult;
+    for (std::string::size_type i = 0; i < str.size(); i++)
+    {
+        if (SAFE_CHARS[rule].find(str[i]) != std::string::npos)
+            strResult.push_back(str[i]);
+    }
+    return strResult;
 }
 
 
@@ -1240,6 +1251,14 @@ int64_t GetTime()
     if (nMockTime) return nMockTime;
 
     return time(NULL);
+}
+
+int64_t GetTimeMicros()
+{
+    int64_t now = (boost::posix_time::microsec_clock::universal_time() -
+                   boost::posix_time::ptime(boost::gregorian::date(1970,1,1))).total_microseconds();
+    assert(now > 0);
+    return now;
 }
 
 void SetMockTime(int64_t nMockTimeIn)

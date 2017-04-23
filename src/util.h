@@ -213,6 +213,7 @@ int GetRandInt(int nMax);
 uint64_t GetRand(uint64_t nMax);
 uint256 GetRandHash();
 int64_t GetTime();
+int64_t GetTimeMicros();
 long hex2long(const char* hexString);
 void SetMockTime(int64_t nMockTimeIn);
 int64_t GetAdjustedTime();
@@ -225,8 +226,24 @@ void runCommand(std::string strCommand);
 
 
 
+static const std::string CHARS_ALPHA_NUM = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
+static const std::string SAFE_CHARS[] =
+{
+    CHARS_ALPHA_NUM + " .,;-_/:?@()", // SAFE_CHARS_DEFAULT
+    CHARS_ALPHA_NUM + " .,;-_?@", // SAFE_CHARS_UA_COMMENT
+    CHARS_ALPHA_NUM + ".-_", // SAFE_CHARS_FILENAME
+};
 
+/** Used by SanitizeString() */
+enum SafeChars
+{
+    SAFE_CHARS_DEFAULT, //!< The full set of allowed chars
+    SAFE_CHARS_UA_COMMENT, //!< BIP-0014 subset
+    SAFE_CHARS_FILENAME, //!< Chars allowed in filenames
+};
+
+std::string SanitizeString(const std::string& str, int rule = SAFE_CHARS_DEFAULT);
 
 
 
