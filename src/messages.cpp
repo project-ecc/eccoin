@@ -201,15 +201,11 @@ void InitializeNode(CNode *pnode) {
 // Requires cs_main.
 CNodeState *State(NodeId pnode)
 {
-    printf("in state thing \n");
     std::map<NodeId, CNodeState>::iterator it = mapNodeState.find(pnode);
-    printf("iterater searched mapNodeState \n");
     if (it == mapNodeState.end())
     {
-        printf("reached the end, returning null \n");
         return NULL;
     }
-    printf("found something, returning it.second \n");
     return &it->second;
 }
 
@@ -609,7 +605,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
         AddTimeData(pfrom->addr, nTime);
 
         // Ask a peer with more blocks than us for missing blocks
-        if (pfrom->nStartingHeight > (nBestHeight - 144))
+        if (pfrom->nStartingHeight > (pindexBest->nHeight - 144))
         {
             if(messageDebug)
             {
@@ -656,11 +652,9 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
         pfrom->vRecv.SetVersion(min(pfrom->nVersion, PROTOCOL_VERSION));
         if (!pfrom->fInbound)
         {
-            printf("is not inbound, going to try some of this state stuff \n");
             // Mark this node as currently connected, so we update its timestamp later.
             LOCK(cs_main);
             State(pfrom->GetId())->fCurrentlyConnected = true;
-            printf("did the state stuff \n");
         }
         if (pfrom->nVersion >= SENDHEADERS_VERSION)
         {
@@ -1260,7 +1254,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
         uint256 hashBlock = block.GetHash();
 
         printf("received block %s\n", hashBlock.ToString().substr(0,20).c_str());
-        // block.print();
+        //block.print();
 
         CInv inv(MSG_BLOCK, hashBlock);
         CTxDB txdb("r");
@@ -1279,7 +1273,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
             /// we should just ask when we are done, not wait for them to ask if we are done yet
             if(pfrom->nVersion < SENDHEADERS_VERSION)
             {
-                if(pindexBest->nHeight = highestAskedFor  + 500 && pindexBest->nHeight >= highestAskedFor + 495)
+                if(pindexBest->nHeight == highestAskedFor  + 500 && pindexBest->nHeight >= highestAskedFor + 495)
                 {
                     pfrom->PushGetBlocks(pindexBest, uint256(0));
                     highestAskedFor = pindexBest->nHeight + 500;
@@ -1287,7 +1281,6 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
             }
         }
     }
-
 
     else if (strCommand == NetMsgType::GETADDR)
     {

@@ -157,7 +157,7 @@ Value getbestblockhash(const Array& params, bool fHelp)
             "getbestblockhash\n"
             "Returns the hash of the best block in the longest block chain.");
 
-    return hashBestChain.GetHex();
+    return pindexBest->GetBlockHash().GetHex();
 }
 
 Value getblockcount(const Array& params, bool fHelp)
@@ -167,7 +167,7 @@ Value getblockcount(const Array& params, bool fHelp)
             "getblockcount\n"
             "Returns the number of blocks in the longest block chain.");
 
-    return nBestHeight;
+    return pindexBest->nHeight;
 }
 
 
@@ -224,7 +224,7 @@ Value getblockhash(const Array& params, bool fHelp)
             "Returns hash of block in best-block-chain at <index>.");
 
     int nHeight = params[0].get_int();
-    if (nHeight < 0 || nHeight > nBestHeight)
+    if (nHeight < 0 || nHeight > pindexBest->nHeight)
         throw runtime_error("Block number out of range.");
 
     CBlockIndex* pblockindex = FindBlockByHeight(nHeight);
@@ -261,11 +261,11 @@ Value getblockbynumber(const Array& params, bool fHelp)
             "Returns details of a block with given block-number.");
 
     int nHeight = params[0].get_int();
-    if (nHeight < 0 || nHeight > nBestHeight)
+    if (nHeight < 0 || nHeight > pindexBest->nHeight)
         throw runtime_error("Block number out of range.");
 
     CBlock block;
-    CBlockIndex* pblockindex = mapBlockIndex[hashBestChain];
+    CBlockIndex* pblockindex = mapBlockIndex[pindexBest->GetBlockHash()];
     while (pblockindex->nHeight > nHeight)
         pblockindex = pblockindex->pprev;
 

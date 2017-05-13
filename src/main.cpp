@@ -225,7 +225,7 @@ int CTxIndex::GetDepthInMainChain() const
     CBlockIndex* pindex = (*mi).second;
     if (!pindex || !pindex->IsInMainChain())
         return 0;
-    return 1 + nBestHeight - pindex->nHeight;
+    return 1 + pindexBest->nHeight - pindex->nHeight;
 }
 
 // Return transaction in tx, and if it was found inside a block, its hash is placed in hashBlock
@@ -488,7 +488,7 @@ int GetNumBlocksOfPeers()
 
 bool IsInitialBlockDownload()
 {
-    if (pindexBest == NULL || nBestHeight < pcheckpointMain->GetTotalBlocksEstimate())
+    if (pindexBest == NULL || pindexBest->nHeight < pcheckpointMain->GetTotalBlocksEstimate())
         return true;
     static int64_t nLastUpdate;
     static CBlockIndex* pindexLastBest;
@@ -520,7 +520,7 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
         return error("ProcessBlock() : CheckBlock FAILED");
 
     CBlockIndex* pcheckpoint = pcheckpointMain->GetLastSyncCheckpoint();
-    if (pcheckpoint && pblock->hashPrevBlock != hashBestChain && !pcheckpointMain->WantedByPendingSyncCheckpoint(hash))
+    if (pcheckpoint && pblock->hashPrevBlock != pindexBest->GetBlockHash() && !pcheckpointMain->WantedByPendingSyncCheckpoint(hash))
     {
         // Extra checks to prevent "fill up memory by spamming with bogus blocks"
         int64_t deltaTime = pblock->GetBlockTime() - pcheckpoint->nTime;
@@ -754,7 +754,6 @@ bool LoadBlockIndex(bool fAllowNew)
         assert(block.hashMerkleRoot == uint256("0x4db82fe8b45f3dae2b7c7b8be5ec4c37e72e25eaf989b9db24ce1d0fd37eed8b")); // if false program aborts
         assert(block.GetHash() == (!fTestNet ? hashGenesisBlock : hashGenesisBlockTestNet));
         assert(block.CheckBlock());
-
         // Verify hash target and signature of coinstake tx
         uint256 hashProofOfStake = 0;
 
@@ -763,6 +762,7 @@ bool LoadBlockIndex(bool fAllowNew)
         unsigned int nBlockPos;
         if (!block.WriteToDisk(nFile, nBlockPos))
             return error("LoadBlockIndex() : writing genesis block to disk failed");
+
         if (!block.AddToBlockIndex(nFile, nBlockPos, hashProofOfStake))
             return error("LoadBlockIndex() : genesis block not accepted");
 

@@ -28,7 +28,7 @@ void static SetBestChain(const CBlockLocator& loc)
 CBlockIndex* FindBlockByHeight(int nHeight)
 {
     CBlockIndex *pblockindex;
-    if (nHeight < nBestHeight / 2)
+    if (nHeight < pindexBest->nHeight / 2)
     {
         pblockindex = pindexGenesisBlock;
     }
@@ -78,7 +78,7 @@ void static InvalidChainFound(CBlockIndex* pindexNew)
       CBigNum(pindexNew->nChainTrust).ToString().c_str(), nBestInvalidBlockTrust.Get64(),
       DateTimeStrFormat("%x %H:%M:%S", pindexNew->GetBlockIndexTime()).c_str());
     printf("InvalidChainFound:  current best=%s  height=%d  trust=%s  blocktrust=%" PRId64 "  date=%s\n",
-      hashBestChain.ToString().substr(0,20).c_str(), nBestHeight,
+      pindexBest->GetBlockHash().ToString().substr(0,20).c_str(), pindexBest->nHeight,
       CBigNum(pindexBest->nChainTrust).ToString().c_str(),
       nBestBlockTrust.Get64(),
       DateTimeStrFormat("%x %H:%M:%S", pindexBest->GetBlockIndexTime()).c_str());
@@ -360,9 +360,13 @@ bool CBlock::WriteToDisk(unsigned int& nFileRet, unsigned int& nBlockPosRet)
 
     // Flush stdio buffers and commit to disk before returning
     fflush(fileout);
-    if (!IsInitialBlockDownload() || (nBestHeight+1) % 500 == 0)
+    int compareHeight = -1;
+    if(pindexBest != NULL)
+    {
+        compareHeight = pindexBest->nHeight;
+    }
+    if (!IsInitialBlockDownload() || (compareHeight + 1) % 500 == 0)
         FileCommit(fileout);
-
     return true;
 }
 
@@ -647,12 +651,12 @@ bool CBlock::SetBestChain(CTxDB& txdb, CHeaderChainDB& hcdb, CBlockIndex* pindex
     if (pindexGenesisBlock == NULL && hash == (!fTestNet ? hashGenesisBlock : hashGenesisBlockTestNet))
     {
         if(!txdb.WriteHashBestChain(hash))
-                printf("SetBestChain() : WriteHashBestChain failed\n");
+            return error("SetBestChain() : WriteHashBestChain failed\n");
         if (!txdb.TxnCommit())
             return error("SetBestChain() : TxnCommit failed");
         pindexGenesisBlock = pindexNew;
     }
-    else if (hashPrevBlock == hashBestChain)
+    else if (hashPrevBlock == pindexBest->GetBlockHash())
     {
         if (!SetBestChainInner(txdb, hcdb, pindexNew))
             return error("SetBestChain() : SetBestChainInner failed");
@@ -717,21 +721,22 @@ bool CBlock::SetBestChain(CTxDB& txdb, CHeaderChainDB& hcdb, CBlockIndex* pindex
         const CBlockLocator locator(pindexNew);
         ::SetBestChain(locator);
     }
-
     // New best block
-    hashBestChain = hash;
+    if(pindexBest != NULL)
+    {
+        pindexBest->print();
+    }
     pindexBest = pindexNew;
+    pindexBest->print();
     pblockindexFBBHLast = NULL;
-    nBestHeight = pindexBest->nHeight;
     nBestChainTrust = pindexNew->nChainTrust;
     nBestTimeReceived = GetTime();
     nTransactionsUpdated++;
 
     uint256 nBestBlockTrust = pindexBest->nHeight != 0 ? (pindexBest->nChainTrust - pindexBest->pprev->nChainTrust) : pindexBest->nChainTrust;
 
-
     printf("SetBestChain: new best=%s  height=%d  trust=%s  blocktrust=%" PRId64 "  date=%s\n",
-      hashBestChain.ToString().substr(0,20).c_str(), nBestHeight,
+      pindexBest->GetBlockHash().ToString().substr(0,20).c_str(), pindexBest->nHeight,
       CBigNum(nBestChainTrust).ToString().c_str(),
       nBestBlockTrust.Get64(),
       DateTimeStrFormat("%x %H:%M:%S", pindexBest->GetBlockIndexTime()).c_str());
@@ -740,7 +745,7 @@ bool CBlock::SetBestChain(CTxDB& txdb, CHeaderChainDB& hcdb, CBlockIndex* pindex
 
     if (!fIsInitialDownload && !strCmd.empty())
     {
-        boost::replace_all(strCmd, "%s", hashBestChain.GetHex());
+        boost::replace_all(strCmd, "%s", pindexBest->GetBlockHash().GetHex());
         boost::thread t(runCommand, strCmd); // thread runs free
     }
 
@@ -787,6 +792,16 @@ bool CBlock::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos, const u
         pindexNew->pprev = (*miPrev).second;
         pindexNew->nHeight = pindexNew->pprev->nHeight + 1;
     }
+    else if( pindexNew->GetBlockHash() == hashGenesisBlock)
+    {
+        pindexNew->pprev = NULL;
+        pindexNew->nHeight = 0;
+    }
+    else
+    {
+        printf("Previous hash could not be found in block index, asserting false \n"); /// currently failing here
+        assert(false);
+    }
 
     // ppcoin: compute chain trust score
     pindexNew->nChainTrust = (pindexNew->pprev ? pindexNew->pprev->nChainTrust : 0) + pindexNew->GetBlockTrust();
@@ -794,7 +809,6 @@ bool CBlock::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos, const u
     // ppcoin: compute stake entropy bit for stake modifier
     if (!pindexNew->SetStakeEntropyBit(GetStakeEntropyBit(pindexNew->nHeight)))
         return error("AddToBlockIndex() : SetStakeEntropyBit() failed");
-
     // ppcoin: record proof-of-stake hash value
     pindexNew->hashProofOfStake = hashProofOfStake;
 
@@ -811,6 +825,7 @@ bool CBlock::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos, const u
                      pindexNew->nHeight, pindexNew->nStakeModifierChecksum, mapStakeModifierCheckpoints[pindexNew->nHeight],
                      pindexNew->nFile, pindexNew->nStakeModifier, pindexNew->hashProofOfStake.ToString().c_str());
 
+
     // Add to mapBlockIndex
     map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.insert(make_pair(hash, pindexNew)).first;
     if (pindexNew->IsProofOfStake())
@@ -818,16 +833,19 @@ bool CBlock::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos, const u
         setStakeSeen.insert(make_pair(pindexNew->prevoutStake, pindexNew->nStakeTime));
     }
     pindexNew->phashBlock = &((*mi).first);
+
     // Write to disk block index
     CTxDB txdb;
     CHeaderChainDB hcdb;
     if (!hcdb.TxnBegin())
     {
+        printf("tx begin failed \n");
         return false;
     }
     hcdb.WriteIndexHeader(CDiskBlockIndex(pindexNew));
     if (!hcdb.TxnCommit())
     {
+        printf("failed to commit index header \n");
         return false;
     }
     // New best
@@ -835,6 +853,7 @@ bool CBlock::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos, const u
     {
         if (!SetBestChain(txdb, hcdb, pindexNew))
         {
+            printf("failed to set best chain \n");
             return false;
         }
     }
@@ -931,157 +950,106 @@ bool CBlock::CheckBlock(bool fCheckPOW, bool fCheckMerkleRoot, bool fCheckSig) c
 
 bool CBlock::AcceptBlock(CBlock* pblock)
 {
-    /// this check will skip the rest of the tests and will only happen during syncing
-    /// if the block and hex match ones in the checkpoints list automatically accept them
-    /// if they didnt then they would just get rejected anyway
-
-    std::map<int,uint256>::iterator BCL; //block in checkpoint list
     uint256 hash = GetHash();
-    BCL = mapCheckpoints.find(nBestHeight + 1);
-    if(BCL != mapCheckpoints.end() && BCL->second == hash)
+    // Check for duplicate
+    if (mapBlockIndex.count(hash))
+        return error("AcceptBlock() : block already in mapBlockIndex");
+
+    // Get prev block index
+    map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(hashPrevBlock);
+    if (mi == mapBlockIndex.end())
     {
-        printf("Block is Checkpoint~ Block: hash %s ; prevHash: %s \n",hash.ToString().substr(0,20).c_str() ,pblock->hashPrevBlock.ToString().substr(0,20).c_str());
-
-        uint256 hashProofOfStake = 0;
-        if (IsProofOfStake())
-        {
-            if (!CheckProofOfStake(vtx[1], nBits, hashProofOfStake))
-            {
-                printf("WARNING: ProcessBlock(): check proof-of-stake failed for block %s\n", hash.ToString().c_str());
-                return false; // do not error here as we expect this during initial block download
-            }
-        }
-
-            // Write block to history file
-            if (!CheckDiskSpace(::GetSerializeSize(*this, SER_DISK, CLIENT_VERSION)))
-                return error("AcceptBlock() : out of disk space");
-            unsigned int nFile = -1;
-            unsigned int nBlockPos = 0;
-            if (!WriteToDisk(nFile, nBlockPos))
-                return error("AcceptBlock() : WriteToDisk failed");
-            if (!AddToBlockIndex(nFile, nBlockPos, hashProofOfStake))
-                return error("AcceptBlock() : AddToBlockIndex failed");
-
-            // Relay inventory, but don't relay old inventory during initial block download
-            int nBlockEstimate = pcheckpointMain->GetTotalBlocksEstimate();
-            if (hashBestChain == hash)
-            {
-                LOCK(cs_vNodes);
-                BOOST_FOREACH(CNode* pnode, vNodes)
-                {
-                    if (nBestHeight > (pnode->nStartingHeight != -1 ? pnode->nStartingHeight - 2000 : nBlockEstimate))
-                    {
-                        std::vector<CInv> vInv;
-                        vInv.push_back(CInv(MSG_BLOCK, hash));
-                        pnode->PushMessage("inv", vInv);
-                    }
-                }
-            }
-
-            // ppcoin: check pending sync-checkpoint
-            pcheckpointMain->AcceptPendingSyncCheckpoint();
-
-        return true;
+        return DoS(10, error("AcceptBlock() : prev block not found"));
     }
-        // Check for duplicate
-        if (mapBlockIndex.count(hash))
-            return error("AcceptBlock() : block already in mapBlockIndex");
+    CBlockIndex* pindexPrev = (*mi).second;
+    int nHeight = pindexPrev->nHeight +1 ;
 
-        // Get prev block index
-        map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(hashPrevBlock);
-        if (mi == mapBlockIndex.end())
+    bool IsPoS = (nBits != GetNextTargetRequired(pindexPrev, true) && nHeight > CUTOFF_HEIGHT);
+    //bool IsPoW = ( (nBits != GetNextTargetRequired(pindexPrev, false)) && nHeight <= CUTOFF_HEIGHT ); //not used by ECC
+    //if ( (IsPoS | IsPoW) == true)
+    if(IsPoS == true)
+    {
+        //printf("nBits = %i , GetNextTarget = %i \n", nBits, GetNextTargetRequired(pindexPrev, true));
+        printf("AcceptBlock() : Block is not Correct PoW or Pos. hash: %s, prevhash: %s \n",hash.ToString().substr(0,20).c_str(), pblock->hashPrevBlock.ToString().substr(0,20).c_str());
+        return DoS(100, error("error"));
+    }
+
+    // Check timestamp against prev
+    if (GetBlockTime() <= pindexPrev->GetMedianTimePast() || GetBlockTime() + nMaxClockDrift < pindexPrev->GetBlockIndexTime())
+        return error("AcceptBlock() : block's timestamp is too early");
+
+    // Check that all transactions are finalized
+    BOOST_FOREACH(const CTransaction& tx, vtx)
+        if (!tx.IsFinal(nHeight, GetBlockTime()))
+            return DoS(10, error("AcceptBlock() : contains a non-final transaction"));
+
+    // Check that the block chain matches the known block chain up to a checkpoint
+    if (!pcheckpointMain->CheckHardened(nHeight, hash))
+        return DoS(100, error("AcceptBlock() : rejected by hardened checkpoint lock-in at %d", nHeight));
+
+    // ppcoin: check that the block satisfies synchronized checkpoint
+    if (!pcheckpointMain->CheckSync(hash, pindexPrev))
+    {
+        if(!GetBoolArg("-nosynccheckpoints", false))
         {
-            return DoS(10, error("AcceptBlock() : prev block not found"));
+            return error("AcceptBlock() : rejected by synchronized checkpoint");
         }
-        CBlockIndex* pindexPrev = (*mi).second;
-        int nHeight = pindexPrev->nHeight+1;
-
-        bool IsPoS = (nBits != GetNextTargetRequired(pindexPrev, true) && nHeight > CUTOFF_HEIGHT);
-        //bool IsPoW = ( (nBits != GetNextTargetRequired(pindexPrev, false)) && nHeight <= CUTOFF_HEIGHT ); //not used by ECC
-        //if ( (IsPoS | IsPoW) == true)
-        if(IsPoS == true)
+        else
         {
-            //printf("nBits = %i , GetNextTarget = %i \n", nBits, GetNextTargetRequired(pindexPrev, true));
-            printf("AcceptBlock() : Block is not Correct PoW or Pos. hash: %s, prevhash: %s \n",hash.ToString().substr(0,20).c_str(), pblock->hashPrevBlock.ToString().substr(0,20).c_str());
-            return DoS(100, error("error"));
+            strMiscWarning = ("WARNING: syncronized checkpoint violation detected, but skipped!");
         }
+    }
 
-        // Check timestamp against prev
-        if (GetBlockTime() <= pindexPrev->GetMedianTimePast() || GetBlockTime() + nMaxClockDrift < pindexPrev->GetBlockIndexTime())
-            return error("AcceptBlock() : block's timestamp is too early");
-
-        // Check that all transactions are finalized
-        BOOST_FOREACH(const CTransaction& tx, vtx)
-            if (!tx.IsFinal(nHeight, GetBlockTime()))
-                return DoS(10, error("AcceptBlock() : contains a non-final transaction"));
-
-        // Check that the block chain matches the known block chain up to a checkpoint
-        if (!pcheckpointMain->CheckHardened(nHeight, hash))
-            return DoS(100, error("AcceptBlock() : rejected by hardened checkpoint lock-in at %d", nHeight));
-
-        // ppcoin: check that the block satisfies synchronized checkpoint
-        if (!pcheckpointMain->CheckSync(hash, pindexPrev))
+    // Verify hash target and signature of coinstake tx
+    uint256 hashProofOfStake = 0;
+    if (IsProofOfStake())
+    {
+        if (!CheckProofOfStake(vtx[1], nBits, hashProofOfStake))
         {
-            if(!GetBoolArg("-nosynccheckpoints", false))
-            {
-                return error("AcceptBlock() : rejected by synchronized checkpoint");
-            }
-            else
-            {
-                strMiscWarning = ("WARNING: syncronized checkpoint violation detected, but skipped!");
-            }
+            printf("WARNING: ProcessBlock(): check proof-of-stake failed for block %s\n", hash.ToString().c_str());
+            return false; // do not error here as we expect this during initial block download
         }
+    }
 
-        // Verify hash target and signature of coinstake tx
-        uint256 hashProofOfStake = 0;
-        if (IsProofOfStake())
+    // Reject block.nVersion < 3 blocks since 95% threshold on mainNet and always on testNet:
+    if (nVersion < 3 && ((!fTestNet && nHeight > 14060) || (fTestNet && nHeight > 0)))
+        return error("CheckBlock() : rejected nVersion < 3 block");
+
+    // Enforce rule that the coinbase starts with serialized block height
+    CScript expect = CScript() << nHeight;
+    if (!std::equal(expect.begin(), expect.end(), vtx[0].vin[0].scriptSig.begin()))
+        return DoS(100, error("AcceptBlock() : block height mismatch in coinbase"));
+
+    // Write block to history file
+    if (!CheckDiskSpace(::GetSerializeSize(*this, SER_DISK, CLIENT_VERSION)))
+        return error("AcceptBlock() : out of disk space");
+    unsigned int nFile = -1;
+    unsigned int nBlockPos = 0;
+    if (!WriteToDisk(nFile, nBlockPos))
+        return error("AcceptBlock() : WriteToDisk failed");
+    if (!AddToBlockIndex(nFile, nBlockPos, hashProofOfStake))
+        return error("AcceptBlock() : AddToBlockIndex failed");
+
+    // Relay inventory, but don't relay old inventory during initial block download
+    int nBlockEstimate = pcheckpointMain->GetTotalBlocksEstimate();
+    if (pindexBest->GetBlockHash() == hash)
+    {
+        LOCK(cs_vNodes);
+        BOOST_FOREACH(CNode* pnode, vNodes)
         {
-            if (!CheckProofOfStake(vtx[1], nBits, hashProofOfStake))
+            if (pindexBest->nHeight > (pnode->nStartingHeight != -1 ? pnode->nStartingHeight - 2000 : nBlockEstimate))
             {
-                printf("WARNING: ProcessBlock(): check proof-of-stake failed for block %s\n", hash.ToString().c_str());
-                return false; // do not error here as we expect this during initial block download
-            }
-        }
-
-        // Reject block.nVersion < 3 blocks since 95% threshold on mainNet and always on testNet:
-        if (nVersion < 3 && ((!fTestNet && nHeight > 14060) || (fTestNet && nHeight > 0)))
-            return error("CheckBlock() : rejected nVersion < 3 block");
-
-        // Enforce rule that the coinbase starts with serialized block height
-        CScript expect = CScript() << nHeight;
-        if (!std::equal(expect.begin(), expect.end(), vtx[0].vin[0].scriptSig.begin()))
-            return DoS(100, error("AcceptBlock() : block height mismatch in coinbase"));
-
-        // Write block to history file
-        if (!CheckDiskSpace(::GetSerializeSize(*this, SER_DISK, CLIENT_VERSION)))
-            return error("AcceptBlock() : out of disk space");
-        unsigned int nFile = -1;
-        unsigned int nBlockPos = 0;
-        if (!WriteToDisk(nFile, nBlockPos))
-            return error("AcceptBlock() : WriteToDisk failed");
-        if (!AddToBlockIndex(nFile, nBlockPos, hashProofOfStake))
-            return error("AcceptBlock() : AddToBlockIndex failed");
-
-        // Relay inventory, but don't relay old inventory during initial block download
-        int nBlockEstimate = pcheckpointMain->GetTotalBlocksEstimate();
-        if (hashBestChain == hash)
-        {
-            LOCK(cs_vNodes);
-            BOOST_FOREACH(CNode* pnode, vNodes)
-            {
-                if (nBestHeight > (pnode->nStartingHeight != -1 ? pnode->nStartingHeight - 2000 : nBlockEstimate))
-                {
-                    std::vector<CInv> vInv;
-                    vInv.push_back(CInv(MSG_BLOCK, hash));
-                    pnode->PushMessage("inv", vInv);
-                }
+                std::vector<CInv> vInv;
+                vInv.push_back(CInv(MSG_BLOCK, hash));
+                pnode->PushMessage("inv", vInv);
             }
         }
+    }
 
-        // ppcoin: check pending sync-checkpoint
-        pcheckpointMain->AcceptPendingSyncCheckpoint();
+    // ppcoin: check pending sync-checkpoint
+    pcheckpointMain->AcceptPendingSyncCheckpoint();
 
-        return true;
+    return true;
 }
 
 

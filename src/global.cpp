@@ -36,14 +36,11 @@ unsigned int nModifierInterval = 6*60*60;
 unsigned int nModifierIntervalSecond = 60*60;
 
 CBlockIndex* pindexGenesisBlock = NULL;
-int nBestHeight = -1;
 
 int64_t nBestTimeReceived = 0;
 int64_t nChainStartTime = 1393744287;
 
-
 uint256 nBestChainTrust = 0;
 uint256 nBestInvalidTrust = 0;
 
-uint256 hashBestChain = 0;
 int nBestCheckpointHeight = 0;

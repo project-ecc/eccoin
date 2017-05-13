@@ -45,12 +45,10 @@ extern unsigned int nStakeMaxAge;           //84 days
 extern unsigned int nModifierInterval;
 extern unsigned int nModifierIntervalSecond;
 extern CBlockIndex* pindexGenesisBlock;
-extern int nBestHeight;
 extern int64_t nBestTimeReceived;
 extern int64_t nChainStartTime;
 extern uint256 nBestChainTrust;
 extern uint256 nBestInvalidTrust;
-extern uint256 hashBestChain;
 extern int nBestCheckpointHeight;
 
 

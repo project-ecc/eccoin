@@ -38,7 +38,7 @@ int ClientModel::getNumConnections() const
 
 int ClientModel::getNumBlocks() const
 {
-    return nBestHeight;
+    return pindexBest->nHeight;
 }
 
 int ClientModel::getNumBlocksAtStartup()

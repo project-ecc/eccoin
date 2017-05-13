@@ -894,7 +894,7 @@ bool AppInit2()
 
     //// debug print
     printf("mapBlockIndex.size() = %" PRIszu "\n",   mapBlockIndex.size());
-    printf("nBestHeight = %d\n",            nBestHeight);
+    printf("nBestHeight = %d\n",                     pindexBest->nHeight);
     printf("setKeyPool.size() = %" PRIszu "\n",      pwalletMain->setKeyPool.size());
     printf("mapWallet.size() = %" PRIszu "\n",       pwalletMain->mapWallet.size());
     printf("mapAddressBook.size() = %" PRIszu "\n",  pwalletMain->mapAddressBook.size());

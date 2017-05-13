@@ -475,6 +475,11 @@ bool LoadBlockIndexInternal()
         }
         delete iterator;
         int rewritten = 0;
+        if (!hcdb.TxnBegin())
+        {
+            printf("UPDGRADE INTIATION FAILED, CRITICAL ERROR! \n");
+            return false;
+        }
         /// need to create the new index so this one isnt used next time
         {
             printf("running update to move block index loading to the new metachain folder \n");
@@ -531,17 +536,17 @@ bool LoadBlockIndexInternal()
 
 
     // Load hashBestChain pointer to end of best chain
-    if (!itxdb.ReadHashBestChain(hashBestChain))
+    uint256 bestReadHash = 0;
+    if (!itxdb.ReadHashBestChain(bestReadHash))
     {
         if (pindexGenesisBlock == NULL)
             return true;
         return error("CTxDB::LoadBlockIndex() : hashBestChain not loaded");
     }
-    if (!mapBlockIndex.count(hashBestChain))
+    if (!mapBlockIndex.count(bestReadHash))
         return error("CTxDB::LoadBlockIndex() : hashBestChain not found in the block index");
 
-    pindexBest = mapBlockIndex[hashBestChain];
-    nBestHeight = pindexBest->nHeight;
+    pindexBest = mapBlockIndex[bestReadHash];
     nBestChainTrust = pindexBest->nChainTrust;
 
     // ECCoin: write checkpoint we loaded from
@@ -571,14 +576,14 @@ bool LoadBlockIndexInternal()
     int nCheckDepth = GetArg( "-checkblocks", 2500);
     if (nCheckDepth == 0)
         nCheckDepth = 1000000000; // suffices until the year 19000
-    if (nCheckDepth > nBestHeight)
-        nCheckDepth = nBestHeight;
+    if (nCheckDepth > pindexBest->nHeight)
+        nCheckDepth = pindexBest->nHeight;
     printf("Verifying last %i blocks at level %i\n", nCheckDepth, nCheckLevel);
     CBlockIndex* pindexFork = NULL;
     map<pair<unsigned int, unsigned int>, CBlockIndex*> mapBlockPos;
     for (CBlockIndex* pindex = pindexBest; pindex && pindex->pprev; pindex = pindex->pprev)
     {
-        if (fRequestShutdown || pindex->nHeight < nBestHeight-nCheckDepth)
+        if (fRequestShutdown || pindex->nHeight < pindexBest->nHeight-nCheckDepth)
             break;
         CBlock block;
         if (!block.ReadFromDisk(pindex))
