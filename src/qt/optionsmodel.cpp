@@ -224,7 +224,7 @@ bool OptionsModel::setData(const QModelIndex & index, const QVariant & value, in
             proxy.first = CService("127.0.0.1", 9050);
             GetProxy(NET_IPV4, proxy);
 
-            proxy.first.SetPort(value.toInt());
+            proxy.first.Set_Port(value.toInt());
             settings.setValue("addrProxy", proxy.first.ToStringIPPort().c_str());
             successful = ApplyProxySettings();
         }

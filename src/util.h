@@ -27,7 +27,7 @@
 #include <openssl/sha.h>
 #include <openssl/ripemd.h>
 
-#include "netbase.h" // for AddTimeData
+#include "network/netbase.h" // for AddTimeData
 
 // to obtain PRId64 on some old systems
 #define __STDC_FORMAT_MACROS 1

@@ -15,6 +15,8 @@
 #include "walletdb.h"
 #include "chain.h"
 
+#include "network/netutils.h"
+
 #include <string>
 #include <string.h>
 
@@ -462,13 +464,6 @@ bool AppInit2()
     fPrintToConsole = GetBoolArg("-printtoconsole");
     fPrintToDebugger = GetBoolArg("-printtodebugger");
     fLogTimestamps = GetBoolArg("-logtimestamps");
-
-    if (mapArgs.count("-timeout"))
-    {
-        int nNewTimeout = GetArg("-timeout", 5000);
-        if (nNewTimeout > 0 && nNewTimeout < 600000)
-            nConnectTimeout = nNewTimeout;
-    }
 
     if (mapArgs.count("-paytxfee"))
     {

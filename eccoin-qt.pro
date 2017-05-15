@@ -124,7 +124,12 @@ contains(BITCOIN_NEED_QT_PLUGINS, 1) {
 
 
 SOURCES += \
-    src/txdb-leveldb.cpp
+    src/txdb-leveldb.cpp \
+    src/network/node.cpp \
+    src/network/requests.cpp \
+    src/network/netaddr.cpp \
+    src/network/service.cpp \
+    src/network/netutils.cpp
 
 INCLUDEPATH += src/leveldb/include src/leveldb/helpers
 LIBS += $$PWD/src/leveldb/libleveldb.a $$PWD/src/leveldb/libmemenv.a
@@ -179,7 +184,7 @@ QMAKE_CXXFLAGS_WARN_ON = -fdiagnostics-show-option -Wall -Wextra -Wno-ignored-qu
 DEPENDPATH += src src/json src/qt
 
 HEADERS += \
-    src/addrman.h \
+    src/network/addrman.h \
     src/allocators.h \
     src/base58.h \
     src/bignum.h \
@@ -200,9 +205,9 @@ HEADERS += \
     src/miner.h \
     src/mruset.h \
     src/net.h \
-    src/netbase.h \
+    src/network/netbase.h \
     src/pbkdf2.h \
-    src/protocol.h \
+    src/network/protocol.h \
     src/script.h \
     src/serialize.h \
     src/strlcpy.h \
@@ -274,11 +279,17 @@ HEADERS += \
     src/scrypt.h \
     src/transaction.h \
     src/batchscanner.h \
-    src/validation.h
+    src/validation.h \
+    src/network/node.h \
+    src/network/nodestats.h \
+    src/network/requests.h \
+    src/network/netaddr.h \
+    src/network/service.h \
+    src/network/netutils.h
 #
 
 SOURCES += \
-    src/addrman.cpp \
+    src/network/addrman.cpp \
     src/bitcoinrpc.cpp \
     src/block.cpp \
     src/blockindex.cpp \
@@ -300,11 +311,11 @@ SOURCES += \
     src/messages.cpp \
     src/miner.cpp \
     src/net.cpp \
-    src/netbase.cpp \
+    src/network/netbase.cpp \
     src/noui.cpp \
     src/pbkdf2.cpp \
     src/points.cpp \
-    src/protocol.cpp \
+    src/network/protocol.cpp \
     src/rpcblockchain.cpp \
     src/rpcdump.cpp \
     src/rpcmining.cpp \
