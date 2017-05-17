@@ -129,7 +129,9 @@ SOURCES += \
     src/network/requests.cpp \
     src/network/netaddr.cpp \
     src/network/service.cpp \
-    src/network/netutils.cpp
+    src/network/netutils.cpp \
+    src/network/proxyutils.cpp \
+    src/network/socketutils.cpp
 
 INCLUDEPATH += src/leveldb/include src/leveldb/helpers
 LIBS += $$PWD/src/leveldb/libleveldb.a $$PWD/src/leveldb/libmemenv.a
@@ -205,7 +207,6 @@ HEADERS += \
     src/miner.h \
     src/mruset.h \
     src/net.h \
-    src/network/netbase.h \
     src/pbkdf2.h \
     src/network/protocol.h \
     src/script.h \
@@ -285,7 +286,9 @@ HEADERS += \
     src/network/requests.h \
     src/network/netaddr.h \
     src/network/service.h \
-    src/network/netutils.h
+    src/network/netutils.h \
+    src/network/proxyutils.h \
+    src/network/socketutils.h
 #
 
 SOURCES += \
@@ -311,7 +314,6 @@ SOURCES += \
     src/messages.cpp \
     src/miner.cpp \
     src/net.cpp \
-    src/network/netbase.cpp \
     src/noui.cpp \
     src/pbkdf2.cpp \
     src/points.cpp \

@@ -1,5 +1,6 @@
 #include "node.h"
 #include "locator.h"
+#include "proxyutils.h"
 
 #include <map>
 #include <string>

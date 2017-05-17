@@ -1,33 +1,9 @@
-// Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2012 The Bitcoin developers
-// Distributed under the MIT/X11 software license, see the accompanying
-// file COPYING or http://www.opensource.org/licenses/mit-license.php.
-
-#include "netbase.h"
-#include "util.h"
-#include "sync.h"
 #include "netutils.h"
+#include "proxyutils.h"
+#include "socketutils.h"
+#include "util.h"
 
-#ifndef WIN32
-#include <sys/fcntl.h>
-#endif
-
-#if defined _MSC_VER && !defined(ssize_t)
-# define ssize_t int
-#endif
-
-#include "strlcpy.h"
-#include <boost/algorithm/string/case_conv.hpp> // for to_lower()
-
-using namespace std;
-
-// Settings
-static proxyType proxyInfo[NET_MAX];
-static proxyType nameproxyInfo;
-static CCriticalSection cs_proxyInfos;
-
-
-bool static Socks4(const CService &addrDest, SOCKET& hSocket)
+bool Socks4(const CService &addrDest, SOCKET& hSocket)
 {
     printf("SOCKS4 connecting %s\n", addrDest.ToString().c_str());
     if (!addrDest.IsIPv4())
@@ -71,7 +47,7 @@ bool static Socks4(const CService &addrDest, SOCKET& hSocket)
     return true;
 }
 
-bool static Socks5(string strDest, int port, SOCKET& hSocket)
+bool Socks5(std::string strDest, int port, SOCKET& hSocket)
 {
     printf("SOCKS5 connecting %s\n", strDest.c_str());
     if (strDest.size() > 255)
@@ -100,7 +76,7 @@ bool static Socks5(string strDest, int port, SOCKET& hSocket)
         closesocket(hSocket);
         return error("Proxy failed to initialize");
     }
-    string strSocks5("\5\1");
+    std::string strSocks5("\5\1");
     strSocks5 += '\000'; strSocks5 += '\003';
     strSocks5 += static_cast<char>(std::min((int)strDest.size(), 255));
     strSocks5 += strDest;
@@ -176,7 +152,7 @@ bool static Socks5(string strDest, int port, SOCKET& hSocket)
     return true;
 }
 
-bool static ConnectSocketDirectly(const CService &addrConnect, SOCKET& hSocketRet, int nTimeout)
+bool ConnectSocketDirectly(const CService &addrConnect, SOCKET& hSocketRet, int nTimeout)
 {
     hSocketRet = INVALID_SOCKET;
 
@@ -288,57 +264,7 @@ bool static ConnectSocketDirectly(const CService &addrConnect, SOCKET& hSocketRe
     return true;
 }
 
-bool SetProxy(enum Network net, CService addrProxy, int nSocksVersion) {
-    assert(net >= 0 && net < NET_MAX);
-    if (nSocksVersion != 0 && nSocksVersion != 4 && nSocksVersion != 5)
-        return false;
-    if (nSocksVersion != 0 && !addrProxy.IsValid())
-        return false;
-    LOCK(cs_proxyInfos);
-    proxyInfo[net] = std::make_pair(addrProxy, nSocksVersion);
-    return true;
-}
 
-bool GetProxy(enum Network net, proxyType &proxyInfoOut) {
-    assert(net >= 0 && net < NET_MAX);
-    LOCK(cs_proxyInfos);
-    if (!proxyInfo[net].second)
-        return false;
-    proxyInfoOut = proxyInfo[net];
-    return true;
-}
-
-bool SetNameProxy(CService addrProxy, int nSocksVersion) {
-    if (nSocksVersion != 0 && nSocksVersion != 5)
-        return false;
-    if (nSocksVersion != 0 && !addrProxy.IsValid())
-        return false;
-    LOCK(cs_proxyInfos);
-    nameproxyInfo = std::make_pair(addrProxy, nSocksVersion);
-    return true;
-}
-
-bool GetNameProxy(proxyType &nameproxyInfoOut) {
-    LOCK(cs_proxyInfos);
-    if (!nameproxyInfo.second)
-        return false;
-    nameproxyInfoOut = nameproxyInfo;
-    return true;
-}
-
-bool HaveNameProxy() {
-    LOCK(cs_proxyInfos);
-    return nameproxyInfo.second != 0;
-}
-
-bool IsProxy(const CNetAddr &addr) {
-    LOCK(cs_proxyInfos);
-    for (int i = 0; i < NET_MAX; i++) {
-        if (proxyInfo[i].second && (addr == (CNetAddr)proxyInfo[i].first))
-            return true;
-    }
-    return false;
-}
 
 bool ConnectSocket(const CService &addrDest, SOCKET& hSocketRet, int nTimeout)
 {
@@ -375,9 +301,9 @@ bool ConnectSocket(const CService &addrDest, SOCKET& hSocketRet, int nTimeout)
 
 bool ConnectSocketByName(CService &addr, SOCKET& hSocketRet, const char *pszDest, int portDefault, int nTimeout)
 {
-    string strDest;
+    std::string strDest;
     int port = portDefault;
-    SplitHostPort(string(pszDest), port, strDest);
+    SplitHostPort(std::string(pszDest), port, strDest);
 
     SOCKET hSocket = INVALID_SOCKET;
 

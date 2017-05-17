@@ -11,9 +11,10 @@
 #define __INCLUDED_PROTOCOL_H__
 
 #include "serialize.h"
-#include "netbase.h"
-#include <string>
 #include "uint256.h"
+#include "service.h"
+
+#include <string>
 
 /** nServices flags */
 enum ServiceFlags : uint64_t {

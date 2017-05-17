@@ -23,7 +23,6 @@
 #include "mruset.h"
 #include "network/service.h"
 #include "network/node.h"
-#include "network/netbase.h"
 #include "network/protocol.h"
 #include "network/addrman.h"
 #include "transaction.h"

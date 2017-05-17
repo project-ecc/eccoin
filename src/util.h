@@ -7,6 +7,7 @@
 #define BITCOIN_UTIL_H
 
 #include "uint256.h"
+#include "network/netaddr.h"
 
 #ifndef WIN32
 #include <sys/types.h>
@@ -26,8 +27,6 @@
 
 #include <openssl/sha.h>
 #include <openssl/ripemd.h>
-
-#include "network/netbase.h" // for AddTimeData
 
 // to obtain PRId64 on some old systems
 #define __STDC_FORMAT_MACROS 1

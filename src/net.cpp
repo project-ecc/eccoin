@@ -4,6 +4,8 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "network/netutils.h"
+#include "network/socketutils.h"
+#include "network/proxyutils.h"
 #include "network/addrman.h"
 #include "db.h"
 #include "init.h"

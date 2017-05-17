@@ -4,6 +4,7 @@
 
 #include "wallet.h"
 #include "guiutil.h"
+#include "network/proxyutils.h"
 
 
 OptionsModel::OptionsModel(QObject *parent) :

@@ -10,6 +10,8 @@
 #include "base58.h"
 #include "global.h"
 
+#include "network/proxyutils.h"
+
 using namespace json_spirit;
 using namespace std;
 

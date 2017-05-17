@@ -16,6 +16,7 @@
 #include "chain.h"
 
 #include "network/netutils.h"
+#include "network/proxyutils.h"
 
 #include <string>
 #include <string.h>
