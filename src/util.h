@@ -154,8 +154,11 @@ extern bool fNoListen;
 extern bool fLogTimestamps;
 extern bool fReopenDebugLog;
 extern bool messageDebug;
+extern bool fPrintToDebugLog;
+
 class CBlock;
 
+void OpenDebugLog();
 void RandAddSeed();
 void RandAddSeedPerfmon();
 
@@ -225,12 +228,7 @@ template<typename... Args> std::string FormatStringFromLogArgs(const char *fmt, 
 } while(0)
 
 
-
-static int FileWriteStr(const std::string &str, FILE *fp)
-{
-    return fwrite(str.data(), 1, str.size(), fp);
-}
-
+int FileWriteStr(const std::string &str, FILE *fp);
 
 std::string vstrprintf(const char *format, va_list ap);
 

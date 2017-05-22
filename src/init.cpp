@@ -525,6 +525,9 @@ bool AppInit2()
     if (GetBoolArg("-shrinkdebugfile", !fDebug))
         ShrinkDebugFile();
 
+    if (fPrintToDebugLog)
+        OpenDebugLog();
+
     LogPrintf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
     LogPrintf("ECCoin version %s (%s)\n", FormatFullVersion().c_str(), CLIENT_DATE.c_str());
     LogPrintf("Using OpenSSL version %s\n", SSLeay_version(SSLEAY_VERSION));

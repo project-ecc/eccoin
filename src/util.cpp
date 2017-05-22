@@ -220,6 +220,28 @@ static void DebugPrintInit()
     vMsgsBeforeOpenLog = new std::list<std::string>;
 }
 
+void OpenDebugLog()
+{
+    boost::call_once(&DebugPrintInit, debugPrintInitFlag);
+    boost::mutex::scoped_lock scoped_lock(*mutexDebugLog);
+
+    assert(fileout == NULL);
+    assert(vMsgsBeforeOpenLog);
+    fs::path pathDebug = GetDataDir() / "debug.log";
+    fileout = fsbridge::fopen(pathDebug, "a");
+    if (fileout) {
+        setbuf(fileout, NULL); // unbuffered
+        // dump buffered messages from before we opened the log
+        while (!vMsgsBeforeOpenLog->empty()) {
+            FileWriteStr(vMsgsBeforeOpenLog->front(), fileout);
+            vMsgsBeforeOpenLog->pop_front();
+        }
+    }
+
+    delete vMsgsBeforeOpenLog;
+    vMsgsBeforeOpenLog = NULL;
+}
+
 int LogPrintStr(const std::string &str)
 {
     int ret = 0; // Returns total number of characters written
@@ -1347,6 +1369,11 @@ void SetMockTime(int64_t nMockTimeIn)
 }
 
 static int64_t nTimeOffset = 0;
+
+int FileWriteStr(const std::string &str, FILE *fp)
+{
+    return fwrite(str.data(), 1, str.size(), fp);
+}
 
 int64_t GetTimeOffset()
 {
