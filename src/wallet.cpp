@@ -224,14 +224,14 @@ bool CWallet::SetMinVersion(enum WalletFeature nVersion, CWalletDB* pwalletdbIn,
     if (fFileBacked)
     {
         CWalletDB* pwalletdb = pwalletdbIn ? pwalletdbIn : new CWalletDB(strWalletFile);
-        if (nWalletVersion >= 40000)
+        if (nWalletVersion >= 20407)
         {
             // Versions prior to 0.4.0 did not support the "minversion" record.
             // Use a CCorruptAddress to make them crash instead.
             CCorruptAddress corruptAddress;
             pwalletdb->WriteSetting("addrIncoming", corruptAddress);
         }
-        if (nWalletVersion > 40000)
+        if (nWalletVersion > 20407)
             pwalletdb->WriteMinVersion(nWalletVersion);
         if (!pwalletdbIn)
             delete pwalletdb;

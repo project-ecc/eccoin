@@ -140,7 +140,12 @@ public:
     // Load metadata (used by LoadWallet)
     bool LoadKeyMetadata(const CPubKey &pubkey, const CKeyMetadata &metadata);
 
-    bool LoadMinVersion(int nVersion) { nWalletVersion = nVersion; nWalletMaxVersion = std::max(nWalletMaxVersion, nVersion); return true; }
+    bool LoadMinVersion(int nVersion)
+    {
+        nWalletVersion = nVersion;
+        nWalletMaxVersion = std::max(nWalletMaxVersion, nVersion);
+        return true;
+    }
 
     // Adds an encrypted key to the store, and saves it to disk.
     bool AddCryptedKey(const CPubKey &vchPubKey, const std::vector<unsigned char> &vchCryptedSecret);

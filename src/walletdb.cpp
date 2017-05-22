@@ -442,6 +442,11 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
         int nMinVersion = 0;
         if (Read((string)"minversion", nMinVersion))
         {
+            if(CLIENT_VERSION == 20408)
+            {
+                Write(std::string("minversion"), CLIENT_VERSION);
+                nMinVersion = CLIENT_VERSION;
+            }
             if (nMinVersion > CLIENT_VERSION)
                 return DB_TOO_NEW;
             pwallet->LoadMinVersion(nMinVersion);
