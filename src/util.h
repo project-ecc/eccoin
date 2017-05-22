@@ -27,6 +27,9 @@
 
 #include <openssl/sha.h>
 #include <openssl/ripemd.h>
+#include <atomic>
+
+#include "tinyformat.h"
 
 // to obtain PRId64 on some old systems
 #define __STDC_FORMAT_MACROS 1
@@ -123,16 +126,15 @@ inline void MilliSleep(int64_t n)
  * Parameters count from 1.
  */
 #ifdef __GNUC__
-#define ATTR_WARN_PRINTF(X,Y) __attribute__((format(printf,X,Y)))
+#define ATTR_WARN_PRINTF(X,Y) __attribute__((format(LogPrintf,X,Y)))
 #else
 #define ATTR_WARN_PRINTF(X,Y)
 #endif
 
 
-
-
-
-
+static const bool DEFAULT_LOGTIMEMICROS = false;
+static const bool DEFAULT_LOGIPS        = false;
+static const bool DEFAULT_LOGTIMESTAMPS = true;
 
 
 extern std::map<std::string, std::string> mapArgs;
@@ -156,22 +158,83 @@ class CBlock;
 
 void RandAddSeed();
 void RandAddSeedPerfmon();
-int OutputDebugStringF(const char* pszFormat, ...);
 
-std::string strprintf(const char *format, ...);
+struct CLogCategoryActive
+{
+    std::string category;
+    bool active;
+};
 
-std::string strprintf(const std::string &format, ...);
+namespace BCLog {
+    enum LogFlags : uint32_t {
+        NONE        = 0,
+        NET         = (1 <<  0),
+        TOR         = (1 <<  1),
+        MEMPOOL     = (1 <<  2),
+        HTTP        = (1 <<  3),
+        BENCH       = (1 <<  4),
+        ZMQ         = (1 <<  5),
+        DB          = (1 <<  6),
+        RPC         = (1 <<  7),
+        ESTIMATEFEE = (1 <<  8),
+        ADDRMAN     = (1 <<  9),
+        SELECTCOINS = (1 << 10),
+        REINDEX     = (1 << 11),
+        CMPCTBLOCK  = (1 << 12),
+        RAND        = (1 << 13),
+        PRUNE       = (1 << 14),
+        PROXY       = (1 << 15),
+        MEMPOOLREJ  = (1 << 16),
+        LIBEVENT    = (1 << 17),
+        COINDB      = (1 << 18),
+        QT          = (1 << 19),
+        LEVELDB     = (1 << 20),
+        ALL         = ~(uint32_t)0,
+    };
+}
+
+extern std::atomic<uint32_t> logCategories;
+
+/** Return true if log accepts specified category */
+static inline bool LogAcceptCategory(uint32_t category)
+{
+    return (logCategories.load(std::memory_order_relaxed) & category) != 0;
+}
+
+/** Send a string to the log output */
+int LogPrintStr(const std::string &str);
+
+/** Get format string from VA_ARGS for error reporting */
+template<typename... Args> std::string FormatStringFromLogArgs(const char *fmt, const Args&... args) { return fmt; }
+
+#define LogPrintf(...) do { \
+    std::string _log_msg_; /* Unlikely name to avoid shadowing variables */ \
+    try { \
+        _log_msg_ = tfm::format(__VA_ARGS__); \
+    } catch (tinyformat::format_error &fmterr) { \
+        /* Original format string will have newline so don't add one here */ \
+        _log_msg_ = "Error \"" + std::string(fmterr.what()) + "\" while formatting log message: " + FormatStringFromLogArgs(__VA_ARGS__); \
+    } \
+    LogPrintStr(_log_msg_); \
+} while(0)
+
+#define LogPrint(category, ...) do { \
+    if (LogAcceptCategory((category))) { \
+        LogPrintf(__VA_ARGS__); \
+    } \
+} while(0)
+
+
+
+static int FileWriteStr(const std::string &str, FILE *fp)
+{
+    return fwrite(str.data(), 1, str.size(), fp);
+}
+
+
 std::string vstrprintf(const char *format, va_list ap);
 
 bool error(const char *format, ...);
-
-/* Redefine printf so that it directs output to debug.log
- *
- * Do this *after* defining the other printf-like functions, because otherwise the
- * __attribute__((format(printf,X,Y))) gets expanded to __attribute__((format(OutputDebugStringF,X,Y)))
- * which confuses gcc.
- */
-#define printf OutputDebugStringF
 
 void LogException(std::exception* pex, const char* pszThread);
 void PrintException(std::exception* pex, const char* pszThread);
@@ -331,12 +394,12 @@ inline std::string HexStr(const std::vector<unsigned char>& vch, bool fSpaces=fa
 template<typename T>
 void PrintHex(const T pbegin, const T pend, const char* pszFormat="%s", bool fSpaces=true)
 {
-    printf(pszFormat, HexStr(pbegin, pend, fSpaces).c_str());
+    LogPrintf(pszFormat, HexStr(pbegin, pend, fSpaces).c_str());
 }
 
 inline void PrintHex(const std::vector<unsigned char>& vch, const char* pszFormat="%s", bool fSpaces=true)
 {
-    printf(pszFormat, HexStr(vch, fSpaces).c_str());
+    LogPrintf(pszFormat, HexStr(vch, fSpaces).c_str());
 }
 
 inline int64_t GetPerformanceCounter()

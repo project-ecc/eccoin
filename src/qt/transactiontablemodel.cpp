@@ -66,7 +66,7 @@ public:
      */
     void refreshWallet()
     {
-        OutputDebugStringF("refreshWallet\n");
+        LogPrintf("refreshWallet\n");
         cachedWallet.clear();
         {
             LOCK(wallet->cs_wallet);

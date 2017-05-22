@@ -3,8 +3,9 @@
 
 #include "bitcoinunits.h"
 #include "monitoreddatamapper.h"
-#include "netbase.h"
 #include "optionsmodel.h"
+#include "network/service.h"
+#include "network/netutils.h"
 
 #include <QDir>
 #include <QIntValidator>

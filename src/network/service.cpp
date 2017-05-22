@@ -168,7 +168,7 @@ std::string CService::ToString() const
 
 void CService::print() const
 {
-    printf("CService(%s)\n", ToString().c_str());
+    LogPrintf("CService(%s)\n", ToString().c_str());
 }
 
 void CService::Set_Port(unsigned short portIn)

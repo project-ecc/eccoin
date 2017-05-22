@@ -131,7 +131,8 @@ SOURCES += \
     src/network/service.cpp \
     src/network/netutils.cpp \
     src/network/proxyutils.cpp \
-    src/network/socketutils.cpp
+    src/network/socketutils.cpp \
+    src/fs.cpp
 
 INCLUDEPATH += src/leveldb/include src/leveldb/helpers
 LIBS += $$PWD/src/leveldb/libleveldb.a $$PWD/src/leveldb/libmemenv.a
@@ -288,7 +289,9 @@ HEADERS += \
     src/network/service.h \
     src/network/netutils.h \
     src/network/proxyutils.h \
-    src/network/socketutils.h
+    src/network/socketutils.h \
+    src/tinyformat.h \
+    src/fs.h
 #
 
 SOURCES += \

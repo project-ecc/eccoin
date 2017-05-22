@@ -194,7 +194,7 @@ public:
         if (hSocket != INVALID_SOCKET && !fInbound)
             PushVersion();
 
-        printf("Added connection to %s peer=%d\n", addrName.c_str(), id);
+        LogPrintf("Added connection to %s peer=%d\n", addrName.c_str(), id);
     }
 
     ~CNode();
@@ -277,7 +277,7 @@ public:
         // the key is the earliest time the request can be sent
         int64_t& nRequestTime = mapAlreadyAskedFor[inv];
         if (fDebugNet)
-            printf("askfor %s   %" PRId64 " (%s)\n", inv.ToString().c_str(), nRequestTime, DateTimeStrFormat("%H:%M:%S", nRequestTime/1000000).c_str());
+            LogPrintf("askfor %s   %" PRId64 " (%s)\n", inv.ToString().c_str(), nRequestTime, DateTimeStrFormat("%H:%M:%S", nRequestTime/1000000).c_str());
 
         // Make sure not to reuse time indexes to keep things in the same order
         int64_t nNow = (GetTime() - 1) * 1000000;
@@ -296,7 +296,7 @@ public:
     void BeginMessage(const char* pszCommand)
     {
         if (fDebug)
-            printf("starting message \n");
+            LogPrintf("starting message \n");
         ENTER_CRITICAL_SECTION(cs_vSend);
         if (nHeaderStart != -1)
             AbortMessage();
@@ -304,7 +304,7 @@ public:
         vSend << CMessageHeader(pszCommand, 0);
         nMessageStart = vSend.size();
         if (fDebug)
-            printf("sending: %s \n", pszCommand);
+            LogPrintf("sending: %s \n", pszCommand);
     }
 
     void AbortMessage()
@@ -317,14 +317,14 @@ public:
         LEAVE_CRITICAL_SECTION(cs_vSend);
 
         if (fDebug)
-            printf("(aborted)\n");
+            LogPrintf("(aborted)\n");
     }
 
     void EndMessage()
     {
         if (mapArgs.count("-dropmessagestest") && GetRand(atoi(mapArgs["-dropmessagestest"])) == 0)
         {
-            printf("dropmessages DROPPING SEND MESSAGE\n");
+            LogPrintf("dropmessages DROPPING SEND MESSAGE\n");
             AbortMessage();
             return;
         }
@@ -344,7 +344,7 @@ public:
         memcpy((char*)&vSend[nHeaderStart] + CMessageHeader::CHECKSUM_OFFSET, &nChecksum, sizeof(nChecksum));
 
         if (fDebug) {
-            printf("(%d bytes)\n", nSize);
+            LogPrintf("(%d bytes)\n", nSize);
         }
 
         nHeaderStart = -1;

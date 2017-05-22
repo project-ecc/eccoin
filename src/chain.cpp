@@ -64,7 +64,7 @@ CHeaderChainDB::CHeaderChainDB(const char* pszMode)
         ReadVersion(nVersion);
         if (nVersion < DATABASE_VERSION)
         {
-            printf("Required index version is %d, current version %d, removing old database\n", DATABASE_VERSION, nVersion);
+            LogPrintf("Required index version is %d, current version %d, removing old database\n", DATABASE_VERSION, nVersion);
 
             // Leveldb instance destruction
             delete metadb;
@@ -115,7 +115,7 @@ bool CHeaderChainDB::TxnCommit()
     activeBatch = NULL;
     if (!status.ok())
     {
-        printf("LevelDB batch commit failure: %s\n", status.ToString().c_str());
+        LogPrintf("LevelDB batch commit failure: %s\n", status.ToString().c_str());
         return false;
     }
     return true;
@@ -219,5 +219,5 @@ std::string CHeaderChain::ToString() const
 
 void CHeaderChain::print() const
 {
-    printf("%s\n", ToString().c_str());
+    LogPrintf("%s\n", ToString().c_str());
 }

@@ -251,7 +251,7 @@ std::string CBlockIndex::ToString() const
 
 void CBlockIndex::print() const
 {
-    printf("%s\n", ToString().c_str());
+    LogPrintf("%s\n", ToString().c_str());
 }
 
 
@@ -286,5 +286,5 @@ std::string CDiskBlockIndex::ToString() const
 
 void CDiskBlockIndex::print() const
 {
-    printf("%s\n", ToString().c_str());
+    LogPrintf("%s\n", ToString().c_str());
 }

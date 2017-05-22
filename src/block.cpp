@@ -73,11 +73,11 @@ void static InvalidChainFound(CBlockIndex* pindexNew)
     uint256 nBestInvalidBlockTrust = pindexNew->nChainTrust - pindexNew->pprev->nChainTrust;
     uint256 nBestBlockTrust = pindexBest->nHeight != 0 ? (pindexBest->nChainTrust - pindexBest->pprev->nChainTrust) : pindexBest->nChainTrust;
 
-    printf("InvalidChainFound: invalid block=%s  height=%d  trust=%s  blocktrust=%" PRId64 "  date=%s\n",
+    LogPrintf("InvalidChainFound: invalid block=%s  height=%d  trust=%s  blocktrust=%" PRId64 "  date=%s\n",
       pindexNew->GetBlockHash().ToString().substr(0,20).c_str(), pindexNew->nHeight,
       CBigNum(pindexNew->nChainTrust).ToString().c_str(), nBestInvalidBlockTrust.Get64(),
       DateTimeStrFormat("%x %H:%M:%S", pindexNew->GetBlockIndexTime()).c_str());
-    printf("InvalidChainFound:  current best=%s  height=%d  trust=%s  blocktrust=%" PRId64 "  date=%s\n",
+    LogPrintf("InvalidChainFound:  current best=%s  height=%d  trust=%s  blocktrust=%" PRId64 "  date=%s\n",
       pindexBest->GetBlockHash().ToString().substr(0,20).c_str(), pindexBest->nHeight,
       CBigNum(pindexBest->nChainTrust).ToString().c_str(),
       nBestBlockTrust.Get64(),
@@ -88,7 +88,7 @@ void static InvalidChainFound(CBlockIndex* pindexNew)
 
 bool static Reorganize(CTxDB& txdb, CHeaderChainDB& hcdb, CBlockIndex* pindexNew)
 {
-    printf("REORGANIZE\n");
+    LogPrintf("REORGANIZE\n");
 
     // Find the fork
     CBlockIndex* pfork = pindexBest;
@@ -115,8 +115,8 @@ bool static Reorganize(CTxDB& txdb, CHeaderChainDB& hcdb, CBlockIndex* pindexNew
         vConnect.push_back(pindex);
     reverse(vConnect.begin(), vConnect.end());
 
-    printf("REORGANIZE: Disconnect %" PRIszu " blocks; %s..%s\n", vDisconnect.size(), pfork->GetBlockHash().ToString().substr(0,20).c_str(), pindexBest->GetBlockHash().ToString().substr(0,20).c_str());
-    printf("REORGANIZE: Connect %" PRIszu " blocks; %s..%s\n", vConnect.size(), pfork->GetBlockHash().ToString().substr(0,20).c_str(), pindexNew->GetBlockHash().ToString().substr(0,20).c_str());
+    LogPrintf("REORGANIZE: Disconnect %" PRIszu " blocks; %s..%s\n", vDisconnect.size(), pfork->GetBlockHash().ToString().substr(0,20).c_str(), pindexBest->GetBlockHash().ToString().substr(0,20).c_str());
+    LogPrintf("REORGANIZE: Connect %" PRIszu " blocks; %s..%s\n", vConnect.size(), pfork->GetBlockHash().ToString().substr(0,20).c_str(), pindexNew->GetBlockHash().ToString().substr(0,20).c_str());
 
     // Disconnect shorter branch
     vector<CTransaction> vResurrect;
@@ -183,7 +183,7 @@ bool static Reorganize(CTxDB& txdb, CHeaderChainDB& hcdb, CBlockIndex* pindexNew
         mempool.removeConflicts(tx);
     }
 
-    printf("REORGANIZE: done\n");
+    LogPrintf("REORGANIZE: done\n");
 
     return true;
 }
@@ -253,7 +253,7 @@ unsigned int CBlock::GetStakeEntropyBit(unsigned int nHeight) const
     // Take last bit of block hash as entropy bit
     unsigned int nEntropyBit = static_cast<unsigned int>((GetHash().Get64()) & uint64_t(1));
     if (fDebug && GetBoolArg("-printstakemodifier"))
-        printf("GetStakeEntropyBit: nHeight=%u, hashBlock=%s nEntropyBit=%u\n",nHeight, GetHash().ToString().c_str(), nEntropyBit);
+        LogPrintf("GetStakeEntropyBit: nHeight=%u, hashBlock=%s nEntropyBit=%u\n",nHeight, GetHash().ToString().c_str(), nEntropyBit);
     return nEntropyBit;
 }
 
@@ -396,7 +396,7 @@ bool CBlock::ReadFromDisk(unsigned int nFile, unsigned int nBlockPos, bool fRead
 
 void CBlock::print() const
 {
-    printf("CBlock(hash=%s, ver=%d, hashPrevBlock=%s, hashMerkleRoot=%s, nTime=%u, nBits=%08x, nNonce=%u, vtx=%" PRIszu ", vchBlockSig=%s)\n",
+    LogPrintf("CBlock(hash=%s, ver=%d, hashPrevBlock=%s, hashMerkleRoot=%s, nTime=%u, nBits=%08x, nNonce=%u, vtx=%" PRIszu ", vchBlockSig=%s)\n",
         GetHash().ToString().c_str(),
         nVersion,
         hashPrevBlock.ToString().c_str(),
@@ -406,18 +406,18 @@ void CBlock::print() const
         HexStr(vchBlockSig.begin(), vchBlockSig.end()).c_str());
     for (unsigned int i = 0; i < vtx.size(); i++)
     {
-        printf("  ");
+        LogPrintf("  ");
         vtx[i].print();
     }
-    printf("  vMerkleTree: ");
+    LogPrintf("  vMerkleTree: ");
     for (unsigned int i = 0; i < vMerkleTree.size(); i++)
-        printf("%s ", vMerkleTree[i].ToString().substr(0,10).c_str());
-    printf("\n");
+        LogPrintf("%s ", vMerkleTree[i].ToString().substr(0,10).c_str());
+    LogPrintf("\n");
 }
 
 void CBlock::printScrypt() const
 {
-    printf("CBlock(hash=%s, ver=%d, hashPrevBlock=%s, hashMerkleRoot=%s, nTime=%u, nBits=%08x, nNonce=%u, vtx=%" PRIszu ", vchBlockSig=%s)\n",
+    LogPrintf("CBlock(hash=%s, ver=%d, hashPrevBlock=%s, hashMerkleRoot=%s, nTime=%u, nBits=%08x, nNonce=%u, vtx=%" PRIszu ", vchBlockSig=%s)\n",
         GetHash().ToString().c_str(),
         nVersion,
         hashPrevBlock.ToString().c_str(),
@@ -427,13 +427,13 @@ void CBlock::printScrypt() const
         HexStr(vchBlockSig.begin(), vchBlockSig.end()).c_str());
     for (unsigned int i = 0; i < vtx.size(); i++)
     {
-        printf("  ");
+        LogPrintf("  ");
         vtx[i].print();
     }
-    printf("  vMerkleTree: ");
+    LogPrintf("  vMerkleTree: ");
     for (unsigned int i = 0; i < vMerkleTree.size(); i++)
-        printf("%s ", vMerkleTree[i].ToString().substr(0,10).c_str());
-    printf("\n");
+        LogPrintf("%s ", vMerkleTree[i].ToString().substr(0,10).c_str());
+    LogPrintf("\n");
 }
 
 bool CBlock::ReadFromDisk(const CBlockIndex* pindex, bool fReadTransactions)
@@ -573,7 +573,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CHeaderChainDB& hcdb, CBlockIndex* pindex
     if(pindex->pprev)
     {
         prevHash = pindex->pprev->GetBlockHash();
-        // printf("==> Got prevHash = %s\n", prevHash.ToString().c_str());
+        // LogPrintf("==> Got prevHash = %s\n", prevHash.ToString().c_str());
     }
 
     // ppcoin: track money supply and mint amount info
@@ -678,7 +678,7 @@ bool CBlock::SetBestChain(CTxDB& txdb, CHeaderChainDB& hcdb, CBlockIndex* pindex
         }
 
         if (!vpindexSecondary.empty())
-            printf("Postponing %" PRIszu " reconnects\n", vpindexSecondary.size());
+            LogPrintf("Postponing %" PRIszu " reconnects\n", vpindexSecondary.size());
 
         // Switch to new best branch
         if (!Reorganize(txdb, hcdb, pindexIntermediate))
@@ -695,16 +695,16 @@ bool CBlock::SetBestChain(CTxDB& txdb, CHeaderChainDB& hcdb, CBlockIndex* pindex
             CBlock block;
             if (!block.ReadFromDisk(pindex))
             {
-                printf("SetBestChain() : ReadFromDisk failed\n");
+                LogPrintf("SetBestChain() : ReadFromDisk failed\n");
                 break;
             }
             if (!txdb.TxnBegin()) {
-                printf("SetBestChain() : TxnBegin 2 failed\n");
+                LogPrintf("SetBestChain() : TxnBegin 2 failed\n");
                 break;
             }
 
             if (!hcdb.TxnBegin()) {
-                printf("SetBestChain() : TxnBegin 2 failed\n");
+                LogPrintf("SetBestChain() : TxnBegin 2 failed\n");
                 break;
             }
 
@@ -735,7 +735,7 @@ bool CBlock::SetBestChain(CTxDB& txdb, CHeaderChainDB& hcdb, CBlockIndex* pindex
 
     uint256 nBestBlockTrust = pindexBest->nHeight != 0 ? (pindexBest->nChainTrust - pindexBest->pprev->nChainTrust) : pindexBest->nChainTrust;
 
-    printf("SetBestChain: new best=%s  height=%d  trust=%s  blocktrust=%" PRId64 "  date=%s\n",
+    LogPrintf("SetBestChain: new best=%s  height=%d  trust=%s  blocktrust=%" PRId64 "  date=%s\n",
       pindexBest->GetBlockHash().ToString().substr(0,20).c_str(), pindexBest->nHeight,
       CBigNum(nBestChainTrust).ToString().c_str(),
       nBestBlockTrust.Get64(),
@@ -770,7 +770,7 @@ bool CBlock::GetCoinAge(uint64_t& nCoinAge) const
     if (nCoinAge == 0) // block coin age minimum 1 coin-day
         nCoinAge = 1;
     if (fDebug && GetBoolArg("-printcoinage"))
-        printf("block coin age total nCoinDays=%" PRId64 "\n", nCoinAge);
+        LogPrintf("block coin age total nCoinDays=%" PRId64 "\n", nCoinAge);
     return true;
 }
 
@@ -799,7 +799,7 @@ bool CBlock::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos, const u
     }
     else
     {
-        printf("Previous hash could not be found in block index, asserting false \n"); /// currently failing here
+        LogPrintf("Previous hash could not be found in block index, asserting false \n"); /// currently failing here
         assert(false);
     }
 
@@ -839,13 +839,13 @@ bool CBlock::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos, const u
     CHeaderChainDB hcdb;
     if (!hcdb.TxnBegin())
     {
-        printf("tx begin failed \n");
+        LogPrintf("tx begin failed \n");
         return false;
     }
     hcdb.WriteIndexHeader(CDiskBlockIndex(pindexNew));
     if (!hcdb.TxnCommit())
     {
-        printf("failed to commit index header \n");
+        LogPrintf("failed to commit index header \n");
         return false;
     }
     // New best
@@ -853,7 +853,7 @@ bool CBlock::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos, const u
     {
         if (!SetBestChain(txdb, hcdb, pindexNew))
         {
-            printf("failed to set best chain \n");
+            LogPrintf("failed to set best chain \n");
             return false;
         }
     }
@@ -969,8 +969,8 @@ bool CBlock::AcceptBlock(CBlock* pblock)
     //if ( (IsPoS | IsPoW) == true)
     if(IsPoS == true)
     {
-        //printf("nBits = %i , GetNextTarget = %i \n", nBits, GetNextTargetRequired(pindexPrev, true));
-        printf("AcceptBlock() : Block is not Correct PoW or Pos. hash: %s, prevhash: %s \n",hash.ToString().substr(0,20).c_str(), pblock->hashPrevBlock.ToString().substr(0,20).c_str());
+        //LogPrintf("nBits = %i , GetNextTarget = %i \n", nBits, GetNextTargetRequired(pindexPrev, true));
+        LogPrintf("AcceptBlock() : Block is not Correct PoW or Pos. hash: %s, prevhash: %s \n",hash.ToString().substr(0,20).c_str(), pblock->hashPrevBlock.ToString().substr(0,20).c_str());
         return DoS(100, error("error"));
     }
 
@@ -1006,7 +1006,7 @@ bool CBlock::AcceptBlock(CBlock* pblock)
     {
         if (!CheckProofOfStake(vtx[1], nBits, hashProofOfStake))
         {
-            printf("WARNING: ProcessBlock(): check proof-of-stake failed for block %s\n", hash.ToString().c_str());
+            LogPrintf("WARNING: ProcessBlock(): check proof-of-stake failed for block %s\n", hash.ToString().c_str());
             return false; // do not error here as we expect this during initial block download
         }
     }
@@ -1106,7 +1106,7 @@ bool CBlock::SignScryptBlock(const CKeyStore& keystore)
         }
     }
 
-    printf("Sign failed\n");
+    LogPrintf("Sign failed\n");
     return false;
 }
 

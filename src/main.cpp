@@ -159,7 +159,7 @@ bool AddOrphanTx(const CTransaction& tx)
 
     if (nSize > 5000)
     {
-        printf("ignoring large orphan tx (size: %" PRIszu ", hash: %s)\n", nSize, hash.ToString().substr(0,10).c_str());
+        LogPrintf("ignoring large orphan tx (size: %" PRIszu ", hash: %s)\n", nSize, hash.ToString().substr(0,10).c_str());
         return false;
     }
 
@@ -167,7 +167,7 @@ bool AddOrphanTx(const CTransaction& tx)
     BOOST_FOREACH(const CTxIn& txin, tx.vin)
         mapOrphanTransactionsByPrev[txin.prevout.hash].insert(hash);
 
-    printf("stored orphan tx %s (mapsz %" PRIszu ")\n", hash.ToString().substr(0,10).c_str(), mapOrphanTransactions.size());
+    LogPrintf("stored orphan tx %s (mapsz %" PRIszu ")\n", hash.ToString().substr(0,10).c_str(), mapOrphanTransactions.size());
     return true;
 }
 
@@ -352,7 +352,7 @@ int64_t GetProofOfStakeReward(int64_t nCoinAge, int nHeight)
     }
     if (fDebug && GetBoolArg("-printcreation"))
     {
-        printf("GetProofOfStakeReward(): create=%s nCoinAge=%" PRId64 "\n", FormatMoney(nSubsidy).c_str(), nCoinAge);
+        LogPrintf("GetProofOfStakeReward(): create=%s nCoinAge=%" PRId64 "\n", FormatMoney(nSubsidy).c_str(), nCoinAge);
     }
     return nSubsidy;
 }
@@ -558,7 +558,7 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
 
     if (mapBlockIndex.find(pblock->hashPrevBlock) == mapBlockIndex.end())
     {
-            printf("ProcessBlock: ORPHAN BLOCK with hash = %s, prevHash=%s\n", pblock->GetHash().ToString().substr(0,20).c_str() ,pblock->hashPrevBlock.ToString().substr(0,20).c_str());
+            LogPrintf("ProcessBlock: ORPHAN BLOCK with hash = %s, prevHash=%s\n", pblock->GetHash().ToString().substr(0,20).c_str() ,pblock->hashPrevBlock.ToString().substr(0,20).c_str());
             CBlock* pblock2 = new CBlock(*pblock);
             // ppcoin: check proof-of-stake
             if (pblock2->IsProofOfStake())
@@ -613,7 +613,7 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
             mapOrphanBlocksByPrev.erase(hashPrev);
         }
     }
-    printf("ProcessBlock: ACCEPTED\n");
+    LogPrintf("ProcessBlock: ACCEPTED\n");
 
     // ppcoin: if responsible for sync-checkpoint send it
     if (pfrom && !CSyncCheckpoint::strMasterPrivKey.empty())
@@ -632,7 +632,7 @@ bool CheckDiskSpace(uint64_t nAdditionalBytes)
         fShutdown = true;
         string strMessage = _("Warning: Disk space is low!");
         strMiscWarning = strMessage;
-        printf("*** %s\n", strMessage.c_str());
+        LogPrintf("*** %s\n", strMessage.c_str());
         uiInterface.ThreadSafeMessageBox(strMessage, "ECCoin", CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION | CClientUIInterface::MODAL);
         StartShutdown();
         return false;
@@ -741,14 +741,14 @@ bool LoadBlockIndex(bool fAllowNew)
         {
            // block.nNonce   = 37018887;
         }
-        printf("/////////////////////////// GENESIS BLOCK ///////////////////////////////// \n");
+        LogPrintf("/////////////////////////// GENESIS BLOCK ///////////////////////////////// \n");
         block.printScrypt();
-        printf("/////////////////////////// END GENESIS BLOCK ///////////////////////////// \n");
-        printf("block.GetHash() == %s\n", block.GetHash().ToString().c_str());
-        printf("block.hashMerkleRoot == %s\n", block.hashMerkleRoot.ToString().c_str());
-        printf("block.nTime = %u \n", block.nTime);
-        printf("block.nNonce = %u \n", block.nNonce);
-        printf("block.nBits = %u \n", block.nBits);
+        LogPrintf("/////////////////////////// END GENESIS BLOCK ///////////////////////////// \n");
+        LogPrintf("block.GetHash() == %s\n", block.GetHash().ToString().c_str());
+        LogPrintf("block.hashMerkleRoot == %s\n", block.hashMerkleRoot.ToString().c_str());
+        LogPrintf("block.nTime = %u \n", block.nTime);
+        LogPrintf("block.nNonce = %u \n", block.nNonce);
+        LogPrintf("block.nBits = %u \n", block.nBits);
 
         //// debug print
         assert(block.hashMerkleRoot == uint256("0x4db82fe8b45f3dae2b7c7b8be5ec4c37e72e25eaf989b9db24ce1d0fd37eed8b")); // if false program aborts
@@ -817,25 +817,25 @@ void PrintBlockTree()
         if (nCol > nPrevCol)
         {
             for (int i = 0; i < nCol-1; i++)
-                printf("| ");
-            printf("|\\\n");
+                LogPrintf("| ");
+            LogPrintf("|\\\n");
         }
         else if (nCol < nPrevCol)
         {
             for (int i = 0; i < nCol; i++)
-                printf("| ");
-            printf("|\n");
+                LogPrintf("| ");
+            LogPrintf("|\n");
        }
         nPrevCol = nCol;
 
         // print columns
         for (int i = 0; i < nCol; i++)
-            printf("| ");
+            LogPrintf("| ");
 
         // print item
         CBlock block;
         block.ReadFromDisk(pindex);
-        printf("%d (%u,%u) %s  %08x  %s  mint %7s  tx %" PRIszu "",
+        LogPrintf("%d (%u,%u) %s  %08x  %s  mint %7s  tx %" PRIszu "",
             pindex->nHeight,
             pindex->nFile,
             pindex->nBlockPos,
@@ -917,11 +917,11 @@ bool LoadExternalBlockFile(FILE* fileIn)
             }
         }
         catch (std::exception &e) {
-            printf("%s() : Deserialize or I/O error caught during load\n",
+            LogPrintf("%s() : Deserialize or I/O error caught during load\n",
                    BOOST_CURRENT_FUNCTION);
         }
     }
-    printf("Loaded %i blocks from external file in %" PRId64 " ms\n", nLoaded, GetTimeMillis() - nStart);
+    LogPrintf("Loaded %i blocks from external file in %" PRId64 " ms\n", nLoaded, GetTimeMillis() - nStart);
     return nLoaded > 0;
 }
 

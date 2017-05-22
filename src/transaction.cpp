@@ -567,11 +567,11 @@ bool CTransaction::ConnectInputs(CTxDB& txdb, MapPrevTx inputs, map<uint256, CTx
             int64_t nStakeReward = GetValueOut() - nValueIn;
             if (nStakeReward > GetProofOfStakeReward(GetCoinAge(txdb, nCoinAge, true), pindexBlock->nHeight) - GetMinFee() + MIN_TX_FEE(nTime))
             {
-                printf("nStakeReward = %" PRId64 " , CoinAge = %" PRIu64 " \n", nStakeReward, nCoinAge);
+                LogPrintf("nStakeReward = %" PRId64 " , CoinAge = %" PRIu64 " \n", nStakeReward, nCoinAge);
                 return DoS(100, error("ConnectInputs() : %s stake reward exceeded", GetHash().ToString().substr(0,10).c_str()));
 
             }
-            printf("END: nStakeReward = %" PRId64 " , CoinAge = %" PRIu64 " \n", nStakeReward, nCoinAge);
+            LogPrintf("END: nStakeReward = %" PRId64 " , CoinAge = %" PRIu64 " \n", nStakeReward, nCoinAge);
         }
     }
     return true;
@@ -663,12 +663,12 @@ uint64_t CTransaction::GetCoinAge(CTxDB& txdb, uint64_t nCoinAge, bool byValue) 
         bnCentSecond += CBigNum(nValueIn) * (nTime-txPrev.nTime) / CENT;
 
         if (fDebug && GetBoolArg("-printcoinage"))
-            printf("coin age nValueIn=%" PRId64 " nTimeDiff=%d bnCentSecond=%s\n", nValueIn, nTime - txPrev.nTime, bnCentSecond.ToString().c_str());
+            LogPrintf("coin age nValueIn=%" PRId64 " nTimeDiff=%d bnCentSecond=%s\n", nValueIn, nTime - txPrev.nTime, bnCentSecond.ToString().c_str());
     }
 
     CBigNum bnCoinDay = bnCentSecond * CENT / COIN / (24 * 60 * 60);
     if (fDebug && GetBoolArg("-printcoinage"))
-        printf("coin age bnCoinDay=%s\n", bnCoinDay.ToString().c_str());
+        LogPrintf("coin age bnCoinDay=%s\n", bnCoinDay.ToString().c_str());
     nCoinAge = bnCoinDay.getuint64();
     return nCoinAge;
 }
@@ -703,12 +703,12 @@ bool CTransaction::GetCoinAge(CTxDB& txdb, uint64_t& nCoinAge) const
         bnCentSecond += CBigNum(nValueIn) * (nTime-txPrev.nTime) / CENT;
 
         if (fDebug && GetBoolArg("-printcoinage"))
-            printf("coin age nValueIn=%" PRId64 " nTimeDiff=%d bnCentSecond=%s\n", nValueIn, nTime - txPrev.nTime, bnCentSecond.ToString().c_str());
+            LogPrintf("coin age nValueIn=%" PRId64 " nTimeDiff=%d bnCentSecond=%s\n", nValueIn, nTime - txPrev.nTime, bnCentSecond.ToString().c_str());
     }
 
     CBigNum bnCoinDay = bnCentSecond * CENT / COIN / (24 * 60 * 60);
     if (fDebug && GetBoolArg("-printcoinage"))
-        printf("coin age bnCoinDay=%s\n", bnCoinDay.ToString().c_str());
+        LogPrintf("coin age bnCoinDay=%s\n", bnCoinDay.ToString().c_str());
     nCoinAge = bnCoinDay.getuint64();
     return true;
 }
@@ -782,5 +782,5 @@ std::string CTransaction::ToString() const
 
 void CTransaction::print() const
 {
-    printf("%s", ToString().c_str());
+    LogPrintf("%s", ToString().c_str());
 }

@@ -185,7 +185,7 @@ void PushNodeVersion(CNode *pnode, int64_t nTime)
     pnode->PushMessage(NetMsgType::VERSION, PROTOCOL_VERSION, (uint64_t)nLocalNodeServices, nTime, addrYou, addrMe,
             nonce, pnode->strSubVer, nNodeStartingHeight);
 
-    printf("send version message: version %d, blocks=%d, us=%s, them=%s, peer=%d\n", PROTOCOL_VERSION, nNodeStartingHeight, addrMe.ToString().c_str(), addrYou.ToString().c_str(), nodeid);
+    LogPrintf("send version message: version %d, blocks=%d, us=%s, them=%s, peer=%d\n", PROTOCOL_VERSION, nNodeStartingHeight, addrMe.ToString().c_str(), addrYou.ToString().c_str(), nodeid);
 }
 
 void InitializeNode(CNode *pnode) {
@@ -473,10 +473,10 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
 {
     RandAddSeedPerfmon();
     if(messageDebug)
-        printf("received: %s (%" PRIszu " bytes)\n", strCommand.c_str(), vRecv.size());
+        LogPrintf("received: %s (%" PRIszu " bytes)\n", strCommand.c_str(), vRecv.size());
     if (mapArgs.count("-dropmessagestest") && GetRand(atoi(mapArgs["-dropmessagestest"])) == 0)
     {
-        printf("dropmessagestest DROPPING RECV MESSAGE\n");
+        LogPrintf("dropmessagestest DROPPING RECV MESSAGE\n");
         return true;
     }
 
@@ -508,14 +508,14 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
         }
         if (pfrom->nServicesExpected & ~nServices)
         {
-            printf("peer=%d does not offer the expected services (%08x offered, %08x expected); disconnecting\n", pfrom->id, nServices, pfrom->nServicesExpected);
+            LogPrintf("peer=%d does not offer the expected services (%08x offered, %08x expected); disconnecting\n", pfrom->id, nServices, pfrom->nServicesExpected);
             pfrom->fDisconnect = true;
             return false;
         }
 
         if (nVersion < MIN_PROTO_VERSION)
         {
-            printf("partner %s using obsolete version %i; disconnecting\n", pfrom->addr.ToString().c_str(), pfrom->nVersion);
+            LogPrintf("partner %s using obsolete version %i; disconnecting\n", pfrom->addr.ToString().c_str(), pfrom->nVersion);
             pfrom->fDisconnect = true;
             return false;
         }
@@ -541,7 +541,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
         // Disconnect if we connected to ourself
         if (nNonce == nLocalHostNonce && nNonce > 1)
         {
-            printf("connected to self at %s, disconnecting\n", pfrom->addr.ToString().c_str());
+            LogPrintf("connected to self at %s, disconnecting\n", pfrom->addr.ToString().c_str());
             pfrom->fDisconnect = true;
             return true;
         }
@@ -580,7 +580,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
                 } else if (IsPeerAddrLocalGood(pfrom))
                 {
                     addr.SetIP(addrMe);
-                    printf("ProcessMessages: advertising address %s\n", addr.ToString().c_str());
+                    LogPrintf("ProcessMessages: advertising address %s\n", addr.ToString().c_str());
                     pfrom->PushAddress(addr);
                 }
 
@@ -611,7 +611,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
         {
             if(messageDebug)
             {
-                printf("peer has more blocks than us \n");
+                LogPrintf("peer has more blocks than us \n");
             }
             pfrom->PushGetBlocks(pindexBest, uint256(0));
             highestAskedFor = pindexBest->nHeight + 500;
@@ -619,7 +619,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
         else
         {
             if(messageDebug)
-                printf("peer does not have more blocks than us \n");
+                LogPrintf("peer does not have more blocks than us \n");
         }
 
         // Relay sync-checkpoint
@@ -629,7 +629,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
                 checkpointMessage.RelayTo(pfrom);
         }
 
-        printf("receive version message: version %d, blocks=%d, us=%s, them=%s, peer=%s\n", pfrom->nVersion, pfrom->nStartingHeight, addrMe.ToString().c_str(), addrFrom.ToString().c_str(), pfrom->addr.ToString().c_str());
+        LogPrintf("receive version message: version %d, blocks=%d, us=%s, them=%s, peer=%s\n", pfrom->nVersion, pfrom->nStartingHeight, addrMe.ToString().c_str(), addrFrom.ToString().c_str(), pfrom->addr.ToString().c_str());
 
         cPeerBlockCounts.input(pfrom->nStartingHeight);
 
@@ -637,7 +637,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
         if (!IsInitialBlockDownload())
             pcheckpointMain->AskForPendingSyncCheckpoint(pfrom);
 
-        printf("finished processing version message \n");
+        LogPrintf("finished processing version message \n");
     }
 
 
@@ -666,7 +666,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
             // nodes)
             if(messageDebug)
             {
-                printf("sending message SendHeaders to peer \n");
+                LogPrintf("sending message SendHeaders to peer \n");
             }
             pfrom->PushMessage(NetMsgType::SENDHEADERS);
 
@@ -793,14 +793,14 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
             const CInv &inv = vInv[nInv];
             if(messageDebug)
             {
-                printf("inv hash type = %s \n", inv.GetCommand());
+                LogPrintf("inv hash type = %s \n", inv.GetCommand());
             }
             if (fShutdown)
                 return true;
             bool fAlreadyHave = AlreadyHave(txdb, inv);
             if(messageDebug)
             {
-                printf("  got inventory: %s  %s peer=%d\n", inv.ToString().c_str(), fAlreadyHave ? "have" : "new", pfrom->id);
+                LogPrintf("  got inventory: %s  %s peer=%d\n", inv.ToString().c_str(), fAlreadyHave ? "have" : "new", pfrom->id);
             }
 
             if (!fAlreadyHave)
@@ -842,7 +842,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
             return error("message getdata size() = %" PRIszu "", vInv.size());
         }
         if (vInv.size() > 0) {
-            printf("received getdata for: %s peer=%d\n", vInv[0].ToString().c_str(), pfrom->id);
+            LogPrintf("received getdata for: %s peer=%d\n", vInv[0].ToString().c_str(), pfrom->id);
         }
 
         //pfrom->vRecvGetData.insert(pfrom->vRecvGetData.end(), vInv.begin(), vInv.end());
@@ -854,7 +854,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
                 return true;
             if (messageDebug || (vInv.size() == 1))
             {
-               printf("received getdata for: %s\n", inv.ToString().c_str());
+               LogPrintf("received getdata for: %s\n", inv.ToString().c_str());
             }
 
             if (inv.type == MSG_BLOCK)
@@ -925,7 +925,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
             int nLimit = 500;
             if(messageDebug)
             {
-                printf("getblocks %d to %s limit %d\n", (pindex ? pindex->nHeight : -1), hashStop.ToString().substr(0,20).c_str(), nLimit);
+                LogPrintf("getblocks %d to %s limit %d\n", (pindex ? pindex->nHeight : -1), hashStop.ToString().substr(0,20).c_str(), nLimit);
             }
             for (; pindex; pindex = pindex->pnext)
             {
@@ -941,7 +941,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
                         // getblocks the next batch of inventory.
                         if(messageDebug)
                         {
-                            printf("getblocks stopping at limit %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString().substr(0,20).c_str());
+                            LogPrintf("getblocks stopping at limit %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString().substr(0,20).c_str());
                         }
                         pfrom->hashContinue = pindex->GetBlockHash();
                         break;
@@ -974,7 +974,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
 
         LOCK(cs_main);
         if (IsInitialBlockDownload()) {
-            printf("Ignoring getheaders from peer=%d because node is in initial block download\n", pfrom->id);
+            LogPrintf("Ignoring getheaders from peer=%d because node is in initial block download\n", pfrom->id);
             return true;
         }
 
@@ -999,7 +999,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
         // we must use CBlocks, as CBlockHeaders won't include the 0x00 nTx count at the end
         std::vector<CBlock> vHeaders;
         int nLimit = MAX_HEADERS_RESULTS;
-        printf("getheaders %d to %s from peer=%d\n", (pindex ? pindex->nHeight : -1), hashStop.IsNull() ? "end" : hashStop.ToString().c_str(), pfrom->id);
+        LogPrintf("getheaders %d to %s from peer=%d\n", (pindex ? pindex->nHeight : -1), hashStop.IsNull() ? "end" : hashStop.ToString().c_str(), pfrom->id);
         for (; pindex; pindex = pindex->pnext)
         {
             vHeaders.push_back(pindex->GetBlockHeader());
@@ -1067,7 +1067,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
 
                     if (orphanTx.AcceptToMemoryPool(txdb, true, &fMissingInputs2))
                     {
-                        printf("   accepted orphan tx %s\n", orphanTxHash.ToString().substr(0,10).c_str());
+                        LogPrintf("   accepted orphan tx %s\n", orphanTxHash.ToString().substr(0,10).c_str());
                         SyncWithWallets(tx, NULL, true);
                         RelayTransaction(orphanTx, orphanTxHash);
                         mapAlreadyAskedFor.erase(CInv(MSG_TX, orphanTxHash));
@@ -1080,7 +1080,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
                         vEraseQueue.push_back(orphanTxHash);
                         if(messageDebug)
                         {
-                            printf("   removed invalid orphan tx %s\n", orphanTxHash.ToString().substr(0,10).c_str());
+                            LogPrintf("   removed invalid orphan tx %s\n", orphanTxHash.ToString().substr(0,10).c_str());
                         }
                     }
                 }
@@ -1096,7 +1096,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
             // DoS prevention: do not allow mapOrphanTransactions to grow unbounded
             unsigned int nEvicted = LimitOrphanTxSize(MAX_ORPHAN_TRANSACTIONS);
             if (nEvicted > 0)
-                printf("mapOrphan overflow, removed %u tx\n", nEvicted);
+                LogPrintf("mapOrphan overflow, removed %u tx\n", nEvicted);
         }
         if (tx.nDoS) pfrom->Misbehaving(tx.nDoS);
     }
@@ -1143,7 +1143,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
             if (mapBlockIndex.find(headers[0].hashPrevBlock) == mapBlockIndex.end() && nCount < MAX_BLOCKS_TO_ANNOUNCE) {
                 nodestate->nUnconnectingHeaders++;
                 pfrom->PushMessage(NetMsgType::GETHEADERS, CBlockLocator(pindexBestHeader), uint256());
-                printf("received header %s: missing prev block %s, sending getheaders (%d) to end (peer=%d, nUnconnectingHeaders=%d)\n",
+                LogPrintf("received header %s: missing prev block %s, sending getheaders (%d) to end (peer=%d, nUnconnectingHeaders=%d)\n",
                         headers[0].GetHash().ToString().c_str(),
                         headers[0].hashPrevBlock.ToString().c_str(),
                         pindexBestHeader->nHeight,
@@ -1188,7 +1188,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
             LOCK(cs_main);
             CNodeState *nodestate = State(pfrom->GetId());
             if (nodestate->nUnconnectingHeaders > 0) {
-                printf("peer=%d: resetting nUnconnectingHeaders (%d -> 0)\n", pfrom->id, nodestate->nUnconnectingHeaders);
+                LogPrintf("peer=%d: resetting nUnconnectingHeaders (%d -> 0)\n", pfrom->id, nodestate->nUnconnectingHeaders);
             }
             nodestate->nUnconnectingHeaders = 0;
 
@@ -1200,7 +1200,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
                 // Headers message had its maximum size; the peer may have more headers.
                 // TODO: optimize: if pindexLast is an ancestor of chainActive.Tip or pindexBestHeader, continue
                 // from there instead.
-                printf("more getheaders (%d) to end to peer=%d (startheight:%d)\n", pindexLast->nHeight, pfrom->id, pfrom->nStartingHeight);
+                LogPrintf("more getheaders (%d) to end to peer=%d (startheight:%d)\n", pindexLast->nHeight, pfrom->id, pfrom->nStartingHeight);
                 pfrom->PushMessage(NetMsgType::GETHEADERS, CBlockLocator(pindexLast), uint256());
             }
             std::vector<const CBlockIndex*> vToFetch;
@@ -1221,7 +1221,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
             // direct fetch and rely on parallel download instead.
             if (!mapBlockIndex.count(pindexWalk->GetBlockHash()))
             {
-                printf("Large reorg, won't direct fetch to %s (%d)\n", pindexLast->GetBlockHash().ToString().c_str(), pindexLast->nHeight);
+                LogPrintf("Large reorg, won't direct fetch to %s (%d)\n", pindexLast->GetBlockHash().ToString().c_str(), pindexLast->nHeight);
             } else
             {
                 std::vector<CInv> vGetData;
@@ -1235,11 +1235,11 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
                     }
                     vGetData.push_back(CInv(MSG_BLOCK, pindex->GetBlockHash()));
                     MarkBlockAsInFlight(pfrom->GetId(), pindex->GetBlockHash(), pindex);
-                    printf("Requesting block %s from  peer=%d\n", pindex->GetBlockHash().ToString().c_str(), pfrom->id);
+                    LogPrintf("Requesting block %s from  peer=%d\n", pindex->GetBlockHash().ToString().c_str(), pfrom->id);
                 }
                 if (vGetData.size() > 1)
                 {
-                    printf("Downloading blocks toward %s (%d) via headers direct fetch\n", pindexLast->GetBlockHash().ToString().c_str(), pindexLast->nHeight);
+                    LogPrintf("Downloading blocks toward %s (%d) via headers direct fetch\n", pindexLast->GetBlockHash().ToString().c_str(), pindexLast->nHeight);
                 }
                 if (vGetData.size() > 0)
                 {
@@ -1255,7 +1255,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
         vRecv >> block;
         uint256 hashBlock = block.GetHash();
 
-        printf("received block %s\n", hashBlock.ToString().substr(0,20).c_str());
+        LogPrintf("received block %s\n", hashBlock.ToString().substr(0,20).c_str());
         //block.print();
 
         CInv inv(MSG_BLOCK, hashBlock);
@@ -1379,7 +1379,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
         }
 
         if (!(sProblem.empty())) {
-            //printf("pong peer=%d: %s, %x expected, %x received, %u bytes\n",
+            //LogPrintf("pong peer=%d: %s, %x expected, %x received, %u bytes\n",
             //    pfrom->id,
             //    sProblem,
             //    pfrom->nPingNonceSent,
@@ -1446,7 +1446,7 @@ bool ProcessMessages(CNode* pfrom)
     if (vRecv.empty())
         return true;
     if (messageDebug)
-        printf("ProcessMessages(%u bytes)\n", vRecv.size());
+        LogPrintf("ProcessMessages(%u bytes)\n", vRecv.size());
 
     //
     // Message format
@@ -1463,7 +1463,7 @@ bool ProcessMessages(CNode* pfrom)
         if (pfrom->vSend.size() >= SendBufferSize())
         {
             if(messageDebug)
-                printf("send buffer to full to respond, breaking \n");
+                LogPrintf("send buffer to full to respond, breaking \n");
             break;
         }
 
@@ -1475,7 +1475,7 @@ bool ProcessMessages(CNode* pfrom)
             if ((int)vRecv.size() > nHeaderSize)
             {
                 if(messageDebug)
-                    printf("\n\nPROCESSMESSAGE MESSAGESTART NOT FOUND\n\n");
+                    LogPrintf("\n\nPROCESSMESSAGE MESSAGESTART NOT FOUND\n\n");
                 vRecv.erase(vRecv.begin(), vRecv.end() - nHeaderSize);
             }
             break;
@@ -1483,7 +1483,7 @@ bool ProcessMessages(CNode* pfrom)
         if (pstart - vRecv.begin() > 0)
         {
             if(messageDebug)
-                printf("\n\nPROCESSMESSAGE SKIPPED %" PRIpdd " BYTES\n\n", pstart - vRecv.begin());
+                LogPrintf("\n\nPROCESSMESSAGE SKIPPED %" PRIpdd " BYTES\n\n", pstart - vRecv.begin());
         }
         vRecv.erase(vRecv.begin(), pstart);
 
@@ -1494,7 +1494,7 @@ bool ProcessMessages(CNode* pfrom)
         if (!hdr.IsValid())
         {
             if(messageDebug)
-                printf("\n\nPROCESSMESSAGE: ERRORS IN HEADER %s\n\n\n", hdr.GetCommand().c_str());
+                LogPrintf("\n\nPROCESSMESSAGE: ERRORS IN HEADER %s\n\n\n", hdr.GetCommand().c_str());
             continue;
         }
         const std::string& strCommand = hdr.GetCommand();
@@ -1504,7 +1504,7 @@ bool ProcessMessages(CNode* pfrom)
         if (nMessageSize > MAX_SIZE)
         {
             if(messageDebug)
-                printf("ProcessMessages(%s, %u bytes) : nMessageSize > MAX_SIZE\n", strCommand.c_str(), nMessageSize);
+                LogPrintf("ProcessMessages(%s, %u bytes) : nMessageSize > MAX_SIZE\n", strCommand.c_str(), nMessageSize);
             continue;
         }
         if (nMessageSize > vRecv.size())
@@ -1522,7 +1522,7 @@ bool ProcessMessages(CNode* pfrom)
         {
             if(messageDebug)
             {
-                printf("ProcessMessages(%s, %u bytes) : CHECKSUM ERROR nChecksum=%08x hdr.nChecksum=%08x\n", strCommand.c_str(), nMessageSize, nChecksum, hdr.nChecksum);
+                LogPrintf("ProcessMessages(%s, %u bytes) : CHECKSUM ERROR nChecksum=%08x hdr.nChecksum=%08x\n", strCommand.c_str(), nMessageSize, nChecksum, hdr.nChecksum);
             }
             continue;
         }
@@ -1548,13 +1548,13 @@ bool ProcessMessages(CNode* pfrom)
             {
                 // Allow exceptions from under-length message on vRecv
                 if(messageDebug)
-                    printf("ProcessMessages(%s, %u bytes) : Exception '%s' caught, normally caused by a message being shorter than its stated length\n", strCommand.c_str(), nMessageSize, e.what());
+                    LogPrintf("ProcessMessages(%s, %u bytes) : Exception '%s' caught, normally caused by a message being shorter than its stated length\n", strCommand.c_str(), nMessageSize, e.what());
             }
             else if (strstr(e.what(), "size too large"))
             {
                 // Allow exceptions from over-long size
                 if(messageDebug)
-                    printf("ProcessMessages(%s, %u bytes) : Exception '%s' caught\n", strCommand.c_str(), nMessageSize, e.what());
+                    LogPrintf("ProcessMessages(%s, %u bytes) : Exception '%s' caught\n", strCommand.c_str(), nMessageSize, e.what());
             }
             else
             {
@@ -1570,7 +1570,7 @@ bool ProcessMessages(CNode* pfrom)
         if (!fRet)
         {
             if(messageDebug)
-                printf("ProcessMessage(%s, %u bytes) FAILED\n", strCommand.c_str(), nMessageSize);
+                LogPrintf("ProcessMessage(%s, %u bytes) FAILED\n", strCommand.c_str(), nMessageSize);
         }
     }
 
@@ -1664,7 +1664,7 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
             if (!AlreadyHave(txdb, inv))
             {
                 if (messageDebug)
-                    printf("sending getdata: %s\n", inv.ToString().c_str());
+                    LogPrintf("sending getdata: %s\n", inv.ToString().c_str());
                 vGetData.push_back(inv);
                 if (vGetData.size() >= 1000)
                 {
@@ -1682,7 +1682,7 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
         if(pto->hashContinue != 0 && pto->askedIfReady == false && pto->noReadyActive == false)
         {
             if(messageDebug)
-                printf("sending askReady \n");
+                LogPrintf("sending askReady \n");
             pto->PushMessage("askReady");
             pto->askedIfReady = true;
         }
@@ -1691,7 +1691,7 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
             if(pto->readyIn < GetTime())
             {
                 if(messageDebug)
-                    printf("sending askReady \n");
+                    LogPrintf("sending askReady \n");
                 pto->PushMessage("askReady");
                 pto->askedIfReady = true;
                 pto->noReadyActive = false;

@@ -49,5 +49,5 @@ std::string COutPoint::ToString() const
 
 void COutPoint::print() const
 {
-    printf("%s\n", ToString().c_str());
+    LogPrintf("%s\n", ToString().c_str());
 }
