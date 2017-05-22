@@ -208,9 +208,9 @@ void CHeaderChain::SetNull()
 std::string CHeaderChain::ToString() const
 {
     return strprintf("CHeaderChain: hashBlock=%s, hashPrev=%s, hashNext=%s, nFile=%u, nBlockPos=%u, nHeight=%d \n",
-                     this->hashBlock,
-                     this->hashPrev,
-                     this->hashNext,
+                     this->hashBlock.ToString().c_str(),
+                     this->hashPrev.ToString().c_str(),
+                     this->hashNext.ToString().c_str(),
                      this->nFile,
                      this->nBlockPos,
                      this->nHeight

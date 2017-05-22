@@ -275,7 +275,7 @@ template<typename T>
 inline void formatTruncated(std::ostream& out, const T& value, int ntrunc)
 {
     std::ostringstream tmp;
-    tmp << &value;
+    tmp << value;
     std::string result = tmp.str();
     out.write(result.c_str(), (std::min)(ntrunc, static_cast<int>(result.size())));
 }
@@ -313,8 +313,7 @@ TINYFORMAT_DEFINE_FORMAT_TRUNCATED_CSTR(char)
 /// operator<< to format the type T, with special cases for the %c and %p
 /// conversions.
 template<typename T>
-inline void formatValue(std::ostream& out, const char* /*fmtBegin*/,
-                        const char* fmtEnd, int ntrunc, const T& value)
+inline void formatValue(std::ostream& out, const char* /*fmtBegin*/, const char* fmtEnd, int ntrunc, const T& value)
 {
 #ifndef TINYFORMAT_ALLOW_WCHAR_STRINGS
     // Since we don't support printing of wchar_t using "%ls", make it fail at
@@ -330,9 +329,13 @@ inline void formatValue(std::ostream& out, const char* /*fmtBegin*/,
     const bool canConvertToChar = detail::is_convertible<T,char>::value;
     const bool canConvertToVoidPtr = detail::is_convertible<T, const void*>::value;
     if(canConvertToChar && *(fmtEnd-1) == 'c')
+    {
         detail::formatValueAsType<T, char>::invoke(out, value);
+    }
     else if(canConvertToVoidPtr && *(fmtEnd-1) == 'p')
+    {
         detail::formatValueAsType<T, const void*>::invoke(out, value);
+    }
 #ifdef TINYFORMAT_OLD_LIBSTDCPLUSPLUS_WORKAROUND
     else if(detail::formatZeroIntegerWorkaround<T>::invoke(out, value)) /**/;
 #endif
@@ -344,15 +347,14 @@ inline void formatValue(std::ostream& out, const char* /*fmtBegin*/,
     }
     else
     {
-        out << &value;
+        out << value;
     }
 }
 
 
 // Overloaded version for char types to support printing as an integer
 #define TINYFORMAT_DEFINE_FORMATVALUE_CHAR(charType)                  \
-inline void formatValue(std::ostream& out, const char* /*fmtBegin*/,  \
-                        const char* fmtEnd, int /**/, charType value) \
+inline void formatValue(std::ostream& out, const char* /*fmtBegin*/, const char* fmtEnd, int /**/, charType value) \
 {                                                                     \
     switch(*(fmtEnd-1))                                               \
     {                                                                 \
@@ -514,8 +516,7 @@ class FormatArg
 
     private:
         template<typename T>
-        TINYFORMAT_HIDDEN static void formatImpl(std::ostream& out, const char* fmtBegin,
-                        const char* fmtEnd, int ntrunc, const void* value)
+        TINYFORMAT_HIDDEN static void formatImpl(std::ostream& out, const char* fmtBegin, const char* fmtEnd, int ntrunc, const void* value)
         {
             formatValue(out, fmtBegin, fmtEnd, ntrunc, *static_cast<const T*>(value));
         }
