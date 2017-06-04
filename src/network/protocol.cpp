@@ -4,11 +4,13 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "protocol.h"
-#include "util.h"
+#include "util/util.h"
+#include "util/utilstrencodings.h"
 
 #ifndef WIN32
 # include <arpa/inet.h>
 #endif
+
 
 static const char* ppszTypeName[] =
 {

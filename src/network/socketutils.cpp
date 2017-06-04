@@ -1,7 +1,7 @@
 #include "netutils.h"
 #include "proxyutils.h"
 #include "socketutils.h"
-#include "util.h"
+#include "util/util.h"
 
 bool Socks4(const CService &addrDest, SOCKET& hSocket)
 {

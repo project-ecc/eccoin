@@ -2,7 +2,10 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+
 #include "addrman.h"
+#include "hash.h"
+#include "random.h"
 
 using namespace std;
 

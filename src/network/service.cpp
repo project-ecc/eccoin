@@ -1,6 +1,7 @@
 #include "service.h"
 #include "netutils.h"
-#include "util.h"
+#include "util/util.h"
+
 
 void CService::Init()
 {

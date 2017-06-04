@@ -6,10 +6,11 @@
 #include "sync.h"
 #include "protocol.h"
 #include "mruset.h"
-#include "util.h"
+#include "util/util.h"
 #include "blockindex.h"
 #include "requests.h"
 #include "nodestats.h"
+#include "hash.h"
 
 #include <atomic>
 #include <deque>
@@ -277,7 +278,7 @@ public:
         // the key is the earliest time the request can be sent
         int64_t& nRequestTime = mapAlreadyAskedFor[inv];
         if (fDebugNet)
-            LogPrintf("askfor %s   %" PRId64 " (%s)\n", inv.ToString().c_str(), nRequestTime, DateTimeStrFormat("%H:%M:%S", nRequestTime/1000000).c_str());
+            LogPrintf("askfor %s   %d (%s)\n", inv.ToString().c_str(), nRequestTime, DateTimeStrFormat("%H:%M:%S", nRequestTime/1000000).c_str());
 
         // Make sure not to reuse time indexes to keep things in the same order
         int64_t nNow = (GetTime() - 1) * 1000000;
@@ -322,13 +323,6 @@ public:
 
     void EndMessage()
     {
-        if (mapArgs.count("-dropmessagestest") && GetRand(atoi(mapArgs["-dropmessagestest"])) == 0)
-        {
-            LogPrintf("dropmessages DROPPING SEND MESSAGE\n");
-            AbortMessage();
-            return;
-        }
-
         if (nHeaderStart < 0)
             return;
 

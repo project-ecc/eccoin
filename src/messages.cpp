@@ -473,7 +473,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
 {
     RandAddSeedPerfmon();
     if(messageDebug)
-        LogPrintf("received: %s (%" PRIszu " bytes)\n", strCommand.c_str(), vRecv.size());
+        LogPrintf("received: %s (%u bytes)\n", strCommand.c_str(), vRecv.size());
     if (mapArgs.count("-dropmessagestest") && GetRand(atoi(mapArgs["-dropmessagestest"])) == 0)
     {
         LogPrintf("dropmessagestest DROPPING RECV MESSAGE\n");
@@ -694,7 +694,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
         {
             LOCK(cs_main);
             pfrom->Misbehaving(20);
-            return error("message addr size() = %" PRIszu "", vAddr.size());
+            return error("message addr size() = %u", vAddr.size());
         }
 
         // Store the new addresses
@@ -782,7 +782,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
         {
             LOCK(cs_main);
             pfrom->Misbehaving(20);
-            return error("message inv size() = %" PRIszu "", vInv.size());
+            return error("message inv size() = %u", vInv.size());
         }
 
         LOCK(cs_main);
@@ -839,7 +839,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
         {
             LOCK(cs_main);
             pfrom->Misbehaving(20);
-            return error("message getdata size() = %" PRIszu "", vInv.size());
+            return error("message getdata size() = %u", vInv.size());
         }
         if (vInv.size() > 0) {
             LogPrintf("received getdata for: %s peer=%d\n", vInv[0].ToString().c_str(), pfrom->id);
@@ -1483,7 +1483,7 @@ bool ProcessMessages(CNode* pfrom)
         if (pstart - vRecv.begin() > 0)
         {
             if(messageDebug)
-                LogPrintf("\n\nPROCESSMESSAGE SKIPPED %" PRIpdd " BYTES\n\n", pstart - vRecv.begin());
+                LogPrintf("\n\nPROCESSMESSAGE SKIPPED %d BYTES\n\n", pstart - vRecv.begin());
         }
         vRecv.erase(vRecv.begin(), pstart);
 

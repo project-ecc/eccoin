@@ -9,8 +9,9 @@
 #include "main.h"
 #include "net.h"
 #include "txdb-leveldb.h"
-#include "util.h"
 #include "ui_interface.h"
+#include "random.h"
+
 
 
 extern unsigned char pchMessageStart[4];

@@ -12,9 +12,6 @@ uint64_t nLocalHostNonce = 0;
 // find 'best' local address for a particular peer
 bool GetLocal(CService& addr, const CNetAddr *paddrPeer)
 {
-    if (fNoListen)
-        return false;
-
     int nBestScore = -1;
     int nBestReachability = -1;
     {

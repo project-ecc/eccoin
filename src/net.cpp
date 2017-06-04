@@ -14,6 +14,9 @@
 #include "strlcpy.h"
 #include "txdb-leveldb.h"
 #include "ui_interface.h"
+#include "util/utilexceptions.h"
+#include "random.h"
+
 
 #ifdef WIN32
 #include <string.h>
@@ -726,7 +729,7 @@ void ThreadSocketHandler2(void* parg)
 
                     if (nPos > ReceiveBufferSize()) {
                         if (!pnode->fDisconnect)
-                            LogPrintf("socket recv flood control disconnect (%" PRIszu " bytes)\n", vRecv.size());
+                            LogPrintf("socket recv flood control disconnect (%u bytes)\n", vRecv.size());
                         pnode->CloseSocketDisconnect();
                     }
                     else {
@@ -1073,7 +1076,7 @@ void DumpAddresses()
     CAddrDB adb;
     adb.Write(addrman);
 
-    LogPrintf("Flushed %d addresses to peers.dat  %" PRId64 " ms\n",
+    LogPrintf("Flushed %d addresses to peers.dat  %d ms\n",
            addrman.size(), GetTimeMillis() - nStart);
 }
 
