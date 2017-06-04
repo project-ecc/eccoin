@@ -1,6 +1,8 @@
 #ifndef COINCONTROL_H
 #define COINCONTROL_H
 
+#include "points.h"
+
 /** Coin Control Features. */
 class CCoinControl
 {
@@ -26,6 +28,11 @@ public:
     bool IsSelected(const uint256& hash, unsigned int n) const
     {
         COutPoint outpt(hash, n);
+        return (setSelected.count(outpt) > 0);
+    }
+
+    bool IsSelected(COutPoint outpt) const
+    {
         return (setSelected.count(outpt) > 0);
     }
     

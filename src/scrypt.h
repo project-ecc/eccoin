@@ -4,7 +4,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "util.h"
 #include "net.h"
 #include "block.h"
 

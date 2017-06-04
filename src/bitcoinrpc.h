@@ -16,7 +16,10 @@ class CBlockIndex;
 #include "json/json_spirit_writer_template.h"
 #include "json/json_spirit_utils.h"
 
-#include "util.h"
+#include "util/util.h"
+#include "util/utilmoneystr.h"
+#include "util/utilstrencodings.h"
+#include "util/utiltime.h"
 #include "checkpoints.h"
 
 // HTTP status codes

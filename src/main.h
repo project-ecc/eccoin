@@ -12,6 +12,9 @@
 #include "scrypt.h"
 #include "global.h"
 #include <list>
+#include "util/utilmoneystr.h"
+#include "util/utiltime.h"
+#include "amount.h"
 
 class CWallet;
 class CWalletTx;
@@ -23,13 +26,10 @@ int64_t getMinFee(int64_t nTime);
 #ifndef MIN_TX_FEE
 #define MIN_TX_FEE getMinFee
 #endif
-static const int64_t MAX_MONEY = 50000000000 * COIN;
 static const int64_t COIN_YEAR_REWARD = 10 * CENT; // 10% per year
 static const int64_t MAX_MINT_PROOF_OF_STAKE = 0.1 * COIN;
 static const int MODIFIER_INTERVAL_SWITCH = 2500;
 static const int64_t nMaxClockDrift = 2 * 60 * 60;        // two hours
-
-inline bool MoneyRange(int64_t nValue) { return (nValue >= 0 && nValue <= MAX_MONEY); }
 
 #ifdef USE_UPNP
 static const int fHaveUPnP = true;
@@ -39,6 +39,7 @@ static const int fHaveUPnP = false;
 
 inline int64_t PastDrift(int64_t nTime)   { return nTime - 10 * 60; } // up to 10 minutes from the past
 inline int64_t FutureDrift(int64_t nTime) { return nTime + 10 * 60; } // up to 10 minutes from the future
+
 
 
 extern CMedianFilter<int> cPeerBlockCounts;
@@ -105,5 +106,20 @@ bool GetTransaction(const uint256& hashTx, CWalletTx& wtx);
 extern CWallet* pwalletMain;
 bool GetWalletFile(CWallet* pwallet, std::string &strWalletFileOut);
 
+/** Flags for nSequence and nLockTime locks */
+enum {
+    /* Interpret sequence numbers as relative lock-time constraints. */
+    LOCKTIME_VERIFY_SEQUENCE = (1 << 0),
+
+    /* Use GetMedianTimePast() instead of nTime for end point timestamp. */
+    LOCKTIME_MEDIAN_TIME_PAST = (1 << 1),
+};
+
+struct ChainTxData {
+    int64_t nTime;
+    int64_t nTxCount;
+    double dTxRate;
+};
+double GuessVerificationProgress(const ChainTxData& data, CBlockIndex* pindex);
 
 #endif

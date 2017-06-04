@@ -7,6 +7,9 @@
 #define VALIDATION_H
 
 #include <string>
+#include "util/utiltime.h"
+#include "global.h"
+#include "main.h"
 
 /** "reject" message codes */
 static const unsigned char REJECT_MALFORMED = 0x01;
@@ -84,5 +87,9 @@ public:
     std::string GetRejectReason() const { return strRejectReason; }
     std::string GetDebugMessage() const { return strDebugMessage; }
 };
+
+bool IsFinalTx(const CTransaction &tx, int nBlockHeight, int64_t nBlockTime);
+bool CheckFinalTx(const CTransaction &tx, int flags =-1);
+
 
 #endif // VALIDATION_H

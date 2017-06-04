@@ -6,6 +6,7 @@
 #include "disk.h"
 #include "script.h"
 #include "blockindex.h"
+#include "util/utilmoneystr.h"
 
 class CTxDB;
 class CBlockIndex;
@@ -20,6 +21,10 @@ public:
     COutPoint prevout;
     CScript scriptSig;
     unsigned int nSequence;
+
+    /* Setting nSequence to this value for every input in a transaction
+     * disables nLockTime. */
+    static const uint32_t SEQUENCE_FINAL = 0xffffffff;
 
     CTxIn()
     {
@@ -240,6 +245,45 @@ enum GetMinFee_mode
 typedef std::map<uint256, std::pair<CTxIndex, CTransaction> > MapPrevTx;
 
 
+/** A mutable version of CTransaction. */
+struct CMutableTransaction
+{
+    int32_t nVersion;
+    std::vector<CTxIn> vin;
+    std::vector<CTxOut> vout;
+    uint32_t nLockTime;
+
+    CMutableTransaction();
+    CMutableTransaction(const CTransaction& tx);
+
+    template <typename Stream>
+    inline void Serialize(Stream& s) const {
+        SerializeTransaction(*this, s);
+    }
+
+
+    template <typename Stream>
+    inline void Unserialize(Stream& s) {
+        UnserializeTransaction(*this, s);
+    }
+
+    template <typename Stream>
+    CMutableTransaction(deserialize_type, Stream& s) {
+        Unserialize(s);
+    }
+
+    /** Compute the hash of this CMutableTransaction. This is computed on the
+     * fly, as opposed to GetHash() in CTransaction, which uses a cached result.
+     */
+    uint256 GetHash() const;
+
+    friend bool operator==(const CMutableTransaction& a, const CMutableTransaction& b)
+    {
+        return a.GetHash() == b.GetHash();
+    }
+};
+
+
 /** The basic transaction that is broadcasted on the network and contained in
  * blocks.  A transaction can contain multiple inputs and outputs.
  */
@@ -262,6 +306,18 @@ public:
         SetNull();
     }
 
+    /** Convert a CMutableTransaction into a CTransaction. */
+    CTransaction(const CMutableTransaction &tx) : nVersion(tx.nVersion),
+        vin(tx.vin),
+        vout(tx.vout),
+        nLockTime(tx.nLockTime) {}
+
+    CTransaction(const CMutableTransaction &&tx) : nVersion(tx.nVersion),
+        vin(std::move(tx.vin)),
+        vout(std::move(tx.vout)),
+        nLockTime(tx.nLockTime) {}
+
+
     IMPLEMENT_SERIALIZE
     (
         READWRITE(this->nVersion);
@@ -282,6 +338,11 @@ public:
     bool ReadFromDisk(CTxDB& txdb, COutPoint prevout, CTxIndex& txindexRet);
     bool ReadFromDisk(CTxDB& txdb, COutPoint prevout);
     bool ReadFromDisk(COutPoint prevout);
+
+    uint256 ComputeHash() const
+    {
+        return SerializeHash(*this, SER_GETHASH);
+    }
 
     /** Check for standard transaction types
         @return True if all outputs (scriptPubKeys) use only standard transaction forms
@@ -383,5 +444,6 @@ public:
 protected:
     const CTxOut& GetOutputFor(const CTxIn& input, const MapPrevTx& inputs) const;
 };
+
 
 #endif // CTRANSACTION_H

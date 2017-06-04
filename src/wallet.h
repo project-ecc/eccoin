@@ -15,8 +15,10 @@
 #include "keystore.h"
 #include "script.h"
 #include "ui_interface.h"
-#include "util.h"
 #include "walletdb.h"
+#include "amount.h"
+#include "transaction.h"
+
 
 extern bool fWalletUnlockStakingOnly;
 extern bool fConfChange;
@@ -25,6 +27,7 @@ class CWalletTx;
 class CReserveKey;
 class COutput;
 class CCoinControl;
+struct CMutableTransaction;
 
 /** (client) version numbers for particular wallet features */
 enum WalletFeature
@@ -36,6 +39,14 @@ enum WalletFeature
 
     FEATURE_LATEST = 60000
 };
+
+struct CRecipient
+{
+    CScript scriptPubKey;
+    CAmount nAmount;
+    bool fSubtractFeeFromAmount;
+};
+
 
 /** A key pool entry */
 class CKeyPool
@@ -118,11 +129,23 @@ public:
     std::map<uint256, CWalletTx> mapWallet;
     int64_t nOrderPosNext;
     std::map<uint256, int> mapRequestCount;
+    std::set<COutPoint> setLockedCoins;
 
     std::map<CTxDestination, std::string> mapAddressBook;
 
     CPubKey vchDefaultKey;
     int64_t nTimeFirstKey;
+
+    /**
+     * Used to keep track of spent outpoints, and
+     * detect and report conflicts (double-spends or
+     * mutated transactions where the mutant gets mined).
+     */
+    typedef std::multimap<COutPoint, uint256> TxSpends;
+    TxSpends mapTxSpends;
+    void AddToSpends(const COutPoint& outpoint, const uint256& wtxid);
+    void AddToSpends(const uint256& wtxid);
+    void SyncMetaData(std::pair<TxSpends::iterator, TxSpends::iterator>);
 
     // check whether we are allowed to upgrade (or already support) to the named feature
     bool CanSupportFeature(enum WalletFeature wf) { return nWalletMaxVersion >= wf; }
@@ -304,6 +327,14 @@ public:
         return setKeyPool.size();
     }
 
+    bool IsSpent(const uint256& hash, unsigned int n) const;
+    /**
+     * Return list of available coins and locked coins grouped by non-change output address.
+     */
+    std::map<CTxDestination, std::vector<COutput>> ListCoins() const;
+
+
+    bool BackupWallet(const std::string& strDest);
     bool WGetTransaction(const uint256 &hashTx, CWalletTx& wtx);
 
     bool SetDefaultKey(const CPubKey &vchPubKey);
@@ -329,6 +360,23 @@ public:
      * @note called with lock cs_wallet held.
      */
     boost::signals2::signal<void (CWallet *wallet, const uint256 &hashTx, ChangeType status)> NotifyTransactionChanged;
+
+    /** Show progress e.g. for rescan */
+    boost::signals2::signal<void (const std::string &title, int nProgress)> ShowProgress;
+
+    /** Watch-only address added */
+    boost::signals2::signal<void (bool fHaveWatchOnly)> NotifyWatchonlyChanged;
+
+    bool IsLockedCoin(uint256 hash, unsigned int n) const;
+    void LockCoin(const COutPoint& output);
+    void UnlockCoin(const COutPoint& output);
+    void UnlockAllCoins();
+    void ListLockedCoins(std::vector<COutPoint>& vOutpts) const;
+
+    const CWalletTx* GetWalletTx(const uint256& hash) const;
+
+
+
 };
 
 /** A key allocated from the key pool. */
@@ -711,6 +759,18 @@ public:
 
     void RelayWalletTransaction(CTxDB& txdb);
     void RelayWalletTransaction();
+
+    // True if only scriptSigs are different
+    bool IsEquivalentTo(const CWalletTx& _tx) const
+    {
+            CMutableTransaction tx1 = *this;
+            CMutableTransaction tx2 = _tx;
+            for (unsigned int i = 0; i < tx1.vin.size(); i++) tx1.vin[i].scriptSig = CScript();
+            for (unsigned int i = 0; i < tx2.vin.size(); i++) tx2.vin[i].scriptSig = CScript();
+            return CTransaction(tx1) == CTransaction(tx2);
+    }
+
+
 };
 
 

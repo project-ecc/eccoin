@@ -115,7 +115,7 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx, bool fCheckInputs,
         // Don't accept it if it can't get into a block
         int64_t txMinFee = tx.GetMinFee(1000, GMF_RELAY, nSize);
         if (nFees < txMinFee)
-            return error("CTxMemPool::accept() : not enough fees %s, %" PRId64 " < %" PRId64 "",
+            return error("CTxMemPool::accept() : not enough fees %s, %d < %d",
                          hash.ToString().c_str(),
                          nFees, txMinFee);
 
@@ -168,7 +168,7 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx, bool fCheckInputs,
     if (ptxOld)
         EraseFromWallets(ptxOld->GetHash());
 
-    LogPrintf("CTxMemPool::accept() : accepted %s (poolsz %" PRIszu ")\n",
+    LogPrintf("CTxMemPool::accept() : accepted %s (poolsz %u)\n",
            hash.ToString().substr(0,10).c_str(),
            mapTx.size());
     return true;

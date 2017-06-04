@@ -19,7 +19,6 @@
 #include "main.h"
 #include "scrypt.h"
 #include "txdb-leveldb.h"
-#include "util.h"
 #include "init.h"
 #include "wallet.h"
 #include "global.h"

@@ -10,6 +10,8 @@
 #include "scrypt.h"
 #include "global.h"
 #include "mempool.h"
+#include "util/utilexceptions.h"
+#include "util/util.h"
 
 using namespace std;
 
@@ -33,6 +35,20 @@ static string strMintWarning;
 //
 // BitcoinMiner
 //
+
+template <size_t nBytes, typename T>
+T* alignup(T* p)
+{
+    union
+    {
+        T* ptr;
+        size_t n;
+    } u;
+    u.ptr = p;
+    u.n = (u.n + (nBytes-1)) & ~(nBytes-1);
+    return u.ptr;
+}
+
 
 int static FormatHashBlocks(void* pbuffer, unsigned int len)
 {
@@ -361,7 +377,7 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
             nBlockSigOps += nTxSigOps;
             nFees += nTxFees;
 
-            if (fDebug && GetBoolArg("-printpriority"))
+            if (fDebug && GetBoolArg("-printpriority", false))
             {
                 LogPrintf("priority %.1f feeperkb %.1f txid %s\n",
                        dPriority, dFeePerKb, tx.GetHash().ToString().c_str());
@@ -389,8 +405,8 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
         nLastBlockTx = nBlockTx;
         nLastBlockSize = nBlockSize;
 
-        if (fDebug && GetBoolArg("-printpriority"))
-            LogPrintf("CreateNewBlock(): total size %" PRIu64 "\n", nBlockSize);
+        if (fDebug && GetBoolArg("-printpriority", false))
+            LogPrintf("CreateNewBlock(): total size %d \n", nBlockSize);
 
         if (pblock->IsProofOfWork())
             pblock->vtx[0].vout[0].nValue = GetProofOfWorkReward(pindexPrev->nHeight+1, nFees, pindexPrev->GetBlockHash());
@@ -590,7 +606,7 @@ void ScryptMiner(CWallet *pwallet, bool fProofOfStake)
             continue;
         }
 
-        LogPrintf("Running BitcoinMiner with %" PRIszu " transactions in block (%u bytes)\n", pblock->vtx.size(),
+        LogPrintf("Running BitcoinMiner with %u transactions in block (%u bytes)\n", pblock->vtx.size(),
                ::GetSerializeSize(*pblock, SER_NETWORK, PROTOCOL_VERSION));
 
         //
@@ -744,7 +760,7 @@ void GenerateScryptCoins(bool fGenerate, CWallet* pwallet)
 
     if (fGenerate)
     {
-        int nProcessors = boost::thread::hardware_concurrency();
+        int nProcessors = GetNumCores();
         LogPrintf("%d processors\n", nProcessors);
         if (nProcessors < 1)
             nProcessors = 1;
