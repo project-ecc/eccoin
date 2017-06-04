@@ -132,7 +132,30 @@ SOURCES += \
     src/network/netutils.cpp \
     src/network/proxyutils.cpp \
     src/network/socketutils.cpp \
-    src/fs.cpp
+    src/fs.cpp \
+    src/util/util.cpp \
+    src/util/utiltime.cpp \
+    src/util/utilstrencodings.cpp \
+    src/util/utilmoneystr.cpp \
+    src/random.cpp \
+    src/util/utilexceptions.cpp \
+    src/scheduler.cpp \
+    src/threadinterrupt.cpp \
+    src/validation.cpp \
+    src/qt/platformstyle.cpp \
+    src/qt/bantablemodel.cpp \
+    src/qt/peertablemodel.cpp \
+    src/qt/recentrequeststablemodel.cpp \
+    src/qt/utilitydialog.cpp \
+    src/qt/winshutdownmonitor.cpp \
+    src/qt/splashscreen.cpp \
+    src/qt/networkstyle.cpp \
+    src/qt/walletframe.cpp \
+    src/qt/walletview.cpp \
+    src/qt/receivecoinsdialog.cpp \
+    src/qt/receiverequestdialog.cpp \
+    src/qt/modaloverlay.cpp \
+    src/qt/openuridialog.cpp
 
 INCLUDEPATH += src/leveldb/include src/leveldb/helpers
 LIBS += $$PWD/src/leveldb/libleveldb.a $$PWD/src/leveldb/libmemenv.a
@@ -218,7 +241,6 @@ HEADERS += \
     src/txdb-leveldb.h \
     src/uint256.h \
     src/ui_interface.h \
-    src/util.h \
     src/version.h \
     src/wallet.h \
     src/walletdb.h \
@@ -291,7 +313,30 @@ HEADERS += \
     src/network/proxyutils.h \
     src/network/socketutils.h \
     src/tinyformat.h \
-    src/fs.h
+    src/fs.h \
+    src/util/util.h \
+    src/util/utilmoneystr.h \
+    src/util/utilstrencodings.h \
+    src/util/utiltime.h \
+    src/random.h \
+    src/util/utilexceptions.h \
+    src/amount.h \
+    src/scheduler.h \
+    src/reverselock.h \
+    src/threadinterrupt.h \
+    src/qt/bantablemodel.h \
+    src/qt/peertablemodel.h \
+    src/qt/recentrequeststablemodel.h \
+    src/qt/utilitydialog.h \
+    src/qt/winshutdownmonitor.h \
+    src/qt/splashscreen.h \
+    src/qt/networkstyle.h \
+    src/qt/walletframe.h \
+    src/qt/walletview.h \
+    src/qt/receivecoinsdialog.h \
+    src/qt/receiverequestdialog.h \
+    src/qt/modaloverlay.h \
+    src/qt/openuridialog.h
 #
 
 SOURCES += \
@@ -331,7 +376,6 @@ SOURCES += \
     src/scrypt.cpp \
     src/sync.cpp \
     src/transaction.cpp \
-    src/util.cpp \
     src/version.cpp \
     src/walletdb.cpp \
     src/wallet.cpp \
@@ -388,7 +432,12 @@ FORMS += \
     src/qt/forms/sendcoinsentry.ui \
     src/qt/forms/askpassphrasedialog.ui \
     src/qt/forms/rpcconsole.ui \
-    src/qt/forms/optionsdialog.ui
+    src/qt/forms/optionsdialog.ui \
+    src/qt/forms/helpmessagedialog.ui \
+    src/qt/forms/receivecoinsdialog.ui \
+    src/qt/forms/receiverequestdialog.ui \
+    src/qt/forms/modaloverlay.ui \
+    src/qt/forms/openuridialog.ui
 
 contains(USE_QRCODE, 1) {
 HEADERS += src/qt/qrcodedialog.h
