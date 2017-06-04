@@ -43,8 +43,8 @@ public slots:
     void message(int category, const QString &message, bool html = false);
     /** Set number of connections shown in the UI */
     void setNumConnections(int count);
-    /** Set number of blocks shown in the UI */
-    void setNumBlocks(int count, int countOfPeers);
+    /** Set number of blocks and last block date shown in the UI */
+    void setNumBlocks(int count, const QDateTime& blockDate, double nVerificationProgress, bool headers);
     /** Go forward or back in history */
     void browseHistory(int offset);
     /** Scroll console view to end */

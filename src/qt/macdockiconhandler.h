@@ -1,44 +1,44 @@
-#ifndef MACDOCKICONHANDLER_H
-#define MACDOCKICONHANDLER_H
+// Copyright (c) 2011-2015 The Bitcoin Core developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <QtCore/QObject>
+#ifndef BITCOIN_QT_MACDOCKICONHANDLER_H
+#define BITCOIN_QT_MACDOCKICONHANDLER_H
 
-class QMenu;
+#include <QMainWindow>
+#include <QObject>
+
+QT_BEGIN_NAMESPACE
 class QIcon;
+class QMenu;
 class QWidget;
-
-#ifdef __OBJC__
-@class DockIconClickEventHandler;
-#else
-class DockIconClickEventHandler;
-#endif
+QT_END_NAMESPACE
 
 /** Macintosh-specific dock icon handler.
  */
 class MacDockIconHandler : public QObject
 {
     Q_OBJECT
+
 public:
     ~MacDockIconHandler();
 
     QMenu *dockMenu();
     void setIcon(const QIcon &icon);
-
+    void setMainWindow(QMainWindow *window);
     static MacDockIconHandler *instance();
-
+    static void cleanup();
     void handleDockIconClickEvent();
 
-signals:
+Q_SIGNALS:
     void dockIconClicked();
-
-public slots:
 
 private:
     MacDockIconHandler();
 
-    DockIconClickEventHandler *m_dockIconClickEventHandler;
     QWidget *m_dummyWidget;
     QMenu *m_dockMenu;
+    QMainWindow *mainWindow;
 };
 
-#endif // MACDOCKICONCLICKHANDLER_H
+#endif // BITCOIN_QT_MACDOCKICONHANDLER_H

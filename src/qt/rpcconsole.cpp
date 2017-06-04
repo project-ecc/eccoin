@@ -260,18 +260,16 @@ void RPCConsole::setClientModel(ClientModel *model)
     {
         // Subscribe to information, replies, messages, errors
         connect(model, SIGNAL(numConnectionsChanged(int)), this, SLOT(setNumConnections(int)));
-        connect(model, SIGNAL(numBlocksChanged(int,int)), this, SLOT(setNumBlocks(int,int)));
+
+        setNumBlocks(model->getNumBlocks(), model->getLastBlockDate(), model->getVerificationProgress(NULL), false);
+        connect(model, SIGNAL(numBlocksChanged(int,QDateTime,double,bool)), this, SLOT(setNumBlocks(int,QDateTime,double,bool)));
 
         // Provide initial values
         ui->clientVersion->setText(model->formatFullVersion());
-        ui->clientName->setText(model->clientName());
-        ui->buildDate->setText(model->formatBuildDate());
         ui->startupTime->setText(model->formatClientStartupTime());
 
         setNumConnections(model->getNumConnections());
-        ui->isTestNet->setChecked(model->isTestNet());
 
-        setNumBlocks(model->getNumBlocks(), model->getNumBlocksOfPeers());
     }
 }
 
@@ -338,15 +336,12 @@ void RPCConsole::setNumConnections(int count)
     ui->numberOfConnections->setText(QString::number(count));
 }
 
-void RPCConsole::setNumBlocks(int count, int countOfPeers)
+void RPCConsole::setNumBlocks(int count, const QDateTime& blockDate, double nVerificationProgress, bool headers)
 {
     ui->numberOfBlocks->setText(QString::number(count));
-    ui->totalBlocks->setText(QString::number(countOfPeers));
     if(clientModel)
     {
-        // If there is no current number available display N/A instead of 0, which can't ever be true
-        ui->totalBlocks->setText(clientModel->getNumBlocksOfPeers() == 0 ? tr("N/A") : QString::number(clientModel->getNumBlocksOfPeers()));
-        ui->lastBlockTime->setText(clientModel->getLastBlockDate().toString());
+        ui->lastBlockTime->setText(blockDate.toString());
     }
 }
 
@@ -432,6 +427,6 @@ void RPCConsole::scrollToEnd()
 
 void RPCConsole::on_showCLOptionsButton_clicked()
 {
-    GUIUtil::HelpMessageBox help;
-    help.exec();
+    //GUIUtil::HelpMessageBox help;
+    //help.exec();
 }

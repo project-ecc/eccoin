@@ -1,18 +1,24 @@
+// Copyright (c) 2011-2016 The Bitcoin Core developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #include "transactiondesc.h"
 
-#include "guiutil.h"
 #include "bitcoinunits.h"
+#include "guiutil.h"
+#include "transactionrecord.h"
 
-#include "main.h"
-#include "wallet.h"
-#include "db.h"
-#include "txdb-leveldb.h"
-#include "ui_interface.h"
 #include "base58.h"
-#include "global.h"
+#include "validation.h"
+#include "script.h"
+#include "util/utiltime.h"
+#include "util/util.h"
+#include "db.h"
+#include "wallet.h"
+#include "txdb-leveldb.h"
 
-
-#define int64 int64_t
+#include <stdint.h>
+#include <string>
 
 QString TransactionDesc::FormatTxStatus(const CWalletTx& wtx)
 {
@@ -37,6 +43,7 @@ QString TransactionDesc::FormatTxStatus(const CWalletTx& wtx)
     }
 }
 
+
 QString TransactionDesc::toHTML(CWallet *wallet, CWalletTx &wtx)
 {
     QString strHTML;
@@ -46,10 +53,10 @@ QString TransactionDesc::toHTML(CWallet *wallet, CWalletTx &wtx)
         strHTML.reserve(4000);
         strHTML += "<html><font face='verdana, arial, helvetica, sans-serif'>";
 
-        int64 nTime = wtx.GetTxTime();
-        int64 nCredit = wtx.GetCredit();
-        int64 nDebit = wtx.GetDebit();
-        int64 nNet = nCredit - nDebit;
+        int64_t nTime = wtx.GetTxTime();
+        int64_t nCredit = wtx.GetCredit();
+        int64_t nDebit = wtx.GetDebit();
+        int64_t nNet = nCredit - nDebit;
 
         strHTML += "<b>" + tr("Status") + ":</b> " + FormatTxStatus(wtx);
         int nRequests = wtx.GetRequestCount();
@@ -129,7 +136,7 @@ QString TransactionDesc::toHTML(CWallet *wallet, CWalletTx &wtx)
             //
             // Coinbase
             //
-            int64 nUnmatured = 0;
+            int64_t nUnmatured = 0;
             BOOST_FOREACH(const CTxOut& txout, wtx.vout)
                 nUnmatured += wallet->GetCredit(txout);
             strHTML += "<b>" + tr("Credit") + ":</b> ";
@@ -186,13 +193,13 @@ QString TransactionDesc::toHTML(CWallet *wallet, CWalletTx &wtx)
                 if (fAllToMe)
                 {
                     // Payment to self
-                    int64 nChange = wtx.GetChange();
-                    int64 nValue = nCredit - nChange;
+                    int64_t nChange = wtx.GetChange();
+                    int64_t nValue = nCredit - nChange;
                     strHTML += "<b>" + tr("Debit") + ":</b> " + BitcoinUnits::formatWithUnit(BitcoinUnits::BTC, -nValue) + "<br>";
                     strHTML += "<b>" + tr("Credit") + ":</b> " + BitcoinUnits::formatWithUnit(BitcoinUnits::BTC, nValue) + "<br>";
                 }
 
-                int64 nTxFee = nDebit - wtx.GetValueOut();
+                int64_t nTxFee = nDebit - wtx.GetValueOut();
                 if (nTxFee > 0)
                     strHTML += "<b>" + tr("Transaction fee") + ":</b> " + BitcoinUnits::formatWithUnit(BitcoinUnits::BTC, -nTxFee) + "<br>";
             }
@@ -211,19 +218,19 @@ QString TransactionDesc::toHTML(CWallet *wallet, CWalletTx &wtx)
         }
 
         strHTML += "<b>" + tr("Net amount") + ":</b> " + BitcoinUnits::formatWithUnit(BitcoinUnits::BTC, nNet, true) + "<br>";
-			
+
         //
         // Message
         //
         if (!wtx.mapValue["message"].empty())
              strHTML += "<br><b>" + tr("Message") + ":</b><br>" + GUIUtil::HtmlEscape(wtx.mapValue["message"], true) + "<br>";
 
-		if (!wtx.mapValue["comment"].empty())
+        if (!wtx.mapValue["comment"].empty())
             strHTML += "<br><b>" + tr("Comment") + ":</b><br>" + GUIUtil::HtmlEscape(wtx.mapValue["comment"], true) + "<br>";
 
         strHTML += "<b>" + tr("Transaction ID") + ":</b> " + wtx.GetHash().ToString().c_str() + "<br>";
 
-		
+
 
         if (wtx.IsCoinBase() || wtx.IsCoinStake())
             strHTML += "<br>" + tr("Generated coins must mature 50 blocks before they can be spent. When you generated this block, it was broadcast to the network to be added to the block chain. If it fails to get into the chain, its state will change to \"not accepted\" and it won't be spendable. This may occasionally happen if another node generates a block within a few seconds of yours.") + "<br>";
