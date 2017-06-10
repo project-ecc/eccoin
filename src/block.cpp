@@ -67,6 +67,7 @@ void static InvalidChainFound(CBlockIndex* pindexNew)
     {
         nBestInvalidTrust = pindexNew->nChainTrust;
         CTxDB().WriteBestInvalidTrust(CBigNum(nBestInvalidTrust));
+        uiInterface.NotifyBlockTip(IsInitialBlockDownload(), pindexNew);
         uiInterface.NotifyBlocksChanged();
     }
 
@@ -866,7 +867,8 @@ bool CBlock::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos, const u
         UpdatedTransaction(hashPrevBestCoinBase);
         hashPrevBestCoinBase = vtx[0].GetHash();
     }
-
+    // Always notify the UI if a new block tip was connected
+    uiInterface.NotifyBlockTip(IsInitialBlockDownload(), pindexNew);
     uiInterface.NotifyBlocksChanged();
     return true;
 }
