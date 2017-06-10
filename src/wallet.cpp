@@ -878,6 +878,7 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate)
 
     CBlockIndex* pindex = pindexStart;
     {
+        ShowProgress(_("Rescanning..."), 0); // show rescan progress in GUI as dialog or on splashscreen, if -rescan on startup
         LOCK(cs_wallet);
         while (pindex)
         {
@@ -897,6 +898,8 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate)
             }
             pindex = pindex->pnext;
         }
+        ShowProgress(_("Rescanning..."), 100); // hide progress dialog in GUI
+
     }
     return ret;
 }
@@ -1876,6 +1879,8 @@ DBErrors CWallet::LoadWallet(bool& fFirstRunRet)
     fFirstRunRet = !vchDefaultKey.IsValid();
 
     NewThread(ThreadFlushWalletDB, &strWalletFile);
+    uiInterface.LoadWallet(this);
+
     return DB_LOAD_OK;
 }
 
