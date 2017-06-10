@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include "random.h"
 #include "util/utilstrencodings.h"
+#include "messages.h"
 
 using namespace std;
 using namespace boost;
@@ -636,6 +637,8 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
     if (pfrom && !CSyncCheckpoint::strMasterPrivKey.empty())
         pcheckpointMain->SendSyncCheckpoint(pcheckpointMain->AutoSelectSyncCheckpoint());
 
+    NotifyHeaderTip();
+
     return true;
 }
 
@@ -947,30 +950,49 @@ bool LoadExternalBlockFile(FILE* fileIn)
 // CAlert
 //
 
-string GetWarnings(string strFor)
+CCriticalSection cs_warnings;
+
+std::string GetWarnings(const std::string& strFor)
 {
-    string strStatusBar;
-    string strRPC;
+    std::string strStatusBar = "";
+    std::string strRPC = "";
+    std::string strGUI = "";
+    const std::string uiAlertSeperator = "<hr />";
+
+    LOCK(cs_warnings);
+
+//    if (!CLIENT_VERSION_IS_RELEASE) {
+//        strStatusBar = "This is a pre-release test build - use at your own risk - do not use for mining or merchant applications";
+//        strGUI = _("This is a pre-release test build - use at your own risk - do not use for mining or merchant applications");
+//    }
 
     if (GetBoolArg("-testsafemode", false))
-        strRPC = "test";
+        strStatusBar = strRPC = strGUI = "testsafemode enabled";
 
     // Misc warnings like out of disk space and clock is wrong
     if (strMiscWarning != "")
     {
         strStatusBar = strMiscWarning;
+        strGUI += (strGUI.empty() ? "" : uiAlertSeperator) + strMiscWarning;
     }
-
-    // if detected invalid checkpoint enter safe mode
-    if (hashInvalidCheckpoint != 0)
+/*
+    if (fLargeWorkForkFound)
     {
-        strStatusBar = strRPC = _("WARNING: Invalid checkpoint found! Displayed transactions may not be correct! You may need to upgrade, or notify developers.");
+        strStatusBar = strRPC = "Warning: The network does not appear to fully agree! Some miners appear to be experiencing issues.";
+        strGUI += (strGUI.empty() ? "" : uiAlertSeperator) + _("Warning: The network does not appear to fully agree! Some miners appear to be experiencing issues.");
     }
-
-    if (strFor == "statusbar")
+    else if (fLargeWorkInvalidChainFound)
+    {
+        strStatusBar = strRPC = "Warning: We do not appear to fully agree with our peers! You may need to upgrade, or other nodes may need to upgrade.";
+        strGUI += (strGUI.empty() ? "" : uiAlertSeperator) + _("Warning: We do not appear to fully agree with our peers! You may need to upgrade, or other nodes may need to upgrade.");
+    }
+*/
+    if (strFor == "gui")
+        return strGUI;
+    else if (strFor == "statusbar")
         return strStatusBar;
     else if (strFor == "rpc")
         return strRPC;
-    assert(!"GetWarnings() : invalid parameter");
+    assert(!"GetWarnings(): invalid parameter");
     return "error";
 }

@@ -575,12 +575,15 @@ void ThreadSocketHandler2(void* parg)
                 }
             }
         }
-        if (vNodes.size() != nPrevNodeCount)
+        size_t vNodesSize;
         {
-            nPrevNodeCount = vNodes.size();
-            uiInterface.NotifyNumConnectionsChanged(vNodes.size());
+            LOCK(cs_vNodes);
+            vNodesSize = vNodes.size();
         }
-
+        if(vNodesSize != nPrevNodeCount) {
+            nPrevNodeCount = vNodesSize;
+            uiInterface.NotifyNumConnectionsChanged(nPrevNodeCount);
+        }
 
         //
         // Find which sockets have data to receive

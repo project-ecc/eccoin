@@ -16,6 +16,7 @@
 
 extern unsigned char pchMessageStart[4];
 
+void NotifyHeaderTip();
 bool AlreadyHave(CTxDB& txdb, const CInv& inv);
 bool ProcessMessages(CNode* pfrom);
 bool SendMessages(CNode* pto, bool fSendTrickle);

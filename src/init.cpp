@@ -30,6 +30,11 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <openssl/crypto.h>
 
+#include <boost/thread/thread.hpp>
+#include <boost/algorithm/string/replace.hpp>
+
+#include "server.h"
+
 #ifndef WIN32
 #include <signal.h>
 #endif
@@ -49,8 +54,50 @@ unsigned int nNodeLifespan;
 unsigned int nDerivationMethodIndex;
 unsigned int nMinerSleep;
 bool fUseFastIndex;
+boost::condition_variable cvBlockChange;
 
 using namespace std;
+
+void OnRPCStarted()
+{
+    uiInterface.NotifyBlockTip.connect(&RPCNotifyBlockChange);
+}
+
+void OnRPCStopped()
+{
+    uiInterface.NotifyBlockTip.disconnect(&RPCNotifyBlockChange);
+    RPCNotifyBlockChange(false, nullptr);
+    cvBlockChange.notify_all();
+    LogPrint(BCLog::RPC, "RPC stopped.\n");
+}
+
+static void BlockNotifyCallback(bool initialSync, const CBlockIndex *pBlockIndex)
+{
+    if (initialSync || !pBlockIndex)
+        return;
+
+    std::string strCmd = GetArg("-blocknotify", "");
+
+    boost::replace_all(strCmd, "%s", pBlockIndex->GetBlockHash().GetHex());
+    boost::thread t(runCommand, strCmd); // thread runs free
+}
+
+
+static bool fHaveGenesis = false;
+static boost::mutex cs_GenesisWait;
+static boost::condition_variable condvar_GenesisWait;
+
+static void BlockNotifyGenesisWait(bool, const CBlockIndex *pBlockIndex)
+{
+    if (pBlockIndex != NULL) {
+        {
+            boost::unique_lock<boost::mutex> lock_GenesisWait(cs_GenesisWait);
+            fHaveGenesis = true;
+        }
+        condvar_GenesisWait.notify_all();
+    }
+}
+
 
 void Interrupt(boost::thread_group& threadGroup)
 {
@@ -108,21 +155,21 @@ bool AppInitSanityChecks()
 
 bool AppInitServers(boost::thread_group& threadGroup)
 {
-    /*
+
     RPCServer::OnStarted(&OnRPCStarted);
     RPCServer::OnStopped(&OnRPCStopped);
-    RPCServer::OnPreCommand(&OnRPCPreCommand);
-    if (!InitHTTPServer())
+    //RPCServer::OnPreCommand(&OnRPCPreCommand);
+    //if (!InitHTTPServer())
         return false;
     if (!StartRPC())
         return false;
-    if (!StartHTTPRPC())
+    //if (!StartHTTPRPC())
         return false;
-    if (GetBoolArg("-rest", DEFAULT_REST_ENABLE) && !StartREST())
+    //if (GetBoolArg("-rest", false) && !StartREST())
         return false;
-    if (!StartHTTPServer())
+    //if (!StartHTTPServer())
         return false;
-    */
+
     return true;
 }
 
@@ -1117,6 +1164,8 @@ bool AppInit2()
         return false;
 
     RandAddSeedPerfmon();
+
+    uiInterface.NotifyBlockTip.connect(BlockNotifyCallback);
 
     //// debug print
     LogPrintf("mapBlockIndex.size() = %u \n",   mapBlockIndex.size());
