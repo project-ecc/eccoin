@@ -46,8 +46,8 @@ static inline unsigned short GetDefaultRPCPort()
 Object JSONRPCError(int code, const string& message)
 {
     Object error;
-    error.push_back(Pair("code", code));
-    error.push_back(Pair("message", message));
+    error.push_back(Pair_Type("code", code));
+    error.push_back(Pair_Type("message", message));
     return error;
 }
 
@@ -236,7 +236,7 @@ Value stop(const Array& params, bool fHelp)
 //
 
 
-static const CRPCCommand vRPCCommands[] =
+const CRPCCommand vRPCCommands[] =
 { //  name                      function                 safemd  unlocked
   //  ------------------------  -----------------------  ------  --------
     { "help",                   &help,                   true,   true },
@@ -321,7 +321,7 @@ CRPCTable::CRPCTable()
 
 const CRPCCommand *CRPCTable::operator[](string name) const
 {
-    map<string, const CRPCCommand*>::const_iterator it = mapCommands.find(name);
+    std::map<std::string, const CRPCCommand*>::const_iterator it = mapCommands.find(name);
     if (it == mapCommands.end())
         return NULL;
     return (*it).second;
@@ -506,9 +506,9 @@ bool HTTPAuthorized(map<string, string>& mapHeaders)
 string JSONRPCRequest(const string& strMethod, const Array& params, const Value& id)
 {
     Object request;
-    request.push_back(Pair("method", strMethod));
-    request.push_back(Pair("params", params));
-    request.push_back(Pair("id", id));
+    request.push_back(Pair_Type("method", strMethod));
+    request.push_back(Pair_Type("params", params));
+    request.push_back(Pair_Type("id", id));
     return write_string(Value(request), false) + "\n";
 }
 
@@ -516,11 +516,11 @@ Object JSONRPCReplyObj(const Value& result, const Value& error, const Value& id)
 {
     Object reply;
     if (error.type() != null_type)
-        reply.push_back(Pair("result", Value::null));
+        reply.push_back(Pair_Type("result", Value::null));
     else
-        reply.push_back(Pair("result", result));
-    reply.push_back(Pair("error", error));
-    reply.push_back(Pair("id", id));
+        reply.push_back(Pair_Type("result", result));
+    reply.push_back(Pair_Type("error", error));
+    reply.push_back(Pair_Type("id", id));
     return reply;
 }
 

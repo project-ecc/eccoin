@@ -138,7 +138,7 @@ namespace json_spirit
     typedef Config_vector< std::string > Config;
 
     typedef Config::Value_type  Value;
-    typedef Config::Pair_type   Pair;
+    typedef Config::Pair_type   Pair_Type;
     typedef Config::Object_type Object;
     typedef Config::Array_type  Array;
 

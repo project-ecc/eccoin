@@ -22,6 +22,8 @@ class CBlockIndex;
 #include "util/utiltime.h"
 #include "checkpoints.h"
 
+#include "univalue.h"
+
 // HTTP status codes
 enum HTTPStatusCode
 {
@@ -35,38 +37,72 @@ enum HTTPStatusCode
 
 // Bitcoin RPC error codes
 enum RPCErrorCode
-{
-    // Standard JSON-RPC 2.0 errors
+{  
+    //! Standard JSON-RPC 2.0 errors
+    // RPC_INVALID_REQUEST is internally mapped to HTTP_BAD_REQUEST (400).
+    // It should not be used for application-layer errors.
     RPC_INVALID_REQUEST  = -32600,
+    // RPC_METHOD_NOT_FOUND is internally mapped to HTTP_NOT_FOUND (404).
+    // It should not be used for application-layer errors.
     RPC_METHOD_NOT_FOUND = -32601,
     RPC_INVALID_PARAMS   = -32602,
+    // RPC_INTERNAL_ERROR should only be used for genuine errors in bitcoind
+    // (for example datadir corruption).
     RPC_INTERNAL_ERROR   = -32603,
     RPC_PARSE_ERROR      = -32700,
 
-    // General application defined errors
-    RPC_MISC_ERROR                  = -1,  // std::exception thrown in command handling
-    RPC_FORBIDDEN_BY_SAFE_MODE      = -2,  // Server is in safe mode, and command is not allowed in safe mode
-    RPC_TYPE_ERROR                  = -3,  // Unexpected type was passed as parameter
-    RPC_INVALID_ADDRESS_OR_KEY      = -5,  // Invalid address or key
-    RPC_OUT_OF_MEMORY               = -7,  // Ran out of memory during operation
-    RPC_INVALID_PARAMETER           = -8,  // Invalid, missing or duplicate parameter
-    RPC_DATABASE_ERROR              = -20, // Database error
-    RPC_DESERIALIZATION_ERROR       = -22, // Error parsing or validating structure in raw format
+    //! General application defined errors
+    RPC_MISC_ERROR                  = -1,  //!< std::exception thrown in command handling
+    RPC_FORBIDDEN_BY_SAFE_MODE      = -2,  //!< Server is in safe mode, and command is not allowed in safe mode
+    RPC_TYPE_ERROR                  = -3,  //!< Unexpected type was passed as parameter
+    RPC_INVALID_ADDRESS_OR_KEY      = -5,  //!< Invalid address or key
+    RPC_OUT_OF_MEMORY               = -7,  //!< Ran out of memory during operation
+    RPC_INVALID_PARAMETER           = -8,  //!< Invalid, missing or duplicate parameter
+    RPC_DATABASE_ERROR              = -20, //!< Database error
+    RPC_DESERIALIZATION_ERROR       = -22, //!< Error parsing or validating structure in raw format
+    RPC_VERIFY_ERROR                = -25, //!< General error during transaction or block submission
+    RPC_VERIFY_REJECTED             = -26, //!< Transaction or block was rejected by network rules
+    RPC_VERIFY_ALREADY_IN_CHAIN     = -27, //!< Transaction already in chain
+    RPC_IN_WARMUP                   = -28, //!< Client still warming up
 
-    // P2P client errors
-    RPC_CLIENT_NOT_CONNECTED        = -9,  // Bitcoin is not connected
-    RPC_CLIENT_IN_INITIAL_DOWNLOAD  = -10, // Still downloading initial blocks
+    //! Aliases for backward compatibility
+    RPC_TRANSACTION_ERROR           = RPC_VERIFY_ERROR,
+    RPC_TRANSACTION_REJECTED        = RPC_VERIFY_REJECTED,
+    RPC_TRANSACTION_ALREADY_IN_CHAIN= RPC_VERIFY_ALREADY_IN_CHAIN,
 
-    // Wallet errors
-    RPC_WALLET_ERROR                = -4,  // Unspecified problem with wallet (key not found etc.)
-    RPC_WALLET_INSUFFICIENT_FUNDS   = -6,  // Not enough funds in wallet or account
-    RPC_WALLET_INVALID_ACCOUNT_NAME = -11, // Invalid account name
-    RPC_WALLET_KEYPOOL_RAN_OUT      = -12, // Keypool ran out, call keypoolrefill first
-    RPC_WALLET_UNLOCK_NEEDED        = -13, // Enter the wallet passphrase with walletpassphrase first
-    RPC_WALLET_PASSPHRASE_INCORRECT = -14, // The wallet passphrase entered was incorrect
-    RPC_WALLET_WRONG_ENC_STATE      = -15, // Command given in wrong wallet encryption state (encrypting an encrypted wallet etc.)
-    RPC_WALLET_ENCRYPTION_FAILED    = -16, // Failed to encrypt the wallet
-    RPC_WALLET_ALREADY_UNLOCKED     = -17, // Wallet is already unlocked
+    //! P2P client errors
+    RPC_CLIENT_NOT_CONNECTED        = -9,  //!< Bitcoin is not connected
+    RPC_CLIENT_IN_INITIAL_DOWNLOAD  = -10, //!< Still downloading initial blocks
+    RPC_CLIENT_NODE_ALREADY_ADDED   = -23, //!< Node is already added
+    RPC_CLIENT_NODE_NOT_ADDED       = -24, //!< Node has not been added before
+    RPC_CLIENT_NODE_NOT_CONNECTED   = -29, //!< Node to disconnect not found in connected nodes
+    RPC_CLIENT_INVALID_IP_OR_SUBNET = -30, //!< Invalid IP/Subnet
+    RPC_CLIENT_P2P_DISABLED         = -31, //!< No valid connection manager instance found
+
+    //! Wallet errors
+    RPC_WALLET_ERROR                = -4,  //!< Unspecified problem with wallet (key not found etc.)
+    RPC_WALLET_INSUFFICIENT_FUNDS   = -6,  //!< Not enough funds in wallet or account
+    RPC_WALLET_INVALID_ACCOUNT_NAME = -11, //!< Invalid account name
+    RPC_WALLET_KEYPOOL_RAN_OUT      = -12, //!< Keypool ran out, call keypoolrefill first
+    RPC_WALLET_UNLOCK_NEEDED        = -13, //!< Enter the wallet passphrase with walletpassphrase first
+    RPC_WALLET_PASSPHRASE_INCORRECT = -14, //!< The wallet passphrase entered was incorrect
+    RPC_WALLET_WRONG_ENC_STATE      = -15, //!< Command given in wrong wallet encryption state (encrypting an encrypted wallet etc.)
+    RPC_WALLET_ENCRYPTION_FAILED    = -16, //!< Failed to encrypt the wallet
+    RPC_WALLET_ALREADY_UNLOCKED     = -17, //!< Wallet is already unlocked
+};
+
+class JSONRPCRequest
+{
+public:
+    UniValue id;
+    std::string strMethod;
+    UniValue params;
+    bool fHelp;
+    std::string URI;
+    std::string authUser;
+
+    JSONRPCRequest() : id(NullUniValue), params(NullUniValue), fHelp(false) {}
+    void parse(const UniValue& valRequest);
 };
 
 json_spirit::Object JSONRPCError(int code, const std::string& message);
@@ -93,6 +129,11 @@ void RPCTypeCheck(const json_spirit::Object& o,
 
 typedef json_spirit::Value(*rpcfn_type)(const json_spirit::Array& params, bool fHelp);
 
+extern void RPCNotifyBlockChange(bool ibd, const CBlockIndex * pindex);
+
+
+//typedef UniValue(*rpcfn_type) (const JSONRPCRequest& jsonRequest);
+
 class CRPCCommand
 {
 public:
@@ -100,6 +141,8 @@ public:
     rpcfn_type actor;
     bool okSafeMode;
     bool unlocked;
+    //std::string category;
+    //std::vector<std::string> argNames;
 };
 
 /**
@@ -122,6 +165,21 @@ public:
      * @throws an exception (json_spirit::Value) when an error happens.
      */
     json_spirit::Value execute(const std::string &method, const json_spirit::Array &params) const;
+
+    /**
+    * Returns a list of registered commands
+    * @returns List of registered commands.
+    */
+    std::vector<std::string> listCommands() const;
+
+
+    /**
+     * Appends a CRPCCommand to the dispatch table.
+     * Returns false if RPC server is already running (dump concurrency protection).
+     * Commands cannot be overwritten (returns false).
+     */
+    bool appendCommand(const std::string& name, const CRPCCommand* pcmd);
+
 };
 
 extern const CRPCTable tableRPC;
@@ -219,5 +277,7 @@ extern json_spirit::Value getblockhash(const json_spirit::Array& params, bool fH
 extern json_spirit::Value getblock(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getblockbynumber(const json_spirit::Array& params, bool fHelp);
 extern json_spirit::Value getcheckpoint(const json_spirit::Array& params, bool fHelp);
+
+extern const CRPCCommand vRPCCommands[];
 
 #endif

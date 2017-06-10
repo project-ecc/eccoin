@@ -259,13 +259,14 @@ static void BlockTipChanged(ClientModel *clientmodel, bool initialSync, const CB
     // lock free async UI updates in case we have a new block tip
     // during initial sync, only update the UI if the last update
     // was > 250ms (MODEL_UPDATE_DELAY) ago
-    int64_t now = 0;
-    if (initialSync)
-        now = GetTimeMillis();
+    int64_t now = GetTimeMillis();
+    //if (initialSync)
+        //now = GetTimeMillis();
 
     int64_t& nLastUpdateNotification = fHeader ? nLastHeaderTipUpdateNotification : nLastBlockTipUpdateNotification;
 
-    if (fHeader) {
+    if (fHeader)
+    {
         // cache best headers time and height to reduce future cs_main locks
         clientmodel->cachedBestHeaderHeight = pIndex->nHeight;
         clientmodel->cachedBestHeaderTime = pIndex->GetBlockIndexTime();
@@ -281,7 +282,6 @@ static void BlockTipChanged(ClientModel *clientmodel, bool initialSync, const CB
         nLastUpdateNotification = now;
     }
 }
-
 void ClientModel::subscribeToCoreSignals()
 {
     // Connect signals to client
@@ -289,6 +289,7 @@ void ClientModel::subscribeToCoreSignals()
     uiInterface.NotifyNumConnectionsChanged.connect(boost::bind(NotifyNumConnectionsChanged, this, _1));
     uiInterface.NotifyNetworkActiveChanged.connect(boost::bind(NotifyNetworkActiveChanged, this, _1));
     uiInterface.NotifyAlertChanged.connect(boost::bind(NotifyAlertChanged, this));
+    //uiInterface.BannedListChanged.connect(boost::bind(BannedListChanged, this));
     uiInterface.NotifyBlockTip.connect(boost::bind(BlockTipChanged, this, _1, _2, false));
     uiInterface.NotifyHeaderTip.connect(boost::bind(BlockTipChanged, this, _1, _2, true));
 }
@@ -300,6 +301,7 @@ void ClientModel::unsubscribeFromCoreSignals()
     uiInterface.NotifyNumConnectionsChanged.disconnect(boost::bind(NotifyNumConnectionsChanged, this, _1));
     uiInterface.NotifyNetworkActiveChanged.disconnect(boost::bind(NotifyNetworkActiveChanged, this, _1));
     uiInterface.NotifyAlertChanged.disconnect(boost::bind(NotifyAlertChanged, this));
+    //uiInterface.BannedListChanged.disconnect(boost::bind(BannedListChanged, this));
     uiInterface.NotifyBlockTip.disconnect(boost::bind(BlockTipChanged, this, _1, _2, false));
     uiInterface.NotifyHeaderTip.disconnect(boost::bind(BlockTipChanged, this, _1, _2, true));
 }

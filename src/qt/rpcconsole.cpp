@@ -260,16 +260,14 @@ void RPCConsole::setClientModel(ClientModel *model)
     {
         // Subscribe to information, replies, messages, errors
         connect(model, SIGNAL(numConnectionsChanged(int)), this, SLOT(setNumConnections(int)));
-
-        setNumBlocks(model->getNumBlocks(), model->getLastBlockDate(), model->getVerificationProgress(NULL), false);
         connect(model, SIGNAL(numBlocksChanged(int,QDateTime,double,bool)), this, SLOT(setNumBlocks(int,QDateTime,double,bool)));
 
         // Provide initial values
         ui->clientVersion->setText(model->formatFullVersion());
         ui->startupTime->setText(model->formatClientStartupTime());
 
+        setNumBlocks(model->getNumBlocks(), model->getLastBlockDate(), model->getVerificationProgress(NULL), false);
         setNumConnections(model->getNumConnections());
-
     }
 }
 

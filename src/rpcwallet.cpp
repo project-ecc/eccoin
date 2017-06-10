@@ -50,20 +50,20 @@ void EnsureWalletIsUnlocked()
 void WalletTxToJSON(const CWalletTx& wtx, Object& entry)
 {
     int confirms = wtx.GetDepthInMainChain();
-    entry.push_back(Pair("confirmations", confirms));
+    entry.push_back(Pair_Type("confirmations", confirms));
     if (wtx.IsCoinBase() || wtx.IsCoinStake())
-        entry.push_back(Pair("generated", true));
+        entry.push_back(Pair_Type("generated", true));
     if (confirms > 0)
     {
-        entry.push_back(Pair("blockhash", wtx.hashBlock.GetHex()));
-        entry.push_back(Pair("blockindex", wtx.nIndex));
-        entry.push_back(Pair("blocktime", (boost::int64_t)(mapBlockIndex[wtx.hashBlock]->nTime)));
+        entry.push_back(Pair_Type("blockhash", wtx.hashBlock.GetHex()));
+        entry.push_back(Pair_Type("blockindex", wtx.nIndex));
+        entry.push_back(Pair_Type("blocktime", (boost::int64_t)(mapBlockIndex[wtx.hashBlock]->nTime)));
     }
-    entry.push_back(Pair("txid", wtx.GetHash().GetHex()));
-    entry.push_back(Pair("time", (boost::int64_t)wtx.GetTxTime()));
-    entry.push_back(Pair("timereceived", (boost::int64_t)wtx.nTimeReceived));
+    entry.push_back(Pair_Type("txid", wtx.GetHash().GetHex()));
+    entry.push_back(Pair_Type("time", (boost::int64_t)wtx.GetTxTime()));
+    entry.push_back(Pair_Type("timereceived", (boost::int64_t)wtx.nTimeReceived));
     BOOST_FOREACH(const PAIRTYPE(string,string)& item, wtx.mapValue)
-        entry.push_back(Pair(item.first, item.second));
+        entry.push_back(Pair_Type(item.first, item.second));
 }
 
 string AccountFromValue(const Value& value)
@@ -85,31 +85,31 @@ Value getinfo(const Array& params, bool fHelp)
     GetProxy(NET_IPV4, proxy);
 
     Object obj, diff;
-    obj.push_back(Pair("version",       FormatFullVersion()));
-    obj.push_back(Pair("protocolversion",(int)PROTOCOL_VERSION));
-    obj.push_back(Pair("walletversion", pwalletMain->GetVersion()));
-    obj.push_back(Pair("balance",       ValueFromAmount(pwalletMain->GetBalance())));
-    obj.push_back(Pair("newmint",       ValueFromAmount(pwalletMain->GetNewMint())));
-    obj.push_back(Pair("stake",         ValueFromAmount(pwalletMain->GetStake())));
-    obj.push_back(Pair("blocks",        pindexBest->nHeight));
-    obj.push_back(Pair("timeoffset",    (boost::int64_t)GetTimeOffset()));
-    obj.push_back(Pair("moneysupply",   ValueFromAmount(pindexBest->nMoneySupply)));
-    obj.push_back(Pair("connections",   (int)vNodes.size()));
-    obj.push_back(Pair("proxy",         (proxy.first.IsValid() ? proxy.first.ToStringIPPort() : string())));
-    obj.push_back(Pair("ip",            addrSeenByPeer.ToStringIP()));
+    obj.push_back(Pair_Type("version",       FormatFullVersion()));
+    obj.push_back(Pair_Type("protocolversion",(int)PROTOCOL_VERSION));
+    obj.push_back(Pair_Type("walletversion", pwalletMain->GetVersion()));
+    obj.push_back(Pair_Type("balance",       ValueFromAmount(pwalletMain->GetBalance())));
+    obj.push_back(Pair_Type("newmint",       ValueFromAmount(pwalletMain->GetNewMint())));
+    obj.push_back(Pair_Type("stake",         ValueFromAmount(pwalletMain->GetStake())));
+    obj.push_back(Pair_Type("blocks",        pindexBest->nHeight));
+    obj.push_back(Pair_Type("timeoffset",    (boost::int64_t)GetTimeOffset()));
+    obj.push_back(Pair_Type("moneysupply",   ValueFromAmount(pindexBest->nMoneySupply)));
+    obj.push_back(Pair_Type("connections",   (int)vNodes.size()));
+    obj.push_back(Pair_Type("proxy",         (proxy.first.IsValid() ? proxy.first.ToStringIPPort() : string())));
+    obj.push_back(Pair_Type("ip",            addrSeenByPeer.ToStringIP()));
 
-    diff.push_back(Pair("proof-of-work",  GetDifficulty()));
-    diff.push_back(Pair("proof-of-stake", GetDifficulty(GetLastBlockIndex(pindexBest, true))));
-    obj.push_back(Pair("difficulty",    diff));
+    diff.push_back(Pair_Type("proof-of-work",  GetDifficulty()));
+    diff.push_back(Pair_Type("proof-of-stake", GetDifficulty(GetLastBlockIndex(pindexBest, true))));
+    obj.push_back(Pair_Type("difficulty",    diff));
 
-    obj.push_back(Pair("testnet",       fTestNet));
-    obj.push_back(Pair("keypoololdest", (boost::int64_t)pwalletMain->GetOldestKeyPoolTime()));
-    obj.push_back(Pair("keypoolsize",   (int)pwalletMain->GetKeyPoolSize()));
-    obj.push_back(Pair("paytxfee",      ValueFromAmount(nTransactionFee)));
-    obj.push_back(Pair("mininput",      ValueFromAmount(nMinimumInputValue)));
+    obj.push_back(Pair_Type("testnet",       fTestNet));
+    obj.push_back(Pair_Type("keypoololdest", (boost::int64_t)pwalletMain->GetOldestKeyPoolTime()));
+    obj.push_back(Pair_Type("keypoolsize",   (int)pwalletMain->GetKeyPoolSize()));
+    obj.push_back(Pair_Type("paytxfee",      ValueFromAmount(nTransactionFee)));
+    obj.push_back(Pair_Type("mininput",      ValueFromAmount(nMinimumInputValue)));
     if (pwalletMain->IsCrypted())
-        obj.push_back(Pair("unlocked_until", (boost::int64_t)nWalletUnlockTime / 1000));
-    obj.push_back(Pair("errors",        GetWarnings("statusbar")));
+        obj.push_back(Pair_Type("unlocked_until", (boost::int64_t)nWalletUnlockTime / 1000));
+    obj.push_back(Pair_Type("errors",        GetWarnings("statusbar")));
     return obj;
 }
 
@@ -725,7 +725,7 @@ Value sendmany(const Array& params, bool fHelp)
     vector<pair<CScript, int64_t> > vecSend;
 
     int64_t totalAmount = 0;
-    BOOST_FOREACH(const Pair& s, sendTo)
+    BOOST_FOREACH(const Pair_Type& s, sendTo)
     {
         CBitcoinAddress address(s.name_);
         if (!address.IsValid())
@@ -936,10 +936,10 @@ Value ListReceived(const Array& params, bool fByAccounts)
         else
         {
             Object obj;
-            obj.push_back(Pair("address",       address.ToString()));
-            obj.push_back(Pair("account",       strAccount));
-            obj.push_back(Pair("amount",        ValueFromAmount(nAmount)));
-            obj.push_back(Pair("confirmations", (nConf == std::numeric_limits<int>::max() ? 0 : nConf)));
+            obj.push_back(Pair_Type("address",       address.ToString()));
+            obj.push_back(Pair_Type("account",       strAccount));
+            obj.push_back(Pair_Type("amount",        ValueFromAmount(nAmount)));
+            obj.push_back(Pair_Type("confirmations", (nConf == std::numeric_limits<int>::max() ? 0 : nConf)));
             ret.push_back(obj);
         }
     }
@@ -951,9 +951,9 @@ Value ListReceived(const Array& params, bool fByAccounts)
             int64_t nAmount = (*it).second.nAmount;
             int nConf = (*it).second.nConf;
             Object obj;
-            obj.push_back(Pair("account",       (*it).first));
-            obj.push_back(Pair("amount",        ValueFromAmount(nAmount)));
-            obj.push_back(Pair("confirmations", (nConf == std::numeric_limits<int>::max() ? 0 : nConf)));
+            obj.push_back(Pair_Type("account",       (*it).first));
+            obj.push_back(Pair_Type("amount",        ValueFromAmount(nAmount)));
+            obj.push_back(Pair_Type("confirmations", (nConf == std::numeric_limits<int>::max() ? 0 : nConf)));
             ret.push_back(obj);
         }
     }
@@ -998,7 +998,7 @@ static void MaybePushAddress(Object & entry, const CTxDestination &dest)
 {
     CBitcoinAddress addr;
     if (addr.Set(dest))
-        entry.push_back(Pair("address", addr.ToString()));
+        entry.push_back(Pair_Type("address", addr.ToString()));
 }
 
 void ListTransactions(const CWalletTx& wtx, const string& strAccount, int nMinDepth, bool fLong, Array& ret)
@@ -1018,11 +1018,11 @@ void ListTransactions(const CWalletTx& wtx, const string& strAccount, int nMinDe
         BOOST_FOREACH(const PAIRTYPE(CTxDestination, int64_t)& s, listSent)
         {
             Object entry;
-            entry.push_back(Pair("account", strSentAccount));
+            entry.push_back(Pair_Type("account", strSentAccount));
             MaybePushAddress(entry, s.first);
-            entry.push_back(Pair("category", "send"));
-            entry.push_back(Pair("amount", ValueFromAmount(-s.second)));
-            entry.push_back(Pair("fee", ValueFromAmount(-nFee)));
+            entry.push_back(Pair_Type("category", "send"));
+            entry.push_back(Pair_Type("amount", ValueFromAmount(-s.second)));
+            entry.push_back(Pair_Type("fee", ValueFromAmount(-nFee)));
             if (fLong)
                 WalletTxToJSON(wtx, entry);
             ret.push_back(entry);
@@ -1041,26 +1041,26 @@ void ListTransactions(const CWalletTx& wtx, const string& strAccount, int nMinDe
             if (fAllAccounts || (account == strAccount))
             {
                 Object entry;
-                entry.push_back(Pair("account", account));
+                entry.push_back(Pair_Type("account", account));
                 MaybePushAddress(entry, r.first);
                 if (wtx.IsCoinBase() || wtx.IsCoinStake())
                 {
                     if (wtx.GetDepthInMainChain() < 1)
-                        entry.push_back(Pair("category", "orphan"));
+                        entry.push_back(Pair_Type("category", "orphan"));
                     else if (wtx.GetBlocksToMaturity() > 0)
-                        entry.push_back(Pair("category", "immature"));
+                        entry.push_back(Pair_Type("category", "immature"));
                     else
-                        entry.push_back(Pair("category", "generate"));
+                        entry.push_back(Pair_Type("category", "generate"));
                 }
                 else
                 {
-                    entry.push_back(Pair("category", "receive"));
+                    entry.push_back(Pair_Type("category", "receive"));
                 }
                 if (!wtx.IsCoinStake())
-                    entry.push_back(Pair("amount", ValueFromAmount(r.second)));
+                    entry.push_back(Pair_Type("amount", ValueFromAmount(r.second)));
                 else
                 {
-                    entry.push_back(Pair("amount", ValueFromAmount(-nFee)));
+                    entry.push_back(Pair_Type("amount", ValueFromAmount(-nFee)));
                     stop = true; // only one coinstake output
                 }
                 if (fLong)
@@ -1080,12 +1080,12 @@ void AcentryToJSON(const CAccountingEntry& acentry, const string& strAccount, Ar
     if (fAllAccounts || acentry.strAccount == strAccount)
     {
         Object entry;
-        entry.push_back(Pair("account", acentry.strAccount));
-        entry.push_back(Pair("category", "move"));
-        entry.push_back(Pair("time", (boost::int64_t)acentry.nTime));
-        entry.push_back(Pair("amount", ValueFromAmount(acentry.nCreditDebit)));
-        entry.push_back(Pair("otheraccount", acentry.strOtherAccount));
-        entry.push_back(Pair("comment", acentry.strComment));
+        entry.push_back(Pair_Type("account", acentry.strAccount));
+        entry.push_back(Pair_Type("category", "move"));
+        entry.push_back(Pair_Type("time", (boost::int64_t)acentry.nTime));
+        entry.push_back(Pair_Type("amount", ValueFromAmount(acentry.nCreditDebit)));
+        entry.push_back(Pair_Type("otheraccount", acentry.strOtherAccount));
+        entry.push_back(Pair_Type("comment", acentry.strComment));
         ret.push_back(entry);
     }
 }
@@ -1198,7 +1198,7 @@ Value listaccounts(const Array& params, bool fHelp)
 
     Object ret;
     BOOST_FOREACH(const PAIRTYPE(string, int64_t)& accountBalance, mapAccountBalances) {
-        ret.push_back(Pair(accountBalance.first, ValueFromAmount(accountBalance.second)));
+        ret.push_back(Pair_Type(accountBalance.first, ValueFromAmount(accountBalance.second)));
     }
     return ret;
 }
@@ -1260,8 +1260,8 @@ Value listsinceblock(const Array& params, bool fHelp)
     }
 
     Object ret;
-    ret.push_back(Pair("transactions", transactions));
-    ret.push_back(Pair("lastblock", lastblock.GetHex()));
+    ret.push_back(Pair_Type("transactions", transactions));
+    ret.push_back(Pair_Type("lastblock", lastblock.GetHex()));
 
     return ret;
 }
@@ -1289,15 +1289,15 @@ Value gettransaction(const Array& params, bool fHelp)
         int64_t nNet = nCredit - nDebit;
         int64_t nFee = (wtx.IsFromMe() ? wtx.GetValueOut() - nDebit : 0);
 
-        entry.push_back(Pair("amount", ValueFromAmount(nNet - nFee)));
+        entry.push_back(Pair_Type("amount", ValueFromAmount(nNet - nFee)));
         if (wtx.IsFromMe())
-            entry.push_back(Pair("fee", ValueFromAmount(nFee)));
+            entry.push_back(Pair_Type("fee", ValueFromAmount(nFee)));
 
         WalletTxToJSON(wtx, entry);
 
         Array details;
         ListTransactions(pwalletMain->mapWallet[hash], "*", 0, false, details);
-        entry.push_back(Pair("details", details));
+        entry.push_back(Pair_Type("details", details));
     }
     else
     {
@@ -1307,18 +1307,18 @@ Value gettransaction(const Array& params, bool fHelp)
         {
             TxToJSON(tx, 0, entry);
             if (hashBlock == 0)
-                entry.push_back(Pair("confirmations", 0));
+                entry.push_back(Pair_Type("confirmations", 0));
             else
             {
-                entry.push_back(Pair("blockhash", hashBlock.GetHex()));
+                entry.push_back(Pair_Type("blockhash", hashBlock.GetHex()));
                 map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(hashBlock);
                 if (mi != mapBlockIndex.end() && (*mi).second)
                 {
                     CBlockIndex* pindex = (*mi).second;
                     if (pindex->IsInMainChain())
-                        entry.push_back(Pair("confirmations", 1 + pindexBest->nHeight - pindex->nHeight));
+                        entry.push_back(Pair_Type("confirmations", 1 + pindexBest->nHeight - pindex->nHeight));
                     else
-                        entry.push_back(Pair("confirmations", 0));
+                        entry.push_back(Pair_Type("confirmations", 0));
                 }
             }
         }
@@ -1550,29 +1550,29 @@ public:
         Object obj;
         CPubKey vchPubKey;
         pwalletMain->GetPubKey(keyID, vchPubKey);
-        obj.push_back(Pair("isscript", false));
-        obj.push_back(Pair("pubkey", HexStr(vchPubKey.Raw())));
-        obj.push_back(Pair("iscompressed", vchPubKey.IsCompressed()));
+        obj.push_back(Pair_Type("isscript", false));
+        obj.push_back(Pair_Type("pubkey", HexStr(vchPubKey.Raw())));
+        obj.push_back(Pair_Type("iscompressed", vchPubKey.IsCompressed()));
         return obj;
     }
 
     Object operator()(const CScriptID &scriptID) const {
         Object obj;
-        obj.push_back(Pair("isscript", true));
+        obj.push_back(Pair_Type("isscript", true));
         CScript subscript;
         pwalletMain->GetCScript(scriptID, subscript);
         std::vector<CTxDestination> addresses;
         txnouttype whichType;
         int nRequired;
         ExtractDestinations(subscript, whichType, addresses, nRequired);
-        obj.push_back(Pair("script", GetTxnOutputType(whichType)));
-        obj.push_back(Pair("hex", HexStr(subscript.begin(), subscript.end())));
+        obj.push_back(Pair_Type("script", GetTxnOutputType(whichType)));
+        obj.push_back(Pair_Type("hex", HexStr(subscript.begin(), subscript.end())));
         Array a;
         BOOST_FOREACH(const CTxDestination& addr, addresses)
             a.push_back(CBitcoinAddress(addr).ToString());
-        obj.push_back(Pair("addresses", a));
+        obj.push_back(Pair_Type("addresses", a));
         if (whichType == TX_MULTISIG)
-            obj.push_back(Pair("sigsrequired", nRequired));
+            obj.push_back(Pair_Type("sigsrequired", nRequired));
         return obj;
     }
 };
@@ -1588,20 +1588,20 @@ Value validateaddress(const Array& params, bool fHelp)
     bool isValid = address.IsValid();
 
     Object ret;
-    ret.push_back(Pair("isvalid", isValid));
+    ret.push_back(Pair_Type("isvalid", isValid));
     if (isValid)
     {
         CTxDestination dest = address.Get();
         string currentAddress = address.ToString();
-        ret.push_back(Pair("address", currentAddress));
+        ret.push_back(Pair_Type("address", currentAddress));
         bool fMine = IsMine(*pwalletMain, dest);
-        ret.push_back(Pair("ismine", fMine));
+        ret.push_back(Pair_Type("ismine", fMine));
         if (fMine) {
             Object detail = boost::apply_visitor(DescribeAddressVisitor(), dest);
             ret.insert(ret.end(), detail.begin(), detail.end());
         }
         if (pwalletMain->mapAddressBook.count(dest))
-            ret.push_back(Pair("account", pwalletMain->mapAddressBook[dest]));
+            ret.push_back(Pair_Type("account", pwalletMain->mapAddressBook[dest]));
     }
     return ret;
 }
@@ -1624,21 +1624,21 @@ Value validatepubkey(const Array& params, bool fHelp)
     address.Set(keyID);
 
     Object ret;
-    ret.push_back(Pair("isvalid", isValid));
+    ret.push_back(Pair_Type("isvalid", isValid));
     if (isValid)
     {
         CTxDestination dest = address.Get();
         string currentAddress = address.ToString();
-        ret.push_back(Pair("address", currentAddress));
+        ret.push_back(Pair_Type("address", currentAddress));
         bool fMine = IsMine(*pwalletMain, dest);
-        ret.push_back(Pair("ismine", fMine));
-        ret.push_back(Pair("iscompressed", isCompressed));
+        ret.push_back(Pair_Type("ismine", fMine));
+        ret.push_back(Pair_Type("iscompressed", isCompressed));
         if (fMine) {
             Object detail = boost::apply_visitor(DescribeAddressVisitor(), dest);
             ret.insert(ret.end(), detail.begin(), detail.end());
         }
         if (pwalletMain->mapAddressBook.count(dest))
-            ret.push_back(Pair("account", pwalletMain->mapAddressBook[dest]));
+            ret.push_back(Pair_Type("account", pwalletMain->mapAddressBook[dest]));
     }
     return ret;
 }
@@ -1656,11 +1656,11 @@ Value checkwallet(const Array& params, bool fHelp)
     pwalletMain->FixSpentCoins(nMismatchSpent, nBalanceInQuestion, true);
     Object result;
     if (nMismatchSpent == 0)
-        result.push_back(Pair("wallet check passed", true));
+        result.push_back(Pair_Type("wallet check passed", true));
     else
     {
-        result.push_back(Pair("mismatched spent coins", nMismatchSpent));
-        result.push_back(Pair("amount in question", ValueFromAmount(nBalanceInQuestion)));
+        result.push_back(Pair_Type("mismatched spent coins", nMismatchSpent));
+        result.push_back(Pair_Type("amount in question", ValueFromAmount(nBalanceInQuestion)));
     }
     return result;
 }
@@ -1679,11 +1679,11 @@ Value repairwallet(const Array& params, bool fHelp)
     pwalletMain->FixSpentCoins(nMismatchSpent, nBalanceInQuestion);
     Object result;
     if (nMismatchSpent == 0)
-        result.push_back(Pair("wallet check passed", true));
+        result.push_back(Pair_Type("wallet check passed", true));
     else
     {
-        result.push_back(Pair("mismatched spent coins", nMismatchSpent));
-        result.push_back(Pair("amount affected by repair", ValueFromAmount(nBalanceInQuestion)));
+        result.push_back(Pair_Type("mismatched spent coins", nMismatchSpent));
+        result.push_back(Pair_Type("amount affected by repair", ValueFromAmount(nBalanceInQuestion)));
     }
     return result;
 }
@@ -1720,7 +1720,7 @@ Value makekeypair(const Array& params, bool fHelp)
 
     CPrivKey vchPrivKey = key.GetPrivKey();
     Object result;
-    result.push_back(Pair("PrivateKey", HexStr<CPrivKey::iterator>(vchPrivKey.begin(), vchPrivKey.end())));
-    result.push_back(Pair("PublicKey", HexStr(key.GetPubKey().Raw())));
+    result.push_back(Pair_Type("PrivateKey", HexStr<CPrivKey::iterator>(vchPrivKey.begin(), vchPrivKey.end())));
+    result.push_back(Pair_Type("PublicKey", HexStr(key.GetPubKey().Raw())));
     return result;
 }

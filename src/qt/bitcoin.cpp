@@ -597,7 +597,7 @@ int main(int argc, char *argv[])
     // Parse URIs on command line -- this can affect Params()
     //PaymentServer::ipcParseCommandLine(argc, argv);
 
-    QScopedPointer<const NetworkStyle> networkStyle(NetworkStyle::instantiate(QString::fromStdString("")));
+    QScopedPointer<const NetworkStyle> networkStyle(NetworkStyle::instantiate(QString::fromStdString("main")));
     assert(!networkStyle.isNull());
     // Allow for separate UI settings for testnets
     QApplication::setApplicationName(networkStyle->getAppName());
