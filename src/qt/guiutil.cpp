@@ -540,6 +540,10 @@ int TableViewLastColumnResizingFixer::getAvailableWidthForColumn(int column)
     if (nTableWidth > 0)
     {
         int nOtherColsWidth = getColumnsWidth() - tableView->horizontalHeader()->sectionSize(column);
+        if(lastColumnMinimumWidth * 3 > 850) //850 is the windows starting width
+        {
+            nResult = 283; //close enough 850/3 is 283.3333
+        }
         nResult = std::max(nResult, nTableWidth - nOtherColsWidth);
     }
 
