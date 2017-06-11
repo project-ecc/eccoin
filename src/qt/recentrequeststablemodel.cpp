@@ -7,8 +7,12 @@
 #include "bitcoinunits.h"
 #include "guiutil.h"
 #include "optionsmodel.h"
-
+#include "allocators.h"
 #include "clientversion.h"
+#include "base58.h"
+#include "wallet.h"
+#include "util/utilstrencodings.h"
+
 
 #include <boost/foreach.hpp>
 
@@ -18,13 +22,10 @@ RecentRequestsTableModel::RecentRequestsTableModel(CWallet *wallet, WalletModel 
     Q_UNUSED(wallet);
     nReceiveRequestsMaxId = 0;
 
-    // Load entries from wallet
-    std::vector<std::string> vReceiveRequests;
-    BOOST_FOREACH(const std::string& request, vReceiveRequests)
-        addNewRequest(request);
+    loadAddrs();
 
     /* These columns must match the indices in the ColumnIndex enumeration */
-    columns << tr("Date") << tr("Label") << tr("Message") << getAmountTitle();
+    columns << tr("Date") << tr("Label") << tr("Address"); //getAmountTitle();
 
     connect(walletModel->getOptionsModel(), SIGNAL(displayUnitChanged(int)), this, SLOT(updateDisplayUnit()));
 }
@@ -32,6 +33,17 @@ RecentRequestsTableModel::RecentRequestsTableModel(CWallet *wallet, WalletModel 
 RecentRequestsTableModel::~RecentRequestsTableModel()
 {
     /* Intentionally left empty */
+}
+
+void RecentRequestsTableModel::loadAddrs()
+{
+    LOCK(this->walletModel->getWallet()->cs_wallet);
+    BOOST_FOREACH(const PAIRTYPE(CTxDestination, std::string)& item, this->walletModel->getWallet()->mapAddressBook)
+    {
+        const CBitcoinAddress& addr = item.first;
+        const std::string& strName = item.second;
+        addNewRequest(strName, addr.ToString());
+    }
 }
 
 int RecentRequestsTableModel::rowCount(const QModelIndex &parent) const
@@ -73,25 +85,27 @@ QVariant RecentRequestsTableModel::data(const QModelIndex &index, int role) cons
         case Message:
             //if(rec->recipient.message.isEmpty() && role == Qt::DisplayRole)
             {
-                return tr("(no message)");
+                return tr(rec->recipient.address.toStdString().c_str());
             }
             //else
             //{
             //    return rec->recipient.message;
             //}
-        case Amount:
-            if (rec->recipient.amount == 0 && role == Qt::DisplayRole)
+        //case Amount:
+            //if (rec->recipient.amount == 0 && role == Qt::DisplayRole)
                 return tr("(no amount requested)");
+            /*
             else if (role == Qt::EditRole)
                 return BitcoinUnits::format(walletModel->getOptionsModel()->getDisplayUnit(), rec->recipient.amount, false, BitcoinUnits::separatorNever);
             else
                 return BitcoinUnits::format(walletModel->getOptionsModel()->getDisplayUnit(), rec->recipient.amount);
+            */
         }
     }
     else if (role == Qt::TextAlignmentRole)
     {
-        if (index.column() == Amount)
-            return (int)(Qt::AlignRight|Qt::AlignVCenter);
+        //if (index.column() == Amount)
+        //    return (int)(Qt::AlignRight|Qt::AlignVCenter);
     }
     return QVariant();
 }
@@ -116,8 +130,8 @@ QVariant RecentRequestsTableModel::headerData(int section, Qt::Orientation orien
 /** Updates the column title to "Amount (DisplayUnit)" and emits headerDataChanged() signal for table headers to react. */
 void RecentRequestsTableModel::updateAmountColumnTitle()
 {
-    columns[Amount] = getAmountTitle();
-    Q_EMIT headerDataChanged(Qt::Horizontal,Amount,Amount);
+    //columns[Amount] = getAmountTitle();
+    //Q_EMIT headerDataChanged(Qt::Horizontal,Amount,Amount);
 }
 
 /** Gets title for amount column including current display unit if optionsModel reference available. */
@@ -165,15 +179,15 @@ void RecentRequestsTableModel::addNewRequest(const SendCoinsRecipient &recipient
 }
 
 // called from ctor when loading from wallet
-void RecentRequestsTableModel::addNewRequest(const std::string &recipient)
+void RecentRequestsTableModel::addNewRequest(const std::string &label, const std::string &addr)
 {
-    std::vector<char> data(recipient.begin(), recipient.end());
-    CDataStream ss(data, SER_DISK, CLIENT_VERSION);
-
     RecentRequestEntry entry;
 
-    if (entry.id == 0) // should not happen
-        return;
+    entry.recipient.label = QString::fromStdString(label);
+    entry.recipient.address = QString::fromStdString(addr);
+
+    //if (entry.id == 0) // should not happen
+    //    return;
 
     if (entry.id > nReceiveRequestsMaxId)
         nReceiveRequestsMaxId = entry.id;
@@ -215,8 +229,8 @@ bool RecentRequestEntryLessThan::operator()(RecentRequestEntry &left, RecentRequ
         return pLeft->recipient.label < pRight->recipient.label;
     //case RecentRequestsTableModel::Message:
         //return pLeft->recipient.message < pRight->recipient.message;
-    case RecentRequestsTableModel::Amount:
-        return pLeft->recipient.amount < pRight->recipient.amount;
+    //case RecentRequestsTableModel::Amount:
+    //    return pLeft->recipient.amount < pRight->recipient.amount;
     default:
         return pLeft->id < pRight->id;
     }

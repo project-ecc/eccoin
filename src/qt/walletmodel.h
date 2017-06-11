@@ -37,6 +37,10 @@ QT_END_NAMESPACE
 class SendCoinsRecipient
 {
 public:
+    explicit SendCoinsRecipient(const QString &addr = "", const QString &_label = "", const CAmount& _amount = 0, const QString &_message = ""):
+        address(addr), label(_label), amount(_amount) {}
+
+
     QString address;
     QString label;
     CAmount amount;
@@ -155,6 +159,12 @@ public:
     int getDefaultConfirmTarget() const;
 
     bool getDefaultWalletRbf() const;
+
+    void loadReceiveRequests(std::vector<std::string>& vReceiveRequests);
+
+    bool saveReceiveRequest(const std::string &sAddress, const int64_t nId, const std::string &sRequest);
+
+    CWallet* getWallet();
 
 private:
     CWallet *wallet;

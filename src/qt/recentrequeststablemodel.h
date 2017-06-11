@@ -64,7 +64,6 @@ public:
         Date = 0,
         Label = 1,
         Message = 2,
-        Amount = 3,
         NUMBER_OF_COLUMNS
     };
 
@@ -80,9 +79,10 @@ public:
     Qt::ItemFlags flags(const QModelIndex &index) const;
     /*@}*/
 
+    void loadAddrs();
     const RecentRequestEntry &entry(int row) const { return list[row]; }
     void addNewRequest(const SendCoinsRecipient &recipient);
-    void addNewRequest(const std::string &recipient);
+    void addNewRequest(const std::string &label, const std::string &addr);
     void addNewRequest(RecentRequestEntry &recipient);
 
 public Q_SLOTS:

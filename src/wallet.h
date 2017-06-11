@@ -375,8 +375,6 @@ public:
 
     const CWalletTx* GetWalletTx(const uint256& hash) const;
 
-
-
 };
 
 /** A key allocated from the key pool. */

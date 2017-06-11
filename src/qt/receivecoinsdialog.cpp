@@ -46,22 +46,22 @@ ReceiveCoinsDialog::ReceiveCoinsDialog(const PlatformStyle *_platformStyle, QWid
     // context menu actions
     QAction *copyURIAction = new QAction(tr("Copy URI"), this);
     QAction *copyLabelAction = new QAction(tr("Copy label"), this);
-    QAction *copyMessageAction = new QAction(tr("Copy message"), this);
-    QAction *copyAmountAction = new QAction(tr("Copy amount"), this);
+    QAction *copyMessageAction = new QAction(tr("Copy Address"), this);
+    //QAction *copyAmountAction = new QAction(tr("Copy amount"), this);
 
     // context menu
     contextMenu = new QMenu(this);
     contextMenu->addAction(copyURIAction);
     contextMenu->addAction(copyLabelAction);
     contextMenu->addAction(copyMessageAction);
-    contextMenu->addAction(copyAmountAction);
+    //contextMenu->addAction(copyAmountAction);
 
     // context menu signals
     connect(ui->recentRequestsView, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(showMenu(QPoint)));
     connect(copyURIAction, SIGNAL(triggered()), this, SLOT(copyURI()));
     connect(copyLabelAction, SIGNAL(triggered()), this, SLOT(copyLabel()));
     connect(copyMessageAction, SIGNAL(triggered()), this, SLOT(copyMessage()));
-    connect(copyAmountAction, SIGNAL(triggered()), this, SLOT(copyAmount()));
+    //connect(copyAmountAction, SIGNAL(triggered()), this, SLOT(copyAmount()));
 
     connect(ui->clearButton, SIGNAL(clicked()), this, SLOT(clear()));
 }
@@ -86,13 +86,18 @@ void ReceiveCoinsDialog::setModel(WalletModel *_model)
         tableView->setSelectionMode(QAbstractItemView::ContiguousSelection);
         tableView->setColumnWidth(RecentRequestsTableModel::Date, DATE_COLUMN_WIDTH);
         tableView->setColumnWidth(RecentRequestsTableModel::Label, LABEL_COLUMN_WIDTH);
-        tableView->setColumnWidth(RecentRequestsTableModel::Amount, AMOUNT_MINIMUM_COLUMN_WIDTH);
+        tableView->setColumnWidth(RecentRequestsTableModel::Message, MESSAGE_COLUMN_WIDTH);
+        //tableView->setColumnWidth(RecentRequestsTableModel::Amount, AMOUNT_MINIMUM_COLUMN_WIDTH);
 
         connect(tableView->selectionModel(),
             SIGNAL(selectionChanged(QItemSelection, QItemSelection)), this,
             SLOT(recentRequestsView_selectionChanged(QItemSelection, QItemSelection)));
         // Last 2 columns are set by the columnResizingFixer, when the table geometry is ready.
         columnResizingFixer = new GUIUtil::TableViewLastColumnResizingFixer(tableView, AMOUNT_MINIMUM_COLUMN_WIDTH, DATE_COLUMN_WIDTH, this);
+        columnResizingFixer->stretchColumnWidth(0);
+        columnResizingFixer->stretchColumnWidth(1);
+        columnResizingFixer->stretchColumnWidth(2);
+
     }
 }
 
@@ -106,7 +111,7 @@ void ReceiveCoinsDialog::clear()
     //ui->reqAmount->clear();
     ui->reqLabel->setText("");
     ui->reqMessage->setText("");
-    ui->reuseAddress->setChecked(false);
+    //ui->reuseAddress->setChecked(false);
     updateDisplayUnit();
 }
 
@@ -135,26 +140,30 @@ void ReceiveCoinsDialog::on_receiveButton_clicked()
 
     QString address;
     QString label = ui->reqLabel->text();
+    /*
     if(ui->reuseAddress->isChecked())
     {
-        /* Choose existing receiving address */
+        // Choose existing receiving address
         AddressBookPage dlg(platformStyle, AddressBookPage::ForSelection, AddressBookPage::ReceivingTab, this);
         dlg.setModel(model->getAddressTableModel());
         if(dlg.exec())
         {
             address = dlg.getReturnValue();
-            if(label.isEmpty()) /* If no label provided, use the previously used label */
+            if(label.isEmpty()) // If no label provided, use the previously used label
             {
                 label = model->getAddressTableModel()->labelForAddress(address);
             }
         } else {
             return;
         }
-    } else {
+    }
+    else
+    */
+    {
         /* Generate new receiving address */
         address = model->getAddressTableModel()->addRow(AddressTableModel::Receive, label, "");
     }
-    SendCoinsRecipient info;
+    SendCoinsRecipient info(address, label, 0);
     ReceiveRequestDialog *dialog = new ReceiveRequestDialog(this);
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->setModel(model->getOptionsModel());
@@ -290,5 +299,5 @@ void ReceiveCoinsDialog::copyMessage()
 // context menu action: copy amount
 void ReceiveCoinsDialog::copyAmount()
 {
-    copyColumnToClipboard(RecentRequestsTableModel::Amount);
+    //copyColumnToClipboard(RecentRequestsTableModel::Amount);
 }

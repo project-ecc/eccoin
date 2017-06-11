@@ -544,3 +544,28 @@ bool WalletModel::getDefaultWalletRbf() const
 {
     return false; // not yet implemented
 }
+
+void WalletModel::loadReceiveRequests(std::vector<std::string>& vReceiveRequests)
+{
+    //vReceiveRequests = wallet->GetDestValues("rr"); // receive request
+}
+
+bool WalletModel::saveReceiveRequest(const std::string &sAddress, const int64_t nId, const std::string &sRequest)
+{
+    CTxDestination dest = CBitcoinAddress(sAddress).Get();
+
+    //std::stringstream ss;
+    //ss << nId;
+    //std::string key = "rr" + ss.str(); // "rr" prefix = "receive request" in destdata
+
+    LOCK(wallet->cs_wallet);
+    //if (sRequest.empty())
+    //    return wallet->EraseDestData(dest, key);
+    //else
+    //    return wallet->AddDestData(dest, key, sRequest);
+}
+
+CWallet* WalletModel::getWallet()
+{
+    return this->wallet;
+}
