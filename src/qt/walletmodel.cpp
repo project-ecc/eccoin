@@ -188,7 +188,6 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipie
         }
         total += rcp.amount;
     }
-
     if(recipients.size() > setAddress.size())
     {
         return DuplicateAddress;
@@ -197,17 +196,15 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipie
     int64_t nBalance = 0;
     std::vector<COutput> vCoins;
     wallet->AvailableCoins(vCoins, true, coinControl);
-
     BOOST_FOREACH(const COutput& out, vCoins)
         nBalance += out.tx->vout[out.i].nValue;
      if(total > nBalance)
     {
         return AmountExceedsBalance;
     }
-
     if((total + nTransactionFee) > nBalance)
     {
-        return SendCoinsReturn(AmountWithFeeExceedsBalance, nTransactionFee);
+        return SendCoinsReturn(AmountWithFeeExceedsBalance);
     }
 
     {
@@ -226,12 +223,12 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipie
         CReserveKey keyChange(wallet);
         int64_t nFeeRequired = 0;
         bool fCreated = wallet->CreateTransaction(vecSend, wtx, keyChange, nFeeRequired, coinControl);
-
         if(!fCreated)
         {
+            printf("transaction created failed \n");
             if((total + nFeeRequired) > nBalance) // FIXME: could cause collisions in the future
             {
-                return SendCoinsReturn(AmountWithFeeExceedsBalance, nFeeRequired);
+                return SendCoinsReturn(AmountWithFeeExceedsBalance);
             }
             return TransactionCreationFailed;
         }
@@ -254,7 +251,6 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipie
         std::string strLabel = rcp.label.toStdString();
         {
             LOCK(wallet->cs_wallet);
-
             std::map<CTxDestination, std::string>::iterator mi = wallet->mapAddressBook.find(dest);
 
             // Check if we have a new address or an updated label
@@ -264,7 +260,6 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipie
             }
         }
     }
-
     return SendCoinsReturn(OK);
 }
 
