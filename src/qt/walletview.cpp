@@ -281,6 +281,17 @@ void WalletView::unlockWallet()
     }
 }
 
+void WalletView::lockWallet()
+{
+    if(!walletModel)
+        return;
+    // Unlock wallet when requested by wallet model
+    if (walletModel->getEncryptionStatus() == WalletModel::Unlocked)
+    {
+        walletModel->setWalletLocked(true);
+    }
+}
+
 void WalletView::usedSendingAddresses()
 {
     if(!walletModel)
