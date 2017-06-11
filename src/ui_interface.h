@@ -127,11 +127,4 @@ public:
 
 extern CClientUIInterface uiInterface;
 
-
-/** Show error message **/
-bool static InitError(const std::string& str)
-{
-    uiInterface.ThreadSafeMessageBox(str, "", CClientUIInterface::MSG_ERROR);
-    return false;
-}
 #endif
