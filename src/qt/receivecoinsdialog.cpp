@@ -103,7 +103,7 @@ ReceiveCoinsDialog::~ReceiveCoinsDialog()
 
 void ReceiveCoinsDialog::clear()
 {
-    ui->reqAmount->clear();
+    //ui->reqAmount->clear();
     ui->reqLabel->setText("");
     ui->reqMessage->setText("");
     ui->reuseAddress->setChecked(false);
@@ -124,7 +124,7 @@ void ReceiveCoinsDialog::updateDisplayUnit()
 {
     if(model && model->getOptionsModel())
     {
-        ui->reqAmount->setDisplayUnit(model->getOptionsModel()->getDisplayUnit());
+        //ui->reqAmount->setDisplayUnit(model->getOptionsModel()->getDisplayUnit());
     }
 }
 
@@ -220,7 +220,7 @@ void ReceiveCoinsDialog::keyPressEvent(QKeyEvent *event)
     if (event->key() == Qt::Key_Return)
     {
         // press return -> submit form
-        if (ui->reqLabel->hasFocus() || ui->reqAmount->hasFocus() || ui->reqMessage->hasFocus())
+        if (ui->reqLabel->hasFocus() || ui->reqMessage->hasFocus() )//|| ui->reqAmount->hasFocus() )
         {
             event->ignore();
             on_receiveButton_clicked();
