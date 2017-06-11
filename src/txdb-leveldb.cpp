@@ -361,6 +361,8 @@ bool LoadBlockIndexInternal()
         }
     }
     int64_t nStartMapping = GetTimeMillis();
+    int retries = 0;
+    LoadIndex:
     std::string upgraded;
     bool readUpgrade = itxdb.ReadUpgrade(upgraded);
     if(upgraded == "true" && readUpgrade == true)
@@ -507,33 +509,6 @@ bool LoadBlockIndexInternal()
 
     if (fRequestShutdown)
         return true;
-
-    // Calculate nChainTrust
-    vector<pair<int, CBlockIndex*> > vSortedByHeight;
-    vSortedByHeight.reserve(mapBlockIndex.size());
-
-    BOOST_FOREACH(const PAIRTYPE(uint256, CBlockIndex*)& item, mapBlockIndex)
-    {
-        CBlockIndex* pindex = item.second;
-        vSortedByHeight.push_back(make_pair(pindex->nHeight, pindex));
-    }
-    sort(vSortedByHeight.begin(), vSortedByHeight.end());
-
-    int64_t nStartChecksums = GetTimeMillis();
-
-    BOOST_FOREACH(const PAIRTYPE(int, CBlockIndex*)& item, vSortedByHeight)
-    {
-        CBlockIndex* pindex = item.second;
-        pindex->nChainTrust = (pindex->pprev ? pindex->pprev->nChainTrust : 0) + pindex->GetBlockTrust();
-        // NovaCoin: calculate stake modifier checksum
-        pindex->nStakeModifierChecksum = GetStakeModifierChecksum(pindex);
-        if (!CheckStakeModifierCheckpoints(pindex->nHeight, pindex))
-         return error("CTxDB::LoadBlockIndex() : Failed stake modifier checkpoint height=%d, checksum=%08x, correct checksum=%08x, nflags = %i, modifier=0x%016I64x  hashproofofstake = %s", pindex->nHeight, pindex->nStakeModifierChecksum, mapStakeModifierCheckpoints[pindex->nHeight], pindex->nFile, pindex->nStakeModifier, pindex->hashProofOfStake.ToString().c_str());
-    }
-
-    LogPrintf("Time To Makechecksums: %I64d ms\n", GetTimeMillis() - nStartChecksums);
-
-
     // Load hashBestChain pointer to end of best chain
     uint256 bestReadHash = 0;
     if (!itxdb.ReadHashBestChain(bestReadHash))
@@ -547,6 +522,37 @@ bool LoadBlockIndexInternal()
 
     pindexBest = mapBlockIndex[bestReadHash];
     nBestChainTrust = pindexBest->nChainTrust;
+
+    int64_t nStartChecksums = GetTimeMillis();
+
+    CBlockIndex* pindex = pindexBest;
+    while(pindex)
+    {
+        if(!pindex->pprev && pindex->GetBlockHash() != (!fTestNet ? hashGenesisBlock : hashGenesisBlockTestNet))
+        {
+            retries = retries + 1;
+            if(retries > 3)
+            {
+                assert("Failed to load blockindex after trying 3 times. Please contact Griffith on slack or bitcointalk if you get this message" && false);
+            }
+            LogPrintf("\n\nCRITICAL ERROR:");
+            LogPrintf("Block with hash %s had no pprev and it should because it is not the genesisblock %s \n"
+                      "We are going to clear the blockindex and try to load it again \n",
+                      pindex->GetBlockHash().ToString().c_str(),
+                      hashGenesisBlock.ToString().c_str()
+                      );
+            LogPrintf("\n\n\n");
+            mapBlockIndex.clear();
+            goto LoadIndex;
+        }
+        pindex->nChainTrust = (pindex->pprev ? pindex->pprev->nChainTrust : 0) + pindex->GetBlockTrust();
+        // NovaCoin: calculate stake modifier checksum
+        pindex->nStakeModifierChecksum = GetStakeModifierChecksum(pindex);
+        if (!CheckStakeModifierCheckpoints(pindex->nHeight, pindex))
+         return error("CTxDB::LoadBlockIndex() : Failed stake modifier checkpoint height=%d, checksum=%08x, correct checksum=%08x, nflags = %i, modifier=0x%016I64x  hashproofofstake = %s", pindex->nHeight, pindex->nStakeModifierChecksum, mapStakeModifierCheckpoints[pindex->nHeight], pindex->nFile, pindex->nStakeModifier, pindex->hashProofOfStake.ToString().c_str());
+    }
+
+    LogPrintf("Time To Makechecksums: %I64d ms\n", GetTimeMillis() - nStartChecksums);
 
     // ECCoin: write checkpoint we loaded from
     if( bestCheckpoint != 0 )
