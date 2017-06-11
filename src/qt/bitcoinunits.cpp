@@ -62,10 +62,10 @@ qint64 BitcoinUnits::factor(int unit)
 {
     switch(unit)
     {
-    case ECC:  return 100000000;
-    case mECC: return 100000;
-    case uECC: return 100;
-    default:   return 100000000;
+    case ECC:  return 1000000;
+    case mECC: return 1000;
+    case uECC: return 1;
+    default:   return 1000000;
     }
 }
 
@@ -73,9 +73,9 @@ int BitcoinUnits::decimals(int unit)
 {
     switch(unit)
     {
-    case ECC: return 8;
-    case mECC: return 5;
-    case uECC: return 2;
+    case ECC: return 6;
+    case mECC: return 3;
+    case uECC: return 0;
     default: return 0;
     }
 }
