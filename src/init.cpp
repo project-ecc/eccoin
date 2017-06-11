@@ -58,6 +58,13 @@ boost::condition_variable cvBlockChange;
 
 using namespace std;
 
+/** Show error message **/
+bool InitError(const std::string& str)
+{
+    uiInterface.ThreadSafeMessageBox(str, "", CClientUIInterface::MSG_ERROR);
+    return false;
+}
+
 void OnRPCStarted()
 {
     uiInterface.NotifyBlockTip.connect(&RPCNotifyBlockChange);
