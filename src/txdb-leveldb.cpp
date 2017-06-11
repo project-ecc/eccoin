@@ -500,11 +500,7 @@ bool LoadBlockIndexInternal()
             assert(false);
         }
     }
-    LogPrintf("Time To Map Block Index: %I64d ms\n", GetTimeMillis() - nStartMapping);
-
-
-
-
+    LogPrintf("Time To Map Block Index: %I64 ms\n", GetTimeMillis() - nStartMapping);
 
 
     if (fRequestShutdown)
@@ -525,10 +521,23 @@ bool LoadBlockIndexInternal()
 
     int64_t nStartChecksums = GetTimeMillis();
 
-    CBlockIndex* pindex = pindexBest;
+    CBlockIndex* pindex = pindexGenesisBlock;
     while(pindex)
     {
-        if(!pindex->pprev && pindex->GetBlockHash() != (!fTestNet ? hashGenesisBlock : hashGenesisBlockTestNet))
+        pindex->nChainTrust = (pindex->pprev ? pindex->pprev->nChainTrust : 0) + pindex->GetBlockTrust();
+        // NovaCoin: calculate stake modifier checksum
+        pindex->nStakeModifierChecksum = GetStakeModifierChecksum(pindex);
+        if (!CheckStakeModifierCheckpoints(pindex->nHeight, pindex))
+         return error("CTxDB::LoadBlockIndex() : Failed stake modifier checkpoint height=%d, checksum=%08x, correct checksum=%08x, nflags = %i, modifier=0x%016I64x  hashproofofstake = %s", pindex->nHeight, pindex->nStakeModifierChecksum, mapStakeModifierCheckpoints[pindex->nHeight], pindex->nFile, pindex->nStakeModifier, pindex->hashProofOfStake.ToString().c_str());
+        /// do on the fly repairs of linkage for pprev
+        if(pindex->pnext)
+        {
+            if(pindex->pnext->pprev == NULL)
+            {
+                pindex->pnext->pprev = pindex;
+            }
+        }
+        if(pindex->pnext == NULL && pindex->GetBlockHash() != pindexBest->GetBlockHash())
         {
             retries = retries + 1;
             if(retries > 3)
@@ -536,23 +545,18 @@ bool LoadBlockIndexInternal()
                 assert("Failed to load blockindex after trying 3 times. Please contact Griffith on slack or bitcointalk if you get this message" && false);
             }
             LogPrintf("\n\nCRITICAL ERROR:");
-            LogPrintf("Block with hash %s had no pprev and it should because it is not the genesisblock %s \n"
+            LogPrintf("Block with hash %s had no pnext and it should because it is not the chain tip %s \n"
                       "We are going to clear the blockindex and try to load it again \n",
                       pindex->GetBlockHash().ToString().c_str(),
-                      hashGenesisBlock.ToString().c_str()
+                      pindex->GetBlockHash().ToString().c_str()
                       );
             LogPrintf("\n\n\n");
             mapBlockIndex.clear();
             goto LoadIndex;
         }
-        pindex->nChainTrust = (pindex->pprev ? pindex->pprev->nChainTrust : 0) + pindex->GetBlockTrust();
-        // NovaCoin: calculate stake modifier checksum
-        pindex->nStakeModifierChecksum = GetStakeModifierChecksum(pindex);
-        if (!CheckStakeModifierCheckpoints(pindex->nHeight, pindex))
-         return error("CTxDB::LoadBlockIndex() : Failed stake modifier checkpoint height=%d, checksum=%08x, correct checksum=%08x, nflags = %i, modifier=0x%016I64x  hashproofofstake = %s", pindex->nHeight, pindex->nStakeModifierChecksum, mapStakeModifierCheckpoints[pindex->nHeight], pindex->nFile, pindex->nStakeModifier, pindex->hashProofOfStake.ToString().c_str());
+        pindex = pindex->pnext;
     }
-
-    LogPrintf("Time To Makechecksums: %I64d ms\n", GetTimeMillis() - nStartChecksums);
+    LogPrintf("Time To Makechecksums: %I64 ms\n", GetTimeMillis() - nStartChecksums);
 
     // ECCoin: write checkpoint we loaded from
     if( bestCheckpoint != 0 )
