@@ -868,7 +868,7 @@ bool NewThread(void(*pfn)(void*), void* parg)
     {
         boost::thread(pfn, parg); // thread detaches when out of scope
     } catch(boost::thread_resource_error &e) {
-        printf("Error creating thread: %s\n", e.what());
+        LogPrintf("Error creating thread: %s\n", e.what());
         return false;
     }
     return true;
@@ -979,7 +979,7 @@ bool WildcardMatch(const std::string& str, const std::string& mask)
 }
 
 void LogStackTrace() {
-    printf("\n\n******* exception encountered *******\n");
+    LogPrintf("\n\n******* exception encountered *******\n");
     if (fileout)
     {
 #ifndef WIN32
