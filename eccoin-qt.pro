@@ -155,7 +155,11 @@ SOURCES += \
     src/qt/receivecoinsdialog.cpp \
     src/qt/receiverequestdialog.cpp \
     src/qt/modaloverlay.cpp \
-    src/qt/openuridialog.cpp
+    src/qt/openuridialog.cpp \
+    src/server.cpp \
+    src/univalue.cpp \
+    src/univalue_read.cpp \
+    src/univalue_write.cpp
 
 INCLUDEPATH += src/leveldb/include src/leveldb/helpers
 LIBS += $$PWD/src/leveldb/libleveldb.a $$PWD/src/leveldb/libmemenv.a
@@ -336,7 +340,11 @@ HEADERS += \
     src/qt/receivecoinsdialog.h \
     src/qt/receiverequestdialog.h \
     src/qt/modaloverlay.h \
-    src/qt/openuridialog.h
+    src/qt/openuridialog.h \
+    src/server.h \
+    src/univalue.h \
+    src/univalue_escapes.h \
+    src/univalue_utffilter.h
 #
 
 SOURCES += \
