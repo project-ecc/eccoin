@@ -1144,11 +1144,28 @@ static bool ThreadSafeMessageBox(BitcoinGUI *gui, const std::string& message, co
     return ret;
 }
 
+static bool ThreadSafeAskFee(BitcoinGUI *gui, int64_t nFeeRequired, const std::string& strCaption)
+{
+
+    if(nFeeRequired < MIN_TX_FEE(GetTime()) || nFeeRequired <= nTransactionFee || fDaemon)
+        return true;
+    bool payFee = false;
+
+    QMetaObject::invokeMethod(gui, "askFee", GUIUtil::blockingGUIThreadConnection(),
+                               Q_ARG(qint64, nFeeRequired),
+                               Q_ARG(bool*, &payFee));
+
+    return payFee;
+}
+
+
 void BitcoinGUI::subscribeToCoreSignals()
 {
     // Connect signals to client
     uiInterface.ThreadSafeMessageBox.connect(boost::bind(ThreadSafeMessageBox, this, _1, _2, _3));
     uiInterface.ThreadSafeQuestion.connect(boost::bind(ThreadSafeMessageBox, this, _1, _3, _4));
+    uiInterface.ThreadSafeAskFee.connect(boost::bind(ThreadSafeAskFee, this, _1, _2));
+
 }
 
 void BitcoinGUI::unsubscribeFromCoreSignals()
@@ -1156,6 +1173,8 @@ void BitcoinGUI::unsubscribeFromCoreSignals()
     // Disconnect signals from client
     uiInterface.ThreadSafeMessageBox.disconnect(boost::bind(ThreadSafeMessageBox, this, _1, _2, _3));
     uiInterface.ThreadSafeQuestion.disconnect(boost::bind(ThreadSafeMessageBox, this, _1, _3, _4));
+    uiInterface.ThreadSafeAskFee.disconnect(boost::bind(ThreadSafeAskFee, this, _1, _2));
+
 }
 
 void BitcoinGUI::toggleNetworkActive()
