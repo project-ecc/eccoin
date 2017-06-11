@@ -96,7 +96,7 @@ public:
     boost::signals2::signal<std::string (const char* psz)> Translate;
 
     /** Block chain changed. */
-    boost::signals2::signal<void ()> NotifyBlocksChanged;
+    //boost::signals2::signal<void ()> NotifyBlocksChanged;
 
     /** Number of network connections changed. */
     boost::signals2::signal<void (int newNumConnections)> NotifyNumConnectionsChanged;

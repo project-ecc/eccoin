@@ -36,7 +36,7 @@ static const int PROTOCOL_VERSION = 60032;
 static const int MIN_PROTO_VERSION = 60028;
 
 // "sendheaders" command and announcing blocks with headers starts with this version
-static const int SENDHEADERS_VERSION = 60032;
+static const int SENDHEADERS_VERSION = 60035;
 
 // nTime field added to CAddress, starting with this version;
 // if possible, avoid requesting addresses nodes older than this
