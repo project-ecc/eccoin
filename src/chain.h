@@ -67,7 +67,7 @@ protected:
                     return false;
                 }
                 // Some unexpected error.
-                printf("LevelDB read failure: %s\n", status.ToString().c_str());
+                LogPrintf("LevelDB read failure: %s\n", status.ToString().c_str());
                 return false;
             }
         }
@@ -105,7 +105,7 @@ protected:
         leveldb::Status status = pdb->Put(leveldb::WriteOptions(), ssKey.str(), ssValue.str());
         if (!status.ok())
         {
-            printf("LevelDB write failure: %s\n", status.ToString().c_str());
+            LogPrintf("LevelDB write failure: %s\n", status.ToString().c_str());
             return false;
         }
         return true;

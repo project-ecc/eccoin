@@ -7,7 +7,6 @@
 #include <boost/assign/list_of.hpp>
 
 #include "main.h"
-#include "util.h"
 
 static std::map<int, unsigned int> mapStakeModifierCheckpoints =
 	boost::assign::map_list_of

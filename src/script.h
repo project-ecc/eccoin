@@ -17,6 +17,9 @@
 #include "keystore.h"
 #include "bignum.h"
 
+#include "util/utilstrencodings.h"
+#include "util/util.h"
+
 typedef std::vector<unsigned char> valtype;
 
 class CTransaction;
@@ -549,7 +552,7 @@ public:
 
     void PrintHex() const
     {
-        printf("CScript(%s)\n", HexStr(begin(), end(), true).c_str());
+        LogPrintf("CScript(%s)\n", HexStr(begin(), end(), true).c_str());
     }
 
     std::string ToString(bool fShort=false) const
@@ -577,7 +580,7 @@ public:
 
     void print() const
     {
-        printf("%s\n", ToString().c_str());
+        LogPrintf("%s\n", ToString().c_str());
     }
 
     CScriptID GetID() const
@@ -605,6 +608,8 @@ bool VerifyScript(const CScript& scriptSig, const CScript& scriptPubKey, const C
 bool VerifyScript(const CScript& scriptSig, const CScript& scriptPubKey, const CTransaction& txTo, unsigned int nIn,int nHashType);
 bool VerifySignature(const CTransaction& txFrom, const CTransaction& txTo, unsigned int nIn, int nHashType);
 bool VerifySignature(const CTransaction& txFrom, const CTransaction& txTo, unsigned int nIn, bool fValidatePayToScriptHash, int nHashType);
+
+CScript GetScriptForDestination(const CTxDestination& dest);
 
 // Given two sets of signatures for scriptPubKey, possibly with OP_0 placeholders,
 // combine them intelligently and return the result.

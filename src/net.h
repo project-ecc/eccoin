@@ -14,15 +14,17 @@
 #include <boost/array.hpp>
 #include <boost/foreach.hpp>
 #include <openssl/rand.h>
+#include <atomic>
 
 #ifndef WIN32
 #include <arpa/inet.h>
 #endif
 
 #include "mruset.h"
-#include "netbase.h"
-#include "protocol.h"
-#include "addrman.h"
+#include "network/service.h"
+#include "network/node.h"
+#include "network/protocol.h"
+#include "network/addrman.h"
 #include "transaction.h"
 
 class CRequestTracker;
@@ -45,6 +47,24 @@ bool BindListenPort(const CService &bindAddr, std::string& strError=REF(std::str
 void StartNode(void* parg);
 bool StopNode();
 
+/** Maximum length of strSubVer in `version` message */
+static const unsigned int MAX_SUBVERSION_LENGTH = 256;
+
+/** Maximum number of unconnecting headers announcements before DoS score */
+static const int MAX_UNCONNECTING_HEADERS = 10;
+
+static const ServiceFlags REQUIRED_SERVICES = NODE_NETWORK;
+
+/** Number of headers sent in one getheaders result. We rely on the assumption that if a peer sends
+ *  less than this number, we reached its tip. Changing this value is a protocol upgrade. */
+static const unsigned int MAX_HEADERS_RESULTS = 2000;
+
+/** Maximum number of headers to announce when relaying blocks with headers message.*/
+static const unsigned int MAX_BLOCKS_TO_ANNOUNCE = 8;
+
+/** Number of blocks that can be requested at any given time from a single peer. */
+static const int MAX_BLOCKS_IN_TRANSIT_PER_PEER = 16;
+
 enum
 {
     LOCAL_NONE,   // unknown
@@ -65,34 +85,14 @@ bool AddLocal(const CService& addr, int nScore = LOCAL_NONE);
 bool AddLocal(const CNetAddr& addr, int nScore = LOCAL_NONE);
 bool SeenLocal(const CService& addr);
 bool IsLocal(const CService& addr);
-bool GetLocal(CService &addr, const CNetAddr *paddrPeer = NULL);
 bool IsReachable(const CNetAddr &addr);
 void SetReachable(enum Network net, bool fFlag = true);
-CAddress GetLocalAddress(const CNetAddr *paddrPeer = NULL);
 
 
 enum
 {
     MSG_TX = 1,
     MSG_BLOCK,
-};
-
-class CRequestTracker
-{
-public:
-    void (*fn)(void*, CDataStream&);
-    void* param1;
-
-    explicit CRequestTracker(void (*fnIn)(void*, CDataStream&)=NULL, void* param1In=NULL)
-    {
-        fn = fnIn;
-        param1 = param1In;
-    }
-
-    bool IsNull()
-    {
-        return fn == NULL;
-    }
 };
 
 
@@ -117,8 +117,6 @@ enum threadId
 extern bool fClient;
 extern bool fDiscover;
 extern bool fUseUPnP;
-extern uint64_t nLocalServices;
-extern uint64_t nLocalHostNonce;
 extern CAddress addrSeenByPeer;
 extern boost::array<int, THREAD_MAX> vnThreadsRunning;
 extern CAddrMan addrman;
@@ -128,498 +126,12 @@ extern CCriticalSection cs_vNodes;
 extern std::map<CInv, CDataStream> mapRelay;
 extern std::deque<std::pair<int64_t, CInv> > vRelayExpiration;
 extern CCriticalSection cs_mapRelay;
-extern std::map<CInv, int64_t> mapAlreadyAskedFor;
-
-
-
-
-class CNodeStats
-{
-public:
-    uint64_t nServices;
-    int64_t nLastSend;
-    int64_t nLastRecv;
-    int64_t nTimeConnected;
-    std::string addrName;
-    int nVersion;
-    std::string strSubVer;
-    bool fInbound;
-    int nStartingHeight;
-    int nMisbehavior;
-};
 
 
 
 extern int highestAskedFor;
 extern bool isSynced;
 
-
-/** Information about a peer */
-class CNode
-{
-public:
-    // socket
-    uint64_t nServices;
-    SOCKET hSocket;
-    CDataStream vSend;
-    CDataStream vRecv;
-    CCriticalSection cs_vSend;
-    CCriticalSection cs_vRecv;
-    int64_t nLastSend;
-    int64_t nLastRecv;
-    int64_t nLastSendEmpty;
-    int64_t nTimeConnected;
-    int nHeaderStart;
-    unsigned int nMessageStart;
-    CAddress addr;
-    std::string addrName;
-    CService addrLocal;
-    int nVersion;
-    bool fastMessaging;
-    bool askedIfReady; /// asked this peer if they are ready to recieve more blocks
-    int64_t readyIn; /// time until peer is next ready
-    bool noReadyActive;
-    std::string strSubVer;
-    bool fInbound;
-    bool fNetworkNode;
-    bool fSuccessfullyConnected;
-    bool fDisconnect;
-    CSemaphoreGrant grantOutbound;
-    int nRefCount;
-protected:
-
-    // Denial-of-service detection/prevention
-    // Key is IP address, value is banned-until-time
-    static std::map<CNetAddr, int64_t> setBanned;
-    static CCriticalSection cs_setBanned;
-    int nMisbehavior;
-
-public:
-    std::map<uint256, CRequestTracker> mapRequests;
-    CCriticalSection cs_mapRequests;
-    uint256 hashContinue;
-    int nStartingHeight;
-
-    // flood relay
-    std::vector<CAddress> vAddrToSend;
-    std::set<CAddress> setAddrKnown;
-    bool fGetAddr;
-    std::set<uint256> setKnown;
-    uint256 hashCheckpointKnown; // ppcoin: known sent sync-checkpoint
-
-    // inventory based relay
-    std::multimap<int64_t, CInv> mapAskFor;
-
-    CNode(SOCKET hSocketIn, CAddress addrIn, std::string addrNameIn = "", bool fInboundIn=false) : vSend(SER_NETWORK, MIN_PROTO_VERSION), vRecv(SER_NETWORK, MIN_PROTO_VERSION)
-    {
-        nServices = 0;
-        hSocket = hSocketIn;
-        nLastSend = 0;
-        nLastRecv = 0;
-        nLastSendEmpty = GetTime();
-        nTimeConnected = GetTime();
-        nHeaderStart = -1;
-        nMessageStart = -1;
-        addr = addrIn;
-        addrName = addrNameIn == "" ? addr.ToStringIPPort() : addrNameIn;
-        nVersion = 0;
-        fastMessaging = false;
-        askedIfReady = false;
-        readyIn = 0; // the next time a peer is ready in
-        noReadyActive = false;
-        strSubVer = "";
-        fInbound = fInboundIn;
-        fNetworkNode = false;
-        fSuccessfullyConnected = false;
-        fDisconnect = false;
-        nRefCount = 0;
-        hashContinue = 0;
-        nStartingHeight = -1;
-        fGetAddr = false;
-        nMisbehavior = 0;
-        hashCheckpointKnown = 0;
-
-        // Be shy and don't send version until we hear
-        if (hSocket != INVALID_SOCKET && !fInbound)
-            PushVersion();
-    }
-
-    ~CNode()
-    {
-        if (hSocket != INVALID_SOCKET)
-        {
-            closesocket(hSocket);
-            hSocket = INVALID_SOCKET;
-        }
-    }
-
-private:
-    CNode(const CNode&);
-    void operator=(const CNode&);
-public:
-
-
-    int GetRefCount()
-    {
-        assert(nRefCount >= 0);
-        return nRefCount;
-    }
-
-    CNode* AddRef()
-    {
-        nRefCount++;
-        return this;
-    }
-
-    void Release()
-    {
-        nRefCount--;
-    }
-
-
-
-    void AddAddressKnown(const CAddress& addr)
-    {
-        setAddrKnown.insert(addr);
-    }
-
-    void PushAddress(const CAddress& addr)
-    {
-        // Known checking here is only to save space from duplicates.
-        // SendMessages will filter it again for knowns that were added
-        // after addresses were pushed.
-        if (addr.IsValid() && !setAddrKnown.count(addr))
-            vAddrToSend.push_back(addr);
-    }
-
-    void AskFor(const CInv& inv)
-    {
-        // We're using mapAskFor as a priority queue,
-        // the key is the earliest time the request can be sent
-        int64_t& nRequestTime = mapAlreadyAskedFor[inv];
-        if (fDebugNet)
-            printf("askfor %s   %" PRId64 " (%s)\n", inv.ToString().c_str(), nRequestTime, DateTimeStrFormat("%H:%M:%S", nRequestTime/1000000).c_str());
-
-        // Make sure not to reuse time indexes to keep things in the same order
-        int64_t nNow = (GetTime() - 1) * 1000000;
-        static int64_t nLastTime;
-        ++nLastTime;
-        nNow = std::max(nNow, nLastTime);
-        nLastTime = nNow;
-
-        // Each retry is 2 minutes after the last
-        nRequestTime = std::max(nRequestTime + 2 * 60 * 1000000, nNow);
-        mapAskFor.insert(std::make_pair(nRequestTime, inv));
-    }
-
-
-
-    void BeginMessage(const char* pszCommand)
-    {
-        if (fDebug)
-            printf("starting message \n");
-        ENTER_CRITICAL_SECTION(cs_vSend);
-        if (nHeaderStart != -1)
-            AbortMessage();
-        nHeaderStart = vSend.size();
-        vSend << CMessageHeader(pszCommand, 0);
-        nMessageStart = vSend.size();
-        if (fDebug)
-            printf("sending: %s \n", pszCommand);
-    }
-
-    void AbortMessage()
-    {
-        if (nHeaderStart < 0)
-            return;
-        vSend.resize(nHeaderStart);
-        nHeaderStart = -1;
-        nMessageStart = -1;
-        LEAVE_CRITICAL_SECTION(cs_vSend);
-
-        if (fDebug)
-            printf("(aborted)\n");
-    }
-
-    void EndMessage()
-    {
-        if (mapArgs.count("-dropmessagestest") && GetRand(atoi(mapArgs["-dropmessagestest"])) == 0)
-        {
-            printf("dropmessages DROPPING SEND MESSAGE\n");
-            AbortMessage();
-            return;
-        }
-
-        if (nHeaderStart < 0)
-            return;
-
-        // Set the size
-        unsigned int nSize = vSend.size() - nMessageStart;
-        memcpy((char*)&vSend[nHeaderStart] + CMessageHeader::MESSAGE_SIZE_OFFSET, &nSize, sizeof(nSize));
-
-        // Set the checksum
-        uint256 hash = Hash(vSend.begin() + nMessageStart, vSend.end());
-        unsigned int nChecksum = 0;
-        memcpy(&nChecksum, &hash, sizeof(nChecksum));
-        assert(nMessageStart - nHeaderStart >= CMessageHeader::CHECKSUM_OFFSET + sizeof(nChecksum));
-        memcpy((char*)&vSend[nHeaderStart] + CMessageHeader::CHECKSUM_OFFSET, &nChecksum, sizeof(nChecksum));
-
-        if (fDebug) {
-            printf("(%d bytes)\n", nSize);
-        }
-
-        nHeaderStart = -1;
-        nMessageStart = -1;
-        LEAVE_CRITICAL_SECTION(cs_vSend);
-    }
-
-    void EndMessageAbortIfEmpty()
-    {
-        if (nHeaderStart < 0)
-            return;
-        int nSize = vSend.size() - nMessageStart;
-        if (nSize > 0)
-            EndMessage();
-        else
-            AbortMessage();
-    }
-
-
-
-    void PushVersion();
-
-
-    void PushMessage(const char* pszCommand)
-    {
-        try
-        {
-            BeginMessage(pszCommand);
-            EndMessage();
-        }
-        catch (...)
-        {
-            AbortMessage();
-            throw;
-        }
-    }
-
-    template<typename T1>
-    void PushMessage(const char* pszCommand, const T1& a1)
-    {
-        try
-        {
-            BeginMessage(pszCommand);
-            vSend << a1;
-            EndMessage();
-        }
-        catch (...)
-        {
-            AbortMessage();
-            throw;
-        }
-    }
-
-    template<typename T1, typename T2>
-    void PushMessage(const char* pszCommand, const T1& a1, const T2& a2)
-    {
-        try
-        {
-            BeginMessage(pszCommand);
-            vSend << a1 << a2;
-            EndMessage();
-        }
-        catch (...)
-        {
-            AbortMessage();
-            throw;
-        }
-    }
-
-    template<typename T1, typename T2, typename T3>
-    void PushMessage(const char* pszCommand, const T1& a1, const T2& a2, const T3& a3)
-    {
-        try
-        {
-            BeginMessage(pszCommand);
-            vSend << a1 << a2 << a3;
-            EndMessage();
-        }
-        catch (...)
-        {
-            AbortMessage();
-            throw;
-        }
-    }
-
-    template<typename T1, typename T2, typename T3, typename T4>
-    void PushMessage(const char* pszCommand, const T1& a1, const T2& a2, const T3& a3, const T4& a4)
-    {
-        try
-        {
-            BeginMessage(pszCommand);
-            vSend << a1 << a2 << a3 << a4;
-            EndMessage();
-        }
-        catch (...)
-        {
-            AbortMessage();
-            throw;
-        }
-    }
-
-    template<typename T1, typename T2, typename T3, typename T4, typename T5>
-    void PushMessage(const char* pszCommand, const T1& a1, const T2& a2, const T3& a3, const T4& a4, const T5& a5)
-    {
-        try
-        {
-            BeginMessage(pszCommand);
-            vSend << a1 << a2 << a3 << a4 << a5;
-            EndMessage();
-        }
-        catch (...)
-        {
-            AbortMessage();
-            throw;
-        }
-    }
-
-    template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6>
-    void PushMessage(const char* pszCommand, const T1& a1, const T2& a2, const T3& a3, const T4& a4, const T5& a5, const T6& a6)
-    {
-        try
-        {
-            BeginMessage(pszCommand);
-            vSend << a1 << a2 << a3 << a4 << a5 << a6;
-            EndMessage();
-        }
-        catch (...)
-        {
-            AbortMessage();
-            throw;
-        }
-    }
-
-    template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7>
-    void PushMessage(const char* pszCommand, const T1& a1, const T2& a2, const T3& a3, const T4& a4, const T5& a5, const T6& a6, const T7& a7)
-    {
-        try
-        {
-            BeginMessage(pszCommand);
-            vSend << a1 << a2 << a3 << a4 << a5 << a6 << a7;
-            EndMessage();
-        }
-        catch (...)
-        {
-            AbortMessage();
-            throw;
-        }
-    }
-
-    template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7, typename T8>
-    void PushMessage(const char* pszCommand, const T1& a1, const T2& a2, const T3& a3, const T4& a4, const T5& a5, const T6& a6, const T7& a7, const T8& a8)
-    {
-        try
-        {
-            BeginMessage(pszCommand);
-            vSend << a1 << a2 << a3 << a4 << a5 << a6 << a7 << a8;
-            EndMessage();
-        }
-        catch (...)
-        {
-            AbortMessage();
-            throw;
-        }
-    }
-
-    template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7, typename T8, typename T9>
-    void PushMessage(const char* pszCommand, const T1& a1, const T2& a2, const T3& a3, const T4& a4, const T5& a5, const T6& a6, const T7& a7, const T8& a8, const T9& a9)
-    {
-        try
-        {
-            BeginMessage(pszCommand);
-            vSend << a1 << a2 << a3 << a4 << a5 << a6 << a7 << a8 << a9;
-            EndMessage();
-        }
-        catch (...)
-        {
-            AbortMessage();
-            throw;
-        }
-    }
-
-
-    void PushRequest(const char* pszCommand,
-                     void (*fn)(void*, CDataStream&), void* param1)
-    {
-        uint256 hashReply;
-        RAND_bytes((unsigned char*)&hashReply, sizeof(hashReply));
-
-        {
-            LOCK(cs_mapRequests);
-            mapRequests[hashReply] = CRequestTracker(fn, param1);
-        }
-
-        PushMessage(pszCommand, hashReply);
-    }
-
-    template<typename T1>
-    void PushRequest(const char* pszCommand, const T1& a1,
-                     void (*fn)(void*, CDataStream&), void* param1)
-    {
-        uint256 hashReply;
-        RAND_bytes((unsigned char*)&hashReply, sizeof(hashReply));
-
-        {
-            LOCK(cs_mapRequests);
-            mapRequests[hashReply] = CRequestTracker(fn, param1);
-        }
-
-        PushMessage(pszCommand, hashReply, a1);
-    }
-
-    template<typename T1, typename T2>
-    void PushRequest(const char* pszCommand, const T1& a1, const T2& a2,
-                     void (*fn)(void*, CDataStream&), void* param1)
-    {
-        uint256 hashReply;
-        RAND_bytes((unsigned char*)&hashReply, sizeof(hashReply));
-
-        {
-            LOCK(cs_mapRequests);
-            mapRequests[hashReply] = CRequestTracker(fn, param1);
-        }
-
-        PushMessage(pszCommand, hashReply, a1, a2);
-    }
-
-
-    void PushGetBlocks(CBlockIndex* pindexBegin, uint256 hashEnd);
-    bool IsSubscribed(unsigned int nChannel);
-    void Subscribe(unsigned int nChannel, unsigned int nHops=0);
-    void CancelSubscribe(unsigned int nChannel);
-    void CloseSocketDisconnect();
-    void Cleanup();
-
-
-    // Denial-of-service detection/prevention
-    // The idea is to detect peers that are behaving
-    // badly and disconnect/ban them, but do it in a
-    // one-coding-mistake-won't-shatter-the-entire-network
-    // way.
-    // IMPORTANT:  There should be nothing I can give a
-    // node that it will forward on that will make that
-    // node's peers drop it. If there is, an attacker
-    // can isolate a node and/or try to split the network.
-    // Dropping a node for sending stuff that is invalid
-    // now but might be valid in a later version is also
-    // dangerous, because it can cause a network split
-    // between nodes running old code and nodes running
-    // new code.
-    static void ClearBanned(); // needed for unit testing
-    static bool IsBanned(CNetAddr ip);
-    bool Misbehaving(int howmuch); // 1 == a little, 100 == a lot
-    void copyStats(CNodeStats &stats);
-};
 
 inline void RelayInventory(const CInv& inv)
 {

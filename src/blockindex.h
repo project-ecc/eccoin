@@ -2,10 +2,12 @@
 #define CBLOCKINDEX_H
 
 #include <stdio.h>
-#include "util.h"
 #include "points.h"
 
+
 class COutPoint;
+class CBlockHeader;
+class CBlock;
 
 extern bool fUseFastIndex;
 
@@ -32,6 +34,11 @@ public:
     int64_t nMint;
     int64_t nMoneySupply;
 
+    //! (memory only) Number of transactions in the chain up to and including this block.
+    //! This value will be non-zero only if and only if transactions for this block and all its parents are available.
+    //! Change to 64-bit type when necessary; won't happen before 2030
+    unsigned int nChainTx;
+
     unsigned int nFlags;  // ppcoin: block index flags
     enum
     {
@@ -55,8 +62,12 @@ public:
     unsigned int nBits;
     unsigned int nNonce;
 
+    void SetNull();
+
     CBlockIndex();
     CBlockIndex(unsigned int nFileIn, unsigned int nBlockPosIn, CBlock& block);
+    CBlockIndex(const CBlockHeader& block);
+
     CBlock GetBlockHeader() const;
     uint256 GetBlockHash() const;
     int64_t GetBlockIndexTime() const;
@@ -152,5 +163,6 @@ public:
 };
 
 extern CBlockIndex* pindexBest;
+extern CBlockIndex *pindexBestHeader;
 
 #endif // CBLOCKINDEX_H

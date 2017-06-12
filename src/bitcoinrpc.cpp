@@ -4,14 +4,14 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "init.h"
-#include "util.h"
+
 #include "sync.h"
 #include "ui_interface.h"
 #include "base58.h"
 #include "bitcoinrpc.h"
 #include "db.h"
+#include "util/utilexceptions.h"
 
-#undef printf
 #include <boost/asio.hpp>
 #include <boost/asio/ip/v6_only.hpp>
 #include <boost/bind.hpp>
@@ -24,8 +24,6 @@
 #include <boost/filesystem/fstream.hpp>
 #include <boost/shared_ptr.hpp>
 #include <list>
-
-#define printf OutputDebugStringF
 
 using namespace std;
 using namespace boost;
@@ -48,8 +46,8 @@ static inline unsigned short GetDefaultRPCPort()
 Object JSONRPCError(int code, const string& message)
 {
     Object error;
-    error.push_back(Pair("code", code));
-    error.push_back(Pair("message", message));
+    error.push_back(Pair_Type("code", code));
+    error.push_back(Pair_Type("message", message));
     return error;
 }
 
@@ -238,7 +236,7 @@ Value stop(const Array& params, bool fHelp)
 //
 
 
-static const CRPCCommand vRPCCommands[] =
+const CRPCCommand vRPCCommands[] =
 { //  name                      function                 safemd  unlocked
   //  ------------------------  -----------------------  ------  --------
     { "help",                   &help,                   true,   true },
@@ -323,7 +321,7 @@ CRPCTable::CRPCTable()
 
 const CRPCCommand *CRPCTable::operator[](string name) const
 {
-    map<string, const CRPCCommand*>::const_iterator it = mapCommands.find(name);
+    std::map<std::string, const CRPCCommand*>::const_iterator it = mapCommands.find(name);
     if (it == mapCommands.end())
         return NULL;
     return (*it).second;
@@ -396,7 +394,7 @@ static string HTTPReply(int nStatus, const string& strMsg, bool keepalive)
             "HTTP/1.1 %d %s\r\n"
             "Date: %s\r\n"
             "Connection: %s\r\n"
-            "Content-Length: %" PRIszu "\r\n"
+            "Content-Length: %Iu \r\n"
             "Content-Type: application/json\r\n"
             "Server: ECCoin-json-rpc/%s\r\n"
             "\r\n"
@@ -508,9 +506,9 @@ bool HTTPAuthorized(map<string, string>& mapHeaders)
 string JSONRPCRequest(const string& strMethod, const Array& params, const Value& id)
 {
     Object request;
-    request.push_back(Pair("method", strMethod));
-    request.push_back(Pair("params", params));
-    request.push_back(Pair("id", id));
+    request.push_back(Pair_Type("method", strMethod));
+    request.push_back(Pair_Type("params", params));
+    request.push_back(Pair_Type("id", id));
     return write_string(Value(request), false) + "\n";
 }
 
@@ -518,11 +516,11 @@ Object JSONRPCReplyObj(const Value& result, const Value& error, const Value& id)
 {
     Object reply;
     if (error.type() != null_type)
-        reply.push_back(Pair("result", Value::null));
+        reply.push_back(Pair_Type("result", Value::null));
     else
-        reply.push_back(Pair("result", result));
-    reply.push_back(Pair("error", error));
-    reply.push_back(Pair("id", id));
+        reply.push_back(Pair_Type("result", result));
+    reply.push_back(Pair_Type("error", error));
+    reply.push_back(Pair_Type("id", id));
     return reply;
 }
 
@@ -684,7 +682,7 @@ void ThreadRPCServer(void* parg)
         vnThreadsRunning[THREAD_RPCLISTENER]--;
         PrintException(NULL, "ThreadRPCServer()");
     }
-    printf("ThreadRPCServer exited\n");
+    LogPrintf("ThreadRPCServer exited\n");
 }
 
 // Forward declaration required for RPCListen
@@ -756,7 +754,7 @@ static void RPCAcceptHandler(boost::shared_ptr< basic_socket_acceptor<Protocol, 
 
     // start HTTP client thread
     else if (!NewThread(ThreadRPCServer3, conn)) {
-        printf("Failed to create RPC server client thread\n");
+        LogPrintf("Failed to create RPC server client thread\n");
         delete conn;
     }
 
@@ -765,7 +763,7 @@ static void RPCAcceptHandler(boost::shared_ptr< basic_socket_acceptor<Protocol, 
 
 void ThreadRPCServer2(void* parg)
 {
-    printf("ThreadRPCServer started\n");
+    LogPrintf("ThreadRPCServer started\n");
 
     strRPCUserColonPass = mapArgs["-rpcuser"] + ":" + mapArgs["-rpcpassword"];
     if ((mapArgs["-rpcpassword"] == "") ||
@@ -791,12 +789,12 @@ void ThreadRPCServer2(void* parg)
                 strWhatAmI.c_str(),
                 GetConfigFile().string().c_str(),
                 EncodeBase58(&rand_pwd[0],&rand_pwd[0]+32).c_str()),
-            _("Error"), CClientUIInterface::OK | CClientUIInterface::MODAL);
+            _("Error"), CClientUIInterface::BTN_OK | CClientUIInterface::MODAL);
         StartShutdown();
         return;
     }
 
-    const bool fUseSSL = GetBoolArg("-rpcssl");
+    const bool fUseSSL = GetBoolArg("-rpcssl", false);
 
     asio::io_service io_service;
 
@@ -808,12 +806,12 @@ void ThreadRPCServer2(void* parg)
         filesystem::path pathCertFile(GetArg("-rpcsslcertificatechainfile", "server.cert"));
         if (!pathCertFile.is_complete()) pathCertFile = filesystem::path(GetDataDir()) / pathCertFile;
         if (filesystem::exists(pathCertFile)) context.use_certificate_chain_file(pathCertFile.string());
-        else printf("ThreadRPCServer ERROR: missing server certificate file %s\n", pathCertFile.string().c_str());
+        else LogPrintf("ThreadRPCServer ERROR: missing server certificate file %s\n", pathCertFile.string().c_str());
 
         filesystem::path pathPKFile(GetArg("-rpcsslprivatekeyfile", "server.pem"));
         if (!pathPKFile.is_complete()) pathPKFile = filesystem::path(GetDataDir()) / pathPKFile;
         if (filesystem::exists(pathPKFile)) context.use_private_key_file(pathPKFile.string(), ssl::context::pem);
-        else printf("ThreadRPCServer ERROR: missing server private key file %s\n", pathPKFile.string().c_str());
+        else LogPrintf("ThreadRPCServer ERROR: missing server private key file %s\n", pathPKFile.string().c_str());
 
         string strCiphers = GetArg("-rpcsslciphers", "TLSv1+HIGH:!SSLv2:!aNULL:!eNULL:!AH:!3DES:@STRENGTH");
         SSL_CTX_set_cipher_list(context.impl(), strCiphers.c_str());
@@ -882,7 +880,7 @@ void ThreadRPCServer2(void* parg)
     }
 
     if (!fListening) {
-        uiInterface.ThreadSafeMessageBox(strerr, _("Error"), CClientUIInterface::OK | CClientUIInterface::MODAL);
+        uiInterface.ThreadSafeMessageBox(strerr, _("Error"), CClientUIInterface::BTN_OK | CClientUIInterface::MODAL);
         StartShutdown();
         return;
     }
@@ -923,7 +921,7 @@ void JSONRequest::parse(const Value& valRequest)
         throw JSONRPCError(RPC_INVALID_REQUEST, "Method must be a string");
     strMethod = valMethod.get_str();
     if (strMethod != "getwork" && strMethod != "getblocktemplate")
-        printf("ThreadRPCServer method=%s\n", strMethod.c_str());
+        LogPrintf("ThreadRPCServer method=%s\n", strMethod.c_str());
 
     // Parse params
     Value valParams = find_value(request, "params");
@@ -1007,7 +1005,7 @@ void ThreadRPCServer3(void* parg)
         }
         if (!HTTPAuthorized(mapHeaders))
         {
-            printf("ThreadRPCServer incorrect password attempt from %s\n", conn->peer_address_to_string().c_str());
+            LogPrintf("ThreadRPCServer incorrect password attempt from %s\n", conn->peer_address_to_string().c_str());
             /* Deter brute-forcing short passwords.
                If this results in a DOS the user really
                shouldn't have their RPC port exposed.*/
@@ -1075,7 +1073,7 @@ json_spirit::Value CRPCTable::execute(const std::string &strMethod, const json_s
 
     // Observe safe mode
     string strWarning = GetWarnings("rpc");
-    if (strWarning != "" && !GetBoolArg("-disablesafemode") &&
+    if (strWarning != "" && !GetBoolArg("-disablesafemode", false) &&
         !pcmd->okSafeMode)
         throw JSONRPCError(RPC_FORBIDDEN_BY_SAFE_MODE, string("Safe mode: ") + strWarning);
 
@@ -1109,7 +1107,7 @@ Object CallRPC(const string& strMethod, const Array& params)
                 GetConfigFile().string().c_str()));
 
     // Connect to localhost
-    bool fUseSSL = GetBoolArg("-rpcssl");
+    bool fUseSSL = GetBoolArg("-rpcssl", false);
     asio::io_service io_service;
     ssl::context context(io_service, ssl::context::sslv23);
     context.set_options(ssl::context::no_sslv2);
@@ -1315,7 +1313,7 @@ int main(int argc, char *argv[])
     {
         if (argc >= 2 && string(argv[1]) == "-server")
         {
-            printf("server ready\n");
+            LogPrintf("server ready\n");
             ThreadRPCServer(NULL);
         }
         else

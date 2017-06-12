@@ -11,16 +11,12 @@
 #include "qtipcserver.h"
 #include "guiconstants.h"
 #include "ui_interface.h"
-#include "util.h"
+#include "util/util.h"
 
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/interprocess/ipc/message_queue.hpp>
 #include <boost/version.hpp>
-
-#if defined(WIN32) && (!defined(BOOST_INTERPROCESS_HAS_WINDOWS_KERNEL_BOOTTIME) || !defined(BOOST_INTERPROCESS_HAS_KERNEL_BOOTTIME) || BOOST_VERSION < 104900)
-#warning Compiling without BOOST_INTERPROCESS_HAS_WINDOWS_KERNEL_BOOTTIME and BOOST_INTERPROCESS_HAS_KERNEL_BOOTTIME uncommented in boost/interprocess/detail/tmp_dir_helpers.hpp or using a boost version before 1.49 may have unintended results see svn.boost.org/trac/boost/ticket/5392
-#endif
 
 using namespace boost;
 using namespace boost::interprocess;
@@ -42,7 +38,7 @@ static bool ipcScanCmd(int argc, char *argv[], bool fRelay)
     bool fSent = false;
     for (int i = 1; i < argc; i++)
     {
-        if (boost::algorithm::istarts_with(argv[i], "bitcoin:"))
+        if (boost::algorithm::istarts_with(argv[i], "E-CurrencyCoin:"))
         {
             const char *strURI = argv[i];
             try {
@@ -57,7 +53,7 @@ static bool ipcScanCmd(int argc, char *argv[], bool fRelay)
                 // the first start of the first instance
                 if (ex.get_error_code() != boost::interprocess::not_found_error || !fRelay)
                 {
-                    printf("main() - boost interprocess exception #%d: %s\n", ex.get_error_code(), ex.what());
+                    LogPrintf("main() - boost interprocess exception #%d: %s\n", ex.get_error_code(), ex.what());
                     break;
                 }
             }
@@ -75,7 +71,7 @@ void ipcScanRelay(int argc, char *argv[])
 static void ipcThread(void* pArg)
 {
     // Make this thread recognisable as the GUI-IPC thread
-    RenameThread("bitcoin-gui-ipc");
+    RenameThread("E-CurrencyCoin-gui-ipc");
 	
     try
     {
@@ -86,12 +82,12 @@ static void ipcThread(void* pArg)
     } catch (...) {
         PrintExceptionContinue(NULL, "ipcThread()");
     }
-    printf("ipcThread exited\n");
+    LogPrintf("ipcThread exited\n");
 }
 
 static void ipcThread2(void* pArg)
 {
-    printf("ipcThread started\n");
+    LogPrintf("ipcThread started\n");
 
     message_queue* mq = (message_queue*)pArg;
     char buffer[MAX_URI_LENGTH + 1] = "";
@@ -146,7 +142,7 @@ void ipcInit(int argc, char *argv[])
         mq = new message_queue(open_or_create, BITCOINURI_QUEUE_NAME, 2, MAX_URI_LENGTH);
     }
     catch (interprocess_exception &ex) {
-        printf("ipcInit() - boost interprocess exception #%d: %s\n", ex.get_error_code(), ex.what());
+        LogPrintf("ipcInit() - boost interprocess exception #%d: %s\n", ex.get_error_code(), ex.what());
         return;
     }
 

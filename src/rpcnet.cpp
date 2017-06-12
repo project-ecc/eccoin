@@ -50,16 +50,16 @@ Value getpeerinfo(const Array& params, bool fHelp)
     BOOST_FOREACH(const CNodeStats& stats, vstats) {
         Object obj;
 
-        obj.push_back(Pair("addr", stats.addrName));
-        obj.push_back(Pair("services", strprintf("%" PRIx64 "", stats.nServices)));
-        obj.push_back(Pair("lastsend", (boost::int64_t)stats.nLastSend));
-        obj.push_back(Pair("lastrecv", (boost::int64_t)stats.nLastRecv));
-        obj.push_back(Pair("conntime", (boost::int64_t)stats.nTimeConnected));
-        obj.push_back(Pair("version", stats.nVersion));
-        obj.push_back(Pair("subver", stats.strSubVer));
-        obj.push_back(Pair("inbound", stats.fInbound));
-        obj.push_back(Pair("startingheight", stats.nStartingHeight));
-        obj.push_back(Pair("banscore", stats.nMisbehavior));
+        obj.push_back(Pair_Type("addr", stats.addrName));
+        obj.push_back(Pair_Type("services", strprintf("%llx", stats.nServices)));
+        obj.push_back(Pair_Type("lastsend", (boost::int64_t)stats.nLastSend));
+        obj.push_back(Pair_Type("lastrecv", (boost::int64_t)stats.nLastRecv));
+        obj.push_back(Pair_Type("conntime", (boost::int64_t)stats.nTimeConnected));
+        obj.push_back(Pair_Type("version", stats.nVersion));
+        obj.push_back(Pair_Type("subver", stats.strSubVer));
+        obj.push_back(Pair_Type("inbound", stats.fInbound));
+        obj.push_back(Pair_Type("startingheight", stats.nStartingHeight));
+        obj.push_back(Pair_Type("banscore", stats.nMisbehavior));
 
         ret.push_back(obj);
     }

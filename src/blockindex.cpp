@@ -7,7 +7,37 @@
 #include <map>
 
 CBlockIndex* pindexBest = NULL;
+CBlockIndex *pindexBestHeader = NULL;
 
+
+void CBlockIndex::SetNull()
+{
+    pnext = NULL;
+    nBlockPos = 0;
+    nChainTrust = 0;
+
+    nMint = 0;
+    nMoneySupply = 0;
+    nStakeModifier = 0;
+    nStakeModifierChecksum = 0;
+    nChainTx = 0;
+
+    // proof-of-stake specific fields
+    prevoutStake.SetNull();
+    nStakeTime = 0;
+    hashProofOfStake.SetNull();
+
+    phashBlock = NULL;
+    pprev = NULL;
+    nHeight = 0;
+    nFile = 0;
+
+    nVersion       = 0;
+    hashMerkleRoot = uint256();
+    nTime          = 0;
+    nBits          = 0;
+    nNonce         = 0;
+}
 
 CBlockIndex::CBlockIndex()
 {
@@ -32,6 +62,17 @@ CBlockIndex::CBlockIndex()
     nTime          = 0;
     nBits          = 0;
     nNonce         = 0;
+}
+
+CBlockIndex::CBlockIndex(const CBlockHeader& block)
+{
+    SetNull();
+
+    nVersion       = block.nVersion;
+    hashMerkleRoot = block.hashMerkleRoot;
+    nTime          = block.nTime;
+    nBits          = block.nBits;
+    nNonce         = block.nNonce;
 }
 
 CBlockIndex::CBlockIndex(unsigned int nFileIn, unsigned int nBlockPosIn, CBlock& block)
@@ -198,7 +239,7 @@ void CBlockIndex::SetStakeModifier(uint64_t nModifier, bool fGeneratedStakeModif
 
 std::string CBlockIndex::ToString() const
 {
-    return strprintf("CBlockIndex(nprev=%p, pnext=%p, nFile=%u, nBlockPos=%-6d nHeight=%d, nMint=%s, nMoneySupply=%s, nFlags=(%s)(%d)(%s), nStakeModifier=%" PRIx64 ", nStakeModifierChecksum=%08x, hashProofOfStake=%s, prevoutStake=(%s), nStakeTime=%d merkle=%s, hashBlock=%s)",
+    return strprintf("CBlockIndex(nprev=%p, pnext=%p, nFile=%u, nBlockPos=%-6d nHeight=%d, nMint=%s, nMoneySupply=%s, nFlags=(%s)(%d)(%s), nStakeModifier=%d, nStakeModifierChecksum=%08x, hashProofOfStake=%s, prevoutStake=(%s), nStakeTime=%d merkle=%s, hashBlock=%s)",
         pprev, pnext, nFile, nBlockPos, nHeight,
         FormatMoney(nMint).c_str(), FormatMoney(nMoneySupply).c_str(),
         GeneratedStakeModifier() ? "MOD" : "-", GetStakeEntropyBit(), IsProofOfStake()? "PoS" : "PoW",
@@ -211,7 +252,7 @@ std::string CBlockIndex::ToString() const
 
 void CBlockIndex::print() const
 {
-    printf("%s\n", ToString().c_str());
+    LogPrintf("%s\n", ToString().c_str());
 }
 
 
@@ -246,5 +287,5 @@ std::string CDiskBlockIndex::ToString() const
 
 void CDiskBlockIndex::print() const
 {
-    printf("%s\n", ToString().c_str());
+    LogPrintf("%s\n", ToString().c_str());
 }

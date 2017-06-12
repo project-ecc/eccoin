@@ -2,7 +2,7 @@
 #define DISK_H
 
 #include "serialize.h"
-#include "util.h"
+#include "util/util.h"
 
 /** Position on disk for a particular transaction. */
 class CDiskTxPos
@@ -51,7 +51,7 @@ public:
 
     void print() const
     {
-        printf("%s", ToString().c_str());
+        LogPrintf("%s", ToString().c_str());
     }
 };
 

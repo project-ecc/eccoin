@@ -33,7 +33,6 @@
 #include "scrypt.h"
 #include "pbkdf2.h"
 
-#include "util.h"
 #include "net.h"
 
 #define SCRYPT_BUFFER_SIZE (131072 + 63)
@@ -175,7 +174,7 @@ void scrypt(const void* input, size_t inputlen, uint32_t *res, void *scratchpad)
     uint32_t X[32];
     V = (uint32_t *)(((uintptr_t)(scratchpad) + 63) & ~ (uintptr_t)(63));
 
-    PBKDF2_SHA256((const uint8_t*)input, inputlen, (const uint8_t*)input, sizeof(block_header), 1, (uint8_t *)X, 128);
+    PBKDF2_SHA256((const uint8_t*)input, inputlen, (const uint8_t*)input, sizeof(CBlockHeader), 1, (uint8_t *)X, 128);
 
     scrypt_core(X, V);
 
@@ -214,12 +213,12 @@ uint256 scrypt_blockhash(const void* input)
     return scrypt_nosalt(input, 80, scratchpad);
 }
 
-unsigned int scanhash_scrypt(block_header *pdata, void *scratchbuf,
+unsigned int scanhash_scrypt(CBlockHeader *pdata, void *scratchbuf,
     uint32_t max_nonce, uint32_t &hash_count,
-    void *result, block_header *res_header)
+    void *result, CBlockHeader *res_header)
 {
     hash_count = 0;
-    block_header data = *pdata;
+    CBlockHeader data = *pdata;
     uint32_t hash[8];
     unsigned char *hashc = (unsigned char *) &hash;
 
@@ -239,7 +238,7 @@ unsigned int scanhash_scrypt(block_header *pdata, void *scratchbuf,
 
     while (true) {
 
-        data.nonce = n++;
+        data.nNonce = n++;
 
 #ifdef SCRYPT_3WAY
         if (throughput >= 2 && n < max_nonce) {
@@ -279,7 +278,7 @@ unsigned int scanhash_scrypt(block_header *pdata, void *scratchbuf,
         if (hashc[31] == 0 && hashc[30] == 0) {
             memcpy(result, hash, 32);
 
-            return data.nonce;
+            return data.nNonce;
         }
 
         if (n >= max_nonce) {

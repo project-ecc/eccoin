@@ -37,6 +37,21 @@ class CScript;
 
 static const unsigned int MAX_SIZE = 0x02000000;
 
+/**
+ * Dummy data type to identify deserializing constructors.
+ *
+ * By convention, a constructor of a type T with signature
+ *
+ *   template <typename Stream> T::T(deserialize_type, Stream& s)
+ *
+ * is a deserializing constructor, which builds the type by
+ * deserializing it from s. If T contains const fields, this
+ * is likely the only way to do so.
+ */
+struct deserialize_type {};
+constexpr deserialize_type deserialize {};
+
+
 // Used to bypass the rule against non-const reference to temporary
 // where it makes sense with wrappers such as CFlatData or CTxDB
 template<typename T>
@@ -366,7 +381,6 @@ inline void Unserialize(Stream& is, T& a, long nType, int nVersion)
 {
     a.Unserialize(is, (int)nType, nVersion);
 }
-
 
 
 

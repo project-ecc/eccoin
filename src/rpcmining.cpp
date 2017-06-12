@@ -17,8 +17,6 @@ using namespace std;
 
 extern unsigned int nTargetSpacing;
 
-
-
 Value getmininginfo(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() != 0)
@@ -30,27 +28,27 @@ Value getmininginfo(const Array& params, bool fHelp)
     //pwalletMain->GetStakeWeight(*pwalletMain, nMinWeight, nMaxWeight, nWeight);
 
     Object obj, diff, weight;
-    obj.push_back(Pair("blocks",        (int)nBestHeight));
-    obj.push_back(Pair("currentblocksize",(uint64_t)nLastBlockSize));
-    obj.push_back(Pair("currentblocktx",(uint64_t)nLastBlockTx));
+    obj.push_back(Pair_Type("blocks",        pindexBest->nHeight));
+    obj.push_back(Pair_Type("currentblocksize",(uint64_t)nLastBlockSize));
+    obj.push_back(Pair_Type("currentblocktx",(uint64_t)nLastBlockTx));
 
-    diff.push_back(Pair("proof-of-work",        GetDifficulty()));
-    diff.push_back(Pair("proof-of-stake",       GetDifficulty(GetLastBlockIndex(pindexBest, true))));
-    diff.push_back(Pair("search-interval",      (int)nLastCoinStakeSearchInterval));
-    obj.push_back(Pair("difficulty",    diff));
+    diff.push_back(Pair_Type("proof-of-work",        GetDifficulty()));
+    diff.push_back(Pair_Type("proof-of-stake",       GetDifficulty(GetLastBlockIndex(pindexBest, true))));
+    diff.push_back(Pair_Type("search-interval",      (int)nLastCoinStakeSearchInterval));
+    obj.push_back(Pair_Type("difficulty",    diff));
 
-    obj.push_back(Pair("netmhashps",     GetPoWMHashPS()));
-    obj.push_back(Pair("netstakeweight", GetPoSKernelPS()));
-    obj.push_back(Pair("errors",        GetWarnings("statusbar")));
-    obj.push_back(Pair("pooledtx",      (uint64_t)mempool.size()));
+    obj.push_back(Pair_Type("netmhashps",     GetPoWMHashPS()));
+    obj.push_back(Pair_Type("netstakeweight", GetPoSKernelPS()));
+    obj.push_back(Pair_Type("errors",        GetWarnings("statusbar")));
+    obj.push_back(Pair_Type("pooledtx",      (uint64_t)mempool.size()));
 
-    weight.push_back(Pair("minimum",    (uint64_t)nMinWeight));
-    weight.push_back(Pair("maximum",    (uint64_t)nMaxWeight));
-    weight.push_back(Pair("combined",  (uint64_t)nWeight));
-    obj.push_back(Pair("stakeweight", weight));
+    weight.push_back(Pair_Type("minimum",    (uint64_t)nMinWeight));
+    weight.push_back(Pair_Type("maximum",    (uint64_t)nMaxWeight));
+    weight.push_back(Pair_Type("combined",  (uint64_t)nWeight));
+    obj.push_back(Pair_Type("stakeweight", weight));
 
-    obj.push_back(Pair("stakeinterest",    (uint64_t)COIN_YEAR_REWARD));
-    obj.push_back(Pair("testnet",       fTestNet));
+    obj.push_back(Pair_Type("stakeinterest",    (uint64_t)COIN_YEAR_REWARD));
+    obj.push_back(Pair_Type("testnet",       fTestNet));
     return obj;
 }
 
@@ -70,21 +68,21 @@ Value getstakinginfo(const Array& params, bool fHelp)
 
     Object obj;
 
-    obj.push_back(Pair("enabled", GetBoolArg("-staking", true)));
-    obj.push_back(Pair("staking", staking));
-    obj.push_back(Pair("errors", GetWarnings("statusbar")));
+    obj.push_back(Pair_Type("enabled", GetBoolArg("-staking", true)));
+    obj.push_back(Pair_Type("staking", staking));
+    obj.push_back(Pair_Type("errors", GetWarnings("statusbar")));
 
-    obj.push_back(Pair("currentblocksize", (uint64_t)nLastBlockSize));
-    obj.push_back(Pair("currentblocktx", (uint64_t)nLastBlockTx));
-    obj.push_back(Pair("pooledtx", (uint64_t)mempool.size()));
+    obj.push_back(Pair_Type("currentblocksize", (uint64_t)nLastBlockSize));
+    obj.push_back(Pair_Type("currentblocktx", (uint64_t)nLastBlockTx));
+    obj.push_back(Pair_Type("pooledtx", (uint64_t)mempool.size()));
 
-    obj.push_back(Pair("difficulty", GetDifficulty(GetLastBlockIndex(pindexBest, true))));
-    obj.push_back(Pair("search-interval", (int)nLastCoinStakeSearchInterval));
+    obj.push_back(Pair_Type("difficulty", GetDifficulty(GetLastBlockIndex(pindexBest, true))));
+    obj.push_back(Pair_Type("search-interval", (int)nLastCoinStakeSearchInterval));
 
-    obj.push_back(Pair("weight", (uint64_t)nWeight));
-    obj.push_back(Pair("netstakeweight", (uint64_t)nNetworkWeight));
+    obj.push_back(Pair_Type("weight", (uint64_t)nWeight));
+    obj.push_back(Pair_Type("netstakeweight", (uint64_t)nNetworkWeight));
 
-    obj.push_back(Pair("expectedtime", nExpectedTime));
+    obj.push_back(Pair_Type("expectedtime", nExpectedTime));
 
     return obj;
 }
@@ -106,7 +104,7 @@ Value getworkex(const Array& params, bool fHelp)
     if (pindexBest->nHeight >= LAST_POW_BLOCK)
         throw JSONRPCError(RPC_MISC_ERROR, "No more PoW blocks");
 
-    typedef map<uint256, pair<CBlock*, CScript> > mapNewBlock_t;
+    typedef map<uint256, std::pair<CBlock*, CScript> > mapNewBlock_t;
     static mapNewBlock_t mapNewBlock;
     static vector<CBlock*> vNewBlock;
     static CReserveKey reservekey(pwalletMain);
@@ -163,12 +161,12 @@ Value getworkex(const Array& params, bool fHelp)
         std::vector<uint256> merkle = pblock->GetMerkleBranch(0);
 
         Object result;
-        result.push_back(Pair("data",     HexStr(BEGIN(pdata), END(pdata))));
-        result.push_back(Pair("target",   HexStr(BEGIN(hashTarget), END(hashTarget))));
+        result.push_back(Pair_Type("data",     HexStr(BEGIN(pdata), END(pdata))));
+        result.push_back(Pair_Type("target",   HexStr(BEGIN(hashTarget), END(hashTarget))));
 
         CDataStream ssTx(SER_NETWORK, PROTOCOL_VERSION);
         ssTx << coinbaseTx;
-        result.push_back(Pair("coinbase", HexStr(ssTx.begin(), ssTx.end())));
+        result.push_back(Pair_Type("coinbase", HexStr(ssTx.begin(), ssTx.end())));
 
         Array merkle_arr;
 
@@ -176,7 +174,7 @@ Value getworkex(const Array& params, bool fHelp)
             merkle_arr.push_back(HexStr(BEGIN(merkleh), END(merkleh)));
         }
 
-        result.push_back(Pair("merkle", merkle_arr));
+        result.push_back(Pair_Type("merkle", merkle_arr));
 
 
         return result;
@@ -240,7 +238,7 @@ Value getwork(const Array& params, bool fHelp)
     if (pindexBest->nHeight >= LAST_POW_BLOCK)
         throw JSONRPCError(RPC_MISC_ERROR, "No more PoW blocks");
 
-    typedef map<uint256, pair<CBlock*, CScript> > mapNewBlock_t;
+    typedef map<uint256, std::pair<CBlock*, CScript> > mapNewBlock_t;
     static mapNewBlock_t mapNewBlock;    // FIXME: thread safety
     static vector<CBlock*> vNewBlock;
     static CReserveKey reservekey(pwalletMain);
@@ -302,10 +300,10 @@ Value getwork(const Array& params, bool fHelp)
         uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
 
         Object result;
-        result.push_back(Pair("midstate", HexStr(BEGIN(pmidstate), END(pmidstate)))); // deprecated
-        result.push_back(Pair("data",     HexStr(BEGIN(pdata), END(pdata))));
-        result.push_back(Pair("hash1",    HexStr(BEGIN(phash1), END(phash1)))); // deprecated
-        result.push_back(Pair("target",   HexStr(BEGIN(hashTarget), END(hashTarget))));
+        result.push_back(Pair_Type("midstate", HexStr(BEGIN(pmidstate), END(pmidstate)))); // deprecated
+        result.push_back(Pair_Type("data",     HexStr(BEGIN(pdata), END(pdata))));
+        result.push_back(Pair_Type("hash1",    HexStr(BEGIN(phash1), END(phash1)))); // deprecated
+        result.push_back(Pair_Type("target",   HexStr(BEGIN(hashTarget), END(hashTarget))));
         return result;
     }
     else
@@ -436,16 +434,16 @@ Value getblocktemplate(const Array& params, bool fHelp)
 
         CDataStream ssTx(SER_NETWORK, PROTOCOL_VERSION);
         ssTx << tx;
-        entry.push_back(Pair("data", HexStr(ssTx.begin(), ssTx.end())));
+        entry.push_back(Pair_Type("data", HexStr(ssTx.begin(), ssTx.end())));
 
-        entry.push_back(Pair("hash", txHash.GetHex()));
+        entry.push_back(Pair_Type("hash", txHash.GetHex()));
 
         MapPrevTx mapInputs;
         map<uint256, CTxIndex> mapUnused;
         bool fInvalid = false;
         if (tx.FetchInputs(txdb, mapUnused, false, false, mapInputs, fInvalid))
         {
-            entry.push_back(Pair("fee", (int64_t)(tx.GetValueIn(mapInputs) - tx.GetValueOut())));
+            entry.push_back(Pair_Type("fee", (int64_t)(tx.GetValueIn(mapInputs) - tx.GetValueOut())));
 
             Array deps;
             BOOST_FOREACH (MapPrevTx::value_type& inp, mapInputs)
@@ -453,18 +451,18 @@ Value getblocktemplate(const Array& params, bool fHelp)
                 if (setTxIndex.count(inp.first))
                     deps.push_back(setTxIndex[inp.first]);
             }
-            entry.push_back(Pair("depends", deps));
+            entry.push_back(Pair_Type("depends", deps));
 
             int64_t nSigOps = tx.GetLegacySigOpCount();
             nSigOps += tx.GetP2SHSigOpCount(mapInputs);
-            entry.push_back(Pair("sigops", nSigOps));
+            entry.push_back(Pair_Type("sigops", nSigOps));
         }
 
         transactions.push_back(entry);
     }
 
     Object aux;
-    aux.push_back(Pair("flags", HexStr(COINBASE_FLAGS.begin(), COINBASE_FLAGS.end())));
+    aux.push_back(Pair_Type("flags", HexStr(COINBASE_FLAGS.begin(), COINBASE_FLAGS.end())));
 
     uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
 
@@ -477,20 +475,20 @@ Value getblocktemplate(const Array& params, bool fHelp)
     }
 
     Object result;
-    result.push_back(Pair("version", pblock->nVersion));
-    result.push_back(Pair("previousblockhash", pblock->hashPrevBlock.GetHex()));
-    result.push_back(Pair("transactions", transactions));
-    result.push_back(Pair("coinbaseaux", aux));
-    result.push_back(Pair("coinbasevalue", (int64_t)pblock->vtx[0].vout[0].nValue));
-    result.push_back(Pair("target", hashTarget.GetHex()));
-    result.push_back(Pair("mintime", (int64_t)pindexPrev->GetPastTimeLimit()+1));
-    result.push_back(Pair("mutable", aMutable));
-    result.push_back(Pair("noncerange", "00000000ffffffff"));
-    result.push_back(Pair("sigoplimit", (int64_t)MAX_BLOCK_SIGOPS));
-    result.push_back(Pair("sizelimit", (int64_t)MAX_BLOCK_SIZE));
-    result.push_back(Pair("curtime", (int64_t)pblock->nTime));
-    result.push_back(Pair("bits", HexBits(pblock->nBits)));
-    result.push_back(Pair("height", (int64_t)(pindexPrev->nHeight+1)));
+    result.push_back(Pair_Type("version", pblock->nVersion));
+    result.push_back(Pair_Type("previousblockhash", pblock->hashPrevBlock.GetHex()));
+    result.push_back(Pair_Type("transactions", transactions));
+    result.push_back(Pair_Type("coinbaseaux", aux));
+    result.push_back(Pair_Type("coinbasevalue", (int64_t)pblock->vtx[0].vout[0].nValue));
+    result.push_back(Pair_Type("target", hashTarget.GetHex()));
+    result.push_back(Pair_Type("mintime", (int64_t)pindexPrev->GetPastTimeLimit()+1));
+    result.push_back(Pair_Type("mutable", aMutable));
+    result.push_back(Pair_Type("noncerange", "00000000ffffffff"));
+    result.push_back(Pair_Type("sigoplimit", (int64_t)MAX_BLOCK_SIGOPS));
+    result.push_back(Pair_Type("sizelimit", (int64_t)MAX_BLOCK_SIZE));
+    result.push_back(Pair_Type("curtime", (int64_t)pblock->nTime));
+    result.push_back(Pair_Type("bits", HexBits(pblock->nBits)));
+    result.push_back(Pair_Type("height", (int64_t)(pindexPrev->nHeight+1)));
 
     return result;
 }
