@@ -107,9 +107,9 @@ void WalletModel::checkBalanceChanged()
     CAmount newBalance = getBalance();
     CAmount newUnconfirmedBalance = getUnconfirmedBalance();
     CAmount newImmatureBalance = getImmatureBalance();
-    CAmount newWatchOnlyBalance = 0;
-    CAmount newWatchUnconfBalance = 0;
-    CAmount newWatchImmatureBalance = 0;
+    //CAmount newWatchOnlyBalance = 0;
+    //CAmount newWatchUnconfBalance = 0;
+    //CAmount newWatchImmatureBalance = 0;
     if (haveWatchOnly())
     {
         //newWatchOnlyBalance = getWatchBalance();
@@ -558,6 +558,7 @@ bool WalletModel::saveReceiveRequest(const std::string &sAddress, const int64_t 
     //    return wallet->EraseDestData(dest, key);
     //else
     //    return wallet->AddDestData(dest, key, sRequest);
+    return true;
 }
 
 CWallet* WalletModel::getWallet()

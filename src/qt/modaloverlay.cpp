@@ -6,6 +6,7 @@
 #include "ui_modaloverlay.h"
 
 #include "guiutil.h"
+#include "main.h"
 
 #include <QResizeEvent>
 #include <QPropertyAnimation>
@@ -66,9 +67,14 @@ bool ModalOverlay::event(QEvent* ev) {
 
 void ModalOverlay::setKnownBestHeight(int count, const QDateTime& blockDate)
 {
-    if (count > bestHeaderHeight) {
+    if (count > GetNumBlocksOfPeers()) {
         bestHeaderHeight = count;
         bestHeaderDate = blockDate;
+    }
+    else
+    {
+        bestHeaderHeight = GetNumBlocksOfPeers();
+        bestHeaderDate = QDateTime::currentDateTime();
     }
 }
 
@@ -129,7 +135,8 @@ void ModalOverlay::tipUpdate(int count, const QDateTime& blockDate, double nVeri
     bool hasBestHeader = bestHeaderHeight >= count;
 
     // show remaining number of blocks
-    if (estimateNumHeadersLeft < HEADER_HEIGHT_DELTA_SYNC && hasBestHeader) {
+    if (hasBestHeader)// && estimateNumHeadersLeft < HEADER_HEIGHT_DELTA_SYNC)
+    {
         ui->numberOfBlocksLeft->setText(QString::number(bestHeaderHeight - count));
     } else {
         ui->numberOfBlocksLeft->setText(tr("Unknown. Syncing Headers (%1)...").arg(bestHeaderHeight));
