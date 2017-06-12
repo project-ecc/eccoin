@@ -11,6 +11,9 @@
 #include <assert.h>
 #include <boost/bind.hpp>
 #include <utility>
+#include <chrono>
+
+
 
 CScheduler::CScheduler() : nThreadsServicingQueue(0), stopRequested(false), stopWhenEmpty(false)
 {

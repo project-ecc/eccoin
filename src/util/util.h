@@ -27,6 +27,12 @@
 #include <string>
 #include <vector>
 
+#ifndef WIN32
+#include <sys/types.h>
+#include <sys/time.h>
+#include <sys/resource.h>
+#endif
+
 #include <boost/signals2/signal.hpp>
 #include <boost/thread/exceptions.hpp>
 

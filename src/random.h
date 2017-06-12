@@ -17,4 +17,7 @@ int GetRandInt(int nMax);
 uint256 GetRandHash();
 void RandAddSeedPerfmon();
 
+static const ssize_t NUM_OS_RANDOM_BYTES = 32;
+
+
 #endif // RANDOM_H

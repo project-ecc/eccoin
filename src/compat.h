@@ -26,6 +26,7 @@
 #include <net/if.h>
 #include <netinet/in.h>
 #include <ifaddrs.h>
+#include <unistd.h>
 
 #ifndef _MSC_VER
 typedef u_int SOCKET;
