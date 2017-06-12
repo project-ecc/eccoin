@@ -42,7 +42,10 @@ void RecentRequestsTableModel::loadAddrs()
     {
         const CBitcoinAddress& addr = item.first;
         const std::string& strName = item.second;
-        addNewRequest(strName, addr.ToString());
+        if(IsMine( *(walletModel->getWallet()), addr.Get()))
+        {
+            addNewRequest(strName, addr.ToString());
+        }
     }
 }
 
