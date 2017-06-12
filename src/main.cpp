@@ -637,7 +637,7 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
     if (pfrom && !CSyncCheckpoint::strMasterPrivKey.empty())
         pcheckpointMain->SendSyncCheckpoint(pcheckpointMain->AutoSelectSyncCheckpoint());
 
-    NotifyHeaderTip();
+    //NotifyHeaderTip();
 
     return true;
 }
