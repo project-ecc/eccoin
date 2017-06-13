@@ -15,6 +15,7 @@
 #include "chain.h"
 
 #include "util/util.h"
+#include "util/utilexceptions.h"
 #include "random.h"
 
 #include "network/netutils.h"
@@ -440,8 +441,8 @@ bool AppInit(int argc, char* argv[])
             fprintf(stderr, "Error: Specified directory does not exist\n");
             Shutdown(NULL);
         }
-        ReadConfigFile(mapArgs, mapMultiArgs);
-
+        ReadConfigFile();
+			bool fCommandLine = false;
         if (mapArgs.count("-?") || mapArgs.count("--help"))
         {
             // First part of help message is specific to bitcoind / RPC client

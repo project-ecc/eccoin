@@ -327,7 +327,7 @@ static inline int64_t GetArg(const std::string& strArg, int64_t nDefault)
     return gArgs.GetArg(strArg, nDefault);
 }
 
-static inline bool GetBoolArg(const std::string& strArg, bool fDefault)
+static inline bool GetBoolArg(const std::string& strArg, bool fDefault=false)
 {
     return gArgs.GetBoolArg(strArg, fDefault);
 }
