@@ -52,8 +52,7 @@ public Q_SLOTS:
     void accept();
     SendCoinsEntry *addEntry();
     void updateTabsAndLabels();
-    void setBalance(const CAmount& balance, const CAmount& unconfirmedBalance, const CAmount& immatureBalance,
-                    const CAmount& watchOnlyBalance, const CAmount& watchUnconfBalance, const CAmount& watchImmatureBalance);
+    void setBalance(const CAmount& balance, const CAmount &stake, const CAmount& unconfirmedBalance, const CAmount& immatureBalance);
 
 private:
     Ui::SendCoinsDialog *ui;
@@ -68,7 +67,6 @@ private:
     // Additional parameter msgArg can be used via .arg(msgArg).
     void processSendCoinsReturn(const WalletModel::SendCoinsReturn &sendCoinsReturn, const QString &msgArg = QString());
     void minimizeFeeSection(bool fMinimize);
-    void updateFeeMinimizedLabel();
 
 private Q_SLOTS:
     void on_sendButton_clicked();
@@ -89,10 +87,6 @@ private Q_SLOTS:
     void coinControlClipboardLowOutput();
     void coinControlClipboardChange();
     void setMinimumFee();
-    void updateFeeSectionControls();
-    void updateMinFeeLabel();
-    void updateSmartFeeLabel();
-    void updateGlobalFeeVariables();
 
 Q_SIGNALS:
     // Fired when a message should be reported to the user

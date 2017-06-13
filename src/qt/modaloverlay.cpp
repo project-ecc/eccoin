@@ -83,6 +83,11 @@ void ModalOverlay::tipUpdate(int count, const QDateTime& blockDate, double nVeri
     QDateTime currentDate = QDateTime::currentDateTime();
 
     // keep a vector of samples of verification progress at height
+    nVerificationProgress = (count / bestHeaderHeight);
+    if(nVerificationProgress >= 1.0)
+    {
+        nVerificationProgress = 1.0;
+    }
     blockProcessTime.push_front(qMakePair(currentDate.toMSecsSinceEpoch(), nVerificationProgress));
 
     // show progress speed if we have more then one sample
@@ -99,7 +104,8 @@ void ModalOverlay::tipUpdate(int count, const QDateTime& blockDate, double nVeri
             QPair<qint64, double> sample = blockProcessTime[i];
 
             // take first sample after 500 seconds or last available one
-            if (sample.first < (currentDate.toMSecsSinceEpoch() - 500 * 1000) || i == blockProcessTime.size() - 1) {
+            if (sample.first < (currentDate.toMSecsSinceEpoch() - 500 * 1000) || i == blockProcessTime.size() - 1)
+            {
                 progressDelta = progressStart-sample.second;
                 timeDelta = blockProcessTime[0].first - sample.first;
                 progressPerHour = progressDelta/(double)timeDelta*1000*3600;
@@ -131,7 +137,7 @@ void ModalOverlay::tipUpdate(int count, const QDateTime& blockDate, double nVeri
 
     // estimate the number of headers left based on nPowTargetSpacing
     // and check if the gui is not aware of the the best header (happens rarely)
-    int estimateNumHeadersLeft = bestHeaderDate.secsTo(currentDate) / (10*60);
+    //int estimateNumHeadersLeft = bestHeaderDate.secsTo(currentDate) / (10*60);
     bool hasBestHeader = bestHeaderHeight >= count;
 
     // show remaining number of blocks

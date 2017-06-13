@@ -69,6 +69,11 @@ CAmount WalletModel::getBalance(const CCoinControl *coinControl) const
     return wallet->GetBalance();
 }
 
+CAmount WalletModel::getStake() const
+{
+    return wallet->GetStake();
+}
+
 CAmount WalletModel::getUnconfirmedBalance() const
 {
     return wallet->GetUnconfirmedBalance();
@@ -106,34 +111,19 @@ void WalletModel::checkBalanceChanged()
 {
     CAmount newBalance = getBalance();
     CAmount newUnconfirmedBalance = getUnconfirmedBalance();
-    CAmount newImmatureBalance = getImmatureBalance();
-    //CAmount newWatchOnlyBalance = 0;
-    //CAmount newWatchUnconfBalance = 0;
-    //CAmount newWatchImmatureBalance = 0;
-    if (haveWatchOnly())
-    {
-        //newWatchOnlyBalance = getWatchBalance();
-        //newWatchUnconfBalance = getWatchUnconfirmedBalance();
-        //newWatchImmatureBalance = getWatchImmatureBalance();
-    }
+    CAmount newStakeBalance = getStake();
+    CAmount newImmatureBalance = getImmatureBalance() + newStakeBalance;
+
 
     if(cachedBalance != newBalance || cachedUnconfirmedBalance != newUnconfirmedBalance
             || cachedImmatureBalance != newImmatureBalance
-            //|| cachedWatchOnlyBalance != newWatchOnlyBalance || cachedWatchUnconfBalance != newWatchUnconfBalance
-            //|| cachedWatchImmatureBalance != newWatchImmatureBalance
             )
     {
         cachedBalance = newBalance;
         cachedUnconfirmedBalance = newUnconfirmedBalance;
         cachedImmatureBalance = newImmatureBalance;
-        //cachedWatchOnlyBalance = newWatchOnlyBalance;
-        //cachedWatchUnconfBalance = newWatchUnconfBalance;
-        //cachedWatchImmatureBalance = newWatchImmatureBalance;
-        //Q_EMIT balanceChanged(newBalance, newUnconfirmedBalance, newImmatureBalance,
-        //                    newWatchOnlyBalance, newWatchUnconfBalance, newWatchImmatureBalance);
 
-        Q_EMIT balanceChanged(newBalance, newUnconfirmedBalance, newImmatureBalance,
-                            0,0,0);
+        Q_EMIT balanceChanged(newBalance, newStakeBalance, newUnconfirmedBalance, newImmatureBalance);
     }
 }
 
