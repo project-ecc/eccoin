@@ -142,12 +142,9 @@ void SendCoinsDialog::setModel(WalletModel *_model)
             }
         }
 
-        //setBalance(_model->getBalance(), _model->getUnconfirmedBalance(), _model->getImmatureBalance(),
-        //           _model->getWatchBalance(), _model->getWatchUnconfirmedBalance(), _model->getWatchImmatureBalance());
-        setBalance(_model->getBalance(), _model->getUnconfirmedBalance(), _model->getImmatureBalance(),
-                   0,0,0);
+        setBalance(_model->getBalance(),_model->getStake(), _model->getUnconfirmedBalance(), _model->getImmatureBalance());
 
-        connect(_model, SIGNAL(balanceChanged(CAmount,CAmount,CAmount,CAmount,CAmount,CAmount)), this, SLOT(setBalance(CAmount,CAmount,CAmount,CAmount,CAmount,CAmount)));
+        connect(_model, SIGNAL(balanceChanged(CAmount,CAmount,CAmount,CAmount)), this, SLOT(setBalance(CAmount,CAmount,CAmount,CAmount)));
         connect(_model->getOptionsModel(), SIGNAL(displayUnitChanged(int)), this, SLOT(updateDisplayUnit()));
         updateDisplayUnit();
 
@@ -157,36 +154,11 @@ void SendCoinsDialog::setModel(WalletModel *_model)
         ui->frameCoinControl->setVisible(_model->getOptionsModel()->getCoinControlFeatures());
         coinControlUpdateLabels();
 
-        // fee section
-        //connect(ui->sliderSmartFee, SIGNAL(valueChanged(int)), this, SLOT(updateSmartFeeLabel()));
-        //connect(ui->sliderSmartFee, SIGNAL(valueChanged(int)), this, SLOT(updateGlobalFeeVariables()));
-        //connect(ui->sliderSmartFee, SIGNAL(valueChanged(int)), this, SLOT(coinControlUpdateLabels()));
         connect(ui->groupFee, SIGNAL(buttonClicked(int)), this, SLOT(updateFeeSectionControls()));
         connect(ui->groupFee, SIGNAL(buttonClicked(int)), this, SLOT(updateGlobalFeeVariables()));
         connect(ui->groupFee, SIGNAL(buttonClicked(int)), this, SLOT(coinControlUpdateLabels()));
         connect(ui->groupCustomFee, SIGNAL(buttonClicked(int)), this, SLOT(updateGlobalFeeVariables()));
         connect(ui->groupCustomFee, SIGNAL(buttonClicked(int)), this, SLOT(coinControlUpdateLabels()));
-        //connect(ui->customFee, SIGNAL(valueChanged()), this, SLOT(updateGlobalFeeVariables()));
-        //connect(ui->customFee, SIGNAL(valueChanged()), this, SLOT(coinControlUpdateLabels()));
-        //connect(ui->checkBoxMinimumFee, SIGNAL(stateChanged(int)), this, SLOT(setMinimumFee()));
-        //connect(ui->checkBoxMinimumFee, SIGNAL(stateChanged(int)), this, SLOT(updateFeeSectionControls()));
-        //connect(ui->checkBoxMinimumFee, SIGNAL(stateChanged(int)), this, SLOT(updateGlobalFeeVariables()));
-        //connect(ui->checkBoxMinimumFee, SIGNAL(stateChanged(int)), this, SLOT(coinControlUpdateLabels()));
-        //ui->customFee->setSingleStep(CWallet::GetRequiredFee(1000));
-        updateFeeSectionControls();
-        updateMinFeeLabel();
-        updateSmartFeeLabel();
-        updateGlobalFeeVariables();
-
-        // set default rbf checkbox state
-        //ui->optInRBF->setCheckState(model->getDefaultWalletRbf() ? Qt::Checked : Qt::Unchecked);
-
-        // set the smartfee-sliders default value (wallets default conf.target or last stored value)
-        //QSettings settings;
-        //if (settings.value("nSmartFeeSliderPosition").toInt() == 0)
-        //    ui->sliderSmartFee->setValue(ui->sliderSmartFee->maximum() - model->getDefaultConfirmTarget() + 2);
-        //else
-        //    ui->sliderSmartFee->setValue(settings.value("nSmartFeeSliderPosition").toInt());
     }
 }
 
@@ -449,14 +421,11 @@ bool SendCoinsDialog::handlePaymentRequest(const SendCoinsRecipient &rv)
     return true;
 }
 
-void SendCoinsDialog::setBalance(const CAmount& balance, const CAmount& unconfirmedBalance, const CAmount& immatureBalance,
-                                 const CAmount& watchBalance, const CAmount& watchUnconfirmedBalance, const CAmount& watchImmatureBalance)
+void SendCoinsDialog::setBalance(const CAmount& balance, const CAmount& stake, const CAmount& unconfirmedBalance, const CAmount& immatureBalance)
 {
     Q_UNUSED(unconfirmedBalance);
     Q_UNUSED(immatureBalance);
-    Q_UNUSED(watchBalance);
-    Q_UNUSED(watchUnconfirmedBalance);
-    Q_UNUSED(watchImmatureBalance);
+    Q_UNUSED(stake);
 
     if(model && model->getOptionsModel())
     {
@@ -466,10 +435,7 @@ void SendCoinsDialog::setBalance(const CAmount& balance, const CAmount& unconfir
 
 void SendCoinsDialog::updateDisplayUnit()
 {
-    setBalance(model->getBalance(), 0, 0, 0, 0, 0);
-    //ui->customFee->setDisplayUnit(model->getOptionsModel()->getDisplayUnit());
-    updateMinFeeLabel();
-    updateSmartFeeLabel();
+    setBalance(model->getBalance(), 0, 0, 0);
 }
 
 void SendCoinsDialog::processSendCoinsReturn(const WalletModel::SendCoinsReturn &sendCoinsReturn, const QString &msgArg)
@@ -532,103 +498,12 @@ void SendCoinsDialog::on_buttonChooseFee_clicked()
 
 void SendCoinsDialog::on_buttonMinimizeFee_clicked()
 {
-    updateFeeMinimizedLabel();
     minimizeFeeSection(true);
 }
 
 void SendCoinsDialog::setMinimumFee()
 {
     ui->radioCustomPerKilobyte->setChecked(true);
-    //ui->customFee->setValue(CWallet::GetRequiredFee(1000));
-}
-
-void SendCoinsDialog::updateFeeSectionControls()
-{
-    //ui->sliderSmartFee          ->setEnabled(ui->radioSmartFee->isChecked());
-    //ui->labelSmartFee           ->setEnabled(ui->radioSmartFee->isChecked());
-    //ui->labelSmartFee2          ->setEnabled(ui->radioSmartFee->isChecked());
-    //ui->labelSmartFee3          ->setEnabled(ui->radioSmartFee->isChecked());
-    //ui->labelFeeEstimation      ->setEnabled(ui->radioSmartFee->isChecked());
-    //ui->labelSmartFeeNormal     ->setEnabled(ui->radioSmartFee->isChecked());
-    //ui->labelSmartFeeFast       ->setEnabled(ui->radioSmartFee->isChecked());
-    //ui->confirmationTargetLabel ->setEnabled(ui->radioSmartFee->isChecked());
-    //ui->checkBoxMinimumFee      ->setEnabled(ui->radioCustomFee->isChecked());
-    //ui->labelMinFeeWarning      ->setEnabled(ui->radioCustomFee->isChecked());
-    //ui->radioCustomPerKilobyte  ->setEnabled(ui->radioCustomFee->isChecked() && !ui->checkBoxMinimumFee->isChecked());
-    //ui->customFee               ->setEnabled(ui->radioCustomFee->isChecked() && !ui->checkBoxMinimumFee->isChecked());
-}
-
-void SendCoinsDialog::updateGlobalFeeVariables()
-{
-    if (ui->radioSmartFee->isChecked())
-    {
-        //int nConfirmTarget = ui->sliderSmartFee->maximum() - ui->sliderSmartFee->value() + 2;
-        //payTxFee = CFeeRate(0);
-
-        // show the estimated required time for confirmation
-        //ui->confirmationTargetLabel->setText(GUIUtil::formatDurationStr(nConfirmTarget * (10*60)) + " / " + tr("%n block(s)", "", nConfirmTarget));
-    }
-    else
-    {
-        //payTxFee = CFeeRate(ui->customFee->value());
-    }
-}
-
-void SendCoinsDialog::updateFeeMinimizedLabel()
-{
-    if(!model || !model->getOptionsModel())
-        return;
-/*
-    if (ui->radioSmartFee->isChecked())
-        ui->labelFeeMinimized->setText(ui->labelSmartFee->text());
-    else {
-        ui->labelFeeMinimized->setText(BitcoinUnits::formatWithUnit(model->getOptionsModel()->getDisplayUnit(), ui->customFee->value()) +
-            ((ui->radioCustomPerKilobyte->isChecked()) ? "/kB" : ""));
-    }
-*/
-}
-
-void SendCoinsDialog::updateMinFeeLabel()
-{
-    if (model && model->getOptionsModel())
-        //ui->checkBoxMinimumFee->setText(tr("Pay only the required fee of %1").arg(
-        //    BitcoinUnits::formatWithUnit(model->getOptionsModel()->getDisplayUnit(), CWallet::GetRequiredFee(1000)) + "/kB")
-        //);
-        return;
-}
-
-void SendCoinsDialog::updateSmartFeeLabel()
-{
-    if(!model || !model->getOptionsModel())
-        return;
-
-    //int nBlocksToConfirm = ui->sliderSmartFee->maximum() - ui->sliderSmartFee->value() + 2;
-    //int estimateFoundAtBlocks = nBlocksToConfirm;
-    /*
-    CFeeRate feeRate = ::feeEstimator.estimateSmartFee(nBlocksToConfirm, &estimateFoundAtBlocks, ::mempool);
-    if (feeRate <= CFeeRate(0)) // not enough data => minfee
-    {
-        //ui->labelSmartFee->setText(BitcoinUnits::formatWithUnit(model->getOptionsModel()->getDisplayUnit(),
-        //                                                        std::max(CWallet::fallbackFee.GetFeePerK(), CWallet::GetRequiredFee(1000))) + "/kB");
-        ui->labelSmartFee2->show(); // (Smart fee not initialized yet. This usually takes a few blocks...)
-        ui->labelFeeEstimation->setText("");
-        ui->fallbackFeeWarningLabel->setVisible(true);
-        int lightness = ui->fallbackFeeWarningLabel->palette().color(QPalette::WindowText).lightness();
-        QColor warning_colour(255 - (lightness / 5), 176 - (lightness / 3), 48 - (lightness / 14));
-        ui->fallbackFeeWarningLabel->setStyleSheet("QLabel { color: " + warning_colour.name() + "; }");
-        ui->fallbackFeeWarningLabel->setIndent(QFontMetrics(ui->fallbackFeeWarningLabel->font()).width("x"));
-    }
-    else
-        */
-    {
-        //ui->labelSmartFee->setText(BitcoinUnits::formatWithUnit(model->getOptionsModel()->getDisplayUnit(),
-        //                                                        std::max(feeRate.GetFeePerK(), CWallet::GetRequiredFee(1000))) + "/kB");
-        //ui->labelSmartFee2->hide();
-        //ui->labelFeeEstimation->setText(tr("Estimated to begin confirmation within %n block(s).", "", estimateFoundAtBlocks));
-        //ui->fallbackFeeWarningLabel->setVisible(false);
-    }
-
-    updateFeeMinimizedLabel();
 }
 
 // Coin Control: copy label "Quantity" to clipboard
@@ -682,7 +557,6 @@ void SendCoinsDialog::coinControlFeatureChanged(bool checked)
         CoinControlDialog::coinControl->SetNull();
 
     // make sure we set back the confirmation target
-    updateGlobalFeeVariables();
     coinControlUpdateLabels();
 }
 

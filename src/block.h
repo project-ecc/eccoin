@@ -23,6 +23,7 @@ class CBlockHeader
 {
 public:
     // header
+    static const int CURRENT_VERSION = 4;
     int nVersion;
     uint256 hashPrevBlock;
     uint256 hashMerkleRoot;
@@ -47,7 +48,7 @@ public:
 
     void SetNull()
     {
-        nVersion = 0;
+        nVersion = CBlockHeader::CURRENT_VERSION;
         hashPrevBlock = 0;
         hashMerkleRoot = 0;
         nTime = 0;
