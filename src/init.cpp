@@ -1066,7 +1066,7 @@ bool AppInit2()
             uiInterface.ThreadSafeMessageBox(msg, _("ECCoin"), CClientUIInterface::BTN_OK | CClientUIInterface::ICON_WARNING | CClientUIInterface::MODAL);
         }
         else if (nLoadWalletRet == DB_TOO_NEW)
-            strErrors << _("Error loading wallet.dat: Wallet requires newer version, try running wallet with -upgradewallet one time") << "\n";
+            strErrors << _("Error loading wallet.dat: Wallet requires newer version, try running wallet with upgradewallet one time") << "\n";
         else if (nLoadWalletRet == DB_NEED_REWRITE)
         {
             strErrors << _("Wallet needed to be rewritten: restart ECCoin to complete") << "\n";
@@ -1074,7 +1074,11 @@ bool AppInit2()
             return InitError(strErrors.str());
         }
         else
+        {
             strErrors << _("Error loading wallet.dat") << "\n";
+        }
+        if (!strErrors.str().empty())
+            return InitError(strErrors.str());
     }
 
     if (GetBoolArg("-upgradewallet", fFirstRun))
@@ -1089,8 +1093,12 @@ bool AppInit2()
         else
             LogPrintf("Allowing wallet upgrade up to %i\n", nMaxVersion);
         if (nMaxVersion < pwalletMain->GetVersion())
+        {
             strErrors << _("Cannot downgrade wallet") << "\n";
+        }
         pwalletMain->SetMaxVersion(nMaxVersion);
+        if (!strErrors.str().empty())
+            return InitError(strErrors.str());
     }
 
     if (fFirstRun)
