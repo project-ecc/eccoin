@@ -1175,12 +1175,13 @@ void ThreadOpenConnections2(void* parg)
     LogPrintf("ThreadOpenConnections started\n");
 
     // Connect to specific addresses
-    if (mapArgs.count("-connect") && mapMultiArgs["-connect"].size() > 0)
+    if (IsArgSet("-connect") && gArgs.GetArgs("-connect").size() > 0)
     {
         for (int64_t nLoop = 0;; nLoop++)
         {
             ProcessOneShot();
-            BOOST_FOREACH(string strAddr, mapMultiArgs["-connect"])
+		      std::vector<std::string> strAddrs = gArgs.GetArgs("-connect");
+            BOOST_FOREACH(string strAddr, strAddrs)
             {
                 CAddress addr;
                 OpenNetworkConnection(addr, NULL, strAddr.c_str());
@@ -1316,12 +1317,13 @@ void ThreadOpenAddedConnections2(void* parg)
 {
     LogPrintf("ThreadOpenAddedConnections started\n");
 
-    if (mapArgs.count("-addnode") == 0)
+    if (IsArgSet("-addnode") == 0)
         return;
 
     if (HaveNameProxy()) {
         while(!fShutdown) {
-            BOOST_FOREACH(string& strAddNode, mapMultiArgs["-addnode"]) {
+    			std::vector<std::string> strAddNodes = gArgs.GetArgs("-addnode");
+            BOOST_FOREACH(string& strAddNode, strAddNodes) {
                 CAddress addr;
                 CSemaphoreGrant grant(*semOutbound);
                 OpenNetworkConnection(addr, &grant, strAddNode.c_str());
@@ -1335,7 +1337,8 @@ void ThreadOpenAddedConnections2(void* parg)
     }
 
     vector<vector<CService> > vservAddressesToAdd(0);
-    BOOST_FOREACH(string& strAddNode, mapMultiArgs["-addnode"])
+	 std::vector<std::string> strAddNodes = gArgs.GetArgs("-addnode");
+    BOOST_FOREACH(string& strAddNode, strAddNodes)
     {
         vector<CService> vservNode(0);
         if(Lookup(strAddNode.c_str(), vservNode, GetDefaultPort(), fNameLookup, 0))

@@ -176,8 +176,8 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
     // 1-satoshi-fee transactions. It should be set above the real
     // cost to you of processing a transaction.
     int64_t nMinTxFee = MIN_TX_FEE(txNew.nTime);
-    if (mapArgs.count("-mintxfee"))
-        ParseMoney(mapArgs["-mintxfee"], nMinTxFee);
+    if (IsArgSet("-mintxfee"))
+        ParseMoney(GetArg("-mintxfee", "0"), nMinTxFee);
 
     // ppcoin: if coinstake available add coinstake tx
     static int64_t nLastCoinStakeSearchTime = GetAdjustedTime();  // only initialized at startup

@@ -495,7 +495,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
     RandAddSeedPerfmon();
     if(messageDebug)
         LogPrintf("received: %s (%u bytes)\n", strCommand.c_str(), vRecv.size());
-    if (mapArgs.count("-dropmessagestest") && GetRand(atoi(mapArgs["-dropmessagestest"])) == 0)
+    if (IsArgSet("-dropmessagestest") && GetRand(atoi(GetArg("-dropmessagestest", ""))) == 0)
     {
         LogPrintf("dropmessagestest DROPPING RECV MESSAGE\n");
         return true;
@@ -1411,39 +1411,6 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
             pfrom->nPingNonceSent = 0;
         }
     }
-
-    else if(strCommand == "askReady")
-    {
-        /// once we are synced, we no longer need to do anything in terms of ready to sync, we will just get the most recent block as it is broadcast
-        if(isSynced == false)
-        {
-            isSynced = checkSynced(); // if we arent synced we should re-evaluate
-            if(isSynced == false)
-            {
-                if(pindexBest->nHeight <= highestAskedFor  + 500 && pindexBest->nHeight >= highestAskedFor + 495)
-                {
-                    pfrom->PushGetBlocks(pindexBest, uint256(0));
-                    highestAskedFor = pindexBest->nHeight + 500;
-                }
-                else
-                {
-                    pfrom->PushMessage("noReady");
-                }
-            }
-            else
-            {
-                pfrom->PushMessage("noReady");
-            }
-        }
-    }
-
-    else if(strCommand == "noReady")
-    {
-        pfrom->readyIn = (GetTime() + 2);
-        pfrom->noReadyActive = true;
-        pfrom->askedIfReady = false;
-    }
-
     else
     {
         // Ignore unknown commands for extensibility
@@ -1699,24 +1666,6 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
         if (!vGetData.empty())
         {
             pto->PushMessage("getdata", vGetData);
-        }
-        if(pto->hashContinue != 0 && pto->askedIfReady == false && pto->noReadyActive == false)
-        {
-            if(messageDebug)
-                LogPrintf("sending askReady \n");
-            pto->PushMessage("askReady");
-            pto->askedIfReady = true;
-        }
-        else if(pto->hashContinue != 0 && pto->askedIfReady == false && pto->noReadyActive == true)
-        {
-            if(pto->readyIn < GetTime())
-            {
-                if(messageDebug)
-                    LogPrintf("sending askReady \n");
-                pto->PushMessage("askReady");
-                pto->askedIfReady = true;
-                pto->noReadyActive = false;
-            }
         }
     }
     return true;

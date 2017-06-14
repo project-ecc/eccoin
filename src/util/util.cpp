@@ -89,10 +89,6 @@ const char * const BITCOIN_PID_FILENAME = "bitcoind.pid";
 
 ArgsManager gArgs;
 
-std::map<std::string, std::string> mapArgs;
-std::map<std::string, std::vector<std::string> > mapMultiArgs;
-
-
 bool fPrintToConsole = false;
 bool fPrintToDebugLog = true;
 
@@ -439,7 +435,12 @@ void ArgsManager::ParseParameters(int argc, const char* const argv[])
 std::vector<std::string> ArgsManager::GetArgs(const std::string& strArg)
 {
     LOCK(cs_args);
-    return mapMultiArgs.at(strArg);
+	 try{
+    	return mapMultiArgs.at(strArg);
+	 }
+	 catch(...){
+		LogPrintf("exception when trying to get %s from mapMultiArgs \n", strArg.c_str());
+	}
 }
 
 bool ArgsManager::IsArgSet(const std::string& strArg)
@@ -583,8 +584,8 @@ const boost::filesystem::path &GetDataDir(bool fNetSpecific)
 
     LOCK(csPathCached);
 
-    if (mapArgs.count("-datadir")) {
-        path = fs::system_complete(mapArgs["-datadir"]);
+    if (IsArgSet("-datadir")) {
+        path = fs::system_complete(GetArg("-datadir", ""));
         if (!fs::is_directory(path)) {
             path = "";
             return path;

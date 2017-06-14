@@ -329,7 +329,7 @@ Value getcheckpoint(const Array& params, bool fHelp)
     if (pcheckpointMain->CheckpointsMode == Checkpoints::PERMISSIVE)
         result.push_back(Pair_Type("policy", "permissive"));
 
-    if (mapArgs.count("-checkpointkey"))
+    if (IsArgSet("-checkpointkey"))
         result.push_back(Pair_Type("checkpointmaster", true));
 
     return result;

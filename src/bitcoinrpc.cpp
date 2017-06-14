@@ -557,7 +557,7 @@ bool ClientAllowed(const boost::asio::ip::address& address)
         return true;
 
     const string strAddress = address.to_string();
-    const vector<string>& vAllow = mapMultiArgs["-rpcallowip"];
+    const vector<string>& vAllow = gArgs.GetArgs("-rpcallowip");
     BOOST_FOREACH(string strAllow, vAllow)
         if (WildcardMatch(strAddress, strAllow))
             return true;
@@ -765,16 +765,16 @@ void ThreadRPCServer2(void* parg)
 {
     LogPrintf("ThreadRPCServer started\n");
 
-    strRPCUserColonPass = mapArgs["-rpcuser"] + ":" + mapArgs["-rpcpassword"];
-    if ((mapArgs["-rpcpassword"] == "") ||
-        (mapArgs["-rpcuser"] == mapArgs["-rpcpassword"]))
+    strRPCUserColonPass = GetArg("-rpcuser", "") + ":" + GetArg("-rpcpassword", "");
+    if ((GetArg("-rpcpassword", "") == "") ||
+        (GetArg("-rpcuser", "") == GetArg("-rpcpassword", "")))
     {
         unsigned char rand_pwd[32];
         RAND_bytes(rand_pwd, 32);
         string strWhatAmI = "To use ECCoind";
-        if (mapArgs.count("-server"))
+        if (IsArgSet("-server"))
             strWhatAmI = strprintf(_("To use the %s option"), "\"-server\"");
-        else if (mapArgs.count("-daemon"))
+        else if (IsArgSet("-daemon"))
             strWhatAmI = strprintf(_("To use the %s option"), "\"-daemon\"");
         uiInterface.ThreadSafeMessageBox(strprintf(
             _("%s, you must set a rpcpassword in the configuration file:\n %s\n"
@@ -818,7 +818,7 @@ void ThreadRPCServer2(void* parg)
     }
 
     // Try a dual IPv6/IPv4 socket, falling back to separate IPv4 and IPv6 sockets
-    const bool loopback = !mapArgs.count("-rpcallowip");
+    const bool loopback = !IsArgSet("-rpcallowip");
     asio::ip::address bindAddress = loopback ? asio::ip::address_v6::loopback() : asio::ip::address_v6::any();
     ip::tcp::endpoint endpoint(bindAddress, GetArg("-rpcport", GetDefaultRPCPort()));
     boost::system::error_code v6_only_error;
@@ -1009,7 +1009,7 @@ void ThreadRPCServer3(void* parg)
             /* Deter brute-forcing short passwords.
                If this results in a DOS the user really
                shouldn't have their RPC port exposed.*/
-            if (mapArgs["-rpcpassword"].size() < 20)
+            if (GetArg("-rpcpassword", "").size() < 20)
                 MilliSleep(250);
 
             conn->stream() << HTTPReply(HTTP_UNAUTHORIZED, "", false) << std::flush;
@@ -1100,7 +1100,7 @@ json_spirit::Value CRPCTable::execute(const std::string &strMethod, const json_s
 
 Object CallRPC(const string& strMethod, const Array& params)
 {
-    if (mapArgs["-rpcuser"] == "" && mapArgs["-rpcpassword"] == "")
+    if (GetArg("-rpcuser" , "") == "" && GetArg("-rpcpassword", "") == "")
         throw runtime_error(strprintf(
             _("You must set rpcpassword=<password> in the configuration file:\n%s\n"
               "If the file does not exist, create it with owner-readable-only file permissions."),
@@ -1118,7 +1118,7 @@ Object CallRPC(const string& strMethod, const Array& params)
         throw runtime_error("couldn't connect to server");
 
     // HTTP basic authentication
-    string strUserPass64 = EncodeBase64(mapArgs["-rpcuser"] + ":" + mapArgs["-rpcpassword"]);
+    string strUserPass64 = EncodeBase64(GetArg("-rpcuser", "") + ":" + GetArg("-rpcpassword", ""));
     map<string, string> mapRequestHeaders;
     mapRequestHeaders["Authorization"] = string("Basic ") + strUserPass64;
 

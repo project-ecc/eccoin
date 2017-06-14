@@ -265,7 +265,7 @@ int64_t GetArg(const std::string& strArg, int64_t nDefault);
  * @param default (true or false)
  * @return command-line argument or default value
  */
-bool GetBoolArg(const std::string& strArg, bool fDefault);
+bool GetBoolArg(const std::string& strArg, bool fDefault = false);
 
 /**
  * Set an argument if it doesn't already have a value

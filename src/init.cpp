@@ -443,7 +443,7 @@ bool AppInit(int argc, char* argv[])
         }
         ReadConfigFile();
 			bool fCommandLine = false;
-        if (mapArgs.count("-?") || mapArgs.count("--help"))
+        if (IsArgSet("-?") || IsArgSet("--help"))
         {
             // First part of help message is specific to bitcoind / RPC client
             std::string strUsage = _("ECCoin version") + " " + FormatFullVersion() + "\n\n" +
@@ -458,7 +458,6 @@ bool AppInit(int argc, char* argv[])
             fprintf(stdout, "%s", strUsage.c_str());
             return false;
         }
-
         // Command-line RPC
         for (int i = 1; i < argc; i++)
             if (!IsSwitchChar(argv[i][0]) && !boost::algorithm::istarts_with(argv[i], "ECCCoin:"))
@@ -684,19 +683,19 @@ bool AppInit2()
         SoftSetBoolArg("-irc", true);
     }
 
-    if (mapArgs.count("-bind")) {
+    if (IsArgSet("-bind")) {
         // when specifying an explicit binding address, you want to listen on it
         // even when -connect or -proxy is specified
         SoftSetBoolArg("-listen", true);
     }
 
-    if (mapArgs.count("-connect") && mapMultiArgs["-connect"].size() > 0) {
+    if (IsArgSet("-connect") && gArgs.GetArgs("-connect").size() > 0) {
         // when only connecting to trusted nodes, do not seed via DNS, or listen by default
         SoftSetBoolArg("-dnsseed", false);
         SoftSetBoolArg("-listen", false);
     }
 
-    if (mapArgs.count("-proxy")) {
+    if (IsArgSet("-proxy")) {
         // to protect privacy, do not listen by default if a proxy server is specified
         SoftSetBoolArg("-listen", false);
     }
@@ -707,7 +706,7 @@ bool AppInit2()
         SoftSetBoolArg("-discover", false);
     }
 
-    if (mapArgs.count("-externalip")) {
+    if (IsArgSet("-externalip")) {
         // if an explicit public IP is specified, do not try to find others
         SoftSetBoolArg("-discover", false);
     }
@@ -748,10 +747,10 @@ bool AppInit2()
     fPrintToDebugger = GetBoolArg("-printtodebugger", false);
     fLogTimestamps = GetBoolArg("-logtimestamps", true);
 
-    if (mapArgs.count("-paytxfee"))
+    if (IsArgSet("-paytxfee"))
     {
-        if (!ParseMoney(mapArgs["-paytxfee"], nTransactionFee))
-            return InitError(strprintf(_("Invalid amount for -paytxfee=<amount>: '%s'"), mapArgs["-paytxfee"].c_str()));
+        if (!ParseMoney(GetArg("-paytxfee", "0"), nTransactionFee))
+            return InitError(strprintf(_("Invalid amount for -paytxfee=<amount>: '%s'"), GetArg("-paytxfee", "0").c_str()));
         if (nTransactionFee > 0.25 * COIN)
             InitWarning(_("Warning: -paytxfee is set very high! This is the transaction fee you will pay if you send a transaction."));
     }
@@ -759,10 +758,10 @@ bool AppInit2()
     fConfChange = GetBoolArg("-confchange", false);
     fEnforceCanonical = GetBoolArg("-enforcecanonical", true);
 
-    if (mapArgs.count("-mininput"))
+    if (IsArgSet("-mininput"))
     {
-        if (!ParseMoney(mapArgs["-mininput"], nMinimumInputValue))
-            return InitError(strprintf(_("Invalid amount for -mininput=<amount>: '%s'"), mapArgs["-mininput"].c_str()));
+        if (!ParseMoney(GetArg("-mininput", "0"), nMinimumInputValue))
+            return InitError(strprintf(_("Invalid amount for -mininput=<amount>: '%s'"), GetArg("-mininput", "0").c_str()));
     }
 
     // ********************************************************* Step 4: application initialization: dir lock, daemonize, pidfile, debug log
@@ -839,7 +838,7 @@ bool AppInit2()
     {
         string msg = strprintf(_("Error initializing database environment %s!"
                                  " To recover, BACKUP THAT DIRECTORY, then remove"
-                                 " everything from it except for wallet.dat."), strDataDir.c_str());
+                                 " everything fseedsat."), strDataDir.c_str());
         return InitError(msg);
     }
 
@@ -872,9 +871,9 @@ bool AppInit2()
     if (nSocksVersion != 4 && nSocksVersion != 5)
         return InitError(strprintf(_("Unknown -socks proxy version requested: %i"), nSocksVersion));
 
-    if (mapArgs.count("-onlynet")) {
+    if (IsArgSet("-onlynet")) {
         std::set<enum Network> nets;
-        BOOST_FOREACH(std::string snet, mapMultiArgs["-onlynet"]) {
+        BOOST_FOREACH(std::string snet, gArgs.GetArgs("-onlynet")) {
             enum Network net = ParseNetwork(snet);
             if (net == NET_UNROUTABLE)
                 return InitError(strprintf(_("Unknown network specified in -onlynet: '%s'"), snet.c_str()));
@@ -895,10 +894,10 @@ bool AppInit2()
 
     CService addrProxy;
     bool fProxy = false;
-    if (mapArgs.count("-proxy")) {
-        addrProxy = CService(mapArgs["-proxy"], 9050);
+    if (IsArgSet("-proxy")) {
+        addrProxy = CService(GetArg("-proxy", "0"), 9050);
         if (!addrProxy.IsValid())
-            return InitError(strprintf(_("Invalid -proxy address: '%s'"), mapArgs["-proxy"].c_str()));
+            return InitError(strprintf(_("Invalid -proxy address: '%s'"), GetArg("-proxy", "0").c_str()));
 
         if (!IsLimited(NET_IPV4))
             SetProxy(NET_IPV4, addrProxy, nSocksVersion);
@@ -912,18 +911,20 @@ bool AppInit2()
         fProxy = true;
     }
 
+/*
     // -tor can override normal proxy, -notor disables tor entirely
-    if (!(mapArgs.count("-tor") && mapArgs["-tor"] == "0") && (fProxy || mapArgs.count("-tor"))) {
+    if (!(IsArgSet("-tor") && GetArg("-tor", "") == "0") && (fProxy || IsArgSet("-tor"))) {
         CService addrOnion;
-        if (!mapArgs.count("-tor"))
+        if (!IsArgSet("-tor"))
             addrOnion = addrProxy;
         else
-            addrOnion = CService(mapArgs["-tor"], 9050);
+            addrOnion = CService(GetArg("-tor", "0"), 9050);
         if (!addrOnion.IsValid())
-            return InitError(strprintf(_("Invalid -tor address: '%s'"), mapArgs["-tor"].c_str()));
+            return InitError(strprintf(_("Invalid -tor address: '%s'"), GetArg("-tor", "0").c_str()));
         SetProxy(NET_TOR, addrOnion, 5);
         SetReachable(NET_TOR);
     }
+		*/
 
     // see Step 2: parameter interactions for more information about these
     fNoListen = !GetBoolArg("-listen", true);
@@ -937,8 +938,9 @@ bool AppInit2()
     if (!fNoListen)
     {
         std::string strError;
-        if (mapArgs.count("-bind")) {
-            BOOST_FOREACH(std::string strBind, mapMultiArgs["-bind"]) {
+        if (IsArgSet("-bind")) {
+				std::vector<std::string> binds = gArgs.GetArgs("-bind");
+            BOOST_FOREACH(std::string strBind, binds) {
                 CService addrBind;
                 if (!Lookup(strBind.c_str(), addrBind, GetListenPort(), false))
                     return InitError(strprintf(_("Cannot resolve -bind address: '%s'"), strBind.c_str()));
@@ -958,9 +960,10 @@ bool AppInit2()
             return InitError(_("Failed to listen on any port. Use -listen=0 if you want this."));
     }
 
-    if (mapArgs.count("-externalip"))
+    if (IsArgSet("-externalip"))
     {
-        BOOST_FOREACH(string strAddr, mapMultiArgs["-externalip"]) {
+		  std::vector<std::string> externals = gArgs.GetArgs("-externalip");
+        BOOST_FOREACH(string strAddr, externals) {
             CService addrLocal(strAddr, GetListenPort(), fNameLookup);
             if (!addrLocal.IsValid())
                 return InitError(strprintf(_("Cannot resolve -externalip address: '%s'"), strAddr.c_str()));
@@ -968,14 +971,18 @@ bool AppInit2()
         }
     }
 
-    if (mapArgs.count("-checkpointkey")) // ppcoin: checkpoint master priv key
+    if (IsArgSet("-checkpointkey")) // ppcoin: checkpoint master priv key
     {
         if (! pcheckpointMain->SetCheckpointPrivKey(GetArg("-checkpointkey", "")))
             InitError(_("Unable to sign checkpoint, wrong checkpointkey?\n"));
     }
 
-    BOOST_FOREACH(string strDest, mapMultiArgs["-seednode"])
-        AddOneShot(strDest);
+	 if(IsArgSet("-seednode"))
+	 {
+	 	std::vector<std::string> seeds = gArgs.GetArgs("-seednode");
+    	BOOST_FOREACH(string strDest, seeds)
+        	AddOneShot(strDest);
+	 }
 
     // ********************************************************* Step 7: load blockchain
 
@@ -1017,9 +1024,9 @@ bool AppInit2()
         return false;
     }
 
-    if (mapArgs.count("-printblock"))
+    if (IsArgSet("-printblock"))
     {
-        string strMatch = mapArgs["-printblock"];
+        string strMatch = GetArg("-printblock", "0");
         int nFound = 0;
         for (map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.begin(); mi != mapBlockIndex.end(); ++mi)
         {
@@ -1127,11 +1134,11 @@ bool AppInit2()
 
     // ********************************************************* Step 9: import blocks
 
-    if (mapArgs.count("-loadblock"))
+    if (IsArgSet("-loadblock"))
     {
         uiInterface.InitMessage(_("Importing blockchain data file."));
 
-        BOOST_FOREACH(string strFile, mapMultiArgs["-loadblock"])
+        BOOST_FOREACH(string strFile, gArgs.GetArgs("-loadblock"))
         {
             FILE *file = fopen(strFile.c_str(), "rb");
             if (file)
