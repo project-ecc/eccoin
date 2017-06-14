@@ -1066,7 +1066,7 @@ bool AppInit2()
             uiInterface.ThreadSafeMessageBox(msg, _("ECCoin"), CClientUIInterface::BTN_OK | CClientUIInterface::ICON_WARNING | CClientUIInterface::MODAL);
         }
         else if (nLoadWalletRet == DB_TOO_NEW)
-            strErrors << _("Error loading wallet.dat: Wallet requires newer version of ECCoin") << "\n";
+            strErrors << _("Error loading wallet.dat: Wallet requires newer version, try running wallet with -upgradewallet one time") << "\n";
         else if (nLoadWalletRet == DB_NEED_REWRITE)
         {
             strErrors << _("Wallet needed to be rewritten: restart ECCoin to complete") << "\n";

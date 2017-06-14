@@ -442,13 +442,24 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
         int nMinVersion = 0;
         if (Read((string)"minversion", nMinVersion))
         {
-            if(CLIENT_VERSION == 20408)
-            {
-                Write(std::string("minversion"), CLIENT_VERSION);
-                nMinVersion = CLIENT_VERSION;
-            }
-            if (nMinVersion > CLIENT_VERSION)
+            /*
+             if (nMinVersion > CLIENT_VERSION)
                 return DB_TOO_NEW;
+            */
+            if (nMinVersion > CLIENT_VERSION)
+            {
+                //this is ok to do due to the wallet version rollback from 2.4.7.7 to 0.2.4.8 and this being
+                //implemented in 0.2.4.9, should be able to remove this in the furure just because wallets
+                //will be version corrected
+                if(GetArg("-upgradewallet", 0) != 0)
+                {
+                    return DB_TOO_NEW;
+                }
+                else
+                {
+                    pwalletMain->SetMinVersion(CLIENT_VERSION);
+                }
+            }
             pwallet->LoadMinVersion(nMinVersion);
         }
 
