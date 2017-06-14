@@ -44,6 +44,7 @@ public:
     SOCKET hSocket;
     CDataStream vSend;
     CDataStream vRecv;
+    size_t nSendSize; // total size of all vSendMsg entries
     CCriticalSection cs_vSend;
     CCriticalSection cs_vRecv;
     int64_t nLastSend;
@@ -190,6 +191,8 @@ public:
         fGetAddr = false;
         nMisbehavior = 0;
         hashCheckpointKnown = 0;
+        nSendSize = 0;
+
 
         // Be shy and don't send version until we hear
         if (hSocket != INVALID_SOCKET && !fInbound)
@@ -339,7 +342,7 @@ public:
 
         if (fDebug) {
             LogPrintf("(%d bytes)\n", nSize);
-        }
+        }        
 
         nHeaderStart = -1;
         nMessageStart = -1;

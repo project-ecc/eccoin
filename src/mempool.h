@@ -41,6 +41,8 @@ public:
     {
         return mapTx[hash];
     }
+
+    bool lookup(uint256 hash, CTransaction& result) const;
 };
 
 extern CTxMemPool mempool;

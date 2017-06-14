@@ -474,16 +474,95 @@ bool IsPeerAddrLocalGood(CNode *pnode)
            !IsLimited(addrLocal.GetNetwork());
 }
 
-bool checkSynced()
+
+void static ProcessGetData(CNode* pfrom)
 {
-    if(pindexBest->GetBlockIndexTime() < GetTime() - (60 * 2)) // last block more than 2 minutes ago
-    {
-        return false;
+    std::deque<CInv>::iterator it = pfrom->vRecvGetData.begin();
+
+    vector<CInv> vNotFound;
+
+    LOCK(cs_main);
+
+    while (it != pfrom->vRecvGetData.end()) {
+        // Don't bother if send buffer is too full to respond anyway
+        //if (pfrom->nSendSize >= SendBufferSize())
+        //    break;
+
+        const CInv &inv = *it;
+        {
+            it++;
+
+            if (inv.type == MSG_BLOCK)
+            {
+                // Send block from disk
+                map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(inv.hash);
+                if (mi != mapBlockIndex.end())
+                {
+                    CBlock block;
+                    block.ReadFromDisk((*mi).second);
+                    pfrom->PushMessage("block", block);
+
+                    // Trigger them to send a getblocks request for the next batch of inventory
+                    if (inv.hash == pfrom->hashContinue)
+                    {
+                        // Bypass PushInventory, this must send even if redundant,
+                        // and we want it right after the last block so they don't
+                        // wait for other stuff first.
+                        vector<CInv> vInv;
+                        vInv.push_back(CInv(MSG_BLOCK, pindexBest->GetBlockHash()));
+                        pfrom->PushMessage("inv", vInv);
+                        pfrom->hashContinue = 0;
+                    }
+                }
+            }
+            else if (inv.IsKnownType())
+            {
+                // Send stream from relay memory
+                bool pushed = false;
+                {
+                    LOCK(cs_mapRelay);
+                    map<CInv, CDataStream>::iterator mi = mapRelay.find(inv);
+                    if (mi != mapRelay.end()) {
+                        pfrom->PushMessage(inv.GetCommand(), (*mi).second);
+                        pushed = true;
+                    }
+                }
+                if (!pushed && inv.type == MSG_TX) {
+                    CTransaction tx;
+                    if (mempool.lookup(inv.hash, tx)) {
+                        CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
+                        ss.reserve(1000);
+                        ss << tx;
+                        pfrom->PushMessage("tx", ss);
+                        pushed = true;
+                    }
+                }
+                if (!pushed) {
+                    vNotFound.push_back(inv);
+                }
+            }
+
+            // Track requests for our stuff.
+            Inventory(inv.hash);
+
+            if (inv.type == MSG_BLOCK /* || inv.type == MSG_FILTERED_BLOCK */)
+                break;
+        }
     }
-    return true;
+
+    pfrom->vRecvGetData.erase(pfrom->vRecvGetData.begin(), it);
+
+    if (!vNotFound.empty()) {
+        // Let the peer know that we didn't find what it asked for, so it doesn't
+        // have to wait around forever. Currently only SPV clients actually care
+        // about this message: it's needed when they are recursively walking the
+        // dependencies of relevant unconfirmed transactions. SPV clients want to
+        // do that because they want to know about (and store and rebroadcast and
+        // risk analyze) the dependencies of transactions relevant to them, without
+        // having to download the entire memory pool.
+        pfrom->PushMessage("notfound", vNotFound);
+    }
 }
-
-
 
 // The message start string is designed to be unlikely to occur in normal data.
 // The characters are rarely used upper ASCII, not valid as UTF-8, and produce
@@ -664,8 +743,8 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
 
     else if (pfrom->nVersion == 0)
     {
-        // Must have a version message before anything else
-        pfrom->Misbehaving(1);
+        ///dont ban peers here, just ignore them.
+        //pfrom->Misbehaving(1);
         return false;
     }
 
@@ -866,57 +945,10 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
             LogPrintf("received getdata for: %s peer=%d\n", vInv[0].ToString().c_str(), pfrom->id);
         }
 
-        //pfrom->vRecvGetData.insert(pfrom->vRecvGetData.end(), vInv.begin(), vInv.end());
+
+        pfrom->vRecvGetData.insert(pfrom->vRecvGetData.end(), vInv.begin(), vInv.end());
         //ProcessGetData(pfrom, chainparams.GetConsensus(), connman, interruptMsgProc);
-
-        BOOST_FOREACH(const CInv& inv, vInv)
-        {
-            if (fShutdown)
-                return true;
-            if (messageDebug || (vInv.size() == 1))
-            {
-               LogPrintf("received getdata for: %s\n", inv.ToString().c_str());
-            }
-
-            if (inv.type == MSG_BLOCK)
-            {
-                // Send block from disk
-                map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(inv.hash);
-                if (mi != mapBlockIndex.end())
-                {
-                    CBlock block;
-                    block.ReadFromDisk((*mi).second);
-                    pfrom->PushMessage("block", block);
-
-                    // Trigger them to send a getblocks request for the next batch of inventory
-                    if (inv.hash == pfrom->hashContinue)
-                    {
-                        // ppcoin: send latest proof-of-work block to allow the
-                        // download node to accept as orphan (proof-of-stake
-                        // block might be rejected by stake connection check)
-                        vector<CInv> vInv;
-                        vInv.push_back(CInv(MSG_BLOCK, GetLastBlockIndex(pindexBest, false)->GetBlockHash()));
-                        pfrom->PushMessage("inv", vInv);
-                        pfrom->hashContinue = 0;
-                    }
-                }
-            }
-            else if (inv.IsKnownType())
-            {
-                // Send stream from relay memory
-                {
-                    LOCK(cs_mapRelay);
-                    map<CInv, CDataStream>::iterator mi = mapRelay.find(inv);
-                    if (mi != mapRelay.end())
-                    {
-                        pfrom->PushMessage(inv.GetCommand(), (*mi).second);
-                    }
-                }
-            }
-
-            // Track requests for our stuff
-            Inventory(inv.hash);
-        }
+        ProcessGetData(pfrom);
     }
 
     else if (strCommand == NetMsgType::GETBLOCKS)
@@ -925,20 +957,10 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
         uint256 hashStop;
         vRecv >> locator >> hashStop;
 
+        LOCK(cs_main);
+
         // Find the last block the caller has in the main chain
         CBlockIndex* pindex = locator.GetBlockIndex();
-        if(pfrom->hashContinue != 0)
-        {
-            map<uint256, CBlockIndex*>::iterator iter = mapBlockIndex.find(pfrom->hashContinue);
-            if (iter != mapBlockIndex.end())
-            {
-                CBlockIndex* pindexLast = iter->second;
-                if(pindexLast->nHeight > pindex->nHeight)
-                {
-                    pindex = pindexLast;
-                }
-            }
-        }
         {
             // Send the rest of the chain
             if (pindex)
@@ -950,39 +972,21 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
             }
             for (; pindex; pindex = pindex->pnext)
             {
-                map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(pindex->GetBlockHash());
-                if (mi != mapBlockIndex.end())
+                if (pindex->GetBlockHash() == hashStop)
                 {
-                    CBlock block;
-                    block.ReadFromDisk((*mi).second);
-                    pfrom->PushMessage("block", block);
-                    if (--nLimit <= 0)
-                    {
-                        // When this block is requested, we'll send an inv that'll make them
-                        // getblocks the next batch of inventory.
-                        if(messageDebug)
-                        {
-                            LogPrintf("getblocks stopping at limit %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString().substr(0,20).c_str());
-                        }
-                        pfrom->hashContinue = pindex->GetBlockHash();
-                        break;
-                    }
+                    LogPrintf("getblocks stopping at %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString());
+                    break;
+                }
+                pfrom->PushInventory(CInv(MSG_BLOCK, pindex->GetBlockHash()));
+                if (--nLimit <= 0)
+                {
+                    // When this block is requested, we'll send an inv that'll make them
+                    // getblocks the next batch of inventory.
+                    LogPrintf("getblocks stopping at limit %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString());
+                    pfrom->hashContinue = pindex->GetBlockHash();
+                    break;
                 }
             }
-        }
-    }
-    else if (strCommand == "checkpoint")
-    {
-        CSyncCheckpoint checkpoint;
-        vRecv >> checkpoint;
-
-        if (checkpoint.ProcessSyncCheckpoint(pfrom))
-        {
-            // Relay
-            pfrom->hashCheckpointKnown = checkpoint.hashCheckpoint;
-            LOCK(cs_vNodes);
-            BOOST_FOREACH(CNode* pnode, vNodes)
-                checkpoint.RelayTo(pnode);
         }
     }
 
@@ -1066,9 +1070,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
         {
             SyncWithWallets(tx, NULL, true);
             RelayTransaction(tx, inv.hash);
-
             vWorkQueue.push_back(inv.hash);
-
             vEraseQueue.push_back(inv.hash);
 
             pfrom->nLastTXTime = GetTime();
@@ -1280,42 +1282,39 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
         //block.print();
 
         CInv inv(MSG_BLOCK, hashBlock);
-        CTxDB txdb("r");
-        if(!AlreadyHave(txdb, inv))
+        if(ProcessBlock(pfrom, &block))
         {
-            if(ProcessBlock(pfrom, &block))
-            {
-                mapAlreadyAskedFor.erase(inv);
-                pfrom->nLastBlockTime = GetTime();
-            }
-            if (block.nDoS)
-            {
-                pfrom->Misbehaving(block.nDoS);
-            }
+            mapAlreadyAskedFor.erase(inv);
+            pfrom->nLastBlockTime = GetTime();
+        }
+        if (block.nDoS)
+        {
+            pfrom->Misbehaving(block.nDoS);
+        }
 
-            /// we should just ask when we are done, not wait for them to ask if we are done yet
-            if(pfrom->nVersion < SENDHEADERS_VERSION)
+        /// we should just ask when we are done, not wait for them to ask if we are done yet
+        if(pfrom->nVersion < SENDHEADERS_VERSION)
+        {
+            if(pindexBest->nHeight == highestAskedFor  + 500 && pindexBest->nHeight >= highestAskedFor + 495)
             {
-                if(pindexBest->nHeight == highestAskedFor  + 500 && pindexBest->nHeight >= highestAskedFor + 495)
-                {
-                    pfrom->PushGetBlocks(pindexBest, uint256(0));
-                    highestAskedFor = pindexBest->nHeight + 500;
-                }
+                pfrom->PushGetBlocks(pindexBest, uint256(0));
+                highestAskedFor = pindexBest->nHeight + 500;
             }
         }
     }
 
-    else if (strCommand == NetMsgType::GETADDR)
-    {
-        if (!pfrom->fInbound) {
-            return true;
-        }
 
+    else if (strCommand == NetMsgType::GETADDR && (pfrom->fInbound))
+    {
+        int64_t nCutOff = GetTime() - (nNodeLifespan * 24 * 60 * 60);
         pfrom->vAddrToSend.clear();
         vector<CAddress> vAddr = addrman.GetAddr();
         BOOST_FOREACH(const CAddress &addr, vAddr)
         {
-            pfrom->PushAddress(addr);
+            if(addr.nTime > nCutOff)
+            {
+                pfrom->PushAddress(addr);
+            }
         }
     }
 

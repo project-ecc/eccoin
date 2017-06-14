@@ -245,3 +245,15 @@ void CTxMemPool::queryHashes(std::vector<uint256>& vtxid)
     for (map<uint256, CTransaction>::iterator mi = mapTx.begin(); mi != mapTx.end(); ++mi)
         vtxid.push_back((*mi).first);
 }
+
+bool CTxMemPool::lookup(uint256 hash, CTransaction& result) const
+{
+    LOCK(cs);
+    std::map<uint256, CTransaction>::const_iterator i = mapTx.find(hash);
+    if (i == mapTx.end())
+    {
+        return false;
+    }
+    result = i->second;
+    return true;
+}
