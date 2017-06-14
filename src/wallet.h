@@ -30,15 +30,17 @@ class CCoinControl;
 struct CMutableTransaction;
 
 /** (client) version numbers for particular wallet features */
+/** After version 2.4.7.7 the version shifted right one digit to 0.2.4.8 so all wallet features must also lose a digit*/
 enum WalletFeature
 {
-    FEATURE_BASE = 10500, // the earliest version new wallets supports (only useful for getinfo's clientversion output)
+    FEATURE_BASE = 1050, // the earliest version new wallets supports (only useful for getinfo's clientversion output)
 
-    FEATURE_WALLETCRYPT = 40000, // wallet encryption
-    FEATURE_COMPRPUBKEY = 60000, // compressed public keys
+    FEATURE_WALLETCRYPT = 4000, // wallet encryption
+    FEATURE_COMPRPUBKEY = 6000, // compressed public keys
 
-    FEATURE_LATEST = 60000
+    FEATURE_LATEST = 6000
 };
+
 
 struct CRecipient
 {
