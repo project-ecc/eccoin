@@ -57,6 +57,7 @@ public:
 private:
     ClientModel *clientModel;
     WalletModel *walletModel;
+    BitcoinGUI  *Gui;
 
     OverviewPage *overviewPage;
     QWidget *transactionsPage;
