@@ -265,6 +265,11 @@ BitcoinGUI::~BitcoinGUI()
     delete rpcConsole;
 }
 
+QAction* BitcoinGUI::getUnlockWalletAction()
+{
+    return unlockWalletAction;
+}
+
 void BitcoinGUI::createActions()
 {
     QActionGroup *tabGroup = new QActionGroup(this);

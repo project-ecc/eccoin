@@ -67,8 +67,10 @@ public:
     bool addWallet(const QString& name, WalletModel *walletModel);
     bool setCurrentWallet(const QString& name);
     void removeAllWallets();
+    QAction* getUnlockWalletAction();
 
     bool enableWallet;
+    QAction *unlockWalletAction;
 
 protected:
     void changeEvent(QEvent *e);
@@ -109,7 +111,6 @@ private:
     QAction *encryptWalletAction;
     QAction *backupWalletAction;
     QAction *changePassphraseAction;
-    QAction *unlockWalletAction;
     QAction *lockWalletAction;
     QAction *aboutQtAction;
     QAction *openRPCConsoleAction;
