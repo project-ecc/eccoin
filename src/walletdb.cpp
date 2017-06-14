@@ -457,7 +457,7 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
                 }
                 else
                 {
-                    pwalletMain->SetMinVersion(CLIENT_VERSION);
+                    pwalletMain->SetMinVersion(FEATURE_ROLLBACK);
                 }
             }
             pwallet->LoadMinVersion(nMinVersion);
