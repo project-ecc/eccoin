@@ -559,7 +559,7 @@ void ScryptMiner(CWallet *pwallet, bool fProofOfStake)
     {
         if (fShutdown)
             return;
-        while (vNodes.empty() || IsInitialBlockDownload())
+        while (vNodes.empty() || vNodes.size() < 4 || IsInitialBlockDownload())
         {
             MilliSleep(1000);
             if (fShutdown)
