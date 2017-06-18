@@ -112,6 +112,7 @@ bool AppInit(int argc, char* argv[])
             return false;
         }
 
+        /*
         // Error out when loose non-argument tokens are encountered on command line
         for (int i = 1; i < argc; i++) {
             if (!IsSwitchChar(argv[i][0])) {
@@ -119,6 +120,7 @@ bool AppInit(int argc, char* argv[])
                 exit(EXIT_FAILURE);
             }
         }
+        */
 
         // Command-line RPC
         for (int i = 1; i < argc; i++)
