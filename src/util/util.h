@@ -131,11 +131,6 @@ static inline bool LogAcceptCategory(uint32_t category)
     return (logCategories.load(std::memory_order_relaxed) & category) != 0;
 }
 
-static inline unsigned short GetDefaultRPCPort()
-{
-    return GetBoolArg("-testnet", false) ? 29119 : 19119;
-}
-
 /** Returns a string with the log categories. */
 std::string ListLogCategories();
 
@@ -439,6 +434,12 @@ inline uint32_t ByteReverse(uint32_t value)
     value = ((value & 0xFF00FF00) >> 8) | ((value & 0x00FF00FF) << 8);
     return (value<<16) | (value>>16);
 }
+
+static inline unsigned short GetDefaultRPCPort()
+{
+    return GetBoolArg("-testnet", false) ? 29119 : 19119;
+}
+
 
 #endif
 
