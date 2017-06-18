@@ -16,6 +16,9 @@
 #include "rpc/server.h"
 #include "httpserver.h"
 #include "httprpc.h"
+#include "rpc/register.h"
+#include "rpc/server.h"
+#include "rpc/rpcwallet.h"
 
 #include "util/util.h"
 #include "util/utilexceptions.h"
@@ -336,10 +339,10 @@ bool AppInitParameterInteraction()
         LogPrintf("Prune configured to target %uMiB on disk for block and undo files.\n", nPruneTarget / 1024 / 1024);
         fPruneMode = true;
     }
-
+*/
     RegisterAllCoreRPCCommands(tableRPC);
     RegisterWalletRPCCommands(tableRPC);
-
+/*
     nConnectTimeout = GetArg("-timeout", DEFAULT_CONNECT_TIMEOUT);
     if (nConnectTimeout <= 0)
         nConnectTimeout = DEFAULT_CONNECT_TIMEOUT;
