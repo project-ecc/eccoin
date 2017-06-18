@@ -48,7 +48,6 @@ void ThreadOpenAddedConnections2(void* parg);
 void ThreadMapPort2(void* parg);
 #endif
 void ThreadDNSAddressSeed2(void* parg);
-bool OpenNetworkConnection(const CAddress& addrConnect, CSemaphoreGrant *grantOutbound = NULL, const char *strDest = NULL);
 
 //
 // Global state variables
@@ -81,7 +80,7 @@ CCriticalSection cs_vOneShots;
 set<CNetAddr> setservAddNodeAddresses;
 CCriticalSection cs_setservAddNodeAddresses;
 
-static CSemaphore *semOutbound = NULL;
+CSemaphore *semOutbound = NULL;
 
 void AddOneShot(string strDest)
 {
