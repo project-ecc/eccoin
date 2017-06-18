@@ -558,8 +558,10 @@ int CommandLineRPC(int argc, char *argv[])
 
         // make Request Obj
         UniValue req(UniValue::VOBJ);
-        string strMethod = argv[1];
-        req.pushKV("method", strMethod);
+        UniValue method(UniValue::VSTR);
+        method.setStr(argv[1]);
+
+        req.pushKV("method", method);
 
         // Parameters default to strings
         std::vector<std::string> strParams(&argv[2], &argv[argc]);
