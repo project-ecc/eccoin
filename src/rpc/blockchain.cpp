@@ -344,10 +344,6 @@ UniValue getrawmempool(const JSONRPCRequest& request)
             + HelpExampleRpc("getrawmempool", "true")
         );
 
-    bool fVerbose = false;
-    if (request.params.size() > 0)
-        fVerbose = request.params[0].get_bool();
-
     return mempoolToJSON();
 }
 
