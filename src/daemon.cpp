@@ -15,6 +15,8 @@
 #include "util/utilstrencodings.h"
 
 #include <boost/thread.hpp>
+#include <boost/algorithm/string/predicate.hpp>
+
 
 #include <stdio.h>
 
@@ -92,6 +94,18 @@ bool AppInit(int argc, char* argv[])
 
         fprintf(stdout, "%s", strUsage.c_str());
         return true;
+    }
+    bool fCommandLine = false;
+
+    // Command-line RPC
+    for (int i = 1; i < argc; i++)
+        if (!IsSwitchChar(argv[i][0]) && !boost::algorithm::istarts_with(argv[i], "ECCoin:"))
+            fCommandLine = true;
+
+    if (fCommandLine)
+    {
+        int ret = CommandLineRPC(argc, argv);
+        exit(ret);
     }
 
     try

@@ -188,6 +188,7 @@ bool StartRPC();
 void InterruptRPC();
 void StopRPC();
 std::string JSONRPCExecBatch(const UniValue& vReq);
+int CommandLineRPC(int argc, char *argv[]);
 
 
 #endif // SERVER_H

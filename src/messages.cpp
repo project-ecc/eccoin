@@ -613,7 +613,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
             pfrom->fDisconnect = true;
             return false;
         }
-        */)
+        */
 
         if (nVersion < MIN_PROTO_VERSION)
         {

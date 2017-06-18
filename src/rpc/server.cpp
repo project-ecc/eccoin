@@ -7,6 +7,7 @@
 #include "ui_interface.h"
 #include "util/util.h"
 #include "util/utilstrencodings.h"
+#include "util/utilexceptions.h"
 
 #include "univalue/univalue.h"
 
@@ -535,6 +536,58 @@ void RPCRunLater(const std::string& name, std::function<void(void)> func, int64_
     deadlineTimers.erase(name);
     LogPrint(BCLog::RPC, "queue run of timer %s in %i seconds (using %s)\n", name, nSeconds, timerInterface->Name());
     deadlineTimers.emplace(name, std::unique_ptr<RPCTimerBase>(timerInterface->NewTimer(func, nSeconds*1000)));
+}
+
+
+int CommandLineRPC(int argc, char *argv[])
+{
+    string strPrint;
+    int nRet = 0;
+    try
+    {
+        // Skip switches
+        while (argc > 1 && IsSwitchChar(argv[1][0]))
+        {
+            argc--;
+            argv++;
+        }
+
+        // Method
+        if (argc < 2)
+            throw runtime_error("too few parameters");
+
+        // make Request Obj
+        UniValue req(UniValue::VOBJ);
+        string strMethod = argv[1];
+        req.pushKV("method", strMethod);
+
+        // Parameters default to strings
+        std::vector<std::string> strParams(&argv[2], &argv[argc]);
+        UniValue params(UniValue::VARR);
+        for(auto const& value: strParams) {
+            params.push_back(value);
+        }
+        req.pushKV("params", params);
+        // Execute
+        UniValue result = JSONRPCExecOne(req);
+
+        strPrint = result.get_str();
+    }
+    catch (std::exception& e)
+    {
+        strPrint = string("error: ") + e.what();
+        nRet = 87;
+    }
+    catch (...)
+    {
+        PrintException(NULL, "CommandLineRPC()");
+    }
+
+    if (strPrint != "")
+    {
+        fprintf((nRet == 0 ? stdout : stderr), "%s\n", strPrint.c_str());
+    }
+    return nRet;
 }
 
 CRPCTable tableRPC;
