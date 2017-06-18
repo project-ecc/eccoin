@@ -194,7 +194,7 @@ std::map<NodeId, CNodeState> mapNodeState;
 
 void PushNodeVersion(CNode *pnode, int64_t nTime)
 {
-    ServiceFlags nLocalNodeServices = pnode->GetLocalServices();
+    ServiceFlags nLocalNodeServices = nLocalServices;
     uint64_t nonce = RAND_bytes((unsigned char*)&nLocalHostNonce, sizeof(nLocalHostNonce));
     int nNodeStartingHeight = pnode->nStartingHeight;
     NodeId nodeid = pnode->GetId();
