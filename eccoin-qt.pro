@@ -308,7 +308,16 @@ HEADERS += \
     src/byteswap.h \
     src/rpc/rpcwallet.h \
     src/rpc/rpcprotocol.h \
-    src/noui.h
+    src/noui.h \
+    src/json/json_spirit.h \
+    src/json/json_spirit_error_position.h \
+    src/json/json_spirit_reader.h \
+    src/json/json_spirit_reader_template.h \
+    src/json/json_spirit_stream_reader.h \
+    src/json/json_spirit_utils.h \
+    src/json/json_spirit_value.h \
+    src/json/json_spirit_writer.h \
+    src/json/json_spirit_writer_template.h
 
 
 SOURCES += \
