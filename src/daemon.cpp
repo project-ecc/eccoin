@@ -97,17 +97,6 @@ bool AppInit(int argc, char* argv[])
     }
     bool fCommandLine = false;
 
-    // Command-line RPC
-    for (int i = 1; i < argc; i++)
-        if (!IsSwitchChar(argv[i][0]) && !boost::algorithm::istarts_with(argv[i], "ECCoin:"))
-            fCommandLine = true;
-
-    if (fCommandLine)
-    {
-        int ret = CommandLineRPC(argc, argv);
-        exit(ret);
-    }
-
     try
     {
         if (!fs::is_directory(GetDataDir(false)))
@@ -130,6 +119,18 @@ bool AppInit(int argc, char* argv[])
                 exit(EXIT_FAILURE);
             }
         }
+
+        // Command-line RPC
+        for (int i = 1; i < argc; i++)
+            if (!IsSwitchChar(argv[i][0]) && !boost::algorithm::istarts_with(argv[i], "ECCoin:"))
+                fCommandLine = true;
+
+        if (fCommandLine)
+        {
+            int ret = CommandLineRPC(argc, argv);
+            exit(ret);
+        }
+
 
         // -server defaults to true for bitcoind but not for the GUI so do this here
         SoftSetBoolArg("-server", true);
