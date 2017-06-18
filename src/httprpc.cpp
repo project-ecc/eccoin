@@ -229,7 +229,7 @@ static bool InitRPCAuthentication()
 
 bool StartHTTPRPC()
 {
-    LogPrint(BCLog::RPC, "Starting HTTP RPC server\n");
+    LogPrintf("Starting HTTP RPC server\n");
     if (!InitRPCAuthentication())
         return false;
 

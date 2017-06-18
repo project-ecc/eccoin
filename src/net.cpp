@@ -1736,7 +1736,7 @@ void StartNode(void* parg)
             LogPrintf("Error; NewThread(ThreadDumpAddress) failed\n");
 
         // Mine proof-of-stake blocks in the background
-        if (!GetBoolArg("-staking", true))
+        if (!GetBoolArg("-staking", false))
             LogPrintf("Staking disabled\n");
         else
         {

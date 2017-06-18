@@ -320,7 +320,7 @@ bool CRPCTable::appendCommand(const std::string& name, const CRPCCommand* pcmd)
 
 bool StartRPC()
 {
-    LogPrint(BCLog::RPC, "Starting RPC\n");
+    LogPrintf("Starting RPC\n");
     fRPCRunning = true;
     g_rpcSignals.Started();
     return true;
@@ -328,14 +328,14 @@ bool StartRPC()
 
 void InterruptRPC()
 {
-    LogPrint(BCLog::RPC, "Interrupting RPC\n");
+    LogPrintf("Interrupting RPC\n");
     // Interrupt e.g. running longpolls
     fRPCRunning = false;
 }
 
 void StopRPC()
 {
-    LogPrint(BCLog::RPC, "Stopping RPC\n");
+    LogPrintf("Stopping RPC\n");
     deadlineTimers.clear();
     DeleteAuthCookie();
     g_rpcSignals.Stopped();
@@ -601,7 +601,9 @@ public:
             stream.lowest_layer().connect(*endpoint_iterator++, error);
         }
         if (error)
+        {
             return false;
+        }
         return true;
     }
 

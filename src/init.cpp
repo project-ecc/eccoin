@@ -175,7 +175,7 @@ bool AppInitSanityChecks()
     return true;
 }
 
-bool AppInitServers(boost::thread_group& threadGroup)
+bool AppInitServers()
 {
 
     RPCServer::OnStarted(&OnRPCStarted);
@@ -945,6 +945,18 @@ bool AppInit2()
     if (fDaemon)
         fprintf(stdout, "ECCoin server starting\n");
 
+    /* Start the RPC server already.  It will be started in "warmup" mode
+     * and not really process calls already (but it will signify connections
+     * that the server is there and will be ready later).  Warmup mode will
+     * be disabled when initialisation is finished.
+     */
+    if (GetBoolArg("-server", false))
+    {
+        uiInterface.InitMessage.connect(SetRPCWarmupStatus);
+        if (!AppInitServers())
+            return InitError(_("Unable to start HTTP server. See debug log for details."));
+    }
+
     int64_t nStart;
 
     // ********************************************************* Step 5: verify database integrity
@@ -1337,6 +1349,8 @@ bool AppInit2()
 
      // Add wallet transactions that aren't already in a block to mapTransactions
     pwalletMain->ReacceptWalletTransactions();
+
+    SetRPCWarmupFinished();
 
 #if !defined(QT_GUI)
     // Loop until process is exit()ed from shutdown() function,
