@@ -602,6 +602,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
 
         vRecv >> nVersion >> nServiceInt >> nTime >> addrMe;
         nServices = ServiceFlags(nServiceInt);
+        /*
         if (!pfrom->fInbound)
         {
             addrman.SetServices(pfrom->addr, nServices);
@@ -612,6 +613,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
             pfrom->fDisconnect = true;
             return false;
         }
+        */)
 
         if (nVersion < MIN_PROTO_VERSION)
         {
@@ -626,7 +628,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
         if (!vRecv.empty())
         {
             vRecv >> strSubVer;
-            cleanSubVer = SanitizeString(strSubVer);
+            //cleanSubVer = SanitizeString(strSubVer);
         }
         if (!vRecv.empty())
         {
@@ -722,20 +724,9 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
                 LogPrintf("peer does not have more blocks than us \n");
         }
 
-        // Relay sync-checkpoint
-        {
-            LOCK(cs_hashSyncCheckpoint);
-            if (!checkpointMessage.IsNull())
-                checkpointMessage.RelayTo(pfrom);
-        }
-
         LogPrintf("receive version message: version %d, blocks=%d, us=%s, them=%s, peer=%s\n", pfrom->nVersion, pfrom->nStartingHeight, addrMe.ToString().c_str(), addrFrom.ToString().c_str(), pfrom->addr.ToString().c_str());
 
         cPeerBlockCounts.input(pfrom->nStartingHeight);
-
-        // ppcoin: ask for pending sync-checkpoint if any
-        if (!IsInitialBlockDownload())
-            pcheckpointMain->AskForPendingSyncCheckpoint(pfrom);
 
         LogPrintf("finished processing version message \n");
     }
@@ -743,8 +734,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
 
     else if (pfrom->nVersion == 0)
     {
-        ///dont ban peers here, just ignore them.
-        //pfrom->Misbehaving(1);
+        pfrom->Misbehaving(1);
         return false;
     }
 
@@ -777,7 +767,6 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
     else if (!pfrom->fSuccessfullyConnected)
     {
         // Must have a verack message before anything else
-        LOCK(cs_main);
         pfrom->Misbehaving(1);
         return false;
     }
@@ -792,7 +781,6 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
             return true;
         if (vAddr.size() > 1000)
         {
-            LOCK(cs_main);
             pfrom->Misbehaving(20);
             return error("message addr size() = %u", vAddr.size());
         }
@@ -880,7 +868,6 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
         vRecv >> vInv;
         if (vInv.size() > MAX_INV_SZ)
         {
-            LOCK(cs_main);
             pfrom->Misbehaving(20);
             return error("message inv size() = %u", vInv.size());
         }
@@ -931,6 +918,8 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
 
 
     else if (strCommand == NetMsgType::GETDATA)
+        ///commented out updated getdata until the issue with message thread locking failing is solved
+    /*
     {
         vector<CInv> vInv;
         vRecv >> vInv;
@@ -950,14 +939,84 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
         //ProcessGetData(pfrom, chainparams.GetConsensus(), connman, interruptMsgProc);
         ProcessGetData(pfrom);
     }
+    */
+    {
+        vector<CInv> vInv;
+        vRecv >> vInv;
+        if (vInv.size() > MAX_INV_SZ)
+        {
+            pfrom->Misbehaving(20);
+            return error("message getdata size() = %d", vInv.size());
+        }
+
+        if (fDebugNet || (vInv.size() != 1))
+            LogPrintf("received getdata (%d invsz)\n", vInv.size());
+
+        BOOST_FOREACH(const CInv& inv, vInv)
+        {
+            if (fShutdown)
+                return true;
+            if (fDebugNet || (vInv.size() == 1))
+                printf("received getdata for: %s\n", inv.ToString().c_str());
+
+            if (inv.type == MSG_BLOCK)
+            {
+                // Send block from disk
+                map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(inv.hash);
+                if (mi != mapBlockIndex.end())
+                {
+                    CBlock block;
+                    block.ReadFromDisk((*mi).second);
+                    pfrom->PushMessage("block", block);
+
+                    // Trigger them to send a getblocks request for the next batch of inventory
+                    if (inv.hash == pfrom->hashContinue)
+                    {
+                        // ppcoin: send latest proof-of-work block to allow the
+                        // download node to accept as orphan (proof-of-stake
+                        // block might be rejected by stake connection check)
+                        vector<CInv> vInv;
+                        vInv.push_back(CInv(MSG_BLOCK, GetLastBlockIndex(pindexBest, false)->GetBlockHash()));
+                        pfrom->PushMessage("inv", vInv);
+                        pfrom->hashContinue = 0;
+                    }
+                }
+            }
+            else if (inv.IsKnownType())
+            {
+                // Send stream from relay memory
+                bool pushed = false;
+                {
+                    LOCK(cs_mapRelay);
+                    map<CInv, CDataStream>::iterator mi = mapRelay.find(inv);
+                    if (mi != mapRelay.end()) {
+                        pfrom->PushMessage(inv.GetCommand(), (*mi).second);
+                        pushed = true;
+                    }
+                }
+                if (!pushed && inv.type == MSG_TX) {
+                    LOCK(mempool.cs);
+                    if (mempool.exists(inv.hash)) {
+                        CTransaction tx = mempool.lookup(inv.hash);
+                        CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
+                        ss.reserve(1000);
+                        ss << tx;
+                        pfrom->PushMessage("tx", ss);
+                    }
+                }
+            }
+
+            // Track requests for our stuff
+            Inventory(inv.hash);
+        }
+    }
+
 
     else if (strCommand == NetMsgType::GETBLOCKS)
     {
         CBlockLocator locator;
         uint256 hashStop;
         vRecv >> locator >> hashStop;
-
-        LOCK(cs_main);
 
         // Find the last block the caller has in the main chain
         CBlockIndex* pindex = locator.GetBlockIndex();
@@ -1058,8 +1117,6 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
 
         CInv inv(MSG_TX, tx.GetHash());
         pfrom->AddInventoryKnown(inv);
-
-        LOCK(cs_main);
 
         pfrom->setAskFor.erase(inv.hash);
         mapAlreadyAskedFor.erase(inv);
@@ -1618,6 +1675,7 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
         //
         if (fSendTrickle)
         {
+            LOCK(cs_vNodes);
             vector<CAddress> vAddr;
             vAddr.reserve(pto->vAddrToSend.size());
             BOOST_FOREACH(const CAddress& addr, pto->vAddrToSend)
@@ -1665,6 +1723,15 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
                     uint256 hashRand = inv.hash ^ hashSalt;
                     hashRand = Hash(BEGIN(hashRand), END(hashRand));
                     bool fTrickleWait = ((hashRand & 3) != 0);
+
+                    // always trickle our own transactions
+                    if (!fTrickleWait)
+                    {
+                        CWalletTx wtx;
+                        if (GetTransaction(inv.hash, wtx))
+                            if (wtx.fFromMe)
+                                fTrickleWait = true;
+                    }
 
                     if (fTrickleWait)
                     {
