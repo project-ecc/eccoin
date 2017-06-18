@@ -714,7 +714,7 @@ int ReadHTTP(std::basic_istream<char>& stream, map<string, string>& mapHeadersRe
 
 Object CallRPC(const string& strMethod, const Array& params)
 {
-    if (gArgs.GetArgs("-rpcuser") == "" && gArgs.GetArgs("-rpcpassword") == "")
+    if (GetMultiArg("rpcuser", "") == "" && GetMultiArg("rpcpassword", "") == "")
         throw runtime_error(strprintf(
             _("You must set rpcpassword=<password> in the configuration file:\n%s\n"
               "If the file does not exist, create it with owner-readable-only file permissions."),
@@ -732,7 +732,8 @@ Object CallRPC(const string& strMethod, const Array& params)
         throw runtime_error("couldn't connect to server");
 
     // HTTP basic authentication
-    string strUserPass64 = EncodeBase64(gArgs.GetArgs("-rpcuser") + ":" + gArgs.GetArgs("-rpcpassword"));
+
+    string strUserPass64 = EncodeBase64(GetMultiArg("rpcuser", "") + ":" + GetMultiArg("rpcpassword", ""));
     map<string, string> mapRequestHeaders;
     mapRequestHeaders["Authorization"] = string("Basic ") + strUserPass64;
 

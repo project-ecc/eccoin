@@ -465,6 +465,18 @@ int64_t ArgsManager::GetArg(const std::string& strArg, int64_t nDefault)
     return nDefault;
 }
 
+std::string ArgsManager::GetMultiArg(const std::string& strArg, const std::string& nDefault)
+{
+    LOCK(cs_args);
+    if (mapMultiArgs.count(strArg))
+    {
+        std::vector<std::string> resultVect = mapMultiArgs[strArg];
+        std::string result = resultVect[0];
+        return result;
+    }
+    return nDefault;
+}
+
 bool ArgsManager::GetBoolArg(const std::string& strArg, bool fDefault)
 {
     LOCK(cs_args);

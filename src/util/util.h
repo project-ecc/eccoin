@@ -264,6 +264,8 @@ int64_t GetArg(const std::string& strArg, int64_t nDefault);
  */
 bool GetBoolArg(const std::string& strArg, bool fDefault = false);
 
+std::string GetMultiArg(const std::string& strArg, const std::string& nDefault);
+
 /**
  * Set an argument if it doesn't already have a value
  *
@@ -317,6 +319,11 @@ static inline bool IsArgSet(const std::string& strArg)
 static inline std::string GetArg(const std::string& strArg, const std::string& strDefault)
 {
     return gArgs.GetArg(strArg, strDefault);
+}
+
+static inline std::string GetMultiArg(const std::string& strArg, const std::string& strDefault)
+{
+    return gArgs.GetMultiArg(strArg, strDefault);
 }
 
 static inline int64_t GetArg(const std::string& strArg, int64_t nDefault)
