@@ -165,7 +165,8 @@ SOURCES += \
     src/rpc/rpcnet.cpp \
     src/rpc/rpcprotocol.cpp \
     src/rpc/rpcwallet.cpp \
-    src/rest.cpp
+    src/rest.cpp \
+    src/daemon.cpp
 
 INCLUDEPATH += src/leveldb/include src/leveldb/helpers
 LIBS += $$PWD/src/leveldb/libleveldb.a $$PWD/src/leveldb/libmemenv.a
@@ -303,10 +304,11 @@ HEADERS += \
     src/crypto/hmac_sha256.h \
     src/crypto/sha256.h \
     src/crypto/common.h \
-    src/endian.h \
+    src/crypto_endian.h \
     src/byteswap.h \
     src/rpc/rpcwallet.h \
-    src/rpc/rpcprotocol.h
+    src/rpc/rpcprotocol.h \
+    src/noui.h
 
 
 SOURCES += \
