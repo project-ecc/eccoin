@@ -131,6 +131,11 @@ static inline bool LogAcceptCategory(uint32_t category)
     return (logCategories.load(std::memory_order_relaxed) & category) != 0;
 }
 
+static inline unsigned short GetDefaultRPCPort()
+{
+    return GetBoolArg("-testnet", false) ? 29119 : 19119;
+}
+
 /** Returns a string with the log categories. */
 std::string ListLogCategories();
 

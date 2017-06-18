@@ -728,12 +728,12 @@ Object CallRPC(const string& strMethod, const Array& params)
     asio::ssl::stream<asio::ip::tcp::socket> sslStream(io_service, context);
     SSLIOStreamDevice<asio::ip::tcp> d(sslStream, fUseSSL);
     iostreams::stream< SSLIOStreamDevice<asio::ip::tcp> > stream(d);
-    if (!d.connect(GetArg("-rpcconnect", "127.0.0.1"), GetArg("-rpcport", itostr(19119))))
+    if (!d.connect(GetArg("-rpcconnect", "127.0.0.1"), GetArg("-rpcport", itostr(GetDefaultRPCPort()))))
         throw runtime_error("couldn't connect to server");
 
     // HTTP basic authentication
 
-    string strUserPass64 = EncodeBase64(GetArg("-srpcuser", "") + ":" + GetArg("-rpcpassword", ""));
+    string strUserPass64 = EncodeBase64(GetArg("-rpcuser", "") + ":" + GetArg("-rpcpassword",""));
     map<string, string> mapRequestHeaders;
     mapRequestHeaders["Authorization"] = string("Basic ") + strUserPass64;
 
