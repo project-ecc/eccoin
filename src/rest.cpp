@@ -233,7 +233,7 @@ static bool rest_headers(HTTPRequest* req,
         LOCK(cs_main);
         std::map<uint256, CBlockIndex*>::const_iterator it = mapBlockIndex.find(hash);
         const CBlockIndex *pindex = (it != mapBlockIndex.end()) ? it->second : NULL;
-        while (pindex && mapBlockIndex.count(pindex->phashBlock)) {
+        while (pindex && mapBlockIndex.count(pindex->GetBlockHash())) {
             headers.push_back(pindex);
             if (headers.size() == (unsigned long)count)
                 break;
