@@ -364,7 +364,7 @@ void JSONRPCRequest::parse(const UniValue& valRequest)
     if (!valMethod.isStr())
         throw JSONRPCError(RPC_INVALID_REQUEST, "Method must be a string");
     strMethod = valMethod.get_str();
-    LogPrint(BCLog::RPC, "ThreadRPCServer method=%s\n", SanitizeString(strMethod));
+    LogPrintf("ThreadRPCServer method=%s\n", SanitizeString(strMethod));
 
     // Parse params
     UniValue valParams = find_value(request, "params");
@@ -566,8 +566,9 @@ int CommandLineRPC(int argc, char *argv[])
         // Parameters default to strings
         std::vector<std::string> strParams(&argv[2], &argv[argc]);
         UniValue params(UniValue::VARR);
-        for(auto const& value: strParams) {
-            params.push_back(value);
+        for(std::vector<std::string>::iterator it = strParams.begin(); it != strParams.end(); ++it)
+        {
+            params.push_back(*it);
         }
         req.pushKV("params", params);
         // Execute
