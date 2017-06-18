@@ -8,7 +8,9 @@
 #include <stdint.h>
 #include <string.h>
 
+#ifdef WIN32
 #include "crypto_endian.h"
+#endif
 
 uint16_t static inline ReadLE16(const unsigned char* ptr)
 {
