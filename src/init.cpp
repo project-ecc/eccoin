@@ -3,7 +3,6 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "bitcoinrpc.h"
 #include "checkpoints.h"
 #include "init.h"
 #include "net.h"
@@ -13,6 +12,10 @@
 #include "wallet.h"
 #include "walletdb.h"
 #include "chain.h"
+#include "rpc/blockchain.h"
+#include "rpc/server.h"
+#include "httpserver.h"
+#include "httprpc.h"
 
 #include "util/util.h"
 #include "util/utilexceptions.h"
@@ -33,8 +36,6 @@
 
 #include <boost/thread/thread.hpp>
 #include <boost/algorithm/string/replace.hpp>
-
-#include "server.h"
 
 #ifndef WIN32
 #include <signal.h>
@@ -79,6 +80,15 @@ void OnRPCStopped()
     LogPrint(BCLog::RPC, "RPC stopped.\n");
 }
 
+void OnRPCPreCommand(const CRPCCommand& cmd)
+{
+    // Observe safe mode
+    std::string strWarning = GetWarnings("rpc");
+    if (strWarning != "" && !GetBoolArg("-disablesafemode", false) &&
+        !cmd.okSafeMode)
+        throw JSONRPCError(RPC_FORBIDDEN_BY_SAFE_MODE, std::string("Safe mode: ") + strWarning);
+}
+
 static void BlockNotifyCallback(bool initialSync, const CBlockIndex *pBlockIndex)
 {
     if (initialSync || !pBlockIndex)
@@ -109,16 +119,14 @@ static void BlockNotifyGenesisWait(bool, const CBlockIndex *pBlockIndex)
 
 void Interrupt(boost::thread_group& threadGroup)
 {
-    /*
     InterruptHTTPServer();
     InterruptHTTPRPC();
     InterruptRPC();
     InterruptREST();
-    InterruptTorControl();
-    if (g_connman)
-        g_connman->Interrupt();
-    threadGroup.interrupt_all();
-    */
+    //InterruptTorControl();
+    //if (g_connman)
+    //    g_connman->Interrupt();
+    //threadGroup.interrupt_all();
 }
 
 /** Sanity checks
@@ -166,16 +174,16 @@ bool AppInitServers(boost::thread_group& threadGroup)
 
     RPCServer::OnStarted(&OnRPCStarted);
     RPCServer::OnStopped(&OnRPCStopped);
-    //RPCServer::OnPreCommand(&OnRPCPreCommand);
-    //if (!InitHTTPServer())
+    RPCServer::OnPreCommand(&OnRPCPreCommand);
+    if (!InitHTTPServer())
         return false;
     if (!StartRPC())
         return false;
-    //if (!StartHTTPRPC())
+    if (!StartHTTPRPC())
         return false;
-    //if (GetBoolArg("-rest", false) && !StartREST())
+    if (GetBoolArg("-rest", false) && !StartREST())
         return false;
-    //if (!StartHTTPServer())
+    if (!StartHTTPServer())
         return false;
 
     return true;
@@ -1209,9 +1217,6 @@ bool AppInit2()
 
     if (!NewThread(StartNode, NULL))
         InitError(_("Error: could not start node"));
-
-    if (fServer)
-        NewThread(ThreadRPCServer, NULL);
 
     // ********************************************************* Step 12: finished
 
