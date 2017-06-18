@@ -1342,7 +1342,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
         if(ProcessBlock(pfrom, &block))
         {
             mapAlreadyAskedFor.erase(inv);
-            pfrom->nLastBlockTime = GetTime();
+            //pfrom->nLastBlockTime = GetTime();
         }
         if (block.nDoS)
         {
