@@ -3,7 +3,7 @@
 #include <sstream>
 #include <stdio.h>
 #include "univalue.h"
-#include "univalue_escapes.h"
+#include "escapes.h"
 
 using namespace std;
 
