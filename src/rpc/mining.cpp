@@ -313,7 +313,7 @@ UniValue submitblock(const JSONRPCRequest& request)
     if (!fAccepted)
         return "rejected";
 
-    return NULL;
+    return UniValue::VNULL;
 }
 
 static const CRPCCommand commands[] =
