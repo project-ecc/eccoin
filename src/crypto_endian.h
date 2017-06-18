@@ -1,5 +1,5 @@
-#ifndef ENDIAN_H
-#define ENDIAN_H
+#ifndef BITCOIN_ENDIAN_H
+#define BITCOIN_ENDIAN_H
 
 #if defined(HAVE_CONFIG_H)
 #include "config/bitcoin-config.h"
@@ -189,4 +189,4 @@ inline uint64_t le64toh(uint64_t little_endian_64bits)
 
 #endif // WORDS_BIGENDIAN
 
-#endif // ENDIAN_H
+#endif // BITCOIN_ENDIAN_H

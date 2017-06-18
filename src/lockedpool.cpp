@@ -234,7 +234,7 @@ void *PosixLockedPageAllocator::AllocateLocked(size_t len, bool *lockingSuccess)
 void PosixLockedPageAllocator::FreeLocked(void* addr, size_t len)
 {
     len = align_up(len, page_size);
-    memory_cleanse(addr, len);
+    OPENSSL_cleanse(addr, len);
     munlock(addr, len);
     munmap(addr, len);
 }

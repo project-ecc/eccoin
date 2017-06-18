@@ -208,6 +208,17 @@ bool DisconnectNode(const std::string& strNode)
     return false;
 }
 
+bool DisconnectNode(NodeId id)
+{
+    LOCK(cs_vNodes);
+    for(CNode* pnode : vNodes) {
+        if (id == pnode->GetId()) {
+            pnode->fDisconnect = true;
+            return true;
+        }
+    }
+    return false;
+}
 
 std::map<CNetAddr, int64_t> CNode::setBanned;
 CCriticalSection CNode::cs_setBanned;
