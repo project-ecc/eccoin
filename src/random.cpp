@@ -73,7 +73,7 @@ void RandAddSeedPerfmon()
     RegCloseKey(HKEY_PERFORMANCE_DATA);
     if (ret == ERROR_SUCCESS) {
         RAND_add(vData.data(), nSize, nSize / 100.0);
-        LogPrint(BCLog::RAND, "%s: %lu bytes\n", __func__, nSize);
+        LogPrintf("%s: %lu bytes\n", __func__, nSize);
     } else {
         static bool warned = false; // Warn only once
         if (!warned) {

@@ -3,7 +3,6 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "bitcoinrpc.h"
 #include "checkpoints.h"
 #include "db.h"
 #include "txdb-leveldb.h"
@@ -332,6 +331,11 @@ int64_t GetProofOfWorkReward(int64_t nFees, const int nHeight, uint256 prevHash)
     return nSubsidy + nFees;
 }
 
+double ValueFromAmountAsDouble(int64_t amount)
+{
+    return (double)amount / (double)COIN;
+}
+
 const int YEARLY_BLOCKCOUNT = 700800;
 // miner's coin stake reward based on coin age spent (coin-days)
 int64_t GetProofOfStakeReward(int64_t nCoinAge, int nHeight)
@@ -521,7 +525,7 @@ bool IsInitialBlockDownload()
 bool ProcessBlock(CNode* pfrom, CBlock* pblock)
 {
     // Check for duplicate
-    uint256 hash = pblock->GetHash();
+    const uint256 hash = pblock->GetHash();
     if (mapBlockIndex.count(hash))
         return error("ProcessBlock() : already have block %d %s", mapBlockIndex[hash]->nHeight, hash.ToString().substr(0,20).c_str());
 
@@ -603,6 +607,7 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
                     pfrom->AskFor(CInv(MSG_BLOCK,WantedByOrphan(pblock2)));
                 }
             }
+            LogPrintf("Orphan blocks proccessed \n");
             return true;
     }
 
@@ -632,13 +637,6 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
         }
     }
     LogPrintf("ProcessBlock: ACCEPTED\n");
-
-    // ppcoin: if responsible for sync-checkpoint send it
-    if (pfrom && !CSyncCheckpoint::strMasterPrivKey.empty())
-        pcheckpointMain->SendSyncCheckpoint(pcheckpointMain->AutoSelectSyncCheckpoint());
-
-    //NotifyHeaderTip();
-
     return true;
 }
 

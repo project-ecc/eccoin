@@ -465,6 +465,18 @@ int64_t ArgsManager::GetArg(const std::string& strArg, int64_t nDefault)
     return nDefault;
 }
 
+std::string ArgsManager::GetMultiArg(const std::string& strArg, const std::string& nDefault)
+{
+    LOCK(cs_args);
+    if (mapMultiArgs.count(strArg))
+    {
+        std::vector<std::string> resultVect = mapMultiArgs[strArg];
+        std::string result = resultVect[0];
+        return result;
+    }
+    return nDefault;
+}
+
 bool ArgsManager::GetBoolArg(const std::string& strArg, bool fDefault)
 {
     LOCK(cs_args);
@@ -994,4 +1006,34 @@ void LogStackTrace() {
     }
 }
 
+std::string vstrprintf(const char *format, va_list ap)
+{
+    char buffer[50000];
+    char* p = buffer;
+    int limit = sizeof(buffer);
+    int ret;
+    while (true)
+    {
+        va_list arg_ptr;
+        va_copy(arg_ptr, ap);
+#ifdef WIN32
+        ret = _vsnprintf(p, limit, format, arg_ptr);
+#else
+        ret = vsnprintf(p, limit, format, arg_ptr);
+#endif
+        va_end(arg_ptr);
+        if (ret >= 0 && ret < limit)
+            break;
+        if (p != buffer)
+            delete[] p;
+        limit *= 2;
+        p = new char[limit];
+        if (p == NULL)
+            throw std::bad_alloc();
+    }
+    std::string str(p, p+ret);
+    if (p != buffer)
+        delete[] p;
+    return str;
+}
 

@@ -102,6 +102,7 @@ CInv::CInv()
 
 CInv::CInv(int typeIn, const uint256& hashIn)
 {
+    setNull();
     type = typeIn;
     hash = hashIn;
 }

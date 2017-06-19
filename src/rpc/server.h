@@ -2,19 +2,15 @@
 #define SERVER_H
 
 #include "amount.h"
-#include "network/protocol.h"
+#include "rpc/rpcprotocol.h"
 #include "uint256.h"
-#include "fs.h"
-#include "bitcoinrpc.h"
 
 #include <list>
 #include <map>
 #include <stdint.h>
 #include <string>
 
-#include "univalue.h"
-#include "univalue_escapes.h"
-#include "univalue_utffilter.h"
+#include "univalue/univalue.h"
 
 static const unsigned int DEFAULT_RPC_SERIALIZE_VERSION = 1;
 
@@ -27,9 +23,6 @@ namespace RPCServer
     void OnPreCommand(std::function<void (const CRPCCommand&)> slot);
 }
 
-class CBlockIndex;
-class CNetAddr;
-
 /** Wrapper for UniValue::VType, which includes typeAny:
  * Used to denote don't care type. Only used by RPCTypeCheckObj */
 struct UniValueType {
@@ -37,6 +30,20 @@ struct UniValueType {
     UniValueType() : typeAny(true) {}
     bool typeAny;
     UniValue::VType type;
+};
+
+class JSONRPCRequest
+{
+public:
+    UniValue id;
+    std::string strMethod;
+    UniValue params;
+    bool fHelp;
+    std::string URI;
+    std::string authUser;
+
+    JSONRPCRequest() : id(NullUniValue), params(NullUniValue), fHelp(false) {}
+    void parse(const UniValue& valRequest);
 };
 
 /** Query whether RPC is running */
@@ -114,6 +121,55 @@ void RPCUnsetTimerInterface(RPCTimerInterface *iface);
  */
 void RPCRunLater(const std::string& name, std::function<void(void)> func, int64_t nSeconds);
 
+typedef UniValue(*rpcfn_type)(const JSONRPCRequest& jsonRequest);
+
+class CRPCCommand
+{
+public:
+    std::string category;
+    std::string name;
+    rpcfn_type actor;
+    bool okSafeMode;
+    std::vector<std::string> argNames;
+};
+
+/**
+ * Bitcoin RPC command dispatcher.
+ */
+class CRPCTable
+{
+private:
+    std::map<std::string, const CRPCCommand*> mapCommands;
+public:
+    CRPCTable();
+    const CRPCCommand* operator[](const std::string& name) const;
+    std::string help(const std::string& name, const JSONRPCRequest& helpreq) const;
+
+    /**
+     * Execute a method.
+     * @param request The JSONRPCRequest to execute
+     * @returns Result of the call.
+     * @throws an exception (UniValue) when an error happens.
+     */
+    UniValue execute(const JSONRPCRequest &request) const;
+
+    /**
+    * Returns a list of registered commands
+    * @returns List of registered commands.
+    */
+    std::vector<std::string> listCommands() const;
+
+
+    /**
+     * Appends a CRPCCommand to the dispatch table.
+     * Returns false if RPC server is already running (dump concurrency protection).
+     * Commands cannot be overwritten (returns false).
+     */
+    bool appendCommand(const std::string& name, const CRPCCommand* pcmd);
+};
+
+extern CRPCTable tableRPC;
+
 /**
  * Utilities: convert hex-encoded Values
  * (throws error if not hex).
@@ -132,24 +188,7 @@ bool StartRPC();
 void InterruptRPC();
 void StopRPC();
 std::string JSONRPCExecBatch(const UniValue& vReq);
+int CommandLineRPC(int argc, char *argv[]);
 
-// Retrieves any serialization flags requested in command line argument
-int RPCSerializationFlags();
-
-
-UniValue JSONRPCRequestObj(const std::string& strMethod, const UniValue& params, const UniValue& id);
-UniValue JSONRPCReplyObj(const UniValue& result, const UniValue& error, const UniValue& id);
-std::string JSONRPCReply(const UniValue& result, const UniValue& error, const UniValue& id);
-UniValue JSONRPCError_Uni(int code, const std::string& message);
-
-
-/** Get name of RPC authentication cookie file */
-fs::path GetAuthCookieFile();
-/** Generate a new RPC authentication cookie and write it to disk */
-bool GenerateAuthCookie(std::string *cookie_out);
-/** Read the RPC authentication cookie from disk */
-bool GetAuthCookie(std::string *cookie_out);
-/** Delete RPC authentication cookie from disk */
-void DeleteAuthCookie();
 
 #endif // SERVER_H

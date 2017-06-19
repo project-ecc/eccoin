@@ -48,7 +48,6 @@ void ThreadOpenAddedConnections2(void* parg);
 void ThreadMapPort2(void* parg);
 #endif
 void ThreadDNSAddressSeed2(void* parg);
-bool OpenNetworkConnection(const CAddress& addrConnect, CSemaphoreGrant *grantOutbound = NULL, const char *strDest = NULL);
 
 //
 // Global state variables
@@ -81,7 +80,7 @@ CCriticalSection cs_vOneShots;
 set<CNetAddr> setservAddNodeAddresses;
 CCriticalSection cs_setservAddNodeAddresses;
 
-static CSemaphore *semOutbound = NULL;
+CSemaphore *semOutbound = NULL;
 
 void AddOneShot(string strDest)
 {
@@ -562,7 +561,11 @@ void ThreadSocketHandler2(void* parg)
                                 TRY_LOCK(pnode->cs_mapRequests, lockReq);
                                 if (lockReq)
                                 {
-                                    fDelete = true;
+                                    TRY_LOCK(pnode->cs_inventory, lockInv);
+                                    if (lockInv)
+                                    {
+                                        fDelete = true;
+                                    }
                                 }
                             }
                         }
@@ -1733,7 +1736,7 @@ void StartNode(void* parg)
             LogPrintf("Error; NewThread(ThreadDumpAddress) failed\n");
 
         // Mine proof-of-stake blocks in the background
-        if (!GetBoolArg("-staking", true))
+        if (!GetBoolArg("-staking", false))
             LogPrintf("Staking disabled\n");
         else
         {

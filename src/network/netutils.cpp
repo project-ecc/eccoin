@@ -1,5 +1,6 @@
 #include "netutils.h"
 #include "strlcpy.h"
+#include "util/utilstrencodings.h"
 #include <boost/algorithm/string.hpp>
 
 bool fNameLookup = false;
@@ -78,6 +79,16 @@ bool LookupHost(const char *pszName, std::vector<CNetAddr>& vIP, unsigned int nM
     return LookupIntern(pszHost, vIP, nMaxSolutions, fAllowLookup);
 }
 
+bool LookupHost(const char *pszName, CNetAddr& addr, bool fAllowLookup)
+{
+    std::vector<CNetAddr> vIP;
+    LookupHost(pszName, vIP, 1, fAllowLookup);
+    if(vIP.empty())
+        return false;
+    addr = vIP.front();
+    return true;
+}
+
 bool LookupHostNumeric(const char *pszName, std::vector<CNetAddr>& vIP, unsigned int nMaxSolutions)
 {
     return LookupHost(pszName, vIP, nMaxSolutions, false);
@@ -87,6 +98,17 @@ bool LookupNumeric(const char *pszName, CService& addr, int portDefault)
 {
     return Lookup(pszName, addr, portDefault, false);
 }
+
+CService LookupNumeric(const char *pszName, int portDefault)
+{
+    CService addr;
+    // "1.2:345" will fail to resolve the ip, but will still set the port.
+    // If the ip fails to resolve, re-init the result.
+    if(!Lookup(pszName, addr, portDefault, false))
+        addr = CService();
+    return addr;
+}
+
 
 bool LookupIntern(const char *pszName, std::vector<CNetAddr>& vIP, unsigned int nMaxSolutions, bool fAllowLookup)
 {
@@ -150,4 +172,40 @@ bool LookupIntern(const char *pszName, std::vector<CNetAddr>& vIP, unsigned int 
     return (vIP.size() > 0);
 }
 
+bool LookupSubNet(const char* pszName, CSubNet& ret)
+{
+    std::string strSubnet(pszName);
+    size_t slash = strSubnet.find_last_of('/');
+    std::vector<CNetAddr> vIP;
+
+    std::string strAddress = strSubnet.substr(0, slash);
+    if (LookupHost(strAddress.c_str(), vIP, 1, false))
+    {
+        CNetAddr network = vIP[0];
+        if (slash != strSubnet.npos)
+        {
+            std::string strNetmask = strSubnet.substr(slash + 1);
+            int32_t n;
+            // IPv4 addresses start at offset 12, and first 12 bytes must match, so just offset n
+            if (ParseInt32(strNetmask, &n)) { // If valid number, assume /24 syntax
+                ret = CSubNet(network, n);
+                return ret.IsValid();
+            }
+            else // If not a valid number, try full netmask syntax
+            {
+                // Never allow lookup for netmask
+                if (LookupHost(strNetmask.c_str(), vIP, 1, false)) {
+                    ret = CSubNet(network, vIP[0]);
+                    return ret.IsValid();
+                }
+            }
+        }
+        else
+        {
+            ret = CSubNet(network);
+            return ret.IsValid();
+        }
+    }
+    return false;
+}
 

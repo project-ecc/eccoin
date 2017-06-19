@@ -1,7 +1,6 @@
 #ifndef MESSAGES_H
 #define MESSAGES_H
 
-#include "bitcoinrpc.h"
 #include "checkpoints.h"
 #include "db.h"
 #include "init.h"

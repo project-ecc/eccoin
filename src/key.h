@@ -77,6 +77,10 @@ public:
         READWRITE(vchPubKey);
     )
 
+    //! Simple read-only vector-like interface to the pubkey data.
+    unsigned int size() const { return vchPubKey.size(); }
+    const unsigned char& operator[](unsigned int pos) const { return vchPubKey[pos]; }
+
     CKeyID GetID() const {
         return CKeyID(Hash160(vchPubKey));
     }

@@ -1,9 +1,12 @@
 #include "node.h"
 #include "locator.h"
 #include "proxyutils.h"
+#include "net.h"
+#include "netutils.h"
 
 #include <map>
 #include <string>
+#include <vector>
 
 std::map<CInv, int64_t> mapAlreadyAskedFor;
 uint64_t nLocalHostNonce = 0;
@@ -170,6 +173,51 @@ void CNode::PushVersion()
     LogPrintf("send version message: version %d, blocks=%d, us=%s, them=%s, peer=%s\n", PROTOCOL_VERSION, pindexBest->nHeight, addrMe.ToString().c_str(), addrYou.ToString().c_str(), addr.ToString().c_str());
     PushMessage("version", PROTOCOL_VERSION, nLocalServices, nTime, addrYou, addrMe,
                 nLocalHostNonce, FormatSubVersion(CLIENT_NAME, CLIENT_VERSION, std::vector<std::string>()), pindexBest->nHeight);
+}
+
+bool AddNode(const std::string& strNode)
+{
+    LOCK(cs_vNodes);
+    for(std::vector<CNode*>::const_iterator it = vNodes.begin(); it != vNodes.end(); ++it) {
+        CNode* nodeInList = *it;
+        if (strNode == nodeInList->addrName)
+            return false;
+    }
+
+    std::vector<std::vector<CService> > vservAddressesToAdd(0);
+    std::vector<CService> vservNode(0);
+    if(Lookup(strNode.c_str(), vservNode, GetDefaultPort(), fNameLookup, 0))
+    {
+        vservAddressesToAdd.push_back(vservNode);
+        {
+            LOCK(cs_setservAddNodeAddresses);
+            BOOST_FOREACH(CService& serv, vservNode)
+                setservAddNodeAddresses.insert(serv);
+        }
+    }
+    return true;
+}
+
+bool DisconnectNode(const std::string& strNode)
+{
+    LOCK(cs_vNodes);
+    if (CNode* pnode = FindNode(strNode)) {
+        pnode->fDisconnect = true;
+        return true;
+    }
+    return false;
+}
+
+bool DisconnectNode(NodeId id)
+{
+    LOCK(cs_vNodes);
+    for(CNode* pnode : vNodes) {
+        if (id == pnode->GetId()) {
+            pnode->fDisconnect = true;
+            return true;
+        }
+    }
+    return false;
 }
 
 std::map<CNetAddr, int64_t> CNode::setBanned;

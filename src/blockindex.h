@@ -26,6 +26,7 @@ public:
     const uint256* phashBlock;
     CBlockIndex* pprev;
     CBlockIndex* pnext;
+    CBlockIndex* pskip;
     unsigned int nFile;
     unsigned int nBlockPos;
     uint256 nChainTrust; // ppcoin: trust score of block chain
@@ -94,6 +95,11 @@ public:
     void SetStakeModifier(uint64_t nModifier, bool fGeneratedStakeModifier);
     std::string ToString() const;
     void print() const;
+    //! Efficiently find an ancestor of this block.
+    CBlockIndex* GetAncestor(int height);
+    const CBlockIndex* GetAncestor(int height) const;
+    void BuildSkip();
+
 
 };
 

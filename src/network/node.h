@@ -597,5 +597,8 @@ public:
     void copyStats(CNodeStats &stats);
 };
 
+bool AddNode(const std::string& strNode);
+bool DisconnectNode(const std::string& strNode);
+bool DisconnectNode(NodeId id);
 
 #endif // NODE_H

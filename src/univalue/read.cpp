@@ -3,7 +3,7 @@
 #include <vector>
 #include <stdio.h>
 #include "univalue.h"
-#include "univalue_utffilter.h"
+#include "utffilter.h"
 
 using namespace std;
 

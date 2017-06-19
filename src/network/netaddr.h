@@ -69,6 +69,8 @@ class CNetAddr
             (
              READWRITE(FLATDATA(ip));
             )
+
+        friend class CSubNet;
 };
 
 #endif // NETADDR_H

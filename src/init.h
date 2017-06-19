@@ -24,6 +24,7 @@ void StartShutdown();
 void Shutdown(void* parg);
 bool AppInit2();
 std::string HelpMessage();
+bool ShutdownRequested();
 
 /** Interrupt threads */
 void Interrupt(boost::thread_group& threadGroup);
@@ -42,7 +43,8 @@ bool AppInitBasicSetup();
  * @note This can be done before daemonization.
  * @pre Parameters should be parsed and config file should be read, AppInitBasicSetup should have been called.
  */
-//bool AppInitParameterInteraction();
+bool AppInitParameterInteraction();
+
 /**
  * Initialization sanity checks: ecc init, sanity checks, dir lock.
  * @note This can be done before daemonization.
@@ -54,4 +56,7 @@ std::string LicenseInfo();
 
 extern bool fEnforceCanonical;
 
+
+
 #endif
+

@@ -1,5 +1,5 @@
 TEMPLATE = app
-TARGET = eccoin-qt
+TARGET = eccoin-windows-daemon
 VERSION = 0.7.2
 INCLUDEPATH += src src/json src/qt
 DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE
@@ -32,6 +32,8 @@ win32{
     MINIUPNPC_LIB_PATH=C:/deps/miniupnpc
     QRENCODE_INCLUDE_PATH=C:/deps/qrencode-3.4.4
     QRENCODE_LIB_PATH=C:/deps/qrencode-3.4.4/.libs
+    LIBEVENT_LIB_PATH=C:/deps/libevent-2.1.8/.libs
+    LIBEVENT_INCLUDE_PATH=C:/deps/libevent-2.1.8/include
 }
 
 
@@ -84,6 +86,8 @@ contains(USE_QRCODE, 1) {
 #  or: qmake "USE_UPNP=0" (disabled by default)
 #  or: qmake "USE_UPNP=-" (not supported)
 # miniupnpc (http://miniupnp.free.fr/files/) must be installed for support
+
+USE_UPNP=1
 contains(USE_UPNP, -) {
     message(Building without UPNP support)
 } else {
@@ -142,24 +146,27 @@ SOURCES += \
     src/scheduler.cpp \
     src/threadinterrupt.cpp \
     src/validation.cpp \
-    src/qt/platformstyle.cpp \
-    src/qt/bantablemodel.cpp \
-    src/qt/peertablemodel.cpp \
-    src/qt/recentrequeststablemodel.cpp \
-    src/qt/utilitydialog.cpp \
-    src/qt/winshutdownmonitor.cpp \
-    src/qt/splashscreen.cpp \
-    src/qt/networkstyle.cpp \
-    src/qt/walletframe.cpp \
-    src/qt/walletview.cpp \
-    src/qt/receivecoinsdialog.cpp \
-    src/qt/receiverequestdialog.cpp \
-    src/qt/modaloverlay.cpp \
-    src/qt/openuridialog.cpp \
-    src/server.cpp \
-    src/univalue.cpp \
-    src/univalue_read.cpp \
-    src/univalue_write.cpp
+    src/univalue/univalue.cpp \
+    src/univalue/read.cpp \
+    src/univalue/write.cpp \
+    src/rpc/server.cpp \
+    src/rpc/blockchain.cpp \
+    src/rpc/client.cpp \
+    src/rpc/mining.cpp \
+    src/rpc/misc.cpp \
+    src/rpc/rawtransaction.cpp \
+    src/httpserver.cpp \
+    src/rpc/dump.cpp \
+    src/lockedpool.cpp \
+    src/network/subnet.cpp \
+    src/httprpc.cpp \
+    src/crypto/hmac_sha256.cpp \
+    src/crypto/sha256.cpp \
+    src/rpc/rpcnet.cpp \
+    src/rpc/rpcprotocol.cpp \
+    src/rpc/rpcwallet.cpp \
+    src/rest.cpp \
+    src/daemon.cpp
 
 INCLUDEPATH += src/leveldb/include src/leveldb/helpers
 LIBS += $$PWD/src/leveldb/libleveldb.a $$PWD/src/leveldb/libmemenv.a
@@ -211,14 +218,13 @@ QMAKE_CXXFLAGS_WARN_ON = -fdiagnostics-show-option -Wall -Wextra -Wno-ignored-qu
 
 
 # Input
-DEPENDPATH += src src/json src/qt
+DEPENDPATH += src src/json
 
 HEADERS += \
     src/network/addrman.h \
     src/allocators.h \
     src/base58.h \
     src/bignum.h \
-    src/bitcoinrpc.h \
     src/checkpoints.h \
     src/clientversion.h \
     src/coincontrol.h \
@@ -249,50 +255,6 @@ HEADERS += \
     src/wallet.h \
     src/walletdb.h \
 #
-    src/qt/aboutdialog.h \
-    src/qt/addressbookpage.h \
-    src/qt/addresstablemodel.h \
-    src/qt/askpassphrasedialog.h \
-    src/qt/bitcoinaddressvalidator.h \
-    src/qt/bitcoinamountfield.h \
-    src/qt/bitcoingui.h \
-    src/qt/bitcoinunits.h \
-    src/qt/clientmodel.h \
-    src/qt/coincontroldialog.h \
-    src/qt/coincontroltreewidget.h \
-    src/qt/csvmodelwriter.h \
-    src/qt/editaddressdialog.h \
-    src/qt/guiconstants.h \
-    src/qt/guiutil.h \
-    src/qt/monitoreddatamapper.h \
-    src/qt/notificator.h \
-    src/qt/optionsdialog.h \
-    src/qt/optionsmodel.h \
-    src/qt/overviewpage.h \
-    src/qt/qtipcserver.h \
-    src/qt/qvalidatedlineedit.h \
-    src/qt/qvaluecombobox.h \
-    src/qt/rpcconsole.h \
-    src/qt/sendcoinsdialog.h \
-    src/qt/sendcoinsentry.h \
-    src/qt/signverifymessagedialog.h \
-    src/qt/transactiondesc.h \
-    src/qt/transactiondescdialog.h \
-    src/qt/transactionfilterproxy.h \
-    src/qt/transactionrecord.h \
-    src/qt/transactiontablemodel.h \
-    src/qt/transactionview.h \
-    src/qt/walletmodel.h \
-#
-    src/json/json_spirit_writer_template.h \
-    src/json/json_spirit_writer.h \
-    src/json/json_spirit_value.h \
-    src/json/json_spirit_utils.h \
-    src/json/json_spirit_stream_reader.h \
-    src/json/json_spirit_reader_template.h \
-    src/json/json_spirit_reader.h \
-    src/json/json_spirit_error_position.h \
-    src/json/json_spirit.h \
     src/kernel.h \
     src/block.h \
     src/blockindex.h \
@@ -328,28 +290,38 @@ HEADERS += \
     src/scheduler.h \
     src/reverselock.h \
     src/threadinterrupt.h \
-    src/qt/bantablemodel.h \
-    src/qt/peertablemodel.h \
-    src/qt/recentrequeststablemodel.h \
-    src/qt/utilitydialog.h \
-    src/qt/winshutdownmonitor.h \
-    src/qt/splashscreen.h \
-    src/qt/networkstyle.h \
-    src/qt/walletframe.h \
-    src/qt/walletview.h \
-    src/qt/receivecoinsdialog.h \
-    src/qt/receiverequestdialog.h \
-    src/qt/modaloverlay.h \
-    src/qt/openuridialog.h \
-    src/server.h \
-    src/univalue.h \
-    src/univalue_escapes.h \
-    src/univalue_utffilter.h
-#
+    src/univalue/univalue.h \
+    src/univalue/escapes.h \
+    src/univalue/utffilter.h \
+    src/rpc/server.h \
+    src/rpc/blockchain.h \
+    src/rpc/client.h \
+    src/rpc/register.h \
+    src/httpserver.h \
+    src/lockedpool.h \
+    src/network/subnet.h \
+    src/httprpc.h \
+    src/crypto/hmac_sha256.h \
+    src/crypto/sha256.h \
+    src/crypto/common.h \
+    src/crypto_endian.h \
+    src/byteswap.h \
+    src/rpc/rpcwallet.h \
+    src/rpc/rpcprotocol.h \
+    src/noui.h \
+    src/json/json_spirit.h \
+    src/json/json_spirit_error_position.h \
+    src/json/json_spirit_reader.h \
+    src/json/json_spirit_reader_template.h \
+    src/json/json_spirit_stream_reader.h \
+    src/json/json_spirit_utils.h \
+    src/json/json_spirit_value.h \
+    src/json/json_spirit_writer.h \
+    src/json/json_spirit_writer_template.h
+
 
 SOURCES += \
     src/network/addrman.cpp \
-    src/bitcoinrpc.cpp \
     src/block.cpp \
     src/blockindex.cpp \
     src/chain.cpp \
@@ -374,107 +346,29 @@ SOURCES += \
     src/pbkdf2.cpp \
     src/points.cpp \
     src/network/protocol.cpp \
-    src/rpcblockchain.cpp \
-    src/rpcdump.cpp \
-    src/rpcmining.cpp \
-    src/rpcnet.cpp \
-    src/rpcrawtransaction.cpp \
-    src/rpcwallet.cpp \
     src/script.cpp \
     src/scrypt.cpp \
     src/sync.cpp \
     src/transaction.cpp \
     src/version.cpp \
     src/walletdb.cpp \
-    src/wallet.cpp \
-#
-    src/qt/transactionfilterproxy.cpp \
-    src/qt/transactionview.cpp \
-    src/qt/walletmodel.cpp \
-    src/qt/overviewpage.cpp \
-    src/qt/csvmodelwriter.cpp \
-    src/qt/clientmodel.cpp \
-    src/qt/guiutil.cpp \
-    src/qt/transactionrecord.cpp \
-    src/qt/optionsmodel.cpp \
-    src/qt/monitoreddatamapper.cpp \
-    src/qt/transactiondesc.cpp \
-    src/qt/transactiondescdialog.cpp \
-    src/qt/bitcoinstrings.cpp \
-    src/qt/bitcoinamountfield.cpp \
-    src/qt/sendcoinsentry.cpp \
-    src/qt/qvalidatedlineedit.cpp \
-    src/qt/bitcoinunits.cpp \
-    src/qt/qvaluecombobox.cpp \
-    src/qt/askpassphrasedialog.cpp \
-    src/qt/notificator.cpp \
-    src/qt/qtipcserver.cpp \
-    src/qt/rpcconsole.cpp \
-    src/qt/coincontroldialog.cpp \
-    src/qt/coincontroltreewidget.cpp \
-    src/qt/bitcoin.cpp \
-    src/qt/bitcoingui.cpp \
-    src/qt/transactiontablemodel.cpp \
-    src/qt/addresstablemodel.cpp \
-    src/qt/optionsdialog.cpp \
-    src/qt/sendcoinsdialog.cpp \
-    src/qt/addressbookpage.cpp \
-    src/qt/signverifymessagedialog.cpp \
-    src/qt/aboutdialog.cpp \
-    src/qt/editaddressdialog.cpp \
-    src/qt/bitcoinaddressvalidator.cpp
-#
+    src/wallet.cpp
 
-RESOURCES += \
-    src/qt/bitcoin.qrc
-
-FORMS += \
-    src/qt/forms/coincontroldialog.ui \
-    src/qt/forms/sendcoinsdialog.ui \
-    src/qt/forms/addressbookpage.ui \
-    src/qt/forms/signverifymessagedialog.ui \
-    src/qt/forms/aboutdialog.ui \
-    src/qt/forms/editaddressdialog.ui \
-    src/qt/forms/transactiondescdialog.ui \
-    src/qt/forms/overviewpage.ui \
-    src/qt/forms/sendcoinsentry.ui \
-    src/qt/forms/askpassphrasedialog.ui \
-    src/qt/forms/rpcconsole.ui \
-    src/qt/forms/optionsdialog.ui \
-    src/qt/forms/helpmessagedialog.ui \
-    src/qt/forms/receivecoinsdialog.ui \
-    src/qt/forms/receiverequestdialog.ui \
-    src/qt/forms/modaloverlay.ui \
-    src/qt/forms/openuridialog.ui
-
-contains(USE_QRCODE, 1) {
-HEADERS += src/qt/qrcodedialog.h
-SOURCES += src/qt/qrcodedialog.cpp
-FORMS += src/qt/forms/qrcodedialog.ui
-}
 
 CODECFORTR = UTF-8
 
-# for lrelease/lupdate
-# also add new translations to src/qt/bitcoin.qrc under translations/
-TRANSLATIONS = $$files(src/qt/locale/bitcoin_*.ts)
 
 isEmpty(QMAKE_LRELEASE) {
     win32:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\\lrelease.exe
     else:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]/lrelease
 }
-isEmpty(QM_DIR):QM_DIR = $$PWD/src/qt/locale
-# automatically build translations, so they can be included in resource file
+
 TSQM.name = lrelease ${QMAKE_FILE_IN}
 TSQM.input = TRANSLATIONS
 TSQM.output = $$QM_DIR/${QMAKE_FILE_BASE}.qm
 TSQM.commands = $$QMAKE_LRELEASE ${QMAKE_FILE_IN} -qm ${QMAKE_FILE_OUT}
 TSQM.CONFIG = no_link
 QMAKE_EXTRA_COMPILERS += TSQM
-
-# "Other files" to show in Qt Creator
-OTHER_FILES += \
-    doc/*.rst doc/*.txt doc/README README.md res/bitcoin-qt.rc
 
 # platform specific defaults, if not overridden on command line
 isEmpty(BOOST_LIB_SUFFIX) {
@@ -507,7 +401,6 @@ isEmpty(BOOST_INCLUDE_PATH) {
 }
 
 windows:DEFINES += WIN32
-windows:RC_FILE = src/qt/res/bitcoin-qt.rc
 
 windows:!contains(MINGW_THREAD_BUGFIX, 0) {
     # At least qmake's win32-g++-cross profile is missing the -lmingwthrd
@@ -525,20 +418,17 @@ windows:!contains(MINGW_THREAD_BUGFIX, 0) {
     LIBS += -lrt
 }
 
-macx:HEADERS += src/qt/macdockiconhandler.h
-macx:OBJECTIVE_SOURCES += src/qt/macdockiconhandler.mm
 macx:LIBS += -framework Foundation -framework ApplicationServices -framework AppKit
 macx:DEFINES += MAC_OSX MSG_NOSIGNAL=0
-macx:ICON = src/qt/res/icons/ECCoin.icns
-macx:TARGET = "Eccoin-Qt"
+macx:TARGET = "Eccoind"
 macx:QMAKE_CFLAGS_THREAD += -pthread
 macx:QMAKE_LFLAGS_THREAD += -pthread
 macx:QMAKE_CXXFLAGS_THREAD += -pthread
 
 # Set libraries and includes at end, to use platform-defined defaults if not overridden
-INCLUDEPATH += $$BOOST_INCLUDE_PATH $$BDB_INCLUDE_PATH $$OPENSSL_INCLUDE_PATH $$QRENCODE_INCLUDE_PATH
-LIBS += $$join(BOOST_LIB_PATH,,-L,) $$join(BDB_LIB_PATH,,-L,) $$join(OPENSSL_LIB_PATH,,-L,) $$join(QRENCODE_LIB_PATH,,-L,)
-LIBS += -lssl -lcrypto -ldb_cxx$$BDB_LIB_SUFFIX
+INCLUDEPATH += $$BOOST_INCLUDE_PATH $$BDB_INCLUDE_PATH $$OPENSSL_INCLUDE_PATH $$QRENCODE_INCLUDE_PATH $$LIBEVENT_INCLUDE_PATH
+LIBS += $$join(BOOST_LIB_PATH,,-L,) $$join(BDB_LIB_PATH,,-L,) $$join(OPENSSL_LIB_PATH,,-L,) $$join(QRENCODE_LIB_PATH,,-L,) $$join(LIBEVENT_LIB_PATH,,-L,)
+LIBS += -lssl -lcrypto -ldb_cxx$$BDB_LIB_SUFFIX -levent
 # -lgdi32 has to happen after -lcrypto (see  #681)
 win32:LIBS += -lws2_32 -lshlwapi -lmswsock -lole32 -loleaut32 -luuid -lgdi32
 LIBS += -lboost_system$$BOOST_LIB_SUFFIX -lboost_filesystem$$BOOST_LIB_SUFFIX -lboost_program_options$$BOOST_LIB_SUFFIX -lboost_thread$$BOOST_THREAD_LIB_SUFFIX

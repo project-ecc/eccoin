@@ -26,6 +26,8 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
+#include <stdarg.h>
+
 
 #ifndef WIN32
 #include <sys/types.h>
@@ -47,9 +49,6 @@ public:
     /** Translate a message to the native language of the user. */
     boost::signals2::signal<std::string (const char* psz)> Translate;
 };
-
-extern std::map<std::string, std::string> mapArgs;
-extern std::map<std::string, std::vector<std::string> > mapMultiArgs;
 
 extern bool fPrintToConsole;
 extern bool fPrintToDebugLog;
@@ -76,6 +75,7 @@ extern const char * const BITCOIN_CONF_FILENAME;
 extern const char * const BITCOIN_PID_FILENAME;
 
 extern std::atomic<uint32_t> logCategories;
+std::string vstrprintf(const char *format, va_list ap);
 
 /**
  * Translation function: Call Translate signal on UI interface, which returns a boost::optional result.
@@ -166,10 +166,15 @@ template<typename... Args> std::string FormatStringFromLogArgs(const char *fmt, 
     } \
 } while(0)
 
+
 template<typename... Args>
-bool error(const char* fmt, const Args&... args)
+bool error(const char *format, ...)
 {
-    LogPrintStr("ERROR: " + tfm::format(fmt, args...) + "\n");
+    va_list arg_ptr;
+    va_start(arg_ptr, format);
+    std::string str = vstrprintf(format, arg_ptr);
+    va_end(arg_ptr);
+    LogPrintf("ERROR: %s\n", str.c_str());
     return false;
 }
 
@@ -267,6 +272,8 @@ int64_t GetArg(const std::string& strArg, int64_t nDefault);
  */
 bool GetBoolArg(const std::string& strArg, bool fDefault = false);
 
+std::string GetMultiArg(const std::string& strArg, const std::string& nDefault);
+
 /**
  * Set an argument if it doesn't already have a value
  *
@@ -320,6 +327,11 @@ static inline bool IsArgSet(const std::string& strArg)
 static inline std::string GetArg(const std::string& strArg, const std::string& strDefault)
 {
     return gArgs.GetArg(strArg, strDefault);
+}
+
+static inline std::string GetMultiArg(const std::string& strArg, const std::string& strDefault)
+{
+    return gArgs.GetMultiArg(strArg, strDefault);
 }
 
 static inline int64_t GetArg(const std::string& strArg, int64_t nDefault)
@@ -430,6 +442,12 @@ inline uint32_t ByteReverse(uint32_t value)
     value = ((value & 0xFF00FF00) >> 8) | ((value & 0x00FF00FF) << 8);
     return (value<<16) | (value>>16);
 }
+
+static inline unsigned short GetDefaultRPCPort()
+{
+    return GetBoolArg("-testnet", false) ? 29119 : 19119;
+}
+
 
 #endif
 

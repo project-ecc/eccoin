@@ -3,7 +3,6 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "bitcoinrpc.h"
 #include "checkpoints.h"
 #include "init.h"
 #include "net.h"
@@ -13,6 +12,13 @@
 #include "wallet.h"
 #include "walletdb.h"
 #include "chain.h"
+#include "rpc/blockchain.h"
+#include "rpc/server.h"
+#include "httpserver.h"
+#include "httprpc.h"
+#include "rpc/register.h"
+#include "rpc/server.h"
+#include "rpc/rpcwallet.h"
 
 #include "util/util.h"
 #include "util/utilexceptions.h"
@@ -33,8 +39,6 @@
 
 #include <boost/thread/thread.hpp>
 #include <boost/algorithm/string/replace.hpp>
-
-#include "server.h"
 
 #ifndef WIN32
 #include <signal.h>
@@ -59,6 +63,12 @@ boost::condition_variable cvBlockChange;
 
 using namespace std;
 
+bool static InitWarning(const std::string &str)
+{
+    uiInterface.ThreadSafeMessageBox(str, _("ECCoin"), CClientUIInterface::BTN_OK | CClientUIInterface::ICON_WARNING | CClientUIInterface::MODAL);
+    return true;
+}
+
 /** Show error message **/
 bool InitError(const std::string& str)
 {
@@ -76,7 +86,16 @@ void OnRPCStopped()
     uiInterface.NotifyBlockTip.disconnect(&RPCNotifyBlockChange);
     RPCNotifyBlockChange(false, nullptr);
     cvBlockChange.notify_all();
-    LogPrint(BCLog::RPC, "RPC stopped.\n");
+    LogPrintf("RPC stopped.\n");
+}
+
+void OnRPCPreCommand(const CRPCCommand& cmd)
+{
+    // Observe safe mode
+    std::string strWarning = GetWarnings("rpc");
+    if (strWarning != "" && !GetBoolArg("-disablesafemode", false) &&
+        !cmd.okSafeMode)
+        throw JSONRPCError(RPC_FORBIDDEN_BY_SAFE_MODE, std::string("Safe mode: ") + strWarning);
 }
 
 static void BlockNotifyCallback(bool initialSync, const CBlockIndex *pBlockIndex)
@@ -109,16 +128,14 @@ static void BlockNotifyGenesisWait(bool, const CBlockIndex *pBlockIndex)
 
 void Interrupt(boost::thread_group& threadGroup)
 {
-    /*
     InterruptHTTPServer();
     InterruptHTTPRPC();
     InterruptRPC();
     InterruptREST();
-    InterruptTorControl();
-    if (g_connman)
-        g_connman->Interrupt();
-    threadGroup.interrupt_all();
-    */
+    //InterruptTorControl();
+    //if (g_connman)
+    //    g_connman->Interrupt();
+    //threadGroup.interrupt_all();
 }
 
 /** Sanity checks
@@ -161,21 +178,21 @@ bool AppInitSanityChecks()
     return true;
 }
 
-bool AppInitServers(boost::thread_group& threadGroup)
+bool AppInitServers()
 {
 
     RPCServer::OnStarted(&OnRPCStarted);
     RPCServer::OnStopped(&OnRPCStopped);
-    //RPCServer::OnPreCommand(&OnRPCPreCommand);
-    //if (!InitHTTPServer())
+    RPCServer::OnPreCommand(&OnRPCPreCommand);
+    if (!InitHTTPServer())
         return false;
     if (!StartRPC())
         return false;
-    //if (!StartHTTPRPC())
+    if (!StartHTTPRPC())
         return false;
-    //if (GetBoolArg("-rest", false) && !StartREST())
+    if (GetBoolArg("-rest", false) && !StartREST())
         return false;
-    //if (!StartHTTPServer())
+    if (!StartHTTPServer())
         return false;
 
     return true;
@@ -229,6 +246,192 @@ bool AppInitBasicSetup()
 
     std::set_new_handler(new_handler_terminate);
 */
+    return true;
+}
+
+
+bool AppInitParameterInteraction()
+{
+    // ********************************************************* Step 2: parameter interactions
+
+    /*
+    // also see: InitParameterInteraction()
+
+    // Make sure enough file descriptors are available
+    int nBind = std::max(
+                (mapMultiArgs.count("-bind") ? mapMultiArgs.at("-bind").size() : 0) +
+                (mapMultiArgs.count("-whitebind") ? mapMultiArgs.at("-whitebind").size() : 0), size_t(1));
+    nUserMaxConnections = GetArg("-maxconnections", DEFAULT_MAX_PEER_CONNECTIONS);
+    nMaxConnections = std::max(nUserMaxConnections, 0);
+
+    // Trim requested connection counts, to fit into system limitations
+    nMaxConnections = std::max(std::min(nMaxConnections, (int)(FD_SETSIZE - nBind - MIN_CORE_FILEDESCRIPTORS)), 0);
+    nFD = RaiseFileDescriptorLimit(nMaxConnections + MIN_CORE_FILEDESCRIPTORS);
+    if (nFD < MIN_CORE_FILEDESCRIPTORS)
+        return InitError(_("Not enough file descriptors available."));
+    nMaxConnections = std::min(nFD - MIN_CORE_FILEDESCRIPTORS, nMaxConnections);
+
+    if (nMaxConnections < nUserMaxConnections)
+        InitWarning(strprintf(_("Reducing -maxconnections from %d to %d, because of system limitations."), nUserMaxConnections, nMaxConnections));
+
+    // ********************************************************* Step 3: parameter-to-internal-flags
+
+    fDebug = mapMultiArgs.count("-debug");
+    // Special-case: if -debug=0/-nodebug is set, turn off debugging messages
+    if (fDebug) {
+        const vector<string>& categories = mapMultiArgs.at("-debug");
+        if (GetBoolArg("-nodebug", false) || find(categories.begin(), categories.end(), string("0")) != categories.end())
+            fDebug = false;
+    }
+
+    // Check for -debugnet
+    if (GetBoolArg("-debugnet", false))
+        InitWarning(_("Unsupported argument -debugnet ignored, use -debug=net."));
+    // Check for -socks - as this is a privacy risk to continue, exit here
+    if (IsArgSet("-socks"))
+        return InitError(_("Unsupported argument -socks found. Setting SOCKS version isn't possible anymore, only SOCKS5 proxies are supported."));
+    // Check for -tor - as this is a privacy risk to continue, exit here
+    if (GetBoolArg("-tor", false))
+        return InitError(_("Unsupported argument -tor found, use -onion."));
+
+    if (GetBoolArg("-benchmark", false))
+        InitWarning(_("Unsupported argument -benchmark ignored, use -debug=bench."));
+
+    if (GetBoolArg("-whitelistalwaysrelay", false))
+        InitWarning(_("Unsupported argument -whitelistalwaysrelay ignored, use -whitelistrelay and/or -whitelistforcerelay."));
+
+    if (IsArgSet("-blockminsize"))
+        InitWarning("Unsupported argument -blockminsize ignored.");
+
+    // Checkmempool and checkblockindex default to true in regtest mode
+    int ratio = std::min<int>(std::max<int>(GetArg("-checkmempool", chainparams.DefaultConsistencyChecks() ? 1 : 0), 0), 1000000);
+    if (ratio != 0) {
+        mempool.setSanityCheck(1.0 / ratio);
+    }
+    fCheckBlockIndex = GetBoolArg("-checkblockindex", chainparams.DefaultConsistencyChecks());
+    fCheckpointsEnabled = GetBoolArg("-checkpoints", DEFAULT_CHECKPOINTS_ENABLED);
+
+    // mempool limits
+    int64_t nMempoolSizeMax = GetArg("-maxmempool", DEFAULT_MAX_MEMPOOL_SIZE) * 1000000;
+    int64_t nMempoolSizeMin = GetArg("-limitdescendantsize", DEFAULT_DESCENDANT_SIZE_LIMIT) * 1000 * 40;
+    if (nMempoolSizeMax < 0 || nMempoolSizeMax < nMempoolSizeMin)
+        return InitError(strprintf(_("-maxmempool must be at least %d MB"), std::ceil(nMempoolSizeMin / 1000000.0)));
+
+    // -par=0 means autodetect, but nScriptCheckThreads==0 means no concurrency
+    nScriptCheckThreads = GetArg("-par", DEFAULT_SCRIPTCHECK_THREADS);
+    if (nScriptCheckThreads <= 0)
+        nScriptCheckThreads += GetNumCores();
+    if (nScriptCheckThreads <= 1)
+        nScriptCheckThreads = 0;
+    else if (nScriptCheckThreads > MAX_SCRIPTCHECK_THREADS)
+        nScriptCheckThreads = MAX_SCRIPTCHECK_THREADS;
+
+    // block pruning; get the amount of disk space (in MiB) to allot for block & undo files
+    int64_t nSignedPruneTarget = GetArg("-prune", 0) * 1024 * 1024;
+    if (nSignedPruneTarget < 0) {
+        return InitError(_("Prune cannot be configured with a negative value."));
+    }
+    nPruneTarget = (uint64_t) nSignedPruneTarget;
+    if (nPruneTarget) {
+        if (nPruneTarget < MIN_DISK_SPACE_FOR_BLOCK_FILES) {
+            return InitError(strprintf(_("Prune configured below the minimum of %d MiB.  Please use a higher number."), MIN_DISK_SPACE_FOR_BLOCK_FILES / 1024 / 1024));
+        }
+        LogPrintf("Prune configured to target %uMiB on disk for block and undo files.\n", nPruneTarget / 1024 / 1024);
+        fPruneMode = true;
+    }
+*/
+    RegisterAllCoreRPCCommands(tableRPC);
+    RegisterWalletRPCCommands(tableRPC);
+/*
+    nConnectTimeout = GetArg("-timeout", DEFAULT_CONNECT_TIMEOUT);
+    if (nConnectTimeout <= 0)
+        nConnectTimeout = DEFAULT_CONNECT_TIMEOUT;
+
+    // Fee-per-kilobyte amount considered the same as "free"
+    // If you are mining, be careful setting this:
+    // if you set it to zero then
+    // a transaction spammer can cheaply fill blocks using
+    // 1-satoshi-fee transactions. It should be set above the real
+    // cost to you of processing a transaction.
+    if (IsArgSet("-minrelaytxfee"))
+    {
+        CAmount n = 0;
+        if (!ParseMoney(GetArg("-minrelaytxfee", ""), n) || 0 == n)
+            return InitError(AmountErrMsg("minrelaytxfee", GetArg("-minrelaytxfee", "")));
+        // High fee check is done afterward in CWallet::ParameterInteraction()
+        ::minRelayTxFee = CFeeRate(n);
+    }
+
+    fRequireStandard = !GetBoolArg("-acceptnonstdtxn", !chainparams.RequireStandard());
+    if (chainparams.RequireStandard() && !fRequireStandard)
+        return InitError(strprintf("acceptnonstdtxn is not currently supported for %s chain", chainparams.NetworkIDString()));
+    nBytesPerSigOp = GetArg("-bytespersigop", nBytesPerSigOp);
+
+    if (!CWallet::ParameterInteraction())
+        return false;
+
+    fIsBareMultisigStd = GetBoolArg("-permitbaremultisig", DEFAULT_PERMIT_BAREMULTISIG);
+    fAcceptDatacarrier = GetBoolArg("-datacarrier", DEFAULT_ACCEPT_DATACARRIER);
+    nMaxDatacarrierBytes = GetArg("-datacarriersize", nMaxDatacarrierBytes);
+
+    // Option to startup with mocktime set (used for regression testing):
+    SetMockTime(GetArg("-mocktime", 0)); // SetMockTime(0) is a no-op
+
+    if (GetBoolArg("-peerbloomfilters", DEFAULT_PEERBLOOMFILTERS))
+        nLocalServices = ServiceFlags(nLocalServices | NODE_BLOOM);
+
+    if (GetArg("-rpcserialversion", DEFAULT_RPC_SERIALIZE_VERSION) < 0)
+        return InitError("rpcserialversion must be non-negative.");
+
+    if (GetArg("-rpcserialversion", DEFAULT_RPC_SERIALIZE_VERSION) > 1)
+        return InitError("unknown rpcserialversion requested.");
+
+    nMaxTipAge = GetArg("-maxtipage", DEFAULT_MAX_TIP_AGE);
+
+    fEnableReplacement = GetBoolArg("-mempoolreplacement", DEFAULT_ENABLE_REPLACEMENT);
+    if ((!fEnableReplacement) && IsArgSet("-mempoolreplacement")) {
+        // Minimal effort at forwards compatibility
+        std::string strReplacementModeList = GetArg("-mempoolreplacement", "");  // default is impossible
+        std::vector<std::string> vstrReplacementModes;
+        boost::split(vstrReplacementModes, strReplacementModeList, boost::is_any_of(","));
+        fEnableReplacement = (std::find(vstrReplacementModes.begin(), vstrReplacementModes.end(), "fee") != vstrReplacementModes.end());
+    }
+
+    if (mapMultiArgs.count("-bip9params")) {
+        // Allow overriding BIP9 parameters for testing
+        if (!chainparams.MineBlocksOnDemand()) {
+            return InitError("BIP9 parameters may only be overridden on regtest.");
+        }
+        const vector<string>& deployments = mapMultiArgs.at("-bip9params");
+        for (auto i : deployments) {
+            std::vector<std::string> vDeploymentParams;
+            boost::split(vDeploymentParams, i, boost::is_any_of(":"));
+            if (vDeploymentParams.size() != 3) {
+                return InitError("BIP9 parameters malformed, expecting deployment:start:end");
+            }
+            int64_t nStartTime, nTimeout;
+            if (!ParseInt64(vDeploymentParams[1], &nStartTime)) {
+                return InitError(strprintf("Invalid nStartTime (%s)", vDeploymentParams[1]));
+            }
+            if (!ParseInt64(vDeploymentParams[2], &nTimeout)) {
+                return InitError(strprintf("Invalid nTimeout (%s)", vDeploymentParams[2]));
+            }
+            bool found = false;
+            for (int j=0; j<(int)Consensus::MAX_VERSION_BITS_DEPLOYMENTS; ++j)
+            {
+                if (vDeploymentParams[0].compare(VersionBitsDeploymentInfo[j].name) == 0) {
+                    UpdateRegtestBIP9Parameters(Consensus::DeploymentPos(j), nStartTime, nTimeout);
+                    found = true;
+                    LogPrintf("Setting BIP9 activation parameters for %s to start=%ld, timeout=%ld\n", vDeploymentParams[0], nStartTime, nTimeout);
+                    break;
+                }
+            }
+            if (!found) {
+                return InitError(strprintf("Invalid deployment (%s)", vDeploymentParams[0]));
+            }
+        }
+    }
+    */
     return true;
 }
 
@@ -418,89 +621,6 @@ void HandleSIGTERM(int)
 void HandleSIGHUP(int)
 {
     fReopenDebugLog = true;
-}
-
-
-//////////////////////////////////////////////////////////////////////////////
-//
-// Start
-//
-#if !defined(QT_GUI)
-bool AppInit(int argc, char* argv[])
-{
-    bool fRet = false;
-    try
-    {
-        //
-        // Parameters
-        //
-        // If Qt is used, parameters/eccoin.conf are parsed in qt/bitcoin.cpp's main()
-        ParseParameters(argc, argv);
-        if (!boost::filesystem::is_directory(GetDataDir(false)))
-        {
-            fprintf(stderr, "Error: Specified directory does not exist\n");
-            Shutdown(NULL);
-        }
-        ReadConfigFile();
-			bool fCommandLine = false;
-        if (IsArgSet("-?") || IsArgSet("--help"))
-        {
-            // First part of help message is specific to bitcoind / RPC client
-            std::string strUsage = _("ECCoin version") + " " + FormatFullVersion() + "\n\n" +
-                _("Usage:") + "\n" +
-                  "  Coin [options]                     " + "\n" +
-                  "  Coin [options] <command> [params]  " + _("Send command to -server or ECCoind") + "\n" +
-                  "  Coin [options] help                " + _("List commands") + "\n" +
-                  "  Coin [options] help <command>      " + _("Get help for a command") + "\n";
-
-            strUsage += "\n" + HelpMessage();
-
-            fprintf(stdout, "%s", strUsage.c_str());
-            return false;
-        }
-        // Command-line RPC
-        for (int i = 1; i < argc; i++)
-            if (!IsSwitchChar(argv[i][0]) && !boost::algorithm::istarts_with(argv[i], "ECCCoin:"))
-                fCommandLine = true;
-
-        if (fCommandLine)
-        {
-            int ret = CommandLineRPC(argc, argv);
-            exit(ret);
-        }
-
-        fRet = AppInit2();
-    }
-    catch (std::exception& e) {
-        PrintException(&e, "AppInit()");
-    } catch (...) {
-        PrintException(NULL, "AppInit()");
-    }
-    if (!fRet)
-        Shutdown(NULL);
-    return fRet;
-}
-
-extern void noui_connect();
-
-int main(int argc, char* argv[])
-{
-    bool fRet = false;
-    // Connect bitcoind signal handlers
-    noui_connect();
-    fRet = AppInit(argc, argv);
-    if (fRet && fDaemon)
-    {
-        return 0;
-    }
-    return 1;
-}
-#endif
-
-bool static InitWarning(const std::string &str)
-{
-    uiInterface.ThreadSafeMessageBox(str, _("ECCoin"), CClientUIInterface::BTN_OK | CClientUIInterface::ICON_WARNING | CClientUIInterface::MODAL);
-    return true;
 }
 
 
@@ -827,6 +947,18 @@ bool AppInit2()
 
     if (fDaemon)
         fprintf(stdout, "ECCoin server starting\n");
+
+    /* Start the RPC server already.  It will be started in "warmup" mode
+     * and not really process calls already (but it will signify connections
+     * that the server is there and will be ready later).  Warmup mode will
+     * be disabled when initialisation is finished.
+     */
+    if (GetBoolArg("-server", false))
+    {
+        uiInterface.InitMessage.connect(SetRPCWarmupStatus);
+        if (!AppInitServers())
+            return InitError(_("Unable to start HTTP server. See debug log for details."));
+    }
 
     int64_t nStart;
 
@@ -1210,9 +1342,6 @@ bool AppInit2()
     if (!NewThread(StartNode, NULL))
         InitError(_("Error: could not start node"));
 
-    if (fServer)
-        NewThread(ThreadRPCServer, NULL);
-
     // ********************************************************* Step 12: finished
 
     uiInterface.InitMessage(_("Done loading"));
@@ -1224,6 +1353,8 @@ bool AppInit2()
      // Add wallet transactions that aren't already in a block to mapTransactions
     pwalletMain->ReacceptWalletTransactions();
 
+    SetRPCWarmupFinished();
+
 #if !defined(QT_GUI)
     // Loop until process is exit()ed from shutdown() function,
     // called from ThreadRPCServer thread when a "stop" command is received.
@@ -1232,3 +1363,4 @@ bool AppInit2()
 #endif
     return true;
 }
+

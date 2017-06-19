@@ -31,8 +31,14 @@ class CRequestTracker;
 class CNode;
 class CBlockIndex;
 
+extern std::set<CNetAddr> setservAddNodeAddresses;
+extern CCriticalSection cs_setservAddNodeAddresses;
+extern CSemaphore *semOutbound;
+
 inline unsigned int ReceiveBufferSize() { return 1000*GetArg("-maxreceivebuffer", 5*1000); }
 inline unsigned int SendBufferSize() { return 1000*GetArg("-maxsendbuffer", 1*1000); }
+
+bool OpenNetworkConnection(const CAddress& addrConnect, CSemaphoreGrant *grantOutbound = NULL, const char *strDest = NULL);
 
 void AddOneShot(std::string strDest);
 bool RecvLine(SOCKET hSocket, std::string& strLine);
@@ -40,6 +46,7 @@ bool GetMyExternalIP(CNetAddr& ipRet);
 void AddressCurrentlyConnected(const CService& addr);
 CNode* FindNode(const CNetAddr& ip);
 CNode* FindNode(const CService& ip);
+CNode* FindNode(std::string addrName);
 CNode* ConnectNode(CAddress addrConnect, const char *strDest = NULL);
 void MapPort();
 unsigned short GetListenPort();
@@ -92,7 +99,7 @@ void SetReachable(enum Network net, bool fFlag = true);
 enum
 {
     MSG_TX = 1,
-    MSG_BLOCK,
+    MSG_BLOCK = 2,
 };
 
 

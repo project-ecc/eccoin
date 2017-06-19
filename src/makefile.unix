@@ -10,8 +10,8 @@ ARCH:=$(system lscpu | head -n 1 | awk '{print $2}')
 
 DEFS=-DBOOST_SPIRIT_THREADSAFE
 
-DEFS += $(addprefix -I,$(CURDIR) $(CURDIR)/build $(BOOST_INCLUDE_PATH) $(BDB_INCLUDE_PATH) $(OPENSSL_INCLUDE_PATH))
-LIBS = $(addprefix -L,$(BOOST_LIB_PATH) $(BDB_LIB_PATH) $(OPENSSL_LIB_PATH))
+DEFS += $(addprefix -I,$(CURDIR) $(CURDIR)/build $(BOOST_INCLUDE_PATH) $(BDB_INCLUDE_PATH) $(OPENSSL_INCLUDE_PATH) $(EVENT_INCLUDE_PATH))
+LIBS = $(addprefix -L,$(BOOST_LIB_PATH) $(BDB_LIB_PATH) $(OPENSSL_LIB_PATH) $(EVENT_LIB_PATH))
 
 LMODE = dynamic
 LMODE2 = dynamic
@@ -31,6 +31,8 @@ LIBS += \
    -l boost_thread$(BOOST_LIB_SUFFIX) \
    -l db_cxx$(BDB_LIB_SUFFIX) \
    -l ssl \
+   -l event \
+   -l event_pthreads \
    -l crypto
 
 ifndef USE_UPNP
@@ -96,7 +98,7 @@ endif
 
 # CXXFLAGS can be specified on the make command line, so we use xCXXFLAGS that only
 # adds some defaults in front. Unfortunately, CXXFLAGS=... $(CXXFLAGS) does not work.
-xCXXFLAGS=-O2 $(EXT_OPTIONS) -pthread -w -Wextra -Wno-ignored-qualifiers -Wformat -Wformat-security -Wno-unused-parameter -std=c++11  -DBOOST_NO_CXX11_SCOPED_ENUMS -fpermissive\
+xCXXFLAGS=-O2 $(EXT_OPTIONS) -pthread -w -Wextra -Wno-ignored-qualifiers -Wformat -Wformat-security -Wno-unused-parameter -std=c++11 -fpermissive\
     $(DEBUGFLAGS) $(DEFS) $(HARDENING) $(CXXFLAGS)
 
 # LDFLAGS can be specified on the make command line, so we use xLDFLAGS that only
@@ -117,13 +119,6 @@ OBJS= \
     build/main.o \
     build/net.o \
     build/network/protocol.o \
-    build/bitcoinrpc.o \
-    build/rpcdump.o \
-    build/rpcnet.o \
-    build/rpcmining.o \
-    build/rpcwallet.o \
-    build/rpcblockchain.o \
-    build/rpcrawtransaction.o \
     build/script.o \
     build/sync.o \
     build/util/util.o \
@@ -154,12 +149,29 @@ OBJS= \
     build/util/utilmoneystr.o \
     build/util/utilstrencodings.o \
     build/util/utiltime.o \
-    build/univalue.o \
-    build/univalue_write.o \
-    build/univalue_read.o \
+    build/univalue/univalue.o \
+    build/univalue/write.o \
+    build/univalue/read.o \
     build/random.o \
-    build/server.o \
-    build/fs.o
+    build/rpc/server.o \
+    build/rpc/blockchain.o \
+    build/rpc/client.o \
+    build/rpc/dump.o \
+    build/rpc/mining.o \
+    build/rpc/misc.o \
+    build/rpc/rawtransaction.o \
+    build/rpc/rpcnet.o \
+    build/rpc/rpcprotocol.o \
+    build/rpc/rpcwallet.o \
+    build/crypto/sha256.o \
+    build/crypto/hmac_sha256.o \
+    build/rest.o \
+    build/network/subnet.o \
+    build/httprpc.o \
+    build/httpserver.o \
+    build/lockedpool.o \
+    build/fs.o \
+    build/daemon.o
 
 all: ECCoind
 
@@ -213,6 +225,14 @@ clean:
 	-rm -f build/network/*.P
 	-rm -f build/util/*.o
 	-rm -f build/util/*.P
+	-rm -f build/rpc/*.o
+	-rm -f build/rpc/*.P
+	-rm -f build/crypto/*.o
+	-rm -f build/crypto/*.P
+	-rm -f build/univalue/*.o
+	-rm -f build/univalue/*.P
+
+
 
 
 FORCE:

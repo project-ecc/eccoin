@@ -1,63 +1,44 @@
-// Copyright (c) 2009-2012 Bitcoin Developers
-// Distributed under the MIT/X11 software license, see the accompanying
-// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <iostream>
-#include <fstream>
-
-#include "init.h" // for pwalletMain
-#include "bitcoinrpc.h"
-#include "ui_interface.h"
 #include "base58.h"
-#include "global.h"
+#include "chain.h"
+#include "rpc/server.h"
+#include "init.h"
+#include "validation.h"
+#include "script.h"
+#include "sync.h"
+#include "util/util.h"
+#include "rpcwallet.h"
 
-#include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/variant/get.hpp>
+#include "rpc/rpcwallet.h"
+
+#include <fstream>
+#include <stdint.h>
+
 #include <boost/algorithm/string.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
 
-using namespace json_spirit;
+#include "univalue/univalue.h"
+
+#include <boost/assign/list_of.hpp>
+#include <boost/foreach.hpp>
+
 using namespace std;
-
-void EnsureWalletIsUnlocked();
-
-namespace bt = boost::posix_time;
-
-// Extended DecodeDumpTime implementation, see this page for details:
-// http://stackoverflow.com/questions/3786201/parsing-of-date-time-from-string-boost
-const std::locale formats[] = {
-    std::locale(std::locale::classic(),new bt::time_input_facet("%Y-%m-%dT%H:%M:%SZ")),
-    std::locale(std::locale::classic(),new bt::time_input_facet("%Y-%m-%d %H:%M:%S")),
-    std::locale(std::locale::classic(),new bt::time_input_facet("%Y/%m/%d %H:%M:%S")),
-    std::locale(std::locale::classic(),new bt::time_input_facet("%d.%m.%Y %H:%M:%S")),
-    std::locale(std::locale::classic(),new bt::time_input_facet("%Y-%m-%d"))
-};
-
-const size_t formats_n = sizeof(formats)/sizeof(formats[0]);
-
-std::time_t pt_to_time_t(const bt::ptime& pt)
-{
-    bt::ptime timet_start(boost::gregorian::date(1970,1,1));
-    bt::time_duration diff = pt - timet_start;
-    return diff.ticks()/bt::time_duration::rep_type::ticks_per_second;
-}
-
-int64_t DecodeDumpTime(const std::string& s)
-{
-    bt::ptime pt;
-
-    for(size_t i=0; i<formats_n; ++i)
-    {
-        std::istringstream is(s);
-        is.imbue(formats[i]);
-        is >> pt;
-        if(pt != bt::ptime()) break;
-    }
-
-    return pt_to_time_t(pt);
-}
 
 std::string static EncodeDumpTime(int64_t nTime) {
     return DateTimeStrFormat("%Y-%m-%dT%H:%M:%SZ", nTime);
+}
+
+int64_t static DecodeDumpTime(const std::string &str) {
+    static const boost::posix_time::ptime epoch = boost::posix_time::from_time_t(0);
+    static const std::locale loc(std::locale::classic(),
+        new boost::posix_time::time_input_facet("%Y-%m-%dT%H:%M:%SZ"));
+    std::istringstream iss(str);
+    iss.imbue(loc);
+    boost::posix_time::ptime ptime(boost::date_time::not_a_date_time);
+    iss >> ptime;
+    if (ptime.is_not_a_date_time())
+        return 0;
+    return (ptime - epoch).total_seconds();
 }
 
 std::string static EncodeDumpString(const std::string &str) {
@@ -77,7 +58,7 @@ std::string DecodeDumpString(const std::string &str) {
     for (unsigned int pos = 0; pos < str.length(); pos++) {
         unsigned char c = str[pos];
         if (c == '%' && pos+2 < str.length()) {
-            c = (((str[pos+1]>>6)*9+((str[pos+1]-'0')&15)) << 4) | 
+            c = (((str[pos+1]>>6)*9+((str[pos+1]-'0')&15)) << 4) |
                 ((str[pos+2]>>6)*9+((str[pos+2]-'0')&15));
             pos += 2;
         }
@@ -86,35 +67,17 @@ std::string DecodeDumpString(const std::string &str) {
     return ret.str();
 }
 
-class CTxDump
+UniValue importprivkey(const JSONRPCRequest& request)
 {
-public:
-    CBlockIndex *pindex;
-    int64_t nValue;
-    bool fSpent;
-    CWalletTx* ptx;
-    int nOut;
-    CTxDump(CWalletTx* ptx = NULL, int nOut = -1)
-    {
-        pindex = NULL;
-        nValue = 0;
-        fSpent = false;
-        this->ptx = ptx;
-        this->nOut = nOut;
-    }
-};
-
-Value importprivkey(const Array& params, bool fHelp)
-{
-    if (fHelp || params.size() < 1 || params.size() > 2)
+    if (request.fHelp || request.params.size() < 1 || request.params.size() > 2)
         throw runtime_error(
             "importprivkey <ECCoinprivkey> [label]\n"
             "Adds a private key (as returned by dumpprivkey) to your wallet.");
 
-    string strSecret = params[0].get_str();
+    string strSecret = request.params[0].get_str();
     string strLabel = "";
-    if (params.size() > 1)
-        strLabel = params[1].get_str();
+    if (request.params.size() > 1)
+        strLabel = request.params[1].get_str();
     CBitcoinSecret vchSecret;
     bool fGood = vchSecret.SetString(strSecret);
 
@@ -140,20 +103,20 @@ Value importprivkey(const Array& params, bool fHelp)
         pwalletMain->ReacceptWalletTransactions();
     }
 
-    return Value::null;
+    return UniValue::VNULL;
 }
 
-Value importwallet(const Array& params, bool fHelp)
+UniValue importwallet(const JSONRPCRequest& request)
 {
-    if (fHelp || params.size() != 1)
+    if (request.fHelp || request.params.size() != 1)
         throw runtime_error(
             "importwallet <filename>\n"
             "Imports keys from a wallet dump file (see dumpwallet).");
 
-    EnsureWalletIsUnlocked();
+    EnsureWalletIsUnlocked(pwalletMain);
 
     ifstream file;
-    file.open(params[0].get_str().c_str());
+    file.open(request.params[0].get_str().c_str());
     if (!file.is_open())
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Cannot open wallet dump file");
 
@@ -227,20 +190,19 @@ Value importwallet(const Array& params, bool fHelp)
     if (!fGood)
         throw JSONRPCError(RPC_WALLET_ERROR, "Error adding some keys to wallet");
 
-    return Value::null;
+    return UniValue::VNULL;
 }
 
-
-Value dumpprivkey(const Array& params, bool fHelp)
+UniValue dumpprivkey(const JSONRPCRequest& request)
 {
-    if (fHelp || params.size() != 1)
+    if (request.fHelp || request.params.size() != 1)
         throw runtime_error(
             "dumpprivkey <ECCoinaddress>\n"
             "Reveals the private key corresponding to <ECCoinaddress>.");
 
-    EnsureWalletIsUnlocked();
+    EnsureWalletIsUnlocked(pwalletMain);
 
-    string strAddress = params[0].get_str();
+    string strAddress = request.params[0].get_str();
     CBitcoinAddress address;
     if (!address.SetString(strAddress))
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid ECCoin address");
@@ -256,17 +218,18 @@ Value dumpprivkey(const Array& params, bool fHelp)
     return CBitcoinSecret(vchSecret, fCompressed).ToString();
 }
 
-Value dumpwallet(const Array& params, bool fHelp)
+
+UniValue dumpwallet(const JSONRPCRequest& request)
 {
-    if (fHelp || params.size() != 1)
+    if (request.fHelp || request.params.size() != 1)
         throw runtime_error(
             "dumpwallet <filename>\n"
             "Dumps all wallet keys in a human-readable format.");
 
-    EnsureWalletIsUnlocked();
+    EnsureWalletIsUnlocked(pwalletMain);
 
     ofstream file;
-    file.open(params[0].get_str().c_str());
+    file.open(request.params[0].get_str().c_str());
     if (!file.is_open())
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Cannot open wallet dump file");
 
@@ -315,5 +278,20 @@ Value dumpwallet(const Array& params, bool fHelp)
     file << "\n";
     file << "# End of dump\n";
     file.close();
-    return Value::null;
+    return UniValue::VNULL;
+}
+
+
+int64_t GetImportTimestamp(const UniValue& data, int64_t now)
+{
+    if (data.exists("timestamp")) {
+        const UniValue& timestamp = data["timestamp"];
+        if (timestamp.isNum()) {
+            return timestamp.get_int64();
+        } else if (timestamp.isStr() && timestamp.get_str() == "now") {
+            return now;
+        }
+        throw JSONRPCError(RPC_TYPE_ERROR, strprintf("Expected number or \"now\" timestamp value for key. got type %s", uvTypeName(timestamp.type())));
+    }
+    throw JSONRPCError(RPC_TYPE_ERROR, "Missing required timestamp field for key");
 }
