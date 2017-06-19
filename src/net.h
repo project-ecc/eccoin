@@ -99,7 +99,7 @@ void SetReachable(enum Network net, bool fFlag = true);
 enum
 {
     MSG_TX = 1,
-    MSG_BLOCK,
+    MSG_BLOCK = 2,
 };
 
 

@@ -160,6 +160,11 @@ class CInv
         const char* GetCommand() const;
         std::string ToString() const;
         void print() const;
+        void setNull()
+        {
+            type = 0;
+            hash = 0;
+        }
 
     // TODO: make private (improves encapsulation)
     public:
