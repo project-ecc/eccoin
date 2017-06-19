@@ -607,6 +607,7 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
                     pfrom->AskFor(CInv(MSG_BLOCK,WantedByOrphan(pblock2)));
                 }
             }
+            LogPrintf("Orphan blocks proccessed \n");
             return true;
     }
 
@@ -636,13 +637,6 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
         }
     }
     LogPrintf("ProcessBlock: ACCEPTED\n");
-
-    // ppcoin: if responsible for sync-checkpoint send it
-    if (pfrom && !CSyncCheckpoint::strMasterPrivKey.empty())
-        pcheckpointMain->SendSyncCheckpoint(pcheckpointMain->AutoSelectSyncCheckpoint());
-
-    //NotifyHeaderTip();
-
     return true;
 }
 

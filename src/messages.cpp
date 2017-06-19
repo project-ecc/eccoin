@@ -1348,16 +1348,6 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
         {
             pfrom->Misbehaving(block.nDoS);
         }
-
-        /// we should just ask when we are done, not wait for them to ask if we are done yet
-        if(pfrom->nVersion < SENDHEADERS_VERSION)
-        {
-            if(pindexBest->nHeight == highestAskedFor  + 500 && pindexBest->nHeight >= highestAskedFor + 495)
-            {
-                pfrom->PushGetBlocks(pindexBest, uint256(0));
-                highestAskedFor = pindexBest->nHeight + 500;
-            }
-        }
     }
 
 
