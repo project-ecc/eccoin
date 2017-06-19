@@ -26,6 +26,8 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
+#include <stdarg.h>
+
 
 #ifndef WIN32
 #include <sys/types.h>
@@ -73,6 +75,7 @@ extern const char * const BITCOIN_CONF_FILENAME;
 extern const char * const BITCOIN_PID_FILENAME;
 
 extern std::atomic<uint32_t> logCategories;
+std::string vstrprintf(const char *format, va_list ap);
 
 /**
  * Translation function: Call Translate signal on UI interface, which returns a boost::optional result.
@@ -163,10 +166,15 @@ template<typename... Args> std::string FormatStringFromLogArgs(const char *fmt, 
     } \
 } while(0)
 
+
 template<typename... Args>
-bool error(const char* fmt, const Args&... args)
+bool error(const char *format, ...)
 {
-    LogPrintStr("ERROR: " + tfm::format(fmt, args...) + "\n");
+    va_list arg_ptr;
+    va_start(arg_ptr, format);
+    std::string str = vstrprintf(format, arg_ptr);
+    va_end(arg_ptr);
+    LogPrintf("ERROR: %s\n", str.c_str());
     return false;
 }
 

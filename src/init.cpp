@@ -86,7 +86,7 @@ void OnRPCStopped()
     uiInterface.NotifyBlockTip.disconnect(&RPCNotifyBlockChange);
     RPCNotifyBlockChange(false, nullptr);
     cvBlockChange.notify_all();
-    LogPrint(BCLog::RPC, "RPC stopped.\n");
+    LogPrintf("RPC stopped.\n");
 }
 
 void OnRPCPreCommand(const CRPCCommand& cmd)

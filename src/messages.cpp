@@ -1333,9 +1333,9 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
     {
         CBlock block;
         vRecv >> block;
-        uint256 hashBlock = block.GetHash();
+        const uint256 hashBlock = block.GetHash();
 
-        LogPrintf("received block %s\n", hashBlock.ToString().substr(0,20).c_str());
+        //LogPrintf("received block %s\n", hashBlock.ToString().substr(0,20).c_str());
         //block.print();
 
         CInv inv(MSG_BLOCK, hashBlock);
