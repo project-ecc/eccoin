@@ -693,7 +693,7 @@ void ThreadSocketHandler2(void* parg)
             else
             {
                 LogPrintf("accepted connection %s\n", addr.ToString().c_str());
-                //NodeId id = GetNewNodeId();
+                NodeId id = GetNewNodeId();
                 CNode* pnode = new CNode(id, nLocalServices, hSocket, addr, "", true);
                 //InitializeNode(pnode);
                 pnode->AddRef();
