@@ -209,7 +209,9 @@ void PushNodeVersion(CNode *pnode, int64_t nTime)
     LogPrintf("send version message: version %d, blocks=%d, us=%s, them=%s, peer=%d\n", PROTOCOL_VERSION, nNodeStartingHeight, addrMe.ToString().c_str(), addrYou.ToString().c_str(), nodeid);
 }
 
-void InitializeNode(CNode *pnode) {
+void InitializeNode(CNode *pnode)
+{
+    LOCK(pnode->cs_vSend);
     CAddress addr = pnode->addr;
     std::string addrName = pnode->addrName;
     NodeId nodeid = pnode->GetId();
