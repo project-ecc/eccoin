@@ -554,7 +554,7 @@ bool LoadBlockIndexInternal()
             mapBlockIndex.clear();
             goto LoadIndex;
         }
-        pindex->BuildSkip();
+        //pindex->BuildSkip();
         pindex = pindex->pnext;
     }
     LogPrintf("Time To Makechecksums: %I64 ms\n", GetTimeMillis() - nStartChecksums);
