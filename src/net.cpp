@@ -1417,7 +1417,6 @@ bool OpenNetworkConnection(const CAddress& addrConnect, CSemaphoreGrant *grantOu
     if (grantOutbound)
         grantOutbound->MoveTo(pnode->grantOutbound);
     {
-        LOCK(cs_vNodes);
         pnode->fNetworkNode = true;
         InitializeNode(pnode);
     }
