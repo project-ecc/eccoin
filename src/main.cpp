@@ -566,6 +566,7 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
             }
             else
             {
+                LOCK(pfrom->cs_vSend);
                 pfrom->PushGetBlocks(pindexBest, uint256(0));
             }
             return error("ProcessBlock() : block with too little %s", pblock->IsProofOfStake()? "proof-of-stake" : "proof-of-work");
@@ -601,6 +602,7 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
             // Ask this guy to fill in what we're missing from the last block we have
             if (pfrom)
             {
+                LOCK(pfrom->cs_vSend);
                 pfrom->PushGetBlocks(pindexBest, GetOrphanRoot(pblock2));
                 if(!IsInitialBlockDownload())
                 {

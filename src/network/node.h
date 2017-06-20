@@ -346,19 +346,6 @@ public:
         nMessageStart = -1;
     }
 
-    void EndMessageAbortIfEmpty()
-    {
-        if (nHeaderStart < 0)
-            return;
-        int nSize = vSend.size() - nMessageStart;
-        if (nSize > 0)
-            EndMessage();
-        else
-            AbortMessage();
-    }
-
-
-
     void PushVersion();
 
 
@@ -367,7 +354,6 @@ public:
         try
         {
             {
-                LOCK(cs_vSend);
                 BeginMessage(pszCommand);
                 EndMessage();
             }
@@ -385,7 +371,6 @@ public:
         try
         {
             {
-                LOCK(cs_vSend);
                 BeginMessage(pszCommand);
                 vSend << a1;
                 EndMessage();
@@ -404,7 +389,6 @@ public:
         try
         {
             {
-                LOCK(cs_vSend);
                 BeginMessage(pszCommand);
                 vSend << a1 << a2;
                 EndMessage();
@@ -423,7 +407,6 @@ public:
         try
         {
             {
-                LOCK(cs_vSend);
                 BeginMessage(pszCommand);
                 vSend << a1 << a2 << a3;
                 EndMessage();
@@ -442,7 +425,6 @@ public:
         try
         {
             {
-                LOCK(cs_vSend);
                 BeginMessage(pszCommand);
                 vSend << a1 << a2 << a3 << a4;
                 EndMessage();
@@ -461,7 +443,6 @@ public:
         try
         {
             {
-                LOCK(cs_vSend);
                 BeginMessage(pszCommand);
                 vSend << a1 << a2 << a3 << a4 << a5;
                 EndMessage();
@@ -480,7 +461,6 @@ public:
         try
         {
             {
-                LOCK(cs_vSend);
                 BeginMessage(pszCommand);
                 vSend << a1 << a2 << a3 << a4 << a5 << a6;
                 EndMessage();
@@ -499,7 +479,6 @@ public:
         try
         {
             {
-                LOCK(cs_vSend);
                 BeginMessage(pszCommand);
                 vSend << a1 << a2 << a3 << a4 << a5 << a6 << a7;
                 EndMessage();
@@ -518,7 +497,6 @@ public:
         try
         {
             {
-                LOCK(cs_vSend);
                 BeginMessage(pszCommand);
                 vSend << a1 << a2 << a3 << a4 << a5 << a6 << a7 << a8;
                 EndMessage();
@@ -537,7 +515,6 @@ public:
         try
         {
             {
-                LOCK(cs_vSend);
                 BeginMessage(pszCommand);
                 vSend << a1 << a2 << a3 << a4 << a5 << a6 << a7 << a8 << a9;
                 EndMessage();

@@ -203,6 +203,7 @@ void PushNodeVersion(CNode *pnode, int64_t nTime)
     CAddress addrYou = (addr.IsRoutable() && !IsProxy(addr) ? addr : CAddress(CService(), addr.nServices));
     CAddress addrMe = CAddress(CService(), nLocalNodeServices);
 
+    LOCK(pnode->cs_vSend);
     pnode->PushMessage(NetMsgType::VERSION, PROTOCOL_VERSION, (uint64_t)nLocalNodeServices, nTime, addrYou, addrMe,
             nonce, pnode->strSubVer, nNodeStartingHeight);
 

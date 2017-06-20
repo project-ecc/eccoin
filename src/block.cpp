@@ -1046,6 +1046,7 @@ bool CBlock::AcceptBlock(CBlock* pblock)
             {
                 std::vector<CInv> vInv;
                 vInv.push_back(CInv(MSG_BLOCK, hash));
+                LOCK(pnode->cs_vSend);
                 pnode->PushMessage("inv", vInv);
             }
         }

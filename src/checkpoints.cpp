@@ -371,6 +371,7 @@ bool CSyncCheckpoint::ProcessSyncCheckpoint(CNode* pfrom)
         // Ask this guy to fill in what we're missing
         if (pfrom)
         {
+            LOCK(pfrom->cs_vSend);
             pfrom->PushGetBlocks(pindexBest, hashCheckpoint);
             // ask directly as well in case rejected earlier by duplicate
             // proof-of-stake because getblocks may not get it this time

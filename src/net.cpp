@@ -1476,7 +1476,13 @@ void ThreadMessageHandler2(void* parg)
             {
                 TRY_LOCK(pnode->cs_vRecv, lockRecv);
                 if (lockRecv)
-                    ProcessMessages(pnode);
+                {
+                    TRY_LOCK(pnode->cs_vSend, lockSend);
+                    if (lockSend)
+                    {
+                        ProcessMessages(pnode);
+                    }
+                }
             }
 
 
@@ -1484,7 +1490,13 @@ void ThreadMessageHandler2(void* parg)
             {
                 TRY_LOCK(pnode->cs_vSend, lockSend);
                 if (lockSend)
-                    SendMessages(pnode, pnode == pnodeTrickle);
+                {
+                    TRY_LOCK(pnode->cs_vRecv, lockRecv);
+                    if (lockRecv)
+                    {
+                        SendMessages(pnode, pnode == pnodeTrickle);
+                    }
+                }
             }
             if (fShutdown)
                 return;

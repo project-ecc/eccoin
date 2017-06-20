@@ -149,6 +149,7 @@ inline void RelayInventory(const CInv& inv)
         {
             std::vector<CInv> vInv;
             vInv.push_back(inv);
+            LOCK(pnode->cs_vSend);
             pnode->PushMessage("inv", vInv);
         }
     }

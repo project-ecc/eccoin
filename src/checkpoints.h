@@ -218,6 +218,7 @@ public:
         if (pnode->hashCheckpointKnown != hashCheckpoint)
         {
             pnode->hashCheckpointKnown = hashCheckpoint;
+            LOCK(pnode->cs_vSend);
             pnode->PushMessage("checkpoint", *this);
             return true;
         }
