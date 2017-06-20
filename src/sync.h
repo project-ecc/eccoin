@@ -88,7 +88,10 @@ public:
     ~CMutexLock()
     {
         if (lock.owns_lock())
+        {
+            lock.unlock();
             LeaveCritical();
+        }
     }
 
     operator bool()
