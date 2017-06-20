@@ -301,7 +301,6 @@ public:
     {
         if (fDebug)
             LogPrintf("starting message \n");
-        ENTER_CRITICAL_SECTION(cs_vSend);
         if (nHeaderStart != -1)
             AbortMessage();
         nHeaderStart = vSend.size();
@@ -318,7 +317,6 @@ public:
         vSend.resize(nHeaderStart);
         nHeaderStart = -1;
         nMessageStart = -1;
-        LEAVE_CRITICAL_SECTION(cs_vSend);
 
         if (fDebug)
             LogPrintf("(aborted)\n");
@@ -346,7 +344,6 @@ public:
 
         nHeaderStart = -1;
         nMessageStart = -1;
-        LEAVE_CRITICAL_SECTION(cs_vSend);
     }
 
     void EndMessageAbortIfEmpty()
@@ -369,8 +366,11 @@ public:
     {
         try
         {
-            BeginMessage(pszCommand);
-            EndMessage();
+            {
+                LOCK(cs_vSend);
+                BeginMessage(pszCommand);
+                EndMessage();
+            }
         }
         catch (...)
         {
@@ -384,9 +384,12 @@ public:
     {
         try
         {
-            BeginMessage(pszCommand);
-            vSend << a1;
-            EndMessage();
+            {
+                LOCK(cs_vSend);
+                BeginMessage(pszCommand);
+                vSend << a1;
+                EndMessage();
+            }
         }
         catch (...)
         {
@@ -400,9 +403,12 @@ public:
     {
         try
         {
-            BeginMessage(pszCommand);
-            vSend << a1 << a2;
-            EndMessage();
+            {
+                LOCK(cs_vSend);
+                BeginMessage(pszCommand);
+                vSend << a1 << a2;
+                EndMessage();
+            }
         }
         catch (...)
         {
@@ -416,9 +422,12 @@ public:
     {
         try
         {
-            BeginMessage(pszCommand);
-            vSend << a1 << a2 << a3;
-            EndMessage();
+            {
+                LOCK(cs_vSend);
+                BeginMessage(pszCommand);
+                vSend << a1 << a2 << a3;
+                EndMessage();
+            }
         }
         catch (...)
         {
@@ -432,9 +441,12 @@ public:
     {
         try
         {
-            BeginMessage(pszCommand);
-            vSend << a1 << a2 << a3 << a4;
-            EndMessage();
+            {
+                LOCK(cs_vSend);
+                BeginMessage(pszCommand);
+                vSend << a1 << a2 << a3 << a4;
+                EndMessage();
+            }
         }
         catch (...)
         {
@@ -448,9 +460,12 @@ public:
     {
         try
         {
-            BeginMessage(pszCommand);
-            vSend << a1 << a2 << a3 << a4 << a5;
-            EndMessage();
+            {
+                LOCK(cs_vSend);
+                BeginMessage(pszCommand);
+                vSend << a1 << a2 << a3 << a4 << a5;
+                EndMessage();
+            }
         }
         catch (...)
         {
@@ -464,9 +479,12 @@ public:
     {
         try
         {
-            BeginMessage(pszCommand);
-            vSend << a1 << a2 << a3 << a4 << a5 << a6;
-            EndMessage();
+            {
+                LOCK(cs_vSend);
+                BeginMessage(pszCommand);
+                vSend << a1 << a2 << a3 << a4 << a5 << a6;
+                EndMessage();
+            }
         }
         catch (...)
         {
@@ -480,9 +498,12 @@ public:
     {
         try
         {
-            BeginMessage(pszCommand);
-            vSend << a1 << a2 << a3 << a4 << a5 << a6 << a7;
-            EndMessage();
+            {
+                LOCK(cs_vSend);
+                BeginMessage(pszCommand);
+                vSend << a1 << a2 << a3 << a4 << a5 << a6 << a7;
+                EndMessage();
+            }
         }
         catch (...)
         {
@@ -496,9 +517,12 @@ public:
     {
         try
         {
-            BeginMessage(pszCommand);
-            vSend << a1 << a2 << a3 << a4 << a5 << a6 << a7 << a8;
-            EndMessage();
+            {
+                LOCK(cs_vSend);
+                BeginMessage(pszCommand);
+                vSend << a1 << a2 << a3 << a4 << a5 << a6 << a7 << a8;
+                EndMessage();
+            }
         }
         catch (...)
         {
@@ -512,9 +536,12 @@ public:
     {
         try
         {
-            BeginMessage(pszCommand);
-            vSend << a1 << a2 << a3 << a4 << a5 << a6 << a7 << a8 << a9;
-            EndMessage();
+            {
+                LOCK(cs_vSend);
+                BeginMessage(pszCommand);
+                vSend << a1 << a2 << a3 << a4 << a5 << a6 << a7 << a8 << a9;
+                EndMessage();
+            }
         }
         catch (...)
         {

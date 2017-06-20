@@ -211,19 +211,16 @@ void PushNodeVersion(CNode *pnode, int64_t nTime)
 
 void InitializeNode(CNode *pnode)
 {
-    TRY_LOCK(pnode->cs_vSend, lockSend);
-    if (lockSend)
-    {   CAddress addr = pnode->addr;
-        std::string addrName = pnode->addrName;
-        NodeId nodeid = pnode->GetId();
-        {
-            LOCK(cs_main);
-            mapNodeState.emplace_hint(mapNodeState.end(), std::piecewise_construct, std::forward_as_tuple(nodeid), std::forward_as_tuple(addr, std::move(addrName)));
-        }
-        if(!pnode->fInbound)
-        {
-            PushNodeVersion(pnode, GetTime());
-        }
+    CAddress addr = pnode->addr;
+    std::string addrName = pnode->addrName;
+    NodeId nodeid = pnode->GetId();
+    {
+        LOCK(cs_main);
+        mapNodeState.emplace_hint(mapNodeState.end(), std::piecewise_construct, std::forward_as_tuple(nodeid), std::forward_as_tuple(addr, std::move(addrName)));
+    }
+    if(!pnode->fInbound)
+    {
+        PushNodeVersion(pnode, GetTime());
     }
 }
 
