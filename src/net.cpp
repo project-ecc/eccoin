@@ -693,9 +693,9 @@ void ThreadSocketHandler2(void* parg)
             else
             {
                 LogPrintf("accepted connection %s\n", addr.ToString().c_str());
-                NodeId id = GetNewNodeId();
+                //NodeId id = GetNewNodeId();
                 CNode* pnode = new CNode(id, nLocalServices, hSocket, addr, "", true);
-                InitializeNode(pnode);
+                //InitializeNode(pnode);
                 pnode->AddRef();
                 {
                     LOCK(cs_vNodes);
@@ -1418,7 +1418,7 @@ bool OpenNetworkConnection(const CAddress& addrConnect, CSemaphoreGrant *grantOu
         grantOutbound->MoveTo(pnode->grantOutbound);
     {
         pnode->fNetworkNode = true;
-        InitializeNode(pnode);
+        //InitializeNode(pnode);
     }
 
     return true;
