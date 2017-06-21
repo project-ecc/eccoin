@@ -735,14 +735,6 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
         LogPrintf("finished processing version message \n");
     }
 
-
-    else if (pfrom->nVersion == 0)
-    {
-        pfrom->Misbehaving(1);
-        return false;
-    }
-
-
     else if (strCommand == NetMsgType::VERACK)
     {
         pfrom->vRecv.SetVersion(min(pfrom->nVersion, PROTOCOL_VERSION));
@@ -770,8 +762,9 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
 
     else if (!pfrom->fSuccessfullyConnected)
     {
+        ///dont ban just ignore for now
         // Must have a verack message before anything else
-        pfrom->Misbehaving(1);
+        //pfrom->Misbehaving(1);
         return false;
     }
 
@@ -797,25 +790,6 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
         {
             if (fShutdown)
                 return true;
-
-            //###################
-            //###################
-            //###################
-            //###################
-            //###################
-            //###################
-            //###################
-            //###################
-            //###################
-            //###################
-            //possibly dont need
-            if ((addr.nServices & REQUIRED_SERVICES) != REQUIRED_SERVICES)
-                continue;
-            //###################
-            //###################
-            //###################
-            //###################
-            //###################
 
             if (addr.nTime <= 100000000 || addr.nTime > nNow + 10 * 60)
                 addr.nTime = nNow - 5 * 24 * 60 * 60;
