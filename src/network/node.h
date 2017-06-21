@@ -33,9 +33,6 @@ static std::map<CNetAddr, LocalServiceInfo> mapLocalHost;
 bool GetLocal(CService& addr, const CNetAddr *paddrPeer = NULL);
 CAddress GetLocalAddress(const CNetAddr *paddrPeer = NULL);
 
-
-
-
 /** Information about a peer */
 class CNode
 {
@@ -192,13 +189,6 @@ public:
         nMisbehavior = 0;
         hashCheckpointKnown = 0;
         nSendSize = 0;
-
-
-        // Be shy and don't send version until we hear
-        if (hSocket != INVALID_SOCKET && !fInbound)
-            PushVersion();
-
-        LogPrintf("Added connection to %s peer=%d\n", addrName.c_str(), id);
     }
 
     ~CNode();
