@@ -89,6 +89,10 @@ protected:
     static CCriticalSection cs_setBanned;
     int nMisbehavior;
 
+private:
+    const int nMyStartingHeight;
+    const ServiceFlags nLocalServices;
+
 public:
     std::map<uint256, CRequestTracker> mapRequests;
     CCriticalSection cs_mapRequests;
@@ -134,13 +138,15 @@ public:
     // TXN accept times
     std::atomic<int64_t> nLastTXTime;
 
-    CNode(NodeId idIn, ServiceFlags nLocalServicesIn, SOCKET hSocketIn, CAddress addrIn, std::string addrNameIn = "", bool fInboundIn=false) :
+    CNode(NodeId idIn, ServiceFlags nLocalServicesIn, int nMyStartingHeightIn, SOCKET hSocketIn, CAddress addrIn, std::string addrNameIn = "", bool fInboundIn=false) :
       vSend(SER_NETWORK, MIN_PROTO_VERSION),
       vRecv(SER_NETWORK, MIN_PROTO_VERSION),
       nTimeConnected(GetTime()),
       addr(addrIn),
       fInbound(fInboundIn),
-      id(idIn)
+      id(idIn),
+      nLocalServices(nLocalServicesIn),
+      nMyStartingHeight(nMyStartingHeightIn)
     {
         nServices = NODE_NONE;
         nServicesExpected = NODE_NONE;
@@ -184,7 +190,6 @@ public:
         fDisconnect = false;
         nRefCount = 0;
         hashContinue = 0;
-        nStartingHeight = -1;
         fGetAddr = false;
         nMisbehavior = 0;
         hashCheckpointKnown = 0;
@@ -257,6 +262,10 @@ public:
             if (!setInventoryKnown.count(inv))
                 vInventoryToSend.push_back(inv);
         }
+    }
+
+    int GetMyStartingHeight() const {
+        return nMyStartingHeight;
     }
 
     void PushBlockHash(const uint256 &hash)

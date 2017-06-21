@@ -196,7 +196,7 @@ void PushNodeVersion(CNode *pnode, int64_t nTime)
 {
     ServiceFlags nLocalNodeServices = nLocalServices;
     uint64_t nonce = RAND_bytes((unsigned char*)&nLocalHostNonce, sizeof(nLocalHostNonce));
-    int nNodeStartingHeight = pnode->nStartingHeight;
+    int nNodeStartingHeight = pnode->GetMyStartingHeight();
     NodeId nodeid = pnode->GetId();
     CAddress addr = pnode->addr;
 

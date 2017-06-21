@@ -468,7 +468,7 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest)
 
         // Add node
         NodeId id = GetNewNodeId();
-        CNode* pnode = new CNode(id, nLocalServices, hSocket, addrConnect, pszDest ? pszDest : "", false);
+        CNode* pnode = new CNode(id, nLocalServices, pindexBest->nHeight, hSocket, addrConnect, pszDest ? pszDest : "", false);
         pnode->AddRef();
 
         {
@@ -694,7 +694,7 @@ void ThreadSocketHandler2(void* parg)
             {
                 LogPrintf("accepted connection %s\n", addr.ToString().c_str());
                 NodeId id = GetNewNodeId();
-                CNode* pnode = new CNode(id, nLocalServices, hSocket, addr, "", true);
+                CNode* pnode = new CNode(id, nLocalServices, pindexBest->nHeight, hSocket, addr, "", true);
                 InitializeNode(pnode);
                 pnode->AddRef();
                 {
@@ -1709,7 +1709,7 @@ void StartNode(void* parg)
         if (pnodeLocalHost == NULL)
         {
             NodeId id = GetNewNodeId();
-            pnodeLocalHost = new CNode(id, nLocalServices ,INVALID_SOCKET, CAddress(CService("127.0.0.1", 0), nLocalServices));
+            pnodeLocalHost = new CNode(id, nLocalServices, pindexBest->nHeight, INVALID_SOCKET, CAddress(CService("127.0.0.1", 0), nLocalServices));
         }
 
         Discover();
