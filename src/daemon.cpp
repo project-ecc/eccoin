@@ -154,6 +154,7 @@ bool AppInit(int argc, char* argv[])
             // InitError will have been called with detailed error, which ends up on console
             exit(EXIT_FAILURE);
         }
+/*
         if (GetBoolArg("-daemon", false))
         {
 #if HAVE_DECL_DAEMON
@@ -169,8 +170,10 @@ bool AppInit(int argc, char* argv[])
             return false;
 #endif // HAVE_DECL_DAEMON
         }
-
+*/
         fRet = AppInit2();
+	if (fRet && fDaemon)
+            return 0;
     }
     catch (const std::exception& e) {
         PrintExceptionContinue(&e, "AppInit()");
