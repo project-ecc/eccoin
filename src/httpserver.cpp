@@ -108,20 +108,24 @@ public:
         if (queue.size() >= maxDepth) {
             return false;
         }
-        queue.emplace_back(std::unique_ptr<WorkItem>(item));
-        cond.notify_one();
+        (*item)();
+        //queue.emplace_back(std::unique_ptr<WorkItem>(item));
+        //cond.notify_one();
         return true;
     }
     /** Thread function */
     void Run()
     {
         ThreadCounter count(*this);
-        while (true) {
+        while (true)
+        {
             std::unique_ptr<WorkItem> i;
             {
                 std::unique_lock<std::mutex> lock(cs);
                 while (running && queue.empty())
+                {
                     cond.wait(lock);
+                }
                 if (!running)
                     break;
                 i = std::move(queue.front());
@@ -260,6 +264,7 @@ static void http_request_cb(struct evhttp_request* req, void* arg)
     std::string path;
     std::vector<HTTPPathHandler>::const_iterator i = pathHandlers.begin();
     std::vector<HTTPPathHandler>::const_iterator iend = pathHandlers.end();
+    /*
     for (; i != iend; ++i) {
         bool match = false;
         if (i->exactMatch)
@@ -271,20 +276,25 @@ static void http_request_cb(struct evhttp_request* req, void* arg)
             break;
         }
     }
-
+    */
     // Dispatch to worker thread
-    if (i != iend) {
+    //if (i != iend)
+    {
         std::unique_ptr<HTTPWorkItem> item(new HTTPWorkItem(std::move(hreq), path, i->handler));
         assert(workQueue);
         if (workQueue->Enqueue(item.get()))
+        {
             item.release(); /* if true, queue took ownership */
-        else {
+        }
+        else
+        {
             LogPrintf("WARNING: request rejected because http work queue depth exceeded, it can be increased with the -rpcworkqueue= setting\n");
             item->req->WriteReply(HTTP_INTERNAL, "Work queue depth exceeded");
         }
-    } else {
-        hreq->WriteReply(HTTP_NOTFOUND);
     }
+    //else {
+    //    hreq->WriteReply(HTTP_NOTFOUND);
+    //}
 }
 
 /** Callback to reject HTTP requests after shutdown. */
@@ -308,7 +318,7 @@ static bool ThreadHTTP(struct event_base* base, struct evhttp* http)
 /** Bind HTTP server to specified addresses */
 static bool HTTPBindAddresses(struct evhttp* http)
 {
-    int defaultPort = GetArg("-rpcport", 19119);
+    int defaultPort = GetArg("-rpcport", GetDefaultRPCPort());
     std::vector<std::pair<std::string, uint16_t> > endpoints;
 
     // Determine what addresses to bind to
