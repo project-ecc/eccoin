@@ -146,27 +146,25 @@ SOURCES += \
     src/scheduler.cpp \
     src/threadinterrupt.cpp \
     src/validation.cpp \
-    src/univalue/univalue.cpp \
-    src/univalue/read.cpp \
-    src/univalue/write.cpp \
     src/rpc/server.cpp \
     src/rpc/blockchain.cpp \
-    src/rpc/client.cpp \
     src/rpc/mining.cpp \
-    src/rpc/misc.cpp \
     src/rpc/rawtransaction.cpp \
-    src/httpserver.cpp \
     src/rpc/dump.cpp \
     src/lockedpool.cpp \
     src/network/subnet.cpp \
-    src/httprpc.cpp \
     src/crypto/hmac_sha256.cpp \
     src/crypto/sha256.cpp \
     src/rpc/rpcnet.cpp \
     src/rpc/rpcprotocol.cpp \
     src/rpc/rpcwallet.cpp \
-    src/rest.cpp \
-    src/daemon.cpp
+    src/daemon.cpp \
+    src/rpc/httpserver.cpp \
+    src/rpc/rpcutil.cpp \
+    src/rpc/crpc.cpp \
+    src/rpc/cmdline.cpp \
+    src/rpc/jsonrpc.cpp \
+    src/rpc/rpcthreads.cpp
 
 INCLUDEPATH += src/leveldb/include src/leveldb/helpers
 LIBS += $$PWD/src/leveldb/libleveldb.a $$PWD/src/leveldb/libmemenv.a
@@ -290,17 +288,11 @@ HEADERS += \
     src/scheduler.h \
     src/reverselock.h \
     src/threadinterrupt.h \
-    src/univalue/univalue.h \
-    src/univalue/escapes.h \
-    src/univalue/utffilter.h \
     src/rpc/server.h \
     src/rpc/blockchain.h \
-    src/rpc/client.h \
     src/rpc/register.h \
-    src/httpserver.h \
     src/lockedpool.h \
     src/network/subnet.h \
-    src/httprpc.h \
     src/crypto/hmac_sha256.h \
     src/crypto/sha256.h \
     src/crypto/common.h \
@@ -317,7 +309,13 @@ HEADERS += \
     src/json/json_spirit_utils.h \
     src/json/json_spirit_value.h \
     src/json/json_spirit_writer.h \
-    src/json/json_spirit_writer_template.h
+    src/json/json_spirit_writer_template.h \
+    src/rpc/httpserver.h \
+    src/rpc/rpcutil.h \
+    src/rpc/crpc.h \
+    src/rpc/jsonrpc.h \
+    src/rpc/cmdline.h \
+    src/rpc/rpcthreads.h
 
 
 SOURCES += \
