@@ -290,7 +290,6 @@ HEADERS += \
     src/threadinterrupt.h \
     src/rpc/server.h \
     src/rpc/blockchain.h \
-    src/rpc/register.h \
     src/lockedpool.h \
     src/network/subnet.h \
     src/crypto/hmac_sha256.h \
