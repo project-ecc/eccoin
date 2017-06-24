@@ -185,7 +185,7 @@ Value importwallet(const Array& params, bool fHelp)
         CKeyID keyid = key.GetPubKey().GetID();
 
         if (pwalletMain->HaveKey(keyid)) {
-            printf("Skipping import of %s (key already present)\n", CBitcoinAddress(keyid).ToString().c_str());
+            LogPrintf("Skipping import of %s (key already present)\n", CBitcoinAddress(keyid).ToString().c_str());
             continue;
         }
         int64_t nTime = DecodeDumpTime(vstr[1]);
@@ -203,7 +203,7 @@ Value importwallet(const Array& params, bool fHelp)
                 fLabel = true;
             }
         }
-        printf("Importing %s...\n", CBitcoinAddress(keyid).ToString().c_str());
+        LogPrintf("Importing %s...\n", CBitcoinAddress(keyid).ToString().c_str());
         if (!pwalletMain->AddKey(key)) {
             fGood = false;
             continue;
@@ -222,7 +222,7 @@ Value importwallet(const Array& params, bool fHelp)
     if (!pwalletMain->nTimeFirstKey || nTimeBegin < pwalletMain->nTimeFirstKey)
         pwalletMain->nTimeFirstKey = nTimeBegin;
 
-    printf("Rescanning last %i blocks\n", pindexBest->nHeight - pindex->nHeight + 1);
+    LogPrintf("Rescanning last %i blocks\n", pindexBest->nHeight - pindex->nHeight + 1);
     pwalletMain->ScanForWalletTransactions(pindex);
     pwalletMain->ReacceptWalletTransactions();
     pwalletMain->MarkDirty();
@@ -246,7 +246,7 @@ Value dumpprivkey(const Array& params, bool fHelp)
     string strAddress = params[0].get_str();
     CBitcoinAddress address;
     if (!address.SetString(strAddress))
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid SuperCoin address");
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid eccoin address");
     if (fWalletUnlockStakingOnly)
         throw JSONRPCError(RPC_WALLET_UNLOCK_NEEDED, "Wallet is unlocked for staking only.");
     CKeyID keyID;
@@ -290,7 +290,7 @@ Value dumpwallet(const Array& params, bool fHelp)
     std::sort(vKeyBirth.begin(), vKeyBirth.end());
 
     // produce output
-    file << strprintf("# Wallet dump created by SuperCoin %s (%s)\n", CLIENT_BUILD.c_str(), CLIENT_DATE.c_str());
+    file << strprintf("# Wallet dump created by eccoin %s (%s)\n", CLIENT_BUILD.c_str(), CLIENT_DATE.c_str());
     file << strprintf("# * Created on %s\n", EncodeDumpTime(GetTime()).c_str());
     file << strprintf("# * Best block at time of backup was %i (%s),\n", pindexBest->nHeight, pindexBest->GetBlockHash().ToString().c_str());
     file << strprintf("#   mined on %s\n", EncodeDumpTime(pindexBest->nTime).c_str());

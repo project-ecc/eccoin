@@ -174,7 +174,7 @@ static void RPCAcceptHandler(boost::shared_ptr< basic_socket_acceptor<Protocol, 
 
     // start HTTP client thread
     else if (!NewThread(ThreadRPCServer3, conn)) {
-        printf("Failed to create RPC server client thread\n");
+        LogPrintf("Failed to create RPC server client thread\n");
         delete conn;
     }
 
@@ -185,7 +185,7 @@ static void RPCAcceptHandler(boost::shared_ptr< basic_socket_acceptor<Protocol, 
 void ThreadRPCServer(void* parg)
 {
     // Make this thread recognisable as the RPC listener
-    RenameThread("SuperCoin-rpclist");
+    RenameThread("eccoin-rpclist");
 
     try
     {
@@ -200,13 +200,13 @@ void ThreadRPCServer(void* parg)
         vnThreadsRunning[THREAD_RPCLISTENER]--;
         PrintException(NULL, "ThreadRPCServer()");
     }
-    printf("ThreadRPCServer exited\n");
+    LogPrintf("ThreadRPCServer exited\n");
 }
 
 
 void ThreadRPCServer2(void* parg)
 {
-    printf("ThreadRPCServer started\n");
+    LogPrintf("ThreadRPCServer started\n");
 
     strRPCUserColonPass = GetArg("-rpcuser","") + ":" + GetArg("-rpcpassword","");
     if ((GetArg("-rpcpassword","") == "") ||
@@ -228,7 +228,7 @@ void ThreadRPCServer2(void* parg)
               "The username and password MUST NOT be the same.\n"
               "If the file does not exist, create it with owner-readable-only file permissions.\n"
               "It is also recommended to set alertnotify so you are notified of problems;\n"
-              "for example: alertnotify=echo %%s | mail -s \"SuperCoin Alert\" admin@foo.com\n"),
+              "for example: alertnotify=echo %%s | mail -s \"eccoin Alert\" admin@foo.com\n"),
                 strWhatAmI.c_str(),
                 GetConfigFile().string().c_str(),
                 EncodeBase58(&rand_pwd[0],&rand_pwd[0]+32).c_str()),
@@ -249,12 +249,12 @@ void ThreadRPCServer2(void* parg)
         filesystem::path pathCertFile(GetArg("-rpcsslcertificatechainfile", "server.cert"));
         if (!pathCertFile.is_complete()) pathCertFile = filesystem::path(GetDataDir()) / pathCertFile;
         if (filesystem::exists(pathCertFile)) context.use_certificate_chain_file(pathCertFile.string());
-        else printf("ThreadRPCServer ERROR: missing server certificate file %s\n", pathCertFile.string().c_str());
+        else LogPrintf("ThreadRPCServer ERROR: missing server certificate file %s\n", pathCertFile.string().c_str());
 
         filesystem::path pathPKFile(GetArg("-rpcsslprivatekeyfile", "server.pem"));
         if (!pathPKFile.is_complete()) pathPKFile = filesystem::path(GetDataDir()) / pathPKFile;
         if (filesystem::exists(pathPKFile)) context.use_private_key_file(pathPKFile.string(), ssl::context::pem);
-        else printf("ThreadRPCServer ERROR: missing server private key file %s\n", pathPKFile.string().c_str());
+        else LogPrintf("ThreadRPCServer ERROR: missing server private key file %s\n", pathPKFile.string().c_str());
 
         std::string strCiphers = GetArg("-rpcsslciphers", "TLSv1+HIGH:!SSLv2:!aNULL:!eNULL:!AH:!3DES:@STRENGTH");
         SSL_CTX_set_cipher_list(context.impl(), strCiphers.c_str());
@@ -371,7 +371,7 @@ std::string JSONRPCExecBatch(const json_spirit::Array& vReq)
 void ThreadRPCServer3(void* parg)
 {
     // Make this thread recognisable as the RPC handler
-    RenameThread("SuperCoin-rpchand");
+    RenameThread("eccoin-rpchand");
 
     {
         LOCK(cs_THREAD_RPCHANDLER);
@@ -405,7 +405,7 @@ void ThreadRPCServer3(void* parg)
         }
         if (!HTTPAuthorized(mapHeaders))
         {
-            printf("ThreadRPCServer incorrect password attempt from %s\n", conn->peer_address_to_string().c_str());
+            LogPrintf("ThreadRPCServer incorrect password attempt from %s\n", conn->peer_address_to_string().c_str());
             /* Deter brute-forcing short passwords.
                If this results in a DOS the user really
                shouldn't have their RPC port exposed.*/
