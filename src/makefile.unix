@@ -149,26 +149,24 @@ OBJS= \
     build/util/utilmoneystr.o \
     build/util/utilstrencodings.o \
     build/util/utiltime.o \
-    build/univalue/univalue.o \
-    build/univalue/write.o \
-    build/univalue/read.o \
     build/random.o \
     build/rpc/server.o \
     build/rpc/blockchain.o \
-    build/rpc/client.o \
     build/rpc/dump.o \
     build/rpc/mining.o \
-    build/rpc/misc.o \
     build/rpc/rawtransaction.o \
     build/rpc/rpcnet.o \
     build/rpc/rpcprotocol.o \
     build/rpc/rpcwallet.o \
     build/crypto/sha256.o \
     build/crypto/hmac_sha256.o \
-    build/rest.o \
     build/network/subnet.o \
-    build/httprpc.o \
-    build/httpserver.o \
+    build/rpc/httpserver.o \
+    build/rpc/rpcthreads.o \
+    build/rpc/rpcutil.o \
+    build/rpc/cmdline.o \
+    build/rpc/crpc.o \
+    build/rpc/jsonrpc.o \
     build/lockedpool.o \
     build/fs.o \
     build/daemon.o

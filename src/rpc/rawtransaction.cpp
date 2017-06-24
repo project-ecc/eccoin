@@ -15,6 +15,7 @@
 #include "rpcprotocol.h"
 #include "rpcutil.h"
 #include "server.h"
+#include "rpcwallet.h"
 
 #include "json/json_spirit_reader_template.h"
 #include "json/json_spirit_writer_template.h"
