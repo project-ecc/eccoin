@@ -34,20 +34,12 @@
  * Use the buttons <code>Namespaces</code>, <code>Classes</code> or <code>Files</code> at the top of the page to start navigating the code.
  */
 
-
-bool ShutdownRequested()
-{
-    return fRequestShutdown;
-}
-
 //////////////////////////////////////////////////////////////////////////////
 //
 // Start
 //
 bool AppInit(int argc, char* argv[])
 {
-    boost::thread_group threadGroup;
-
     bool fRet = false;
 
     //
@@ -93,16 +85,6 @@ bool AppInit(int argc, char* argv[])
             return false;
         }
 
-        /*
-        // Error out when loose non-argument tokens are encountered on command line
-        for (int i = 1; i < argc; i++) {
-            if (!IsSwitchChar(argv[i][0])) {
-                fprintf(stderr, "Error: Command line contains unexpected token '%s', see bitcoind -h for a list of options.\n", argv[i]);
-                exit(EXIT_FAILURE);
-            }
-        }
-        */
-
         // Command-line RPC
         for (int i = 1; i < argc; i++)
             if (!IsSwitchChar(argv[i][0]) && !boost::algorithm::istarts_with(argv[i], "ECCoin:"))
@@ -115,43 +97,20 @@ bool AppInit(int argc, char* argv[])
         }
 
 
-        // -server defaults to true for bitcoind but not for the GUI so do this here
-        SoftSetBoolArg("-server", true);
         // Set this early so that parameter interactions go to console
         InitLogging();
-        InitParameterInteraction();
+        if(!InitParameterInteraction())
+        {
+            // InitError will have been called with detailed error, which ends up on console
+            exit(EXIT_FAILURE);
+        }
+
         if (!AppInitBasicSetup())
         {
             // InitError will have been called with detailed error, which ends up on console
             exit(EXIT_FAILURE);
         }
-        if (!AppInitParameterInteraction())
-        {
-            // InitError will have been called with detailed error, which ends up on console
-            exit(EXIT_FAILURE);
-        }
-        if (!AppInitSanityChecks())
-        {
-            // InitError will have been called with detailed error, which ends up on console
-            exit(EXIT_FAILURE);
-        }
-/*
-        if (GetBoolArg("-daemon", false))
-        {
-#if HAVE_DECL_DAEMON
-            fprintf(stdout, "Bitcoin server starting\n");
 
-            // Daemonize
-            if (daemon(1, 0)) { // don't chdir (1), do close FDs (0)
-                fprintf(stderr, "Error: daemon() failed: %s\n", strerror(errno));
-                return false;
-            }
-#else
-            fprintf(stderr, "Error: -daemon is not supported on this operating system\n");
-            return false;
-#endif // HAVE_DECL_DAEMON
-        }
-*/
         fRet = AppInit2();
 	if (fRet && fDaemon)
             return 0;
