@@ -169,7 +169,6 @@ struct CNodeState {
 
 
 void NotifyHeaderTip() {
-    bool fNotify = false;
     bool fInitialBlockDownload = false;
     static CBlockIndex* pindexHeaderOld = NULL;
     CBlockIndex* pindexHeader = NULL;
@@ -178,14 +177,9 @@ void NotifyHeaderTip() {
         pindexHeader = pindexBestHeader;
 
         if (pindexHeader != pindexHeaderOld) {
-            fNotify = true;
             fInitialBlockDownload = IsInitialBlockDownload();
             pindexHeaderOld = pindexHeader;
         }
-    }
-    // Send block tip changed notifications without cs_main
-    if (fNotify) {
-        uiInterface.NotifyHeaderTip(fInitialBlockDownload, pindexHeader);
     }
 }
 
@@ -576,7 +570,7 @@ void static ProcessGetData(CNode* pfrom)
 bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, int64_t nTimeReceived)
 {
     RandAddSeedPerfmon();
-    if(messageDebug)
+    if(fDebugNet)
         LogPrintf("received: %s (%u bytes)\n", strCommand.c_str(), vRecv.size());
     if (IsArgSet("-dropmessagestest") && GetRand(atoi(GetArg("-dropmessagestest", ""))) == 0)
     {
@@ -715,7 +709,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
         // Ask a peer with more blocks than us for missing blocks
         if (pfrom->nStartingHeight > (pindexBest->nHeight - 144))
         {
-            if(messageDebug)
+            if(fDebugNet)
             {
                 LogPrintf("peer has more blocks than us \n");
             }
@@ -724,7 +718,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
         }
         else
         {
-            if(messageDebug)
+            if(fDebugNet)
                 LogPrintf("peer does not have more blocks than us \n");
         }
 
@@ -750,7 +744,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
             // We send this to non-NODE NETWORK peers as well, because even
             // non-NODE NETWORK peers can announce blocks (such as pruning
             // nodes)
-            if(messageDebug)
+            if(fDebugNet)
             {
                 LogPrintf("sending message SendHeaders to peer \n");
             }
@@ -856,14 +850,14 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
         for (unsigned int nInv = 0; nInv < vInv.size(); nInv++)
         {
             const CInv &inv = vInv[nInv];
-            if(messageDebug)
+            if(fDebugNet)
             {
                 LogPrintf("inv hash type = %s \n", inv.GetCommand());
             }
             if (fShutdown)
                 return true;
             bool fAlreadyHave = AlreadyHave(txdb, inv);
-            if(messageDebug)
+            if(fDebugNet)
             {
                 LogPrintf("  got inventory: %s  %s peer=%d\n", inv.ToString().c_str(), fAlreadyHave ? "have" : "new", pfrom->id);
             }
@@ -1003,7 +997,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
             if (pindex)
                 pindex = pindex->pnext;
             int nLimit = 500;
-            if(messageDebug)
+            if(fDebugNet)
             {
                 LogPrintf("getblocks %d to %s limit %d\n", (pindex ? pindex->nHeight : -1), hashStop.ToString().substr(0,20).c_str(), nLimit);
             }
@@ -1136,7 +1130,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
                     {
                         // invalid orphan
                         vEraseQueue.push_back(orphanTxHash);
-                        if(messageDebug)
+                        if(fDebugNet)
                         {
                             LogPrintf("   removed invalid orphan tx %s\n", orphanTxHash.ToString().substr(0,10).c_str());
                         }
@@ -1457,7 +1451,7 @@ bool ProcessMessages(CNode* pfrom)
     CDataStream& vRecv = pfrom->vRecv;
     if (vRecv.empty())
         return true;
-    if (messageDebug)
+    if (fDebugNet)
         LogPrintf("ProcessMessages(%u bytes)\n", vRecv.size());
 
     //
@@ -1474,7 +1468,7 @@ bool ProcessMessages(CNode* pfrom)
         // Don't bother if send buffer is too full to respond anyway
         if (pfrom->vSend.size() >= SendBufferSize())
         {
-            if(messageDebug)
+            if(fDebugNet)
                 LogPrintf("send buffer to full to respond, breaking \n");
             break;
         }
@@ -1486,7 +1480,7 @@ bool ProcessMessages(CNode* pfrom)
         {
             if ((int)vRecv.size() > nHeaderSize)
             {
-                if(messageDebug)
+                if(fDebugNet)
                     LogPrintf("\n\nPROCESSMESSAGE MESSAGESTART NOT FOUND\n\n");
                 vRecv.erase(vRecv.begin(), vRecv.end() - nHeaderSize);
             }
@@ -1494,7 +1488,7 @@ bool ProcessMessages(CNode* pfrom)
         }
         if (pstart - vRecv.begin() > 0)
         {
-            if(messageDebug)
+            if(fDebugNet)
                 LogPrintf("\n\nPROCESSMESSAGE SKIPPED %d BYTES\n\n", pstart - vRecv.begin());
         }
         vRecv.erase(vRecv.begin(), pstart);
@@ -1505,7 +1499,7 @@ bool ProcessMessages(CNode* pfrom)
         vRecv >> hdr;
         if (!hdr.IsValid())
         {
-            if(messageDebug)
+            if(fDebugNet)
                 LogPrintf("\n\nPROCESSMESSAGE: ERRORS IN HEADER %s\n\n\n", hdr.GetCommand().c_str());
             continue;
         }
@@ -1515,7 +1509,7 @@ bool ProcessMessages(CNode* pfrom)
         unsigned int nMessageSize = hdr.nMessageSize;
         if (nMessageSize > MAX_SIZE)
         {
-            if(messageDebug)
+            if(fDebugNet)
                 LogPrintf("ProcessMessages(%s, %u bytes) : nMessageSize > MAX_SIZE\n", strCommand.c_str(), nMessageSize);
             continue;
         }
@@ -1532,7 +1526,7 @@ bool ProcessMessages(CNode* pfrom)
         memcpy(&nChecksum, &hash, sizeof(nChecksum));
         if (nChecksum != hdr.nChecksum)
         {
-            if(messageDebug)
+            if(fDebugNet)
             {
                 LogPrintf("ProcessMessages(%s, %u bytes) : CHECKSUM ERROR nChecksum=%08x hdr.nChecksum=%08x\n", strCommand.c_str(), nMessageSize, nChecksum, hdr.nChecksum);
             }
@@ -1559,13 +1553,13 @@ bool ProcessMessages(CNode* pfrom)
             if (strstr(e.what(), "end of data"))
             {
                 // Allow exceptions from under-length message on vRecv
-                if(messageDebug)
+                if(fDebugNet)
                     LogPrintf("ProcessMessages(%s, %u bytes) : Exception '%s' caught, normally caused by a message being shorter than its stated length\n", strCommand.c_str(), nMessageSize, e.what());
             }
             else if (strstr(e.what(), "size too large"))
             {
                 // Allow exceptions from over-long size
-                if(messageDebug)
+                if(fDebugNet)
                     LogPrintf("ProcessMessages(%s, %u bytes) : Exception '%s' caught\n", strCommand.c_str(), nMessageSize, e.what());
             }
             else
@@ -1581,7 +1575,7 @@ bool ProcessMessages(CNode* pfrom)
 
         if (!fRet)
         {
-            if(messageDebug)
+            if(fDebugNet)
                 LogPrintf("ProcessMessage(%s, %u bytes) FAILED\n", strCommand.c_str(), nMessageSize);
         }
     }
@@ -1735,7 +1729,7 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
             const CInv& inv = (*pto->mapAskFor.begin()).second;
             if (!AlreadyHave(txdb, inv))
             {
-                if (messageDebug)
+                if (fDebugNet)
                     LogPrintf("sending getdata: %s\n", inv.ToString().c_str());
                 vGetData.push_back(inv);
                 if (vGetData.size() >= 1000)

@@ -53,7 +53,7 @@ CAddress GetLocalAddress(const CNetAddr *paddrPeer)
 
 void CNode::PushGetBlocks(CBlockIndex* pindexBegin, uint256 hashEnd)
 {
-    if(messageDebug)
+    if(fDebugNet)
     {
         LogPrintf("sending new getBlocks request from %s to %s \n", pindexBegin->GetBlockHash().ToString().c_str(), hashEnd.ToString().c_str());
     }

@@ -94,12 +94,10 @@ bool fPrintToDebugLog = true;
 
 bool fRequestShutdown = false;
 bool fShutdown = false;
-bool messageDebug = false;
 bool fDebugNet = false;
 bool fDebug = false;
 bool fTestNet = false;
 bool fDaemon = false;
-bool fServer = false;
 bool fNoListen = false;
 bool fPrintToDebugger = false;
 

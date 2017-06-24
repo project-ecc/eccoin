@@ -444,7 +444,7 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest)
 
 
     /// debug print
-    if(messageDebug)
+    if(fDebugNet)
         LogPrintf("trying connection %s lastseen=%.1fhrs\n", pszDest ? pszDest : addrConnect.ToString().c_str(), pszDest ? 0 : (double)(GetAdjustedTime() - addrConnect.nTime)/3600.0);
 
     // Connect
@@ -510,7 +510,6 @@ void ThreadSocketHandler2(void* parg)
 {
     LogPrintf("ThreadSocketHandler started\n");
     list<CNode*> vNodesDisconnected;
-    unsigned int nPrevNodeCount = 0;
 
     while (true)
     {
@@ -578,16 +577,6 @@ void ThreadSocketHandler2(void* parg)
                 }
             }
         }
-        size_t vNodesSize;
-        {
-            LOCK(cs_vNodes);
-            vNodesSize = vNodes.size();
-        }
-        if(vNodesSize != nPrevNodeCount) {
-            nPrevNodeCount = vNodesSize;
-            uiInterface.NotifyNumConnectionsChanged(nPrevNodeCount);
-        }
-
         //
         // Find which sockets have data to receive
         //

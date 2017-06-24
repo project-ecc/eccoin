@@ -56,12 +56,10 @@ extern bool fPrintToDebugLog;
 
 extern bool fRequestShutdown;
 extern bool fShutdown;
-extern bool messageDebug;
 extern bool fDebugNet;
 extern bool fDebug;
 extern bool fTestNet;
 extern bool fDaemon;
-extern bool fServer;
 extern bool fPrintToDebugger;
 extern bool fNoListen;
 

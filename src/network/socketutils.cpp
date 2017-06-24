@@ -202,7 +202,7 @@ bool ConnectSocketDirectly(const CService &addrConnect, SOCKET& hSocketRet, int 
             int nRet = select(hSocket + 1, NULL, &fdset, NULL, &timeout);
             if (nRet == 0)
             {
-                if(messageDebug)
+                if(fDebugNet)
                 {
                     LogPrintf("connection timeout\n");
                 }
