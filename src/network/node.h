@@ -90,8 +90,8 @@ protected:
     int nMisbehavior;
 
 private:
-    const int nMyStartingHeight;
     const ServiceFlags nLocalServices;
+    const int nMyStartingHeight;
 
 public:
     std::map<uint256, CRequestTracker> mapRequests;

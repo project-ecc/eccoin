@@ -19,6 +19,7 @@
 #include "sync.h"
 #include "tinyformat.h"
 #include "utiltime.h"
+#include "utilexceptions.h"
 
 #include <atomic>
 #include <exception>
@@ -198,7 +199,6 @@ inline int64_t GetPerformanceCounter()
 #endif
 }
 
-void PrintExceptionContinue(const std::exception *pex, const char* pszThread);
 void FileCommit(FILE *file);
 bool TruncateFile(FILE *file, unsigned int length);
 int RaiseFileDescriptorLimit(int nMinFD);

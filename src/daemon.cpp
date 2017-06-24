@@ -10,10 +10,8 @@
 #include "noui.h"
 #include "scheduler.h"
 #include "util/util.h"
-#include "httpserver.h"
-#include "httprpc.h"
 #include "util/utilstrencodings.h"
-
+#include "rpc/cmdline.h"
 #include <boost/thread.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 
@@ -40,23 +38,6 @@
 bool ShutdownRequested()
 {
     return fRequestShutdown;
-}
-
-
-void WaitForShutdown(boost::thread_group* threadGroup)
-{
-    bool fShutdown = ShutdownRequested();
-    // Tell the main threads to shutdown.
-    while (!fShutdown)
-    {
-        MilliSleep(200);
-        fShutdown = ShutdownRequested();
-    }
-    if (threadGroup)
-    {
-        Interrupt(*threadGroup);
-        threadGroup->join_all();
-    }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -183,15 +164,8 @@ bool AppInit(int argc, char* argv[])
 
     if (!fRet)
     {
-        Interrupt(threadGroup);
-        // threadGroup.join_all(); was left out intentionally here, because we didn't re-test all of
-        // the startup-failure cases to make sure they don't result in a hang due to some
-        // thread-blocking-waiting-for-another-thread-during-startup case
-    } else {
-        WaitForShutdown(&threadGroup);
+            Shutdown(NULL);
     }
-    Shutdown(NULL);
-
     return fRet;
 }
 

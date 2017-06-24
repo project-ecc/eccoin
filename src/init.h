@@ -26,8 +26,6 @@ bool AppInit2();
 std::string HelpMessage();
 bool ShutdownRequested();
 
-/** Interrupt threads */
-void Interrupt(boost::thread_group& threadGroup);
 //!Initialize the logging infrastructure
 void InitLogging();
 //!Parameter interaction: change current parameters depending on various rules

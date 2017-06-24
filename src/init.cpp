@@ -14,11 +14,11 @@
 #include "chain.h"
 #include "rpc/blockchain.h"
 #include "rpc/server.h"
-#include "httpserver.h"
-#include "httprpc.h"
+#include "rpc/httpserver.h"
 #include "rpc/register.h"
 #include "rpc/server.h"
 #include "rpc/rpcwallet.h"
+#include "rpc/rpcthreads.h"
 
 #include "util/util.h"
 #include "util/utilexceptions.h"
@@ -76,28 +76,6 @@ bool InitError(const std::string& str)
     return false;
 }
 
-void OnRPCStarted()
-{
-    uiInterface.NotifyBlockTip.connect(&RPCNotifyBlockChange);
-}
-
-void OnRPCStopped()
-{
-    uiInterface.NotifyBlockTip.disconnect(&RPCNotifyBlockChange);
-    RPCNotifyBlockChange(false, nullptr);
-    cvBlockChange.notify_all();
-    LogPrintf("RPC stopped.\n");
-}
-
-void OnRPCPreCommand(const CRPCCommand& cmd)
-{
-    // Observe safe mode
-    std::string strWarning = GetWarnings("rpc");
-    if (strWarning != "" && !GetBoolArg("-disablesafemode", false) &&
-        !cmd.okSafeMode)
-        throw JSONRPCError(RPC_FORBIDDEN_BY_SAFE_MODE, std::string("Safe mode: ") + strWarning);
-}
-
 static void BlockNotifyCallback(bool initialSync, const CBlockIndex *pBlockIndex)
 {
     if (initialSync || !pBlockIndex)
@@ -123,19 +101,6 @@ static void BlockNotifyGenesisWait(bool, const CBlockIndex *pBlockIndex)
         }
         condvar_GenesisWait.notify_all();
     }
-}
-
-
-void Interrupt(boost::thread_group& threadGroup)
-{
-    InterruptHTTPServer();
-    InterruptHTTPRPC();
-    InterruptRPC();
-    InterruptREST();
-    //InterruptTorControl();
-    //if (g_connman)
-    //    g_connman->Interrupt();
-    //threadGroup.interrupt_all();
 }
 
 /** Sanity checks
@@ -175,26 +140,6 @@ bool AppInitSanityChecks()
 
     // Probe the data directory lock to give an early error message, if possible
     //return LockDataDirectory(true);
-    return true;
-}
-
-bool AppInitServers()
-{
-
-    RPCServer::OnStarted(&OnRPCStarted);
-    RPCServer::OnStopped(&OnRPCStopped);
-    RPCServer::OnPreCommand(&OnRPCPreCommand);
-    if (!InitHTTPServer())
-        return false;
-    if (!StartRPC())
-        return false;
-    if (!StartHTTPRPC())
-        return false;
-    if (GetBoolArg("-rest", false) && !StartREST())
-        return false;
-    if (!StartHTTPServer())
-        return false;
-
     return true;
 }
 
@@ -339,10 +284,10 @@ bool AppInitParameterInteraction()
         LogPrintf("Prune configured to target %uMiB on disk for block and undo files.\n", nPruneTarget / 1024 / 1024);
         fPruneMode = true;
     }
-*/
+
     RegisterAllCoreRPCCommands(tableRPC);
     RegisterWalletRPCCommands(tableRPC);
-/*
+
     nConnectTimeout = GetArg("-timeout", DEFAULT_CONNECT_TIMEOUT);
     if (nConnectTimeout <= 0)
         nConnectTimeout = DEFAULT_CONNECT_TIMEOUT;
@@ -948,18 +893,6 @@ bool AppInit2()
     if (fDaemon)
         fprintf(stdout, "ECCoin server starting\n");
 
-    /* Start the RPC server already.  It will be started in "warmup" mode
-     * and not really process calls already (but it will signify connections
-     * that the server is there and will be ready later).  Warmup mode will
-     * be disabled when initialisation is finished.
-     */
-    if (GetBoolArg("-server", false))
-    {
-        uiInterface.InitMessage.connect(SetRPCWarmupStatus);
-        if (!AppInitServers())
-            return InitError(_("Unable to start HTTP server. See debug log for details."));
-    }
-
     int64_t nStart;
 
     // ********************************************************* Step 5: verify database integrity
@@ -1342,6 +1275,10 @@ bool AppInit2()
     if (!NewThread(StartNode, NULL))
         InitError(_("Error: could not start node"));
 
+
+    if (fServer)
+        NewThread(ThreadRPCServer, NULL);
+
     // ********************************************************* Step 12: finished
 
     uiInterface.InitMessage(_("Done loading"));
@@ -1353,7 +1290,7 @@ bool AppInit2()
      // Add wallet transactions that aren't already in a block to mapTransactions
     pwalletMain->ReacceptWalletTransactions();
 
-    SetRPCWarmupFinished();
+
 
 #if !defined(QT_GUI)
     // Loop until process is exit()ed from shutdown() function,
