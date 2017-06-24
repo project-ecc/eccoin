@@ -1,5 +1,6 @@
 #include "jsonrpc.h"
 #include "httpserver.h"
+#include "util/util.h"
 
 using namespace json_spirit;
 
