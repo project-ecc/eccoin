@@ -404,7 +404,6 @@ void CWallet::WalletUpdateSpent(const CTransaction &tx, bool fBlock)
                 {
                     wtx.MarkUnspent(&txout - &tx.vout[0]);
                     wtx.WriteToDisk();
-                    NotifyTransactionChanged(this, hash, CT_UPDATED);
                 }
             }
         }
@@ -534,9 +533,6 @@ bool CWallet::AddToWallet(const CWalletTx& wtxIn)
 #endif
         // since AddToWallet is called directly for self-originating transactions, check for consumption of own coins
         WalletUpdateSpent(wtx, (wtxIn.hashBlock != 0));
-
-        // Notify UI of new or updated transaction
-        NotifyTransactionChanged(this, hash, fInsertedNew ? CT_NEW : CT_UPDATED);
 
         // notify an external script when a wallet transaction comes in or is updated
         std::string strCmd = GetArg("-walletnotify", "");
@@ -954,7 +950,6 @@ void CWallet::ReacceptWalletTransactions()
                     LogPrintf("ReacceptWalletTransactions found spent coin %s SUM %s\n", FormatMoney(wtx.GetCredit()).c_str(), wtx.GetHash().ToString().c_str());
                     wtx.MarkDirty();
                     wtx.WriteToDisk();
-                    pwalletMain->NotifyTransactionChanged(pwalletMain, wtx.GetHash(), CT_UPDATED);
                 }
             }
             else
@@ -1778,7 +1773,6 @@ bool CWallet::CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey)
                 coin.BindWallet(this);
                 coin.MarkSpent(txin.prevout.n);
                 coin.WriteToDisk();
-                NotifyTransactionChanged(this, coin.GetHash(), CT_UPDATED);
             }
 
             if (fFileBacked)
@@ -1831,7 +1825,7 @@ string CWallet::SendMoney(CScript scriptPubKey, int64_t nValue, CWalletTx& wtxNe
         return strError;
     }
 
-    if (fAskFee && !uiInterface.ThreadSafeAskFee(nFeeRequired, _("Sending...")))
+    if (fAskFee)
         return "ABORTED";
 
     if (!CommitTransaction(wtxNew, reservekey))
@@ -1879,7 +1873,6 @@ DBErrors CWallet::LoadWallet(bool& fFirstRunRet)
     fFirstRunRet = !vchDefaultKey.IsValid();
 
     NewThread(ThreadFlushWalletDB, &strWalletFile);
-    uiInterface.LoadWallet(this);
 
     return DB_LOAD_OK;
 }
@@ -2363,17 +2356,6 @@ void CWallet::GetAllReserveKeys(set<CKeyID>& setAddress) const
         if (!HaveKey(keyID))
             throw runtime_error("GetAllReserveKeyHashes() : unknown key in key pool");
         setAddress.insert(keyID);
-    }
-}
-
-void CWallet::UpdatedTransaction(const uint256 &hashTx)
-{
-    {
-        LOCK(cs_wallet);
-        // Only notify UI if this transaction is in this wallet
-        map<uint256, CWalletTx>::const_iterator mi = mapWallet.find(hashTx);
-        if (mi != mapWallet.end())
-            NotifyTransactionChanged(this, hashTx, CT_UPDATED);
     }
 }
 
