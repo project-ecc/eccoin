@@ -10,7 +10,7 @@
 #include "blockindex.h"
 #include "requests.h"
 #include "nodestats.h"
-#include "hash.h"
+#include "crypto/hash.h"
 
 #include <atomic>
 #include <deque>

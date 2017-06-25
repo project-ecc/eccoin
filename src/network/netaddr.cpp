@@ -3,7 +3,7 @@
 #include "util/utilstrencodings.h"
 #include "uint256.h"
 #include "util/util.h"
-#include "hash.h"
+#include "crypto/hash.h"
 
 static const unsigned char pchIPv4[12] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff };
 

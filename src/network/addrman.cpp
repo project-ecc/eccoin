@@ -4,7 +4,7 @@
 
 
 #include "addrman.h"
-#include "hash.h"
+#include "crypto/hash.h"
 #include "random.h"
 
 using namespace std;

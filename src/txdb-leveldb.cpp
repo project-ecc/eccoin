@@ -17,7 +17,7 @@
 #include "checkpoints.h"
 #include "kernel.h"
 #include "main.h"
-#include "scrypt.h"
+#include "crypto/scrypt.h"
 #include "txdb-leveldb.h"
 #include "init.h"
 #include "wallet.h"
