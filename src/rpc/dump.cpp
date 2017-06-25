@@ -111,7 +111,7 @@ Value importprivkey(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() < 1 || params.size() > 2)
         throw runtime_error(
-            "importprivkey <SuperCoinprivkey> [label]\n"
+            "importprivkey <eccoinprivkey> [label]\n"
             "Adds a private key (as returned by dumpprivkey) to your wallet.");
 
     string strSecret = params[0].get_str();
@@ -238,8 +238,8 @@ Value dumpprivkey(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
         throw runtime_error(
-            "dumpprivkey <SuperCoinaddress>\n"
-            "Reveals the private key corresponding to <SuperCoinaddress>.");
+            "dumpprivkey <eccoinaddress>\n"
+            "Reveals the private key corresponding to <eccoinaddress>.");
 
     EnsureWalletIsUnlocked();
 
