@@ -88,8 +88,4 @@ public:
     std::string GetDebugMessage() const { return strDebugMessage; }
 };
 
-bool IsFinalTx(const CTransaction &tx, int nBlockHeight, int64_t nBlockTime);
-bool CheckFinalTx(const CTransaction &tx, int flags =-1);
-
-
 #endif // VALIDATION_H
