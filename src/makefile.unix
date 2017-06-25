@@ -133,12 +133,12 @@ OBJS= \
     build/points.o \
     build/chain.o \
     build/blockindex.o \
-    build/hash.o \
+    build/crypto/hash.o \
     build/locator.o \
     build/transaction.o \
     build/merkle_transaction.o \
     build/mempool.o \
-    build/scrypt.o \
+    build/crypto/scrypt.o \
     build/network/netutils.o \
     build/network/node.o \
     build/network/proxyutils.o \
@@ -167,7 +167,7 @@ OBJS= \
     build/rpc/cmdline.o \
     build/rpc/crpc.o \
     build/rpc/jsonrpc.o \
-    build/lockedpool.o \
+    build/disk.o \
     build/fs.o \
     build/daemon.o
 

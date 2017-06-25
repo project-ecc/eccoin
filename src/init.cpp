@@ -77,6 +77,17 @@ bool InitError(const std::string& str)
     return false;
 }
 
+void HandleSIGTERM(int)
+{
+    fRequestShutdown = true;
+}
+
+void HandleSIGHUP(int)
+{
+    fReopenDebugLog = true;
+}
+
+
 bool AppInitBasicSetup()
 {
     // ********************************************************* Step 1: setup
@@ -325,16 +336,6 @@ void Shutdown()
         // ensure non-UI client gets exited here, but let ECCoin-Qt reach 'return 0;' in bitcoin.cpp
         exit(0);
     }
-}
-
-void HandleSIGTERM(int)
-{
-    fRequestShutdown = true;
-}
-
-void HandleSIGHUP(int)
-{
-    fReopenDebugLog = true;
 }
 
 
