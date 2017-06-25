@@ -126,46 +126,6 @@ contains(BITCOIN_NEED_QT_PLUGINS, 1) {
     QTPLUGIN += qcncodecs qjpcodecs qtwcodecs qkrcodecs qtaccessiblewidgets
 }
 
-
-SOURCES += \
-    src/txdb-leveldb.cpp \
-    src/network/node.cpp \
-    src/network/requests.cpp \
-    src/network/netaddr.cpp \
-    src/network/service.cpp \
-    src/network/netutils.cpp \
-    src/network/proxyutils.cpp \
-    src/network/socketutils.cpp \
-    src/fs.cpp \
-    src/util/util.cpp \
-    src/util/utiltime.cpp \
-    src/util/utilstrencodings.cpp \
-    src/util/utilmoneystr.cpp \
-    src/random.cpp \
-    src/util/utilexceptions.cpp \
-    src/scheduler.cpp \
-    src/threadinterrupt.cpp \
-    src/validation.cpp \
-    src/rpc/server.cpp \
-    src/rpc/blockchain.cpp \
-    src/rpc/mining.cpp \
-    src/rpc/rawtransaction.cpp \
-    src/rpc/dump.cpp \
-    src/lockedpool.cpp \
-    src/network/subnet.cpp \
-    src/crypto/hmac_sha256.cpp \
-    src/crypto/sha256.cpp \
-    src/rpc/rpcnet.cpp \
-    src/rpc/rpcprotocol.cpp \
-    src/rpc/rpcwallet.cpp \
-    src/daemon.cpp \
-    src/rpc/httpserver.cpp \
-    src/rpc/rpcutil.cpp \
-    src/rpc/crpc.cpp \
-    src/rpc/cmdline.cpp \
-    src/rpc/jsonrpc.cpp \
-    src/rpc/rpcthreads.cpp
-
 INCLUDEPATH += src/leveldb/include src/leveldb/helpers
 LIBS += $$PWD/src/leveldb/libleveldb.a $$PWD/src/leveldb/libmemenv.a
 
@@ -229,7 +189,6 @@ HEADERS += \
     src/compat.h \
     src/crypter.h \
     src/db.h \
-    src/hash.h \
     src/init.h \
     src/key.h \
     src/keystore.h \
@@ -262,9 +221,7 @@ HEADERS += \
     src/locator.h \
     src/mempool.h \
     src/merkle_transaction.h \
-    src/pointers.h \
     src/points.h \
-    src/scrypt.h \
     src/transaction.h \
     src/batchscanner.h \
     src/validation.h \
@@ -285,12 +242,8 @@ HEADERS += \
     src/random.h \
     src/util/utilexceptions.h \
     src/amount.h \
-    src/scheduler.h \
-    src/reverselock.h \
-    src/threadinterrupt.h \
     src/rpc/server.h \
     src/rpc/blockchain.h \
-    src/lockedpool.h \
     src/network/subnet.h \
     src/crypto/hmac_sha256.h \
     src/crypto/sha256.h \
@@ -314,10 +267,46 @@ HEADERS += \
     src/rpc/crpc.h \
     src/rpc/jsonrpc.h \
     src/rpc/cmdline.h \
-    src/rpc/rpcthreads.h
+    src/rpc/rpcthreads.h \
+    src/daemon.h \
+    src/crypto/hash.h \
+    src/crypto/scrypt.h
 
 
 SOURCES += \
+    src/txdb-leveldb.cpp \
+    src/network/node.cpp \
+    src/network/requests.cpp \
+    src/network/netaddr.cpp \
+    src/network/service.cpp \
+    src/network/netutils.cpp \
+    src/network/proxyutils.cpp \
+    src/network/socketutils.cpp \
+    src/fs.cpp \
+    src/util/util.cpp \
+    src/util/utiltime.cpp \
+    src/util/utilstrencodings.cpp \
+    src/util/utilmoneystr.cpp \
+    src/random.cpp \
+    src/util/utilexceptions.cpp \
+    src/rpc/server.cpp \
+    src/rpc/blockchain.cpp \
+    src/rpc/mining.cpp \
+    src/rpc/rawtransaction.cpp \
+    src/rpc/dump.cpp \
+    src/network/subnet.cpp \
+    src/crypto/hmac_sha256.cpp \
+    src/crypto/sha256.cpp \
+    src/rpc/rpcnet.cpp \
+    src/rpc/rpcprotocol.cpp \
+    src/rpc/rpcwallet.cpp \
+    src/daemon.cpp \
+    src/rpc/httpserver.cpp \
+    src/rpc/rpcutil.cpp \
+    src/rpc/crpc.cpp \
+    src/rpc/cmdline.cpp \
+    src/rpc/jsonrpc.cpp \
+    src/rpc/rpcthreads.cpp \
     src/network/addrman.cpp \
     src/block.cpp \
     src/blockindex.cpp \
@@ -327,7 +316,6 @@ SOURCES += \
     src/db.cpp \
     src/disk.cpp \
     src/global.cpp \
-    src/hash.cpp \
     src/init.cpp \
     src/kernel.cpp \
     src/key.cpp \
@@ -344,12 +332,13 @@ SOURCES += \
     src/points.cpp \
     src/network/protocol.cpp \
     src/script.cpp \
-    src/scrypt.cpp \
     src/sync.cpp \
     src/transaction.cpp \
     src/version.cpp \
     src/walletdb.cpp \
-    src/wallet.cpp
+    src/wallet.cpp \
+    src/crypto/hash.cpp \
+    src/crypto/scrypt.cpp
 
 
 CODECFORTR = UTF-8
