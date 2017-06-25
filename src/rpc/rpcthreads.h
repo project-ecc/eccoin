@@ -5,8 +5,8 @@
 #include <map>
 #include "net.h"
 
-void ThreadRPCServer(void* parg);
-void ThreadRPCServer2(void* parg);
+void ThreadRPCServer();
+void ThreadRPCServer2();
 void ThreadRPCServer3(void* parg);
 
 #endif // HTTPRPC_H

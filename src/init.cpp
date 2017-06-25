@@ -26,6 +26,8 @@
 #include "network/netutils.h"
 #include "network/proxyutils.h"
 
+#include "daemon.h"
+
 #include <string>
 #include <string.h>
 
@@ -270,7 +272,7 @@ std::string LicenseInfo()
 // Shutdown
 //
 
-void ExitTimeout(void* parg)
+void ExitTimeout()
 {
 #ifdef WIN32
     MilliSleep(5000);
@@ -281,10 +283,11 @@ void ExitTimeout(void* parg)
 void StartShutdown()
 {
     // Without UI, Shutdown() can simply be started in a new thread
-    NewThread(Shutdown, NULL);
+    boost::thread* shutdown = new boost::thread(&Shutdown);
+    ecc_threads.add_thread(shutdown);
 }
 
-void Shutdown(void* parg)
+void Shutdown()
 {
     static CCriticalSection cs_Shutdown;
     static bool fTaken;
@@ -314,7 +317,8 @@ void Shutdown(void* parg)
         boost::filesystem::remove(GetPidFile());
         UnregisterWallet(pwalletMain);
         delete pwalletMain;
-        NewThread(ExitTimeout, NULL);
+        boost::thread* exitTimeout = new boost::thread(&ExitTimeout);
+        ecc_threads.add_thread(exitTimeout);
         MilliSleep(50);
         LogPrintf("ECCoin exited\n\n");
         fExit = true;
@@ -866,11 +870,11 @@ bool AppInit2()
         }
     }
 
-    if (!NewThread(StartNode, NULL))
-        InitError(_("Error: could not start node"));
+    boost::thread* startNode = new boost::thread(&StartNode);
+    ecc_threads.add_thread(startNode);
 
-
-    NewThread(ThreadRPCServer, NULL);
+    boost::thread* RCPServer = new boost::thread(&ThreadRPCServer);
+    ecc_threads.add_thread(RCPServer);
 
     // ********************************************************* Step 12: finished
     LogPrintf("Done loading\n");

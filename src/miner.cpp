@@ -7,11 +7,13 @@
 #include "txdb-leveldb.h"
 #include "miner.h"
 #include "kernel.h"
-#include "scrypt.h"
+#include "crypto/scrypt.h"
 #include "global.h"
 #include "mempool.h"
 #include "util/utilexceptions.h"
 #include "util/util.h"
+#include "daemon.h"
+#include <boost/thread.hpp>
 
 using namespace std;
 
@@ -770,8 +772,8 @@ void GenerateScryptCoins(bool fGenerate, CWallet* pwallet)
         LogPrintf("Starting %d BitcoinMiner threads\n", nAddThreads);
         for (int i = 0; i < nAddThreads; i++)
         {
-            if (!NewThread(ThreadScryptMiner, pwallet))
-                LogPrintf("Error: NewThread(ThreadBitcoinMiner) failed\n");
+            boost::thread* ScryptMiner = new boost::thread(boost::bind(&ThreadScryptMiner, pwallet));
+            ecc_threads.add_thread(ScryptMiner);
             MilliSleep(10);
         }
     }

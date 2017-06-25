@@ -16,7 +16,8 @@
 #include "ui_interface.h"
 #include "util/utilexceptions.h"
 #include "random.h"
-
+#include "daemon.h"
+#include <boost/thread.hpp>
 
 #ifdef WIN32
 #include <string.h>
@@ -40,14 +41,14 @@ extern bool ProcessMessages(CNode* pfrom);
 extern bool SendMessages(CNode* pto, bool fSendTrickle);
 extern void InitializeNode(CNode *pnode);
 
-void ThreadMessageHandler2(void* parg);
-void ThreadSocketHandler2(void* parg);
-void ThreadOpenConnections2(void* parg);
-void ThreadOpenAddedConnections2(void* parg);
+void ThreadMessageHandler2();
+void ThreadSocketHandler2();
+void ThreadOpenConnections2();
+void ThreadOpenAddedConnections2();
 #ifdef USE_UPNP
-void ThreadMapPort2(void* parg);
+void ThreadMapPort2();
 #endif
-void ThreadDNSAddressSeed2(void* parg);
+void ThreadDNSAddressSeed2();
 
 //
 // Global state variables
@@ -368,7 +369,7 @@ bool GetMyExternalIP(CNetAddr& ipRet)
     return false;
 }
 
-void ThreadGetMyExternalIP(void* parg)
+void ThreadGetMyExternalIP()
 {
     // Make this thread recognisable as the external IP detection thread
     RenameThread("ECCoin-ext-ip");
@@ -485,7 +486,7 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest)
     }
 }
 
-void ThreadSocketHandler(void* parg)
+void ThreadSocketHandler()
 {
     // Make this thread recognisable as the networking thread
     RenameThread("ECCoin-net");
@@ -493,7 +494,7 @@ void ThreadSocketHandler(void* parg)
     try
     {
         vnThreadsRunning[THREAD_SOCKETHANDLER]++;
-        ThreadSocketHandler2(parg);
+        ThreadSocketHandler2();
         vnThreadsRunning[THREAD_SOCKETHANDLER]--;
     }
     catch (std::exception& e) {
@@ -506,7 +507,7 @@ void ThreadSocketHandler(void* parg)
     LogPrintf("ThreadSocketHandler exited\n");
 }
 
-void ThreadSocketHandler2(void* parg)
+void ThreadSocketHandler2()
 {
     LogPrintf("ThreadSocketHandler started\n");
     list<CNode*> vNodesDisconnected;
@@ -835,7 +836,7 @@ void ThreadSocketHandler2(void* parg)
 
 
 #ifdef USE_UPNP
-void ThreadMapPort(void* parg)
+void ThreadMapPort()
 {
     // Make this thread recognisable as the UPnP thread
     RenameThread("ECCoin-UPnP");
@@ -843,7 +844,7 @@ void ThreadMapPort(void* parg)
     try
     {
         vnThreadsRunning[THREAD_UPNP]++;
-        ThreadMapPort2(parg);
+        ThreadMapPort2();
         vnThreadsRunning[THREAD_UPNP]--;
     }
     catch (std::exception& e) {
@@ -856,7 +857,7 @@ void ThreadMapPort(void* parg)
     LogPrintf("ThreadMapPort exited\n");
 }
 
-void ThreadMapPort2(void* parg)
+void ThreadMapPort2()
 {
     LogPrintf("ThreadMapPort started\n");
 
@@ -965,8 +966,8 @@ void MapPort()
 {
     if (fUseUPnP && vnThreadsRunning[THREAD_UPNP] < 1)
     {
-        if (!NewThread(ThreadMapPort, NULL))
-            LogPrintf("Error: ThreadMapPort(ThreadMapPort) failed\n");
+        boost::thread* MapPort = new boost::thread(&ThreadMapPort);
+        ecc_threads.add_thread(MapPort);
     }
 }
 #else
@@ -994,7 +995,7 @@ static const char* strDNSSeed[][2] = {
     {"ECC-Seed2", "159.203.172.212"},
 };
 
-void ThreadDNSAddressSeed(void* parg)
+void ThreadDNSAddressSeed()
 {
     // Make this thread recognisable as the DNS seeding thread
     RenameThread("ECCoin-dnsseed");
@@ -1002,7 +1003,7 @@ void ThreadDNSAddressSeed(void* parg)
     try
     {
         vnThreadsRunning[THREAD_DNSSEED]++;
-        ThreadDNSAddressSeed2(parg);
+        ThreadDNSAddressSeed2();
         vnThreadsRunning[THREAD_DNSSEED]--;
     }
     catch (std::exception& e) {
@@ -1015,7 +1016,7 @@ void ThreadDNSAddressSeed(void* parg)
     LogPrintf("ThreadDNSAddressSeed exited\n");
 }
 
-void ThreadDNSAddressSeed2(void* parg)
+void ThreadDNSAddressSeed2()
 {
     LogPrintf("ThreadDNSAddressSeed started\n");
     int found = 0;
@@ -1077,7 +1078,7 @@ void DumpAddresses()
            addrman.size(), GetTimeMillis() - nStart);
 }
 
-void ThreadDumpAddress2(void* parg)
+void ThreadDumpAddress2()
 {
     vnThreadsRunning[THREAD_DUMPADDRESS]++;
     while (!fShutdown)
@@ -1090,14 +1091,14 @@ void ThreadDumpAddress2(void* parg)
     vnThreadsRunning[THREAD_DUMPADDRESS]--;
 }
 
-void ThreadDumpAddress(void* parg)
+void ThreadDumpAddress()
 {
     // Make this thread recognisable as the address dumping thread
     RenameThread("ECCoin-adrdump");
 
     try
     {
-        ThreadDumpAddress2(parg);
+        ThreadDumpAddress2();
     }
     catch (std::exception& e) {
         PrintException(&e, "ThreadDumpAddress()");
@@ -1105,7 +1106,7 @@ void ThreadDumpAddress(void* parg)
     LogPrintf("ThreadDumpAddress exited\n");
 }
 
-void ThreadOpenConnections(void* parg)
+void ThreadOpenConnections()
 {
     // Make this thread recognisable as the connection opening thread
     RenameThread("ECCoin-opencon");
@@ -1113,7 +1114,7 @@ void ThreadOpenConnections(void* parg)
     try
     {
         vnThreadsRunning[THREAD_OPENCONNECTIONS]++;
-        ThreadOpenConnections2(parg);
+        ThreadOpenConnections2();
         vnThreadsRunning[THREAD_OPENCONNECTIONS]--;
     }
     catch (std::exception& e) {
@@ -1164,7 +1165,7 @@ void static ThreadStakeMinter_Scrypt(void* parg)
     LogPrintf("ThreadStakeMinter exiting, %d threads remaining\n", vnThreadsRunning[THREAD_MINTER]);
 }
 
-void ThreadOpenConnections2(void* parg)
+void ThreadOpenConnections2()
 {
     LogPrintf("ThreadOpenConnections started\n");
 
@@ -1286,7 +1287,7 @@ void ThreadOpenConnections2(void* parg)
     }
 }
 
-void ThreadOpenAddedConnections(void* parg)
+void ThreadOpenAddedConnections()
 {
     // Make this thread recognisable as the connection opening thread
     RenameThread("ECCoin-opencon");
@@ -1294,7 +1295,7 @@ void ThreadOpenAddedConnections(void* parg)
     try
     {
         vnThreadsRunning[THREAD_ADDEDCONNECTIONS]++;
-        ThreadOpenAddedConnections2(parg);
+        ThreadOpenAddedConnections2();
         vnThreadsRunning[THREAD_ADDEDCONNECTIONS]--;
     }
     catch (std::exception& e) {
@@ -1307,7 +1308,7 @@ void ThreadOpenAddedConnections(void* parg)
     LogPrintf("ThreadOpenAddedConnections exited\n");
 }
 
-void ThreadOpenAddedConnections2(void* parg)
+void ThreadOpenAddedConnections2()
 {
     LogPrintf("ThreadOpenAddedConnections started\n");
 
@@ -1420,7 +1421,7 @@ bool OpenNetworkConnection(const CAddress& addrConnect, CSemaphoreGrant *grantOu
 
 
 
-void ThreadMessageHandler(void* parg)
+void ThreadMessageHandler()
 {
     // Make this thread recognisable as the message handling thread
     RenameThread("ECCoin-msghand");
@@ -1428,7 +1429,7 @@ void ThreadMessageHandler(void* parg)
     try
     {
         vnThreadsRunning[THREAD_MESSAGEHANDLER]++;
-        ThreadMessageHandler2(parg);
+        ThreadMessageHandler2();
         vnThreadsRunning[THREAD_MESSAGEHANDLER]--;
     }
     catch (std::exception& e) {
@@ -1441,7 +1442,7 @@ void ThreadMessageHandler(void* parg)
     LogPrintf("ThreadMessageHandler exited\n");
 }
 
-void ThreadMessageHandler2(void* parg)
+void ThreadMessageHandler2()
 {
     LogPrintf("ThreadMessageHandler started\n");
     SetThreadPriority(THREAD_PRIORITY_ABOVE_NORMAL);
@@ -1679,10 +1680,13 @@ void static Discover()
 
     // Don't use external IPv4 discovery, when -onlynet="IPv6"
     if (!IsLimited(NET_IPV4))
-        NewThread(ThreadGetMyExternalIP, NULL);
+    {
+        boost::thread* GetMyExternalIP = new boost::thread(&ThreadGetMyExternalIP);
+        ecc_threads.add_thread(GetMyExternalIP);
+    }
 }
 
-void StartNode(void* parg)
+void StartNode()
 {
         LogPrintf("NodeStarted\n");
         // Make this thread recognisable as the startup thread
@@ -1710,42 +1714,42 @@ void StartNode(void* parg)
         if (!GetBoolArg("-dnsseed", true))
             LogPrintf("DNS seeding disabled\n");
         else
-            if (!NewThread(ThreadDNSAddressSeed, NULL))
-                LogPrintf("Error: NewThread(ThreadDNSAddressSeed) failed\n");
+        {
+            boost::thread* DNSAddressSeed = new boost::thread(&ThreadDNSAddressSeed);
+            ecc_threads.add_thread(DNSAddressSeed);
+        }
 
         // Map ports with UPnP
         if (fUseUPnP)
             MapPort();
 
         // Send and receive from sockets, accept connections
-        if (!NewThread(ThreadSocketHandler, NULL))
-            LogPrintf("Error: NewThread(ThreadSocketHandler) failed\n");
+        boost::thread* SocketHandler = new boost::thread(&ThreadSocketHandler);
+        ecc_threads.add_thread(SocketHandler);
 
         // Initiate outbound connections from -addnode
-        if (!NewThread(ThreadOpenAddedConnections, NULL))
-            LogPrintf("Error: NewThread(ThreadOpenAddedConnections) failed\n");
+        boost::thread* OpenAddedConnections = new boost::thread(&ThreadOpenAddedConnections);
+        ecc_threads.add_thread(OpenAddedConnections);
 
         // Initiate outbound connections
-        if (!NewThread(ThreadOpenConnections, NULL))
-            LogPrintf("Error: NewThread(ThreadOpenConnections) failed\n");
+        boost::thread* OpenConnections = new boost::thread(&ThreadOpenConnections);
+        ecc_threads.add_thread(OpenConnections);
 
         // Process messages
-        if (!NewThread(ThreadMessageHandler, NULL))
-            LogPrintf("Error: NewThread(ThreadMessageHandler) failed\n");
+        boost::thread* MessageHandler = new boost::thread(&ThreadMessageHandler);
+        ecc_threads.add_thread(MessageHandler);
 
         // Dump network addresses
-        if (!NewThread(ThreadDumpAddress, NULL))
-            LogPrintf("Error; NewThread(ThreadDumpAddress) failed\n");
+        boost::thread* DumpAddress = new boost::thread(&ThreadDumpAddress);
+        ecc_threads.add_thread(DumpAddress);
 
         // Mine proof-of-stake blocks in the background
         if (!GetBoolArg("-staking", false))
             LogPrintf("Staking disabled\n");
         else
         {
-                if (!NewThread(ThreadStakeMinter_Scrypt, pwalletMain))
-                {
-                    LogPrintf("Error: NewThread(ThreadStakeMinter) failed\n");
-                }
+            boost::thread* StakeMinter_Scrypt = new boost::thread(boost::bind(&ThreadStakeMinter_Scrypt, pwalletMain));
+            ecc_threads.add_thread(StakeMinter_Scrypt);
         }
         // Generate coins in the background
         GenerateScryptCoins(GetBoolArg("-gen", false), pwalletMain);

@@ -868,18 +868,6 @@ void RenameThread(const char* name)
 #endif
 }
 
-bool NewThread(void(*pfn)(void*), void* parg)
-{
-    try
-    {
-        boost::thread(pfn, parg); // thread detaches when out of scope
-    } catch(boost::thread_resource_error &e) {
-        LogPrintf("Error creating thread: %s\n", e.what());
-        return false;
-    }
-    return true;
-}
-
 void SetupEnvironment()
 {
 #ifdef HAVE_MALLOPT_ARENA_MAX

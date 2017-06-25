@@ -14,6 +14,7 @@
 #include "mempool.h"
 #include "global.h"
 #include "random.h"
+#include "daemon.h"
 #include <boost/thread.hpp>
 
 #include <boost/algorithm/string/replace.hpp>
@@ -1872,8 +1873,8 @@ DBErrors CWallet::LoadWallet(bool& fFirstRunRet)
         return nLoadWalletRet;
     fFirstRunRet = !vchDefaultKey.IsValid();
 
-    NewThread(ThreadFlushWalletDB, &strWalletFile);
-
+    boost::thread* FlushWalletDB = new boost::thread(boost::bind(&ThreadFlushWalletDB, &strWalletFile));
+    ecc_threads.add_thread(FlushWalletDB);
     return DB_LOAD_OK;
 }
 

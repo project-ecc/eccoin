@@ -400,7 +400,6 @@ template <typename Callable> void TraceThread(const char* name,  Callable func)
         throw;
     }
 }
-bool NewThread(void(*pfn)(void*), void* parg);
 
 std::string FormatFullVersion();
 std::string FormatSubVersion(const std::string& name, int nClientVersion, const std::vector<std::string>& comments);

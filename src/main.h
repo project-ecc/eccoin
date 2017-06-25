@@ -9,7 +9,7 @@
 #include "sync.h"
 #include "net.h"
 #include "script.h"
-#include "scrypt.h"
+#include "crypto/scrypt.h"
 #include "global.h"
 #include <list>
 #include "util/utilmoneystr.h"

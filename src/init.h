@@ -21,7 +21,7 @@ extern ServiceFlags nLocalServices;
 
 extern std::string strWalletFileName;
 void StartShutdown();
-void Shutdown(void* parg);
+void Shutdown();
 bool AppInit2();
 std::string HelpMessage();
 
@@ -40,8 +40,6 @@ bool AppInitBasicSetup();
 std::string LicenseInfo();
 
 extern bool fEnforceCanonical;
-
-
 
 #endif
 

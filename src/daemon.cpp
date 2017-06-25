@@ -1,43 +1,32 @@
-
-#if defined(HAVE_CONFIG_H)
-#include "config/bitcoin-config.h"
-#endif
-
 #include "compat.h"
 #include "fs.h"
 #include "rpc/server.h"
 #include "init.h"
 #include "noui.h"
-#include "scheduler.h"
 #include "util/util.h"
 #include "util/utilstrencodings.h"
 #include "rpc/cmdline.h"
 #include <boost/thread.hpp>
 #include <boost/algorithm/string/predicate.hpp>
-
-
 #include <stdio.h>
 
-/* Introduction text for doxygen: */
+boost::thread_group ecc_threads;
+bool AppInit(int argc, char* argv[]);
 
-/*! \mainpage Developer documentation
- *
- * \section intro_sec Introduction
- *
- * This is the developer documentation of the reference client for an experimental new digital currency called Bitcoin (https://www.bitcoin.org/),
- * which enables instant payments to anyone, anywhere in the world. Bitcoin uses peer-to-peer technology to operate
- * with no central authority: managing transactions and issuing money are carried out collectively by the network.
- *
- * The software is a community-driven open source project, released under the MIT license.
- *
- * \section Navigation
- * Use the buttons <code>Namespaces</code>, <code>Classes</code> or <code>Files</code> at the top of the page to start navigating the code.
- */
-
-//////////////////////////////////////////////////////////////////////////////
 //
 // Start
 //
+int main(int argc, char* argv[])
+{
+    SetupEnvironment();
+
+    // Connect bitcoind signal handlers
+    noui_connect();
+
+    return (AppInit(argc, argv) ? EXIT_SUCCESS : EXIT_FAILURE);
+}
+
+
 bool AppInit(int argc, char* argv[])
 {
     bool fRet = false;
@@ -123,18 +112,8 @@ bool AppInit(int argc, char* argv[])
 
     if (!fRet)
     {
-            Shutdown(NULL);
+            Shutdown();
     }
     return fRet;
-}
-
-int main(int argc, char* argv[])
-{
-    SetupEnvironment();
-
-    // Connect bitcoind signal handlers
-    noui_connect();
-
-    return (AppInit(argc, argv) ? EXIT_SUCCESS : EXIT_FAILURE);
 }
 

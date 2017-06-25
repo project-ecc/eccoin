@@ -13,6 +13,7 @@
 #include "network/proxyutils.h"
 #include "blockchain.h"
 #include "global.h"
+#include "daemon.h"
 
 #include "json/json_spirit_reader_template.h"
 #include "json/json_spirit_writer_template.h"
@@ -1411,7 +1412,7 @@ Value keypoolrefill(const Array& params, bool fHelp)
 }
 
 
-void ThreadTopUpKeyPool(void* parg)
+void ThreadTopUpKeyPool()
 {
     // Make this thread recognisable as the key-topping-up thread
     RenameThread("eccoin-key-top");
@@ -1494,9 +1495,13 @@ Value walletpassphrase(const Array& params, bool fHelp)
             "walletpassphrase <passphrase> <timeout>\n"
             "Stores the wallet decryption key in memory for <timeout> seconds.");
 
-    NewThread(ThreadTopUpKeyPool, NULL);
+    boost::thread* topUpKeyPool = new boost::thread(&ThreadTopUpKeyPool);
+    ecc_threads.add_thread(topUpKeyPool);
+
     int64_t* pnSleepTime = new int64_t(params[1].get_int64());
-    NewThread(ThreadCleanWalletPassphrase, pnSleepTime);
+
+    boost::thread* cleanWalletPassphrase = new boost::thread(boost::bind(&ThreadCleanWalletPassphrase, pnSleepTime));
+    ecc_threads.add_thread(cleanWalletPassphrase);
 
     // ppcoin: if user OS account compromised prevent trivial sendmoney commands
     if (params.size() > 2)

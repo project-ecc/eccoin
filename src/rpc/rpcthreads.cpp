@@ -8,7 +8,9 @@
 #include "init.h"
 #include "server.h"
 #include "crpc.h"
+#include "daemon.h"
 
+#include <boost/thread.hpp>
 #include <boost/asio.hpp>
 #include <boost/asio/ip/v6_only.hpp>
 #include <boost/bind.hpp>
@@ -173,16 +175,25 @@ static void RPCAcceptHandler(boost::shared_ptr< basic_socket_acceptor<Protocol, 
     }
 
     // start HTTP client thread
-    else if (!NewThread(ThreadRPCServer3, conn)) {
-        LogPrintf("Failed to create RPC server client thread\n");
-        delete conn;
+
+    else
+    {
+        try
+        {
+            boost::thread* RCPServer3 = new boost::thread(boost::bind(&ThreadRPCServer3, conn));
+            ecc_threads.add_thread(RCPServer3);
+        } catch(boost::thread_resource_error &e) {
+            LogPrintf("Error creating thread: %s\n", e.what());
+            LogPrintf("Failed to create RPC server client thread\n");
+            delete conn;
+        }
     }
 
     vnThreadsRunning[THREAD_RPCLISTENER]--;
 }
 
 
-void ThreadRPCServer(void* parg)
+void ThreadRPCServer()
 {
     // Make this thread recognisable as the RPC listener
     RenameThread("eccoin-rpclist");
@@ -190,7 +201,7 @@ void ThreadRPCServer(void* parg)
     try
     {
         vnThreadsRunning[THREAD_RPCLISTENER]++;
-        ThreadRPCServer2(parg);
+        ThreadRPCServer2();
         vnThreadsRunning[THREAD_RPCLISTENER]--;
     }
     catch (std::exception& e) {
@@ -204,7 +215,7 @@ void ThreadRPCServer(void* parg)
 }
 
 
-void ThreadRPCServer2(void* parg)
+void ThreadRPCServer2()
 {
     LogPrintf("ThreadRPCServer started\n");
 
