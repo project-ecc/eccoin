@@ -426,8 +426,10 @@ void ThreadRPCServer3(void* parg)
             conn->stream() << HTTPReply(HTTP_UNAUTHORIZED, "", false) << std::flush;
             break;
         }
-        if (mapHeaders["connection"] == "close")
-            fRun = false;
+        /// fRun should just be set to false
+        ///this is commented out to shut off keepalive for rpc. this might cause rpc hangs. see bitcoin issue 5655
+        //if (mapHeaders["connection"] == "close")
+        fRun = false;
 
         JSONRequest jreq;
         try
