@@ -12,21 +12,12 @@ public:
     unsigned int nBlockPos;
     unsigned int nTxPos;
 
-    CDiskTxPos()
-    {
-        SetNull();
-    }
-
-    CDiskTxPos(unsigned int nFileIn, unsigned int nBlockPosIn, unsigned int nTxPosIn)
-    {
-        nFile = nFileIn;
-        nBlockPos = nBlockPosIn;
-        nTxPos = nTxPosIn;
-    }
+    CDiskTxPos();
+    CDiskTxPos(unsigned int nFileIn, unsigned int nBlockPosIn, unsigned int nTxPosIn);
 
     IMPLEMENT_SERIALIZE( READWRITE(FLATDATA(*this)); )
-    void SetNull() { nFile = (unsigned int) -1; nBlockPos = 0; nTxPos = 0; }
-    bool IsNull() const { return (nFile == (unsigned int) -1); }
+    void SetNull();
+    bool IsNull() const;
 
     friend bool operator==(const CDiskTxPos& a, const CDiskTxPos& b)
     {
@@ -40,19 +31,8 @@ public:
         return !(a == b);
     }
 
-
-    std::string ToString() const
-    {
-        if (IsNull())
-            return "null";
-        else
-            return strprintf("(nFile=%u, nBlockPos=%u, nTxPos=%u)", nFile, nBlockPos, nTxPos);
-    }
-
-    void print() const
-    {
-        LogPrintf("%s", ToString().c_str());
-    }
+    std::string ToString() const;
+    void print() const;
 };
 
 #endif // DISK_H
