@@ -33,7 +33,7 @@ static const int DATABASE_VERSION = 70508;
 static const int PROTOCOL_VERSION = 60033;
 
 // earlier versions not supported as of Feb 2012, and are disconnected
-static const int MIN_PROTO_VERSION = 60032;
+static const int MIN_PROTO_VERSION = 60033;
 
 // "sendheaders" command and announcing blocks with headers starts with this version
 static const int SENDHEADERS_VERSION = 60035;
