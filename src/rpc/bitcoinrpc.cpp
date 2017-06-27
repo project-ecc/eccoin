@@ -763,8 +763,8 @@ static void RPCAcceptHandler(boost::shared_ptr< basic_socket_acceptor<Protocol, 
     {
         try
         {
-            boost::thread* RCPServer3 = new boost::thread(boost::bind(&ThreadRPCServer3, conn));
-            ecc_threads.add_thread(RCPServer3);
+            boost::thread* RPCServer3 = new boost::thread(boost::bind(&ThreadRPCServer3, conn));
+            RPCServer3->detach();
         } catch(boost::thread_resource_error &e) {
             LogPrintf("Error creating thread: %s\n", e.what());
             LogPrintf("Failed to create RPC server client thread\n");
