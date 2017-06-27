@@ -12,12 +12,7 @@
 #include "wallet.h"
 #include "walletdb.h"
 #include "chain.h"
-#include "rpc/blockchain.h"
-#include "rpc/server.h"
-#include "rpc/httpserver.h"
-#include "rpc/server.h"
-#include "rpc/rpcwallet.h"
-#include "rpc/rpcthreads.h"
+#include "rpc/bitcoinrpc.h"
 
 #include "util/util.h"
 #include "util/utilexceptions.h"

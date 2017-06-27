@@ -8,13 +8,8 @@
 #include "txdb-leveldb.h"
 #include "init.h"
 #include "miner.h"
-#include "json/json_spirit_reader_template.h"
-#include "json/json_spirit_writer_template.h"
-#include "json/json_spirit_utils.h"
-#include "rpcprotocol.h"
+#include "bitcoinrpc.h"
 #include "mempool.h"
-#include "rpcutil.h"
-#include "blockchain.h"
 
 using namespace json_spirit;
 using namespace std;
@@ -50,8 +45,9 @@ Value getmininginfo(const Array& params, bool fHelp)
             "getmininginfo\n"
             "Returns an object containing mining-related information.");
 
+    uint64_t nMinWeight = 0, nMaxWeight = 0, nWeight = 0;
 
-    Object obj, diff;
+    Object obj, diff, weight;
     obj.push_back(Pair("blocks",        (int)pindexBest->nHeight));
     obj.push_back(Pair("currentblocksize",(uint64_t)nLastBlockSize));
     obj.push_back(Pair("currentblocktx",(uint64_t)nLastBlockTx));
@@ -61,11 +57,16 @@ Value getmininginfo(const Array& params, bool fHelp)
     diff.push_back(Pair("search-interval",      (int)nLastCoinStakeSearchInterval));
     obj.push_back(Pair("difficulty",    diff));
 
-    obj.push_back(Pair("blockvalue",     GetProofOfWorkReward(pindexBest->nHeight, 0, pindexBest->pprev)));
+    obj.push_back(Pair("blockvalue",    (uint64_t)GetProofOfWorkReward(pindexBest->nHeight, 0, pindexBest->pprev)));
     obj.push_back(Pair("netmhashps",     GetPoWMHashPS()));
     obj.push_back(Pair("netstakeweight", GetPoSKernelPS()));
     obj.push_back(Pair("errors",        GetWarnings("statusbar")));
     obj.push_back(Pair("pooledtx",      (uint64_t)mempool.size()));
+
+    weight.push_back(Pair("minimum",    (uint64_t)nMinWeight));
+    weight.push_back(Pair("maximum",    (uint64_t)nMaxWeight));
+    weight.push_back(Pair("combined",  (uint64_t)nWeight));
+    obj.push_back(Pair("stakeweight", weight));
 
     obj.push_back(Pair("testnet",       fTestNet));
     return obj;
@@ -78,11 +79,16 @@ Value getstakinginfo(const Array& params, bool fHelp)
             "getstakinginfo\n"
             "Returns an object containing staking-related information.");
 
+    uint64_t nWeight = 0;
+
     uint64_t nNetworkWeight = GetPoSKernelPS();
+    bool staking = nLastCoinStakeSearchInterval && nWeight;
+    int nExpectedTime = staking ? (nStakeTargetSpacing * nNetworkWeight / nWeight) : -1;
 
     Object obj;
 
     obj.push_back(Pair("enabled", GetBoolArg("-staking", true)));
+    obj.push_back(Pair("staking", staking));
     obj.push_back(Pair("errors", GetWarnings("statusbar")));
 
     obj.push_back(Pair("currentblocksize", (uint64_t)nLastBlockSize));
@@ -92,7 +98,10 @@ Value getstakinginfo(const Array& params, bool fHelp)
     obj.push_back(Pair("difficulty", GetDifficulty(GetLastBlockIndex(pindexBest, true))));
     obj.push_back(Pair("search-interval", (int)nLastCoinStakeSearchInterval));
 
+    obj.push_back(Pair("weight", (uint64_t)nWeight));
     obj.push_back(Pair("netstakeweight", (uint64_t)nNetworkWeight));
+
+    obj.push_back(Pair("expectedtime", nExpectedTime));
 
     return obj;
 }
@@ -106,15 +115,15 @@ Value getworkex(const Array& params, bool fHelp)
         );
 
     if (vNodes.empty())
-        throw JSONRPCError(-9, "eccoin is not connected!");
+        throw JSONRPCError(-9, "SuperCoin is not connected!");
 
     if (IsInitialBlockDownload())
-        throw JSONRPCError(-10, "eccoin is downloading blocks...");
+        throw JSONRPCError(-10, "SuperCoin is downloading blocks...");
 
     if (pindexBest->nHeight > LAST_POW_BLOCK)
         throw JSONRPCError(RPC_MISC_ERROR, "No more PoW blocks");
 
-    typedef map<uint256, pair<CBlock*, CScript> > mapNewBlock_t;
+	typedef map<uint256, pair<CBlock*, CScript> > mapNewBlock_t;
     static mapNewBlock_t mapNewBlock;
     static vector<CBlock*> vNewBlock;
     static CReserveKey reservekey(pwalletMain);
@@ -240,10 +249,10 @@ Value getwork(const Array& params, bool fHelp)
             "If [data] is specified, tries to solve the block and returns true if it was successful.");
 
     if (vNodes.empty())
-        throw JSONRPCError(RPC_CLIENT_NOT_CONNECTED, "eccoin is not connected!");
+        throw JSONRPCError(RPC_CLIENT_NOT_CONNECTED, "SuperCoin is not connected!");
 
     if (IsInitialBlockDownload())
-        throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "eccoin is downloading blocks...");
+        throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "SuperCoin is downloading blocks...");
 
     if (pindexBest->nHeight > LAST_POW_BLOCK)
         throw JSONRPCError(RPC_MISC_ERROR, "No more PoW blocks");
@@ -384,10 +393,10 @@ Value getblocktemplate(const Array& params, bool fHelp)
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid mode");
 
     if (vNodes.empty())
-        throw JSONRPCError(RPC_CLIENT_NOT_CONNECTED, "eccoin is not connected!");
+        throw JSONRPCError(RPC_CLIENT_NOT_CONNECTED, "SuperCoin is not connected!");
 
     if (IsInitialBlockDownload())
-        throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "eccoin is downloading blocks...");
+        throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "SuperCoin is downloading blocks...");
 
     if (pindexBest->nHeight > LAST_POW_BLOCK)
         throw JSONRPCError(RPC_MISC_ERROR, "No more PoW blocks");
@@ -452,7 +461,7 @@ Value getblocktemplate(const Array& params, bool fHelp)
         map<uint256, CTxIndex> mapUnused;
         bool fInvalid = false;
 
-        if (!tx.IsCoinBase())
+		if (!tx.IsCoinBase())
         if (tx.FetchInputs(txdb, mapUnused, false, false, mapInputs, fInvalid))
         {
             entry.push_back(Pair("fee", (int64_t)(tx.GetValueIn(mapInputs) - tx.GetValueOut())));
@@ -530,3 +539,4 @@ Value submitblock(const Array& params, bool fHelp)
 
     return Value::null;
 }
+

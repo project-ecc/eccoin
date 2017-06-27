@@ -1,11 +1,10 @@
+#include "rpc/bitcoinrpc.h"
 #include "compat.h"
 #include "fs.h"
-#include "rpc/server.h"
 #include "init.h"
 #include "noui.h"
 #include "util/util.h"
 #include "util/utilstrencodings.h"
-#include "rpc/cmdline.h"
 #include <boost/thread.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <stdio.h>

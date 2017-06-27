@@ -211,7 +211,6 @@ HEADERS += \
     src/version.h \
     src/wallet.h \
     src/walletdb.h \
-#
     src/kernel.h \
     src/block.h \
     src/blockindex.h \
@@ -242,16 +241,12 @@ HEADERS += \
     src/random.h \
     src/util/utilexceptions.h \
     src/amount.h \
-    src/rpc/server.h \
-    src/rpc/blockchain.h \
     src/network/subnet.h \
     src/crypto/hmac_sha256.h \
     src/crypto/sha256.h \
     src/crypto/common.h \
     src/crypto_endian.h \
     src/byteswap.h \
-    src/rpc/rpcwallet.h \
-    src/rpc/rpcprotocol.h \
     src/noui.h \
     src/json/json_spirit.h \
     src/json/json_spirit_error_position.h \
@@ -262,15 +257,10 @@ HEADERS += \
     src/json/json_spirit_value.h \
     src/json/json_spirit_writer.h \
     src/json/json_spirit_writer_template.h \
-    src/rpc/httpserver.h \
-    src/rpc/rpcutil.h \
-    src/rpc/crpc.h \
-    src/rpc/jsonrpc.h \
-    src/rpc/cmdline.h \
-    src/rpc/rpcthreads.h \
     src/daemon.h \
     src/crypto/hash.h \
-    src/crypto/scrypt.h
+    src/crypto/scrypt.h \
+    src/rpc/bitcoinrpc.h
 
 
 SOURCES += \
@@ -289,24 +279,12 @@ SOURCES += \
     src/util/utilmoneystr.cpp \
     src/random.cpp \
     src/util/utilexceptions.cpp \
-    src/rpc/server.cpp \
-    src/rpc/blockchain.cpp \
-    src/rpc/mining.cpp \
-    src/rpc/rawtransaction.cpp \
-    src/rpc/dump.cpp \
     src/network/subnet.cpp \
     src/crypto/hmac_sha256.cpp \
     src/crypto/sha256.cpp \
     src/rpc/rpcnet.cpp \
-    src/rpc/rpcprotocol.cpp \
     src/rpc/rpcwallet.cpp \
     src/daemon.cpp \
-    src/rpc/httpserver.cpp \
-    src/rpc/rpcutil.cpp \
-    src/rpc/crpc.cpp \
-    src/rpc/cmdline.cpp \
-    src/rpc/jsonrpc.cpp \
-    src/rpc/rpcthreads.cpp \
     src/network/addrman.cpp \
     src/block.cpp \
     src/blockindex.cpp \
@@ -338,7 +316,12 @@ SOURCES += \
     src/walletdb.cpp \
     src/wallet.cpp \
     src/crypto/hash.cpp \
-    src/crypto/scrypt.cpp
+    src/crypto/scrypt.cpp \
+    src/rpc/bitcoinrpc.cpp \
+    src/rpc/rpcblockchain.cpp \
+    src/rpc/rpcdump.cpp \
+    src/rpc/rpcmining.cpp \
+    src/rpc/rpcrawtransaction.cpp
 
 
 CODECFORTR = UTF-8

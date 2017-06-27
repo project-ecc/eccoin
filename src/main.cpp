@@ -22,6 +22,7 @@
 #include "random.h"
 #include "util/utilstrencodings.h"
 #include "messages.h"
+#include "rpc/bitcoinrpc.h"
 
 using namespace std;
 using namespace boost;
@@ -329,11 +330,6 @@ int64_t GetProofOfWorkReward(int64_t nFees, const int nHeight, uint256 prevHash)
     nSubsidy += generateMTRandom(seed, 200000) * COIN;
 
     return nSubsidy + nFees;
-}
-
-double ValueFromAmountAsDouble(int64_t amount)
-{
-    return (double)amount / (double)COIN;
 }
 
 const int YEARLY_BLOCKCOUNT = 700800;
