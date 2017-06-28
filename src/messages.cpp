@@ -844,43 +844,40 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
             return error("message inv size() = %u", vInv.size());
         }
 
-        LOCK(cs_main);
-
+        // find last block in inv vector
+        unsigned int nLastBlock = (unsigned int)(-1);
+        for (unsigned int nInv = 0; nInv < vInv.size(); nInv++)
+        {
+            if (vInv[vInv.size() - 1 - nInv].type == MSG_BLOCK)
+            {
+                nLastBlock = vInv.size() - 1 - nInv;
+                break;
+            }
+        }
         CTxDB txdb("r");
         for (unsigned int nInv = 0; nInv < vInv.size(); nInv++)
         {
             const CInv &inv = vInv[nInv];
-            if(fDebugNet)
-            {
-                LogPrintf("inv hash type = %s \n", inv.GetCommand());
-            }
+
             if (fShutdown)
                 return true;
+            pfrom->AddInventoryKnown(inv);
+
             bool fAlreadyHave = AlreadyHave(txdb, inv);
-            if(fDebugNet)
-            {
-                LogPrintf("  got inventory: %s  %s peer=%d\n", inv.ToString().c_str(), fAlreadyHave ? "have" : "new", pfrom->id);
-            }
+            if (fDebug)
+                printf("  got inventory: %s  %s\n", inv.ToString().c_str(), fAlreadyHave ? "have" : "new");
 
             if (!fAlreadyHave)
-            {
                 pfrom->AskFor(inv);
-            }
-            if (inv.type == MSG_BLOCK )
-            {
-                UpdateBlockAvailability(pfrom->GetId(), inv.hash);
-                if (!fAlreadyHave)
-                {
-                    pfrom->AskFor(inv);
-                }
-            }
-            else
-            {
-                pfrom->AddInventoryKnown(inv);
-                if(!fAlreadyHave && !IsInitialBlockDownload())
-                {
-                    pfrom->AskFor(inv);
-                }
+            else if (inv.type == MSG_BLOCK && mapOrphanBlocks.count(inv.hash)) {
+                pfrom->PushGetBlocks(pindexBest, GetOrphanRoot(mapOrphanBlocks[inv.hash]));
+            } else if (nInv == nLastBlock) {
+                // In case we are on a very long side-chain, it is possible that we already have
+                // the last block in an inv bundle sent in response to getblocks. Try to detect
+                // this situation and push another getblocks to continue.
+                pfrom->PushGetBlocks(mapBlockIndex[inv.hash], uint256(0));
+                if (fDebug)
+                    printf("force request: %s\n", inv.ToString().c_str());
             }
 
             // Track requests for our stuff
