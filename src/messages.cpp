@@ -865,7 +865,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
 
             bool fAlreadyHave = AlreadyHave(txdb, inv);
             if (fDebug)
-                printf("  got inventory: %s  %s\n", inv.ToString().c_str(), fAlreadyHave ? "have" : "new");
+                LogPrintf("  got inventory: %s  %s\n", inv.ToString().c_str(), fAlreadyHave ? "have" : "new");
 
             if (!fAlreadyHave)
                 pfrom->AskFor(inv);
@@ -877,7 +877,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
                 // this situation and push another getblocks to continue.
                 pfrom->PushGetBlocks(mapBlockIndex[inv.hash], uint256(0));
                 if (fDebug)
-                    printf("force request: %s\n", inv.ToString().c_str());
+                    LogPrintf("force request: %s\n", inv.ToString().c_str());
             }
 
             // Track requests for our stuff
