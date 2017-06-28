@@ -761,7 +761,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
         //pfrom->Misbehaving(1);
         return false;
     }
-
+/*
     else if (strCommand == NetMsgType::ADDR)
     {
         vector<CAddress> vAddr;
@@ -827,7 +827,7 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
         if (vAddr.size() < 1000)
             pfrom->fGetAddr = false;
     }
-
+*/
     else if (strCommand == NetMsgType::SENDHEADERS)
     {
         LOCK(cs_main);
