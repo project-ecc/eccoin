@@ -1003,6 +1003,8 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
                 if (pindex->GetBlockHash() == hashStop)
                 {
                     LogPrintf("getblocks stopping at %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString());
+                    if (hashStop != pindexBest->GetBlockHash() && pindex->GetBlockIndexTime() + nStakeMinAge > pindexBest->GetBlockIndexTime())
+                        pfrom->PushInventory(CInv(MSG_BLOCK, pindexBest->GetBlockHash()));
                     break;
                 }
                 pfrom->PushInventory(CInv(MSG_BLOCK, pindex->GetBlockHash()));
