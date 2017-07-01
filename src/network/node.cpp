@@ -171,7 +171,7 @@ void CNode::PushVersion()
     CAddress addrMe = GetLocalAddress(&addr);
     RAND_bytes((unsigned char*)&nLocalHostNonce, sizeof(nLocalHostNonce));
     LogPrintf("send version message: version %d, blocks=%d, us=%s, them=%s, peer=%s\n", PROTOCOL_VERSION, pindexBest->nHeight, addrMe.ToString().c_str(), addrYou.ToString().c_str(), addr.ToString().c_str());
-    PushMessage("version", PROTOCOL_VERSION, nLocalServices, nTime, addrYou, addrMe,
+    PushMessage("version", (int)PROTOCOL_VERSION, nLocalServices, nTime, addrYou, addrMe,
                 nLocalHostNonce, FormatSubVersion(CLIENT_NAME, CLIENT_VERSION, std::vector<std::string>()), pindexBest->nHeight);
 }
 
