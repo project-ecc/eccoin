@@ -7,11 +7,11 @@
 # Originally by Laszlo Hanyecz (solar@heliacal.net)
 
 CXX=llvm-g++
-DEPSDIR=/opt/local
+DEPSDIR=/usr/local
 
 INCLUDEPATHS= \
  -I"$(CURDIR)" \
- -I"$(CURDIR)"/obj \
+ -I"$(CURDIR)"/build \
  -I"$(DEPSDIR)/include" \
  -I"$(DEPSDIR)/include/db48"
 
@@ -25,7 +25,7 @@ USE_IPV6:=1
 LIBS= -dead_strip
 
 ifdef STATIC
-# Build STATIC if you are redistributing the MultiWalletCoind binary
+# Build STATIC if you are redistributing the ECCoind binary
 LIBS += \
  $(DEPSDIR)/lib/db48/libdb_cxx-4.8.a \
  $(DEPSDIR)/lib/libboost_system-mt.a \
@@ -59,7 +59,7 @@ CFLAGS = -g -msse2
 endif
 
 # ppc doesn't work because we don't support big-endian
-CFLAGS += -Wall -Wextra -Wformat -Wno-ignored-qualifiers -Wformat-security -Wno-unused-parameter -std=c++11\
+CFLAGS += -Wall -Wextra -Wformat -Wno-ignored-qualifiers -Wformat-security -Wno-unused-parameter -stdlib=libc++ -std=c++11\
     $(DEBUGFLAGS) $(DEFS) $(INCLUDEPATHS)
 
 OBJS= \
@@ -76,13 +76,6 @@ OBJS= \
     build/main.o \
     build/net.o \
     build/network/protocol.o \
-    build/bitcoinrpc.o \
-    build/rpcdump.o \
-    build/rpcnet.o \
-    build/rpcmining.o \
-    build/rpcwallet.o \
-    build/rpcblockchain.o \
-    build/rpcrawtransaction.o \
     build/script.o \
     build/sync.o \
     build/util/util.o \
@@ -97,12 +90,12 @@ OBJS= \
     build/points.o \
     build/chain.o \
     build/blockindex.o \
-    build/hash.o \
+    build/crypto/hash.o \
     build/locator.o \
     build/transaction.o \
     build/merkle_transaction.o \
     build/mempool.o \
-    build/scrypt.o \
+    build/crypto/scrypt.o \
     build/network/netutils.o \
     build/network/node.o \
     build/network/proxyutils.o \
@@ -113,13 +106,21 @@ OBJS= \
     build/util/utilmoneystr.o \
     build/util/utilstrencodings.o \
     build/util/utiltime.o \
-    build/univalue.o \
-    build/univalue_write.o \
-    build/univalue_read.o \
     build/random.o \
-    build/server.o \
-    build/fs.o
-
+    build/rpc/bitcoinrpc.o \
+    build/rpc/rpcblockchain.o \
+    build/rpc/rpcdump.o \
+    build/rpc/rpcmining.o \
+    build/rpc/rpcnet.o \
+    build/rpc/rpcrawtransaction.o \
+    build/rpc/rpcwallet.o \
+    build/crypto/hmac_sha256.o \
+    build/crypto/sha256.o \
+    build/network/subnet.o \
+    build/disk.o \
+    build/fs.o \
+    build/daemon.o
+    
 
 ifndef USE_UPNP
 	override USE_UPNP = -
@@ -137,53 +138,52 @@ ifneq (${USE_IPV6}, -)
 	DEFS += -DUSE_IPV6=$(USE_IPV6)
 endif
 
-all: MultiWalletCoind
+all: ECCoind
 
 LIBS += $(CURDIR)/leveldb/libleveldb.a $(CURDIR)/leveldb/libmemenv.a
 DEFS += $(addprefix -I,$(CURDIR)/leveldb/include)
 DEFS += $(addprefix -I,$(CURDIR)/leveldb/helpers)
-OBJS += obj/txdb-leveldb.o
+OBJS += build/txdb-leveldb.o
 leveldb/libleveldb.a:
 	@echo "Building LevelDB ..."; cd leveldb; make; cd ..
-obj/txdb-leveldb.o: leveldb/libleveldb.a
+build/txdb-leveldb.o: leveldb/libleveldb.a
 
 # auto-generated dependencies:
--include obj/*.P
+-include build/*.P
 
-obj/build.h: FORCE
-	/bin/sh ../share/genbuild.sh obj/build.h
-version.cpp: obj/build.h
+build/build.h: FORCE
+	/bin/sh ../share/genbuild.sh build/build.h
+version.cpp: build/build.h
 DEFS += -DHAVE_BUILD_INFO
 
-obj/%.o: %.cpp
+build/%.o: %.cpp
 	$(CXX) -c $(CFLAGS) -MMD -MF $(@:%.o=%.d) -o $@ $<
 	@cp $(@:%.o=%.d) $(@:%.o=%.P); \
 	  sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
 	      -e '/^$$/ d' -e 's/$$/ :/' < $(@:%.o=%.d) >> $(@:%.o=%.P); \
 	  rm -f $(@:%.o=%.d)
 
-obj/zerocoin/%.o: zerocoin/%.cpp
-	$(CXX) -c $(xCXXFLAGS) -MMD -MF $(@:%.o=%.d) -o $@ $<
-	@cp $(@:%.o=%.d) $(@:%.o=%.P); \
-	  sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
-	      -e '/^$$/ d' -e 's/$$/ :/' < $(@:%.o=%.d) >> $(@:%.o=%.P); \
-	  rm -f $(@:%.o=%.d)
-
-obj/scrypt-x86.o: scrypt-x86.S
+build/scrypt-x86.o: scrypt-x86.S
 	$(CXX) -c $(xCXXFLAGS) -MMD -o $@ $<
 
-obj/scrypt-x86_64.o: scrypt-x86_64.S
+build/scrypt-x86_64.o: scrypt-x86_64.S
 	$(CXX) -c $(xCXXFLAGS) -MMD -o $@ $<
 
-MultiWalletCoind: $(OBJS:obj/%=obj/%)
+ECCoind: $(OBJS:build/%=build/%)
 	$(CXX) $(CFLAGS) -o $@ $(LIBPATHS) $^ $(LIBS)
 
 clean:
-	-rm -f MultiWalletCoind
-	-rm -f obj/*.o
-	-rm -f obj/zerocoin/*.o
-	-rm -f obj/*.P
-	-rm -f obj/zerocoin/*.P
-	-rm -f obj/build.h
+	-rm -f ECCoind
+	-rm -f build/*.o
+	-rm -f build/*.P
+	-rm -f build/build.h
+	-rm -f build/network/*.o
+	-rm -f build/netowkr/*.P
+	-rm -f build/util/*.o
+	-rm -f build/util/*.P
+	-rm -f build/rpc/*.o
+	-rm -f build/rpc/*.P
+	-rm -f build/crypto/*.o
+	-rm -f builf/crypto*.P
 
 FORCE:
