@@ -404,7 +404,9 @@ static bool AcceptBlockHeader(const CBlockHeader& blockHeader, CValidationState&
             return error("%s: Consensus::ContextualCheckBlockHeader: %s, %s", __func__, hash.ToString().c_str(), FormatStateMessage(state).c_str());
     }
     if (pindex == NULL)
-        pindex = blockHeader.AddHeaderToBlockIndex();
+    {
+    //    pindex = blockHeader.AddHeaderToBlockIndex();
+    }
 
     if (ppindex)
         *ppindex = pindex;
