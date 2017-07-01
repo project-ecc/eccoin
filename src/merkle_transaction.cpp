@@ -97,7 +97,7 @@ int CMerkleTx::GetDepthInMainChainINTERNAL(CBlockIndex* &pindexRet)
 
 int CMerkleTx::GetDepthInMainChain(CBlockIndex* &pindexRet) const
 {
-    int nResult = GetDepthInMainChainINTERNAL(pindexRet);
+    const int nResult = GetDepthInMainChainINTERNAL(pindexRet);
     if (nResult == 0 && !mempool.exists(GetHash()))
         return -1; // Not in chain, not in mempool
 
@@ -113,7 +113,8 @@ int CMerkleTx::GetDepthInMainChain() const
 bool CMerkleTx::IsInMainChain() const
 {
     CBlockIndex *pindexRet;
-    return GetDepthInMainChainINTERNAL(pindexRet) > 0;
+    const bool isInChain = (GetDepthInMainChainINTERNAL(pindexRet) > 0);
+    return isInChain;
 }
 
 int CMerkleTx::GetBlocksToMaturity() const
