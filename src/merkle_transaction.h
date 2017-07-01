@@ -13,7 +13,7 @@ private:
 public:
     uint256 hashBlock;
     std::vector<uint256> vMerkleBranch;
-    mutabl int nIndex;
+    mutable int nIndex;
 
     // memory only
     mutable bool fMerkleVerified;
