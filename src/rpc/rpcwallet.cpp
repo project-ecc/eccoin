@@ -1427,7 +1427,7 @@ void ThreadCleanWalletPassphrase(void* parg)
     {
         nWalletUnlockTime = nMyWakeTime;
 
-        while(true)
+        do
         {
             if (nWalletUnlockTime==0)
                 break;
@@ -1439,7 +1439,7 @@ void ThreadCleanWalletPassphrase(void* parg)
             MilliSleep(nToSleep);
             ENTER_CRITICAL_SECTION(cs_nWalletUnlockTime);
 
-        }
+        }while(1);
 
         if (nWalletUnlockTime)
         {
