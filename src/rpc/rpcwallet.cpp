@@ -1490,13 +1490,13 @@ Value walletpassphrase(const Array& params, bool fHelp)
             "Stores the wallet decryption key in memory for <timeout> seconds.");
 
     boost::thread* topUpKeyPool = new boost::thread(&ThreadTopUpKeyPool);
-    ecc_threads.add_thread(topUpKeyPool);
+    topUpKeyPool->detach();
 
     int64_t* pnSleepTime = new int64_t(params[1].get_int64());
 
 
     boost::thread* CleanWalletPassphrase = new boost::thread(boost::bind(&ThreadCleanWalletPassphrase, pnSleepTime));
-    ecc_threads.add_thread(CleanWalletPassphrase);
+    CleanWalletPassphrase->detach();
 
     // ppcoin: if user OS account compromised prevent trivial sendmoney commands
     if (params.size() > 2)
