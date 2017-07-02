@@ -1471,11 +1471,7 @@ void ThreadMessageHandler2()
                 TRY_LOCK(pnode->cs_vRecv, lockRecv);
                 if (lockRecv)
                 {
-                    TRY_LOCK(pnode->cs_vSend, lockSend);
-                    if (lockSend)
-                    {
-                        ProcessMessages(pnode);
-                    }
+                    ProcessMessages(pnode);
                 }
             }
 
@@ -1485,11 +1481,7 @@ void ThreadMessageHandler2()
                 TRY_LOCK(pnode->cs_vSend, lockSend);
                 if (lockSend)
                 {
-                    TRY_LOCK(pnode->cs_vRecv, lockRecv);
-                    if (lockRecv)
-                    {
-                        SendMessages(pnode, pnode == pnodeTrickle);
-                    }
+                    SendMessages(pnode, pnode == pnodeTrickle);
                 }
             }
             if (fShutdown)

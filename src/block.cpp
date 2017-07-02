@@ -850,12 +850,6 @@ bool CBlock::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos, const u
             return false;
         }
     }
-    if (pindexNew == pindexBest)
-    {
-        // Notify UI to display prev block's coinbase if it was ours
-        static uint256 hashPrevBestCoinBase;
-        hashPrevBestCoinBase = vtx[0].GetHash();
-    }
     return true;
 }
 
