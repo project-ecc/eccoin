@@ -566,18 +566,17 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
         }
     }
 
-    // If don't already have its previous block, shunt it off to holding area until we get it
-
-    if (mapBlockIndex.find(pblock->hashPrevBlock) == mapBlockIndex.end())
+    // If we don't already have its previous block, shunt it off to holding area until we get it
+    if (pblock->hashPrevBlock != 0 && !mapBlockIndex.count(pblock->hashPrevBlock))
     {
-            LogPrintf("ProcessBlock: ORPHAN BLOCK with hash = %s, prevHash=%s\n", pblock->GetHash().ToString().substr(0,20).c_str() ,pblock->hashPrevBlock.ToString().substr(0,20).c_str());
+        LogPrintf("ProcessBlock: ORPHAN BLOCK with hash = %s, prevHash=%s\n", pblock->GetHash().ToString().substr(0,20).c_str() ,pblock->hashPrevBlock.ToString().substr(0,20).c_str());
+        // Accept orphans as long as there is a node to request its parents from
+        if (pfrom)
+        {
             CBlock* pblock2 = new CBlock(*pblock);
-            // ppcoin: check proof-of-stake
             if (pblock2->IsProofOfStake())
             {
-                // Limited duplicity on stake: prevents block flood attack
-                //  stake allowed only when there is orphan child block
-                if (setStakeSeenOrphan.count(pblock2->GetProofOfStake()) && !mapOrphanBlocksByPrev.count(hash))
+                if (setStakeSeenOrphan.count(pblock2->GetProofOfStake()))
                     return error("ProcessBlock() :  proof-of-stake (%s, %d) for orphan block %s", pblock2->GetProofOfStake().first.ToString().c_str(), pblock2->GetProofOfStake().second, hash.ToString().c_str());
                 else
                     setStakeSeenOrphan.insert(pblock2->GetProofOfStake());
@@ -587,19 +586,10 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
                 mapOrphanBlocks.insert(make_pair(hash, pblock2));
                 mapOrphanBlocksByPrev.insert(make_pair(pblock2->hashPrevBlock, pblock2));
             }
-
-            // Ask this guy to fill in what we're missing from the last block we have
-            if (pfrom)
-            {
-                LOCK(pfrom->cs_vSend);
-                pfrom->PushGetBlocks(pindexBest, GetOrphanRoot(pblock2));
-                if(!IsInitialBlockDownload())
-                {
-                    pfrom->AskFor(CInv(MSG_BLOCK,WantedByOrphan(pblock2)));
-                }
-            }
-            LogPrintf("Orphan blocks proccessed \n");
-            return true;
+            // Ask this guy to fill in what we're missing
+            pfrom->PushGetBlocks(pindexBest, GetOrphanRoot(pblock2));
+        }
+        return true;
     }
 
     // Store to disk
