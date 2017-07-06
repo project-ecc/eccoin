@@ -1264,22 +1264,22 @@ void ThreadOpenConnections2()
             if (!addr.IsValid() || setConnected.count(addr.GetGroup()) || IsLocal(addr))
                 break;
 
-            // If we didn't find an appropriate destination after trying 100 addresses fetched from addrman,
+            // If we didn't find an appropriate destination after trying 30 addresses fetched from addrman,
             // stop this loop, and let the outer loop run again (which sleeps, adds seed nodes, recalculates
             // already-connected network ranges, ...) before trying new addrman addresses.
             nTries++;
-            if (nTries > 100)
+            if (nTries > 30)
                 break;
 
             if (IsLimited(addr))
                 continue;
 
-            // only consider very recently tried nodes after 30 failed attempts
-            if (nANow - addr.nLastTry < 600 && nTries < 30)
+            // only consider very recently tried nodes after 10 failed attempts
+            if (nANow - addr.nLastTry < 600 && nTries < 10)
                 continue;
 
-            // do not allow non-default ports, unless after 50 invalid addresses selected already
-            if (addr.GetPort() != GetDefaultPort() && nTries < 50)
+            // do not allow non-default ports, unless after 20 invalid addresses selected already
+            if (addr.GetPort() != GetDefaultPort() && nTries < 20)
                 continue;
 
             addrConnect = addr;
