@@ -439,6 +439,7 @@ std::vector<std::string> ArgsManager::GetArgs(const std::string& strArg)
 	 catch(...){
 		LogPrintf("exception when trying to get %s from mapMultiArgs \n", strArg.c_str());
 	}
+    return std::vector<std::string>();
 }
 
 bool ArgsManager::IsArgSet(const std::string& strArg)
@@ -522,22 +523,6 @@ std::string HelpMessageOpt(const std::string &option, const std::string &message
            std::string("\n") + std::string(msgIndent,' ') +
            FormatParagraph(message, screenWidth - msgIndent, msgIndent) +
            std::string("\n\n");
-}
-
-static std::string FormatException(const std::exception* pex, const char* pszThread)
-{
-#ifdef WIN32
-    char pszModule[MAX_PATH] = "";
-    GetModuleFileNameA(NULL, pszModule, sizeof(pszModule));
-#else
-    const char* pszModule = "bitcoin";
-#endif
-    if (pex)
-        return strprintf(
-            "EXCEPTION: %s       \n%s       \n%s in %s       \n", typeid(*pex).name(), pex->what(), pszModule, pszThread);
-    else
-        return strprintf(
-            "UNKNOWN EXCEPTION       \n%s in %s       \n", pszModule, pszThread);
 }
 
 fs::path GetDefaultDataDir()

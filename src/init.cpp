@@ -310,7 +310,6 @@ void Shutdown()
             fTaken = true;
         }
     }
-    static bool fExit;
     if (fFirstThread)
     {
         fShutdown = true;
@@ -327,7 +326,6 @@ void Shutdown()
         ecc_threads.add_thread(exitTimeout);
         MilliSleep(50);
         LogPrintf("ECCoin exited\n\n");
-        fExit = true;
         // ensure non-UI client gets exited here, but let ECCoin-Qt reach 'return 0;' in bitcoin.cpp
         exit(0);
     }

@@ -172,7 +172,7 @@ contains(USE_O3, 1) {
     QMAKE_CFLAGS += -msse2
 }
 
-QMAKE_CXXFLAGS_WARN_ON = -fdiagnostics-show-option -Wall -Wextra -Wno-ignored-qualifiers -Wformat -Wformat-security -Wno-unused-parameter -Wstack-protector
+QMAKE_CXXFLAGS_WARN_ON = -fdiagnostics-show-option -Wall -Wextra -Wformat -Wformat-security -Wno-unused-parameter -Wstack-protector
 
 
 # Input
@@ -192,7 +192,6 @@ HEADERS += \
     src/init.h \
     src/key.h \
     src/keystore.h \
-    src/limitedmap.h \
     src/main.h \
     src/messages.h \
     src/miner.h \
@@ -242,9 +241,6 @@ HEADERS += \
     src/util/utilexceptions.h \
     src/amount.h \
     src/network/subnet.h \
-    src/crypto/hmac_sha256.h \
-    src/crypto/sha256.h \
-    src/crypto/common.h \
     src/crypto_endian.h \
     src/byteswap.h \
     src/noui.h \
@@ -280,8 +276,6 @@ SOURCES += \
     src/random.cpp \
     src/util/utilexceptions.cpp \
     src/network/subnet.cpp \
-    src/crypto/hmac_sha256.cpp \
-    src/crypto/sha256.cpp \
     src/rpc/rpcnet.cpp \
     src/rpc/rpcwallet.cpp \
     src/daemon.cpp \

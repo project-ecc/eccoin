@@ -3,7 +3,7 @@
 
 #include <exception>
 
-void PrintException(std::exception* pex, const char* pszThread);
-void PrintExceptionContinue(std::exception* pex, const char* pszThread);
+void PrintException(const std::exception *pex, const char* pszThread);
+void PrintExceptionContinue(const std::exception *pex, const char* pszThread);
 
 #endif // UTILEXCEPTIONS_H

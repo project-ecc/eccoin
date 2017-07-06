@@ -2,7 +2,7 @@
 #include "util.h"
 
 
-std::string FormatException(std::exception* pex, const char* pszThread)
+std::string FormatException(const std::exception* pex, const char* pszThread)
 {
 #ifdef WIN32
     char pszModule[MAX_PATH] = "";
@@ -19,7 +19,7 @@ std::string FormatException(std::exception* pex, const char* pszThread)
 }
 
 
-void PrintException(std::exception* pex, const char* pszThread)
+void PrintException(const std::exception* pex, const char* pszThread)
 {
     std::string message = FormatException(pex, pszThread);
     LogPrintf("\n\n************************\n%s\n", message.c_str());
@@ -28,7 +28,7 @@ void PrintException(std::exception* pex, const char* pszThread)
     throw;
 }
 
-void PrintExceptionContinue(std::exception* pex, const char* pszThread)
+void PrintExceptionContinue(const std::exception* pex, const char* pszThread)
 {
     std::string message = FormatException(pex, pszThread);
     LogPrintf("\n\n************************\n%s\n", message.c_str());

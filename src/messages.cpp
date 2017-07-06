@@ -167,22 +167,6 @@ struct CNodeState {
     }
 };
 
-
-void NotifyHeaderTip() {
-    bool fInitialBlockDownload = false;
-    static CBlockIndex* pindexHeaderOld = NULL;
-    CBlockIndex* pindexHeader = NULL;
-    {
-        LOCK(cs_main);
-        pindexHeader = pindexBestHeader;
-
-        if (pindexHeader != pindexHeaderOld) {
-            fInitialBlockDownload = IsInitialBlockDownload();
-            pindexHeaderOld = pindexHeader;
-        }
-    }
-}
-
 /** Map maintaining per-node state. Requires cs_main. */
 std::map<NodeId, CNodeState> mapNodeState;
 
@@ -429,7 +413,6 @@ bool ProcessNewBlockHeaders(const std::vector<CBlockHeader>& headers, CValidatio
             }
         }
     }
-    NotifyHeaderTip();
     return true;
 }
 

@@ -16,28 +16,6 @@ using namespace std;
 
 extern unsigned int nStakeTargetSpacing;
 
-Value getsubsidy(const Array& params, bool fHelp)
-{
-    if (fHelp || params.size() > 1)
-        throw runtime_error(
-            "getsubsidy [nTarget]\n"
-            "Returns proof-of-work subsidy value for the specified value of target.");
-
-    unsigned int nBits = 0;
-
-    if (params.size() != 0)
-    {
-        CBigNum bnTarget(uint256(params[0].get_str()));
-        nBits = bnTarget.GetCompact();
-    }
-    else
-    {
-        nBits = GetNextTargetRequired(pindexBest, false);
-    }
-
-    return (uint64_t)GetProofOfWorkReward(pindexBest->nHeight, 0, pindexBest->pprev);
-}
-
 Value getmininginfo(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() != 0)
@@ -57,7 +35,7 @@ Value getmininginfo(const Array& params, bool fHelp)
     diff.push_back(Pair("search-interval",      (int)nLastCoinStakeSearchInterval));
     obj.push_back(Pair("difficulty",    diff));
 
-    obj.push_back(Pair("blockvalue",    (uint64_t)GetProofOfWorkReward(pindexBest->nHeight, 0, pindexBest->pprev)));
+    obj.push_back(Pair("blockvalue",    (uint64_t)0));
     obj.push_back(Pair("netmhashps",     GetPoWMHashPS()));
     obj.push_back(Pair("netstakeweight", GetPoSKernelPS()));
     obj.push_back(Pair("errors",        GetWarnings("statusbar")));
@@ -446,7 +424,7 @@ Value getblocktemplate(const Array& params, bool fHelp)
         uint256 txHash = tx.GetHash();
         setTxIndex[txHash] = i++;
 
-        if (i == 1 && tx.IsCoinBase() || tx.IsCoinStake())
+        if ((i == 1 && tx.IsCoinBase()) || tx.IsCoinStake())
             continue;
 
         Object entry;

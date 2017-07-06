@@ -790,7 +790,7 @@ bool CBlock::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos, const u
     }
     else
     {
-        LogPrintf("Previous hash could not be found in block index, asserting false \n"); /// currently failing here
+        LogPrintf("Previous hash could not be found in block index, asserting false. this should never happen \n");
         assert(false);
     }
 
