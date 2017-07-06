@@ -157,8 +157,6 @@ OBJS= \
     build/rpc/rpcnet.o \
     build/rpc/rpcrawtransaction.o \
     build/rpc/rpcwallet.o \
-    build/crypto/sha256.o \
-    build/crypto/hmac_sha256.o \
     build/network/subnet.o \
     build/disk.o \
     build/fs.o \
