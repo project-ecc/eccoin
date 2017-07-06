@@ -142,18 +142,6 @@ bool InitParameterInteraction()
     fUseFastIndex = GetBoolArg("-fastindex", true);
     nMinerSleep = GetArg("-minersleep", 500);
 
-    pcheckpointMain->CheckpointsMode = Checkpoints::STRICT_X;
-    std::string strCpMode = GetArg("-cppolicy", "strict");
-
-    if(strCpMode == "strict")
-        pcheckpointMain->CheckpointsMode = Checkpoints::STRICT_X;
-
-    if(strCpMode == "advisory")
-        pcheckpointMain->CheckpointsMode = Checkpoints::ADVISORY;
-
-    if(strCpMode == "permissive")
-        pcheckpointMain->CheckpointsMode = Checkpoints::PERMISSIVE;
-
     nDerivationMethodIndex = 0;
 
     // when specifying an explicit binding address, you want to listen on it
@@ -637,12 +625,6 @@ bool AppInit2()
                 return InitError(strprintf(_("Cannot resolve -externalip address: '%s'"), strAddr.c_str()));
             AddLocal(CService(strAddr, GetListenPort(), fNameLookup), LOCAL_MANUAL);
         }
-    }
-
-    if (IsArgSet("-checkpointkey")) // ppcoin: checkpoint master priv key
-    {
-        if (! pcheckpointMain->SetCheckpointPrivKey(GetArg("-checkpointkey", "")))
-            InitError(_("Unable to sign checkpoint, wrong checkpointkey?\n"));
     }
 
 	 if(IsArgSet("-seednode"))

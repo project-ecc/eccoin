@@ -1354,12 +1354,14 @@ bool ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vR
             // it, if the remote node sends a ping once per second and this node takes 5
             // seconds to respond to each, the 5th ping the remote sends would appear to
             // return very quickly.
+            pfrom->PushInventory(CInv(MSG_BLOCK, pindexBest->GetBlockHash()));
             pfrom->PushMessage("pong", nonce);
         }
     }
 
     else if (strCommand == NetMsgType::PONG)
     {
+        pfrom->PushInventory(CInv(MSG_BLOCK, pindexBest->GetBlockHash()));
         int64_t pingUsecEnd = nTimeReceived;
         uint64_t nonce = 0;
         size_t nAvail = vRecv.in_avail();
@@ -1580,7 +1582,7 @@ bool SendMessages(CNode* pto, bool fSendTrickle)
 
         // Keep-alive ping. We send a nonce of zero because we don't use it anywhere
         // right now.
-        if (pto->nLastSend && GetTime() - pto->nLastSend > 30 * 10 && pto->vSend.empty())
+        if (pto->nLastSend && GetTime() - pto->nLastSend > 30 * 5 && pto->vSend.empty())
         {
             uint64_t nonce = 0;
             if (pto->nVersion > BIP0031_VERSION)

@@ -528,7 +528,7 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
     // ppcoin: check proof-of-stake
     // Limited duplicity on stake: prevents block flood attack
     // Duplicate stake allowed only when there is orphan child block
-    if (pblock->IsProofOfStake() && setStakeSeen.count(pblock->GetProofOfStake()) && !mapOrphanBlocksByPrev.count(hash) && !pcheckpointMain->WantedByPendingSyncCheckpoint(hash))
+    if (pblock->IsProofOfStake() && setStakeSeen.count(pblock->GetProofOfStake()) && !mapOrphanBlocksByPrev.count(hash))
     {
             return error("ProcessBlock() : duplicate proof-of-stake (%s, %d) for block %s", pblock->GetProofOfStake().first.ToString().c_str(), pblock->GetProofOfStake().second, hash.ToString().c_str());
     }
@@ -537,8 +537,8 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
     if (!pblock->CheckBlock())
         return error("ProcessBlock() : CheckBlock FAILED");
 
-    CBlockIndex* pcheckpoint = pcheckpointMain->GetLastSyncCheckpoint();
-    if (pcheckpoint && pblock->hashPrevBlock != pindexBest->GetBlockHash() && !pcheckpointMain->WantedByPendingSyncCheckpoint(hash))
+    CBlockIndex* pcheckpoint = pcheckpointMain->GetLastCheckpoint(mapBlockIndex);
+    if (pcheckpoint && pblock->hashPrevBlock != pindexBest->GetBlockHash())
     {
         // Extra checks to prevent "fill up memory by spamming with bogus blocks"
         int64_t deltaTime = pblock->GetBlockTime() - pcheckpoint->nTime;
@@ -555,10 +555,7 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
         {
             if(!IsInitialBlockDownload()) // if it is in the initial download could be a mistake so no need to disconnect peer just reject block
             {
-                if (pfrom)
-                {
-                    pfrom->Misbehaving(100);
-                }
+                return false;
             }
             else
             {
@@ -568,10 +565,6 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
             return error("ProcessBlock() : block with too little %s", pblock->IsProofOfStake()? "proof-of-stake" : "proof-of-work");
         }
     }
-
-    // ppcoin: ask for pending sync-checkpoint if any
-    if (!IsInitialBlockDownload())
-        pcheckpointMain->AskForPendingSyncCheckpoint(pfrom);
 
     // If don't already have its previous block, shunt it off to holding area until we get it
 
@@ -584,7 +577,7 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
             {
                 // Limited duplicity on stake: prevents block flood attack
                 //  stake allowed only when there is orphan child block
-                if (setStakeSeenOrphan.count(pblock2->GetProofOfStake()) && !mapOrphanBlocksByPrev.count(hash) && !pcheckpointMain->WantedByPendingSyncCheckpoint(hash))
+                if (setStakeSeenOrphan.count(pblock2->GetProofOfStake()) && !mapOrphanBlocksByPrev.count(hash))
                     return error("ProcessBlock() :  proof-of-stake (%s, %d) for orphan block %s", pblock2->GetProofOfStake().first.ToString().c_str(), pblock2->GetProofOfStake().second, hash.ToString().c_str());
                 else
                     setStakeSeenOrphan.insert(pblock2->GetProofOfStake());
@@ -781,27 +774,6 @@ bool LoadBlockIndex(bool fAllowNew)
 
         if (!block.AddToBlockIndex(nFile, nBlockPos, hashProofOfStake))
             return error("LoadBlockIndex() : genesis block not accepted");
-
-        // ppcoin: initialize synchronized checkpoint
-        if (!WriteSyncCheckpoint((!fTestNet ? hashGenesisBlock : hashGenesisBlockTestNet)))
-            return error("LoadBlockIndex() : failed to init sync checkpoint");
-    }
-
-    string strPubKey = "";
-
-    // if checkpoint master key changed must reset sync-checkpoint
-    if (!txdb.ReadCheckpointPubKey(strPubKey) || strPubKey != CSyncCheckpoint::strMasterPubKey)
-    {
-        // write checkpoint master key to db
-        txdb.TxnBegin();
-        if (!txdb.WriteCheckpointPubKey(CSyncCheckpoint::strMasterPubKey))
-        {
-            return error("LoadBlockIndex() : failed to write new checkpoint master key to db");
-        }
-        if (!txdb.TxnCommit())
-            return error("LoadBlockIndex() : failed to commit new checkpoint master key to db");
-        if ((!fTestNet) && !pcheckpointMain->ResetSyncCheckpoint())
-            return error("LoadBlockIndex() : failed to reset sync-checkpoint");
     }
 
     return true;

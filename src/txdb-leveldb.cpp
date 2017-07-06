@@ -559,23 +559,6 @@ bool LoadBlockIndexInternal()
     }
     LogPrintf("Time To Makechecksums: %I64 ms\n", GetTimeMillis() - nStartChecksums);
 
-    // ECCoin: write checkpoint we loaded from
-    if( bestCheckpoint != 0 )
-    {
-        uint256 CheckpointBlock = mapCheckpoints.find(bestCheckpoint)->second;
-        if (!WriteSyncCheckpoint(CheckpointBlock))
-            return error("LoadBlockIndex() : failed to init sync checkpoint");
-    }
-    else
-    {
-        if (!WriteSyncCheckpoint((!fTestNet ? hashGenesisBlock : hashGenesisBlockTestNet)))
-            return error("LoadBlockIndex() : failed to init sync checkpoint");
-    }
-    // NovaCoin: load hashSyncCheckpoint
-    if (!itxdb.ReadSyncCheckpoint(hashSyncCheckpoint))
-        return error("CTxDB::LoadBlockIndex() : hashSyncCheckpoint not loaded");
-    LogPrintf("LoadBlockIndex(): synchronized checkpoint %s\n", hashSyncCheckpoint.ToString().c_str());
-
     // Load bnBestInvalidTrust, OK if it doesn't exist
     CBigNum bnBestInvalidTrust;
     itxdb.ReadBestInvalidTrust(bnBestInvalidTrust);

@@ -971,19 +971,6 @@ bool CBlock::AcceptBlock(CBlock* pblock)
     if (!pcheckpointMain->CheckHardened(nHeight, hash))
         return DoS(100, error("AcceptBlock() : rejected by hardened checkpoint lock-in at %d", nHeight));
 
-    // ppcoin: check that the block satisfies synchronized checkpoint
-    if (!pcheckpointMain->CheckSync(hash, pindexPrev))
-    {
-        if(!GetBoolArg("-nosynccheckpoints", false))
-        {
-            return error("AcceptBlock() : rejected by synchronized checkpoint");
-        }
-        else
-        {
-            strMiscWarning = ("WARNING: syncronized checkpoint violation detected, but skipped!");
-        }
-    }
-
     // Verify hash target and signature of coinstake tx
     uint256 hashProofOfStake = 0;
     if (IsProofOfStake())
@@ -1030,9 +1017,6 @@ bool CBlock::AcceptBlock(CBlock* pblock)
             }
         }
     }
-
-    // ppcoin: check pending sync-checkpoint
-    pcheckpointMain->AcceptPendingSyncCheckpoint();
 
     return true;
 }
