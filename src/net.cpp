@@ -1429,26 +1429,18 @@ void ThreadMessageHandler()
 {
     // Make this thread recognisable as the message handling thread
     RenameThread("ECCoin-msghand");
-    while(true)
+    try
     {
-        try
-        {
-            vnThreadsRunning[THREAD_MESSAGEHANDLER]++;
-            ThreadMessageHandler2();
-            vnThreadsRunning[THREAD_MESSAGEHANDLER]--;
-        }
-        catch (std::exception& e) {
-            vnThreadsRunning[THREAD_MESSAGEHANDLER]--;
-            PrintExceptionContinue(&e, "ThreadMessageHandler()");
-        } catch (...) {
-            vnThreadsRunning[THREAD_MESSAGEHANDLER]--;
-            PrintExceptionContinue(NULL, "ThreadMessageHandler()");
-
-        }
-        if(fShutdown)
-        {
-            break;
-        }
+        vnThreadsRunning[THREAD_MESSAGEHANDLER]++;
+        ThreadMessageHandler2();
+        vnThreadsRunning[THREAD_MESSAGEHANDLER]--;
+    }
+    catch (std::exception& e) {
+        vnThreadsRunning[THREAD_MESSAGEHANDLER]--;
+        PrintException(&e, "ThreadMessageHandler()");
+    } catch (...) {
+        vnThreadsRunning[THREAD_MESSAGEHANDLER]--;
+        PrintException(NULL, "ThreadMessageHandler()");
     }
     LogPrintf("ThreadMessageHandler exited\n");
 }
