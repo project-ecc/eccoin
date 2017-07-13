@@ -154,7 +154,10 @@ void CNode::CloseSocketDisconnect()
         LogPrintf("disconnecting node %s\n", addrName.c_str());
         closesocket(hSocket);
         hSocket = INVALID_SOCKET;
-        vRecv.clear();
+        {
+            LOCK(this->cs_vRecv);
+            vRecv.clear();
+        }
     }
 }
 
