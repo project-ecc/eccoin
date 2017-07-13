@@ -73,14 +73,6 @@ public:
     std::deque<CInv> vRecvGetData;
     std::atomic<int64_t> nLastBlockTime;
 
-
-
-    /// Deprecated, to be removed in the future when headersync replaces full block sync
-    bool askedIfReady; /// asked this peer if they are ready to recieve more blocks
-    int64_t readyIn; /// time until peer is next ready
-    bool noReadyActive;
-
-
 protected:
 
     // Denial-of-service detection/prevention
@@ -180,9 +172,6 @@ public:
         addr = addrIn;
         addrName = addrNameIn == "" ? addr.ToStringIPPort() : addrNameIn;
         nVersion = 0;
-        askedIfReady = false;
-        readyIn = 0; // the next time a peer is ready in
-        noReadyActive = false;
         strSubVer = "";
         fInbound = fInboundIn;
         fNetworkNode = false;
