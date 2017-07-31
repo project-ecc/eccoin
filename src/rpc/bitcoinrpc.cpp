@@ -5,13 +5,15 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "init.h"
-#include "util/util.h"
+#include "util.h"
+#include "utilstrencodings.h"
 #include "sync.h"
 #include "ui_interface.h"
 #include "base58.h"
 #include "bitcoinrpc.h"
 #include "db.h"
-#include "daemon.h"
+#include "main.h"
+#include "clientversion.h"
 
 #include <boost/thread.hpp>
 #include <boost/asio.hpp>
@@ -227,8 +229,6 @@ Value stop(const Array& params, bool fHelp)
             "<detach> is true or false to detach the database or not for this stop only\n"
             "Stop eccoin server (and possibly override the detachdb config value).");
     // Shutdown will take long enough that the response should get back
-    if (params.size() > 0)
-        bitdb.SetDetach(params[0].get_bool());
     StartShutdown();
     return "eccoin server stopping";
 }
@@ -562,7 +562,7 @@ bool ClientAllowed(const boost::asio::ip::address& address)
         return true;
 
     const string strAddress = address.to_string();
-    const vector<string>& vAllow = gArgs.GetArgs("-rpcallowip");
+    const vector<string>& vAllow = GetArgs("-rpcallowip");
     BOOST_FOREACH(string strAllow, vAllow)
         if (WildcardMatch(strAddress, strAllow))
             return true;
@@ -676,15 +676,11 @@ void ThreadRPCServer()
 
     try
     {
-        vnThreadsRunning[THREAD_RPCLISTENER]++;
         ThreadRPCServer2();
-        vnThreadsRunning[THREAD_RPCLISTENER]--;
     }
     catch (std::exception& e) {
-        vnThreadsRunning[THREAD_RPCLISTENER]--;
         PrintException(&e, "ThreadRPCServer()");
     } catch (...) {
-        vnThreadsRunning[THREAD_RPCLISTENER]--;
         PrintException(NULL, "ThreadRPCServer()");
     }
     LogPrintf("ThreadRPCServer exited\n");
@@ -730,7 +726,6 @@ static void RPCAcceptHandler(boost::shared_ptr< basic_socket_acceptor<Protocol, 
                              AcceptedConnection* conn,
                              const boost::system::error_code& error)
 {
-    vnThreadsRunning[THREAD_RPCLISTENER]++;
 
     // Immediately start accepting new connections, except when we're cancelled or our socket is closed.
     if (error != asio::error::operation_aborted
@@ -770,8 +765,6 @@ static void RPCAcceptHandler(boost::shared_ptr< basic_socket_acceptor<Protocol, 
             delete conn;
         }
     }
-
-    vnThreadsRunning[THREAD_RPCLISTENER]--;
 }
 
 void ThreadRPCServer2()
@@ -833,7 +826,7 @@ void ThreadRPCServer2()
     // Try a dual IPv6/IPv4 socket, falling back to separate IPv4 and IPv6 sockets
     const bool loopback = !IsArgSet("-rpcallowip");
     asio::ip::address bindAddress = loopback ? asio::ip::address_v6::loopback() : asio::ip::address_v6::any();
-    ip::tcp::endpoint endpoint(bindAddress, GetArg("-rpcport", GetDefaultRPCPort()));
+    ip::tcp::endpoint endpoint(bindAddress, GetArg("-rpcport", BaseParams().RPCPort()));
     boost::system::error_code v6_only_error;
     boost::shared_ptr<ip::tcp::acceptor> acceptor(new ip::tcp::acceptor(io_service));
 
@@ -898,10 +891,8 @@ void ThreadRPCServer2()
         return;
     }
 
-    vnThreadsRunning[THREAD_RPCLISTENER]--;
     while (!fShutdown)
         io_service.run_one();
-    vnThreadsRunning[THREAD_RPCLISTENER]++;
     StopRequests();
 }
 
@@ -988,7 +979,6 @@ void ThreadRPCServer3(void* parg)
 
     {
         LOCK(cs_THREAD_RPCHANDLER);
-        vnThreadsRunning[THREAD_RPCHANDLER]++;
     }
     AcceptedConnection *conn = (AcceptedConnection *) parg;
 
@@ -999,10 +989,6 @@ void ThreadRPCServer3(void* parg)
         {
             conn->close();
             delete conn;
-            {
-                LOCK(cs_THREAD_RPCHANDLER);
-                --vnThreadsRunning[THREAD_RPCHANDLER];
-            }
             return;
         }
         map<string, string> mapHeaders;
@@ -1071,10 +1057,6 @@ void ThreadRPCServer3(void* parg)
     }
 
     delete conn;
-    {
-        LOCK(cs_THREAD_RPCHANDLER);
-        vnThreadsRunning[THREAD_RPCHANDLER]--;
-    }
 }
 
 json_spirit::Value CRPCTable::execute(const std::string &strMethod, const json_spirit::Array &params) const
@@ -1127,7 +1109,7 @@ Object CallRPC(const string& strMethod, const Array& params)
     asio::ssl::stream<asio::ip::tcp::socket> sslStream(io_service, context);
     SSLIOStreamDevice<asio::ip::tcp> d(sslStream, fUseSSL);
     iostreams::stream< SSLIOStreamDevice<asio::ip::tcp> > stream(d);
-    if (!d.connect(GetArg("-rpcconnect", "127.0.0.1"), GetArg("-rpcport", itostr(GetDefaultRPCPort()))))
+    if (!d.connect(GetArg("-rpcconnect", "127.0.0.1"), GetArg("-rpcport", itostr(BaseParams().RPCPort()))))
         throw runtime_error("couldn't connect to server");
 
     // HTTP basic authentication

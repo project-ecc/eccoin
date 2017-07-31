@@ -7,7 +7,14 @@
 #define NOVACOIN_MINER_H
 
 #include "main.h"
-#include "wallet.h"
+#include "wallet/wallet.h"
+
+extern int64_t nLastCoinStakeSearchInterval;
+
+static const bool DEFAULT_GENERATE = false;
+static const int DEFAULT_GENERATE_THREADS = 1;
+
+static const bool DEFAULT_PRINTPRIORITY = false;
 
 
 /** Check mined proof-of-stake block */
@@ -16,14 +23,21 @@ bool CheckStake(CBlock* pblock, CWallet& wallet);
 /** Base sha256 mining transform */
 void SHA256Transform(void* pstate, void* pinput, const void* pinit);
 
-void ScryptMiner(CWallet *pwallet, bool fProofOfStake);
-
-void GenerateScryptCoins(bool fGenerate, CWallet* pwallet);
+void ScryptMiner(CWallet *pwallet);
 
 void IncrementExtraNonce(CBlock* pblock, CBlockIndex* pindexPrev, unsigned int& nExtraNonce);
 void FormatHashBuffers(CBlock* pblock, char* pmidstate, char* pdata, char* phash1);
 bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reservekey);
 
-CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake=false);
+void ThreadScryptMiner(void* parg);
+
+struct CBlockTemplate
+{
+    CBlock block;
+    std::vector<CAmount> vTxFees;
+    std::vector<int64_t> vTxSigOps;
+};
+
+CBlockTemplate* CreateNewBlock(CWallet* pwallet, bool fProofOfStake=false);
 
 #endif // NOVACOIN_MINER_H

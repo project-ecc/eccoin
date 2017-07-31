@@ -1,13 +1,16 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2012 The Bitcoin developers
-// Distributed under the MIT/X11 software license, see the accompanying
+// Copyright (c) 2009-2015 The Bitcoin Core developers
+// Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #ifndef BITCOIN_INIT_H
 #define BITCOIN_INIT_H
 
-#include "wallet.h"
-#include "checkpoints.h"
+#include <string>
+#include "wallet/wallet.h"
+
+class CScheduler;
+class CWallet;
 
 namespace boost
 {
@@ -15,31 +18,29 @@ class thread_group;
 } // namespace boost
 
 extern CWallet* pwalletMain;
-extern Checkpoints* pcheckpointMain;
-extern ServiceFlags nLocalServices;
 
-
-extern std::string strWalletFileName;
 void StartShutdown();
+bool ShutdownRequested();
+/** Interrupt threads */
+void Interrupt(boost::thread_group& threadGroup);
 void Shutdown();
-bool AppInit2();
-std::string HelpMessage();
-
 //!Initialize the logging infrastructure
 void InitLogging();
 //!Parameter interaction: change current parameters depending on various rules
-bool InitParameterInteraction();
+void InitParameterInteraction();
+bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler);
 
-/** Initialize eccoin core: Basic context setup.
- *  @note This can be done before daemonization.
- *  @pre Parameters should be parsed and config file should be read.
- */
-bool AppInitBasicSetup();
+/** The help message mode determines what help message to show */
+enum HelpMessageMode {
+    HMM_BITCOIND,
+    HMM_BITCOIN_QT
+};
 
-
+/** Help for options shared between UI and daemon (for -help) */
+std::string HelpMessage(HelpMessageMode mode);
+/** Returns licensing information (for -version) */
 std::string LicenseInfo();
 
-extern bool fEnforceCanonical;
+extern bool fShutdown;
 
-#endif
-
+#endif // BITCOIN_INIT_H

@@ -1,41 +1,38 @@
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2015 The Bitcoin Core developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #include "random.h"
 
+#include "support/cleanse.h"
 #ifdef WIN32
 #include "compat.h" // for Windows API
-#include <wincrypt.h>
 #endif
-#include "util/util.h"
-#include "util/utilstrencodings.h"
+#include "serialize.h"        // for begin_ptr(vec)
+#include "util.h"             // for LogPrint()
+#include "utilstrencodings.h" // for GetTime()
 
-#include <stdlib.h>
 #include <limits>
-#include <chrono>
-#include <thread>
 
 #ifndef WIN32
 #include <sys/time.h>
 #endif
 
-#ifdef HAVE_SYS_GETRANDOM
-#include <sys/syscall.h>
-#include <linux/random.h>
-#endif
-#ifdef HAVE_GETENTROPY
-#include <unistd.h>
-#endif
-#ifdef HAVE_SYSCTL_ARND
-#include <sys/sysctl.h>
-#endif
-
-#include <mutex>
-
 #include <openssl/err.h>
 #include <openssl/rand.h>
 
-static void RandFailure()
+static inline int64_t GetPerformanceCounter()
 {
-    LogPrintf("Failed to read randomness, aborting\n");
-    abort();
+    int64_t nCounter = 0;
+#ifdef WIN32
+    QueryPerformanceCounter((LARGE_INTEGER*)&nCounter);
+#else
+    timeval t;
+    gettimeofday(&t, NULL);
+    nCounter = (int64_t)(t.tv_sec * 1000000 + t.tv_usec);
+#endif
+    return nCounter;
 }
 
 void RandAddSeed()
@@ -43,6 +40,7 @@ void RandAddSeed()
     // Seed with CPU performance counter
     int64_t nCounter = GetPerformanceCounter();
     RAND_add(&nCounter, sizeof(nCounter), 1.5);
+    memory_cleanse((void*)&nCounter, sizeof(nCounter));
 }
 
 void RandAddSeedPerfmon()
@@ -65,15 +63,16 @@ void RandAddSeedPerfmon()
     const size_t nMaxSize = 10000000; // Bail out at more than 10MB of performance data
     while (true) {
         nSize = vData.size();
-        ret = RegQueryValueExA(HKEY_PERFORMANCE_DATA, "Global", NULL, NULL, vData.data(), &nSize);
+        ret = RegQueryValueExA(HKEY_PERFORMANCE_DATA, "Global", NULL, NULL, begin_ptr(vData), &nSize);
         if (ret != ERROR_MORE_DATA || vData.size() >= nMaxSize)
             break;
         vData.resize(std::max((vData.size() * 3) / 2, nMaxSize)); // Grow size of buffer exponentially
     }
     RegCloseKey(HKEY_PERFORMANCE_DATA);
     if (ret == ERROR_SUCCESS) {
-        RAND_add(vData.data(), nSize, nSize / 100.0);
-        LogPrintf("%s: %lu bytes\n", __func__, nSize);
+        RAND_add(begin_ptr(vData), nSize, nSize / 100.0);
+        memory_cleanse(begin_ptr(vData), nSize);
+        LogPrint("rand", "%s: %lu bytes\n", __func__, nSize);
     } else {
         static bool warned = false; // Warn only once
         if (!warned) {
@@ -84,37 +83,13 @@ void RandAddSeedPerfmon()
 #endif
 }
 
-#ifndef WIN32
-/** Fallback: get 32 bytes of system entropy from /dev/urandom. The most
- * compatible way to get cryptographic randomness on UNIX-ish platforms.
- */
-void GetDevURandom(unsigned char *ent32)
-{
-    int f = open("/dev/urandom", O_RDONLY);
-    if (f == -1) {
-        RandFailure();
-    }
-    int have = 0;
-    do {
-        ssize_t n = read(f, ent32 + have, NUM_OS_RANDOM_BYTES - have);
-        if (n <= 0 || n + have > NUM_OS_RANDOM_BYTES) {
-            RandFailure();
-        }
-        have += n;
-    } while (have < NUM_OS_RANDOM_BYTES);
-    close(f);
-}
-#endif
-
 void GetRandBytes(unsigned char* buf, int num)
 {
     if (RAND_bytes(buf, num) != 1) {
-        RandFailure();
+        LogPrintf("%s: OpenSSL RAND_bytes() failed with error: %s\n", __func__, ERR_error_string(ERR_get_error(), NULL));
+        assert(false);
     }
 }
-
-
-
 
 uint64_t GetRand(uint64_t nMax)
 {
@@ -141,4 +116,24 @@ uint256 GetRandHash()
     uint256 hash;
     GetRandBytes((unsigned char*)&hash, sizeof(hash));
     return hash;
+}
+
+uint32_t insecure_rand_Rz = 11;
+uint32_t insecure_rand_Rw = 11;
+void seed_insecure_rand(bool fDeterministic)
+{
+    // The seed values have some unlikely fixed points which we avoid.
+    if (fDeterministic) {
+        insecure_rand_Rz = insecure_rand_Rw = 11;
+    } else {
+        uint32_t tmp;
+        do {
+            GetRandBytes((unsigned char*)&tmp, 4);
+        } while (tmp == 0 || tmp == 0x9068ffffU);
+        insecure_rand_Rz = tmp;
+        do {
+            GetRandBytes((unsigned char*)&tmp, 4);
+        } while (tmp == 0 || tmp == 0x464fffffU);
+        insecure_rand_Rw = tmp;
+    }
 }

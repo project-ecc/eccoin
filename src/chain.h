@@ -1,226 +1,441 @@
-#ifndef CHEADERCHAIN_H
-#define CHEADERCHAIN_H
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2015 The Bitcoin Core developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#ifndef BITCOIN_CHAIN_H
+#define BITCOIN_CHAIN_H
+
+#include "arith_uint256.h"
+#include "primitives/block.h"
+#include "pow.h"
+#include "tinyformat.h"
 #include "uint256.h"
-#include "main.h"
-#include <leveldb/db.h>
-#include <leveldb/write_batch.h>
 
-extern leveldb::DB *metadb;
+#include <vector>
 
-class CHeaderChainDB
+struct CDiskBlockPos
 {
-public:
-    CHeaderChainDB(const char* pszMode="r+");
-    ~CHeaderChainDB() {
-        // Note that this is not the same as Close() because it deletes only
-        // data scoped to this TxDB object.
-        delete activeBatch;
+    int nFile;
+    unsigned int nPos;
+
+    ADD_SERIALIZE_METHODS
+
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
+        READWRITE(VARINT(nFile));
+        READWRITE(VARINT(nPos));
     }
 
-    // Destroys the underlying shared global state accessed by this TxDB.
-    void Close();
+    CDiskBlockPos() {
+        SetNull();
+    }
 
-private:
-    leveldb::DB *pdb;  // Points to the global instance.
+    CDiskBlockPos(int nFileIn, unsigned int nPosIn) {
+        nFile = nFileIn;
+        nPos = nPosIn;
+    }
 
-    // A batch stores up writes and deletes for atomic application. When this
-    // field is non-NULL, writes/deletes go there instead of directly to disk.
-    leveldb::WriteBatch *activeBatch;
-    leveldb::Options options;
-    bool fReadOnly;
-    int nVersion;
+    friend bool operator==(const CDiskBlockPos &a, const CDiskBlockPos &b) {
+        return (a.nFile == b.nFile && a.nPos == b.nPos);
+    }
 
-protected:
-    // Returns true and sets (value,false) if activeBatch contains the given key
-    // or leaves value alone and sets deleted = true if activeBatch contains a
-    // delete for it.
-    bool ScanBatch(const CDataStream &key, std::string *value, bool *deleted) const;
+    friend bool operator!=(const CDiskBlockPos &a, const CDiskBlockPos &b) {
+        return !(a == b);
+    }
 
-    template<typename K, typename T>
-    bool Read(const K& key, T& value)
+    void SetNull() { nFile = -1; nPos = 0; }
+    bool IsNull() const { return (nFile == -1); }
+
+    std::string ToString() const
     {
-        CDataStream ssKey(SER_DISK, CLIENT_VERSION);
-        ssKey.reserve(1000);
-        ssKey << key;
-        std::string strValue;
-
-        bool readFromDb = true;
-        if (activeBatch)
-        {
-            // First we must search for it in the currently pending set of
-            // changes to the db. If not found in the batch, go on to read disk.
-            bool deleted = false;
-            readFromDb = (ScanBatch(ssKey, &strValue, &deleted) == false);
-            if (deleted)
-            {
-                return false;
-            }
-        }
-        if (readFromDb)
-        {
-            leveldb::Status status = pdb->Get(leveldb::ReadOptions(),ssKey.str(), &strValue);
-            if (!status.ok())
-            {
-                if (status.IsNotFound())
-                {
-                    return false;
-                }
-                // Some unexpected error.
-                LogPrintf("LevelDB read failure: %s\n", status.ToString().c_str());
-                return false;
-            }
-        }
-        // Unserialize value
-        try
-        {
-            CDataStream ssValue(strValue.data(), strValue.data() + strValue.size(), SER_DISK, CLIENT_VERSION);
-            ssValue >> value;
-        }
-        catch (std::exception &e)
-        {
-            return false;
-        }
-        return true;
+        return strprintf("CBlockDiskPos(nFile=%i, nPos=%i)", nFile, nPos);
     }
 
-    template<typename K, typename T>
-    bool Write(const K& key, const T& value)
-    {
-        if (fReadOnly)
-            assert(!"Write called on database in read-only mode");
-
-        CDataStream ssKey(SER_DISK, CLIENT_VERSION);
-        ssKey.reserve(1000);
-        ssKey << key;
-        CDataStream ssValue(SER_DISK, CLIENT_VERSION);
-        ssValue.reserve(10000);
-        ssValue << value;
-
-        if (activeBatch)
-        {
-            activeBatch->Put(ssKey.str(), ssValue.str());
-            return true;
-        }
-        leveldb::Status status = pdb->Put(leveldb::WriteOptions(), ssKey.str(), ssValue.str());
-        if (!status.ok())
-        {
-            LogPrintf("LevelDB write failure: %s\n", status.ToString().c_str());
-            return false;
-        }
-        return true;
-    }
-
-    template<typename K>
-    bool Erase(const K& key)
-    {
-        if (!pdb)
-            return false;
-        if (fReadOnly)
-            assert(!"Erase called on database in read-only mode");
-
-        CDataStream ssKey(SER_DISK, CLIENT_VERSION);
-        ssKey.reserve(1000);
-        ssKey << key;
-        if (activeBatch) {
-            activeBatch->Delete(ssKey.str());
-            return true;
-        }
-        leveldb::Status status = pdb->Delete(leveldb::WriteOptions(), ssKey.str());
-        return (status.ok() || status.IsNotFound());
-    }
-
-    template<typename K>
-    bool Exists(const K& key)
-    {
-        CDataStream ssKey(SER_DISK, CLIENT_VERSION);
-        ssKey.reserve(1000);
-        ssKey << key;
-        std::string unused;
-
-        if (activeBatch) {
-            bool deleted;
-            if (ScanBatch(ssKey, &unused, &deleted) && !deleted) {
-                return true;
-            }
-        }
-
-
-        leveldb::Status status = pdb->Get(leveldb::ReadOptions(), ssKey.str(), &unused);
-        return status.IsNotFound() == false;
-    }
-
-
-public:
-    bool TxnBegin();
-    bool TxnCommit();
-    bool TxnAbort()
-    {
-        delete activeBatch;
-        activeBatch = NULL;
-        return true;
-    }
-
-    bool ReadVersion(int& nVersion)
-    {
-        nVersion = 0;
-        return Read(std::string("version"), nVersion);
-    }
-
-    bool WriteVersion(int nVersion)
-    {
-        return Write(std::string("version"), nVersion);
-    }
-
-    leveldb::DB* getInternalPointer()
-    {
-        return pdb;  // Points to the global instance.
-    }
-
-    bool WriteIndexHeader(const CDiskBlockIndex& blockindex);
-    bool EraseIndexHeader(const CDiskBlockIndex& blockindex);
 };
 
+enum BlockStatus {
+    //! Unused.
+    BLOCK_VALID_UNKNOWN      =    0,
 
-///
-/// This class is a metadata for the chain
-/// It only holds enough information to be able to look up the CBlockIndex
-///     for the block with the hash found in this class. This should replace the
-///     CBlockIndex chain in memory. This map does however store the theorectical
-///     height each of a block index
-///
-/// it is not currently in use. it will be implented and replace the normal blockchain index map when the map starts to use too much memory for most clients (cut off is 900 MB)
-class CHeaderChain
+    //! Parsed, version ok, hash satisfies claimed PoW, 1 <= vtx count <= max, timestamp not in future
+    BLOCK_VALID_HEADER       =    1,
+
+    //! All parent headers found, difficulty matches, timestamp >= median previous, checkpoint. Implies all parents
+    //! are also at least TREE.
+    BLOCK_VALID_TREE         =    2,
+
+    /**
+     * Only first tx is coinbase, 2 <= coinbase input script length <= 100, transactions valid, no duplicate txids,
+     * sigops, size, merkle root. Implies all parents are at least TREE but not necessarily TRANSACTIONS. When all
+     * parent blocks also have TRANSACTIONS, CBlockIndex::nChainTx will be set.
+     */
+    BLOCK_VALID_TRANSACTIONS =    3,
+
+    //! Outputs do not overspend inputs, no double spends, coinbase output ok, no immature coinbase spends, BIP30.
+    //! Implies all parents are also at least CHAIN.
+    BLOCK_VALID_CHAIN        =    4,
+
+    //! Scripts & signatures ok. Implies all parents are also at least SCRIPTS.
+    BLOCK_VALID_SCRIPTS      =    5,
+
+    //! All validity bits.
+    BLOCK_VALID_MASK         =   BLOCK_VALID_HEADER | BLOCK_VALID_TREE | BLOCK_VALID_TRANSACTIONS |
+                                 BLOCK_VALID_CHAIN | BLOCK_VALID_SCRIPTS,
+
+    BLOCK_HAVE_DATA          =    8, //! full block available in blk*.dat
+    BLOCK_HAVE_UNDO          =   16, //! undo data available in rev*.dat
+    BLOCK_HAVE_MASK          =   BLOCK_HAVE_DATA | BLOCK_HAVE_UNDO,
+
+    BLOCK_FAILED_VALID       =   32, //! stage after last reached validness failed
+    BLOCK_FAILED_CHILD       =   64, //! descends from failed block
+    BLOCK_FAILED_MASK        =   BLOCK_FAILED_VALID | BLOCK_FAILED_CHILD,
+};
+
+/** The block chain is a tree shaped structure starting with the
+ * genesis block at the root, with each block potentially having multiple
+ * candidates to be the next block. A blockindex may have multiple pprev pointing
+ * to it, but at most one of them can be part of the currently active branch.
+ */
+class CBlockIndex
 {
 public:
+    //! pointer to the hash of the block, if any. Memory is owned by this CBlockIndex
+    const uint256* phashBlock;
 
-    //fields
-    uint256 hashBlock;
-    uint256 hashPrev;
-    uint256 hashNext;
-    unsigned int nFile;
-    unsigned int nBlockPos;
+    //! pointer to the index of the predecessor of this block
+    CBlockIndex* pprev;
+
+    //! pointer to the index of some further predecessor of this block
+    CBlockIndex* pskip;
+
+    //! height of the entry in the chain. The genesis block has height 0
     int nHeight;
-    CBlockIndex* pindex;
 
-    //functions
-    CHeaderChain();
-    IMPLEMENT_SERIALIZE
-    (
-        READWRITE(hashBlock);
-        READWRITE(hashPrev);
-        READWRITE(hashNext);
-        READWRITE(nFile);
-        READWRITE(nBlockPos);
-        READWRITE(nHeight);
-    )
-    uint256 GetBlockHash() const;
-    CBlockIndex* getBlockIndex();
-    void SetNull();
-    bool WriteToDisk(unsigned int& nFileRet, unsigned int& nBlockPosRet);
-    bool ReadFromDisk(unsigned int nFile, unsigned int nBlockPos, bool fReadTransactions=true);
-    std::string ToString() const;
-    void print() const;
+    //! Which # file this block is stored in (blk?????.dat)
+    int nFile;
+
+    //! Byte offset within blk?????.dat where this block's data is stored
+    unsigned int nDataPos;
+
+    //! Byte offset within rev?????.dat where this block's undo data is stored
+    unsigned int nUndoPos;
+
+    //! (memory only) Total amount of work (expected number of hashes) in the chain up to and including this block
+    arith_uint256 nChainWork;
+
+    //! Number of transactions in this block.
+    //! Note: in a potential headers-first mode, this number cannot be relied upon
+    unsigned int nTx;
+
+    //! (memory only) Number of transactions in the chain up to and including this block.
+    //! This value will be non-zero only if and only if transactions for this block and all its parents are available.
+    //! Change to 64-bit type when necessary; won't happen before 2030
+    unsigned int nChainTx;
+
+    //! Verification status of this block. See enum BlockStatus
+    unsigned int nStatus;
+
+    unsigned int nFlags;  // ppcoin: block index flags
+    enum
+    {
+        BLOCK_PROOF_OF_STAKE = (1 << 0), // is proof-of-stake block
+        BLOCK_STAKE_ENTROPY  = (1 << 1), // entropy bit for stake modifier
+        BLOCK_STAKE_MODIFIER = (1 << 2), // regenerated stake modifier
+    };
+
+    uint64_t nStakeModifier; // hash modifier for proof-of-stake
+    unsigned int nStakeModifierChecksum; // checksum of index; in-memeory only
+
+    // proof-of-stake specific fields
+    COutPoint prevoutStake;
+    unsigned int nStakeTime;
+    uint256 hashProofOfStake;
+
+    int64_t nMint;
+    int64_t nMoneySupply;
+
+    //! block header
+    int nVersion;
+    uint256 hashMerkleRoot;
+    unsigned int nTime;
+    unsigned int nBits;
+    unsigned int nNonce;
+
+    //! (memory only) Sequential id assigned to distinguish order in which blocks are received.
+    uint32_t nSequenceId;
+
+    void SetNull()
+    {
+        phashBlock = NULL;
+        pprev = NULL;
+        pskip = NULL;
+        nHeight = 0;
+        nFile = 0;
+        nDataPos = 0;
+        nUndoPos = 0;
+        nChainWork = arith_uint256();
+        nTx = 0;
+        nChainTx = 0;
+        nStatus = 0;
+        nSequenceId = 0;
+
+        nVersion       = 0;
+        hashMerkleRoot = uint256();
+        nTime          = 0;
+        nBits          = 0;
+        nNonce         = 0;
+
+        // proof-of-stake specific fields
+        nMint = 0;
+        nMoneySupply = 0;
+        nStakeModifier = 0;
+        nStakeModifierChecksum = 0;
+        prevoutStake.SetNull();
+        nStakeTime = 0;
+        hashProofOfStake.SetNull();
+    }
+
+    CBlockIndex()
+    {
+        SetNull();
+    }
+
+    CBlockIndex(const CBlockHeader& block)
+    {
+        SetNull();
+
+        nVersion       = block.nVersion;
+        hashMerkleRoot = block.hashMerkleRoot;
+        nTime          = block.nTime;
+        nBits          = block.nBits;
+        nNonce         = block.nNonce;
+    }
+
+    CDiskBlockPos GetBlockPos() const {
+        CDiskBlockPos ret;
+        if (nStatus & BLOCK_HAVE_DATA) {
+            ret.nFile = nFile;
+            ret.nPos  = nDataPos;
+        }
+        return ret;
+    }
+
+    CDiskBlockPos GetUndoPos() const {
+        CDiskBlockPos ret;
+        if (nStatus & BLOCK_HAVE_UNDO) {
+            ret.nFile = nFile;
+            ret.nPos  = nUndoPos;
+        }
+        return ret;
+    }
+
+    CBlockHeader GetBlockHeader() const
+    {
+        CBlockHeader block;
+        block.nVersion       = nVersion;
+        if (pprev)
+            block.hashPrevBlock = pprev->GetBlockHash();
+        block.hashMerkleRoot = hashMerkleRoot;
+        block.nTime          = nTime;
+        block.nBits          = nBits;
+        block.nNonce         = nNonce;
+        return block;
+    }
+
+    uint256 GetBlockHash() const
+    {
+        return *phashBlock;
+    }
+
+    int64_t GetBlockTime() const
+    {
+        return (int64_t)nTime;
+    }
+
+    enum { nMedianTimeSpan=11 };
+
+    int64_t GetMedianTimePast() const
+    {
+        int64_t pmedian[nMedianTimeSpan];
+        int64_t* pbegin = &pmedian[nMedianTimeSpan];
+        int64_t* pend = &pmedian[nMedianTimeSpan];
+
+        const CBlockIndex* pindex = this;
+        for (int i = 0; i < nMedianTimeSpan && pindex; i++, pindex = pindex->pprev)
+            *(--pbegin) = pindex->GetBlockTime();
+
+        std::sort(pbegin, pend);
+        return pbegin[(pend - pbegin)/2];
+    }
+
+    std::string ToString() const
+    {
+        return strprintf("CBlockIndex(pprev=%p, nHeight=%d, merkle=%s, hashBlock=%s)",
+            pprev, nHeight,
+            hashMerkleRoot.ToString(),
+            GetBlockHash().ToString());
+    }
+
+    //! Check whether this block index entry is valid up to the passed validity level.
+    bool IsValid(enum BlockStatus nUpTo = BLOCK_VALID_TRANSACTIONS) const
+    {
+        assert(!(nUpTo & ~BLOCK_VALID_MASK)); // Only validity flags allowed.
+        if (nStatus & BLOCK_FAILED_MASK)
+            return false;
+        return ((nStatus & BLOCK_VALID_MASK) >= nUpTo);
+    }
+
+    //! Raise the validity level of this block index entry.
+    //! Returns true if the validity was changed.
+    bool RaiseValidity(enum BlockStatus nUpTo)
+    {
+        assert(!(nUpTo & ~BLOCK_VALID_MASK)); // Only validity flags allowed.
+        if (nStatus & BLOCK_FAILED_MASK)
+            return false;
+        if ((nStatus & BLOCK_VALID_MASK) < nUpTo) {
+            nStatus = (nStatus & ~BLOCK_VALID_MASK) | nUpTo;
+            return true;
+        }
+        return false;
+    }
+
+    //! Build the skiplist pointer for this entry.
+    void BuildSkip();
+
+    //! Efficiently find an ancestor of this block.
+    CBlockIndex* GetAncestor(int height);
+    const CBlockIndex* GetAncestor(int height) const;
+
+    //proof of stake functions
+    bool IsProofOfWork() const;
+    bool IsProofOfStake() const;
+    void SetProofOfStake();
+    unsigned int GetStakeEntropyBit() const;
+    bool SetStakeEntropyBit(unsigned int nEntropyBit);
+    bool GeneratedStakeModifier() const;
+    void SetStakeModifier(uint64_t nModifier, bool fGeneratedStakeModifier);
 };
 
-#endif // CHEADERCHAIN_H
+/** Used to marshal pointers into hashes for db storage. */
+class CDiskBlockIndex : public CBlockIndex
+{
+public:
+    uint256 hashPrev;
+
+    CDiskBlockIndex() {
+        hashPrev = uint256();
+    }
+
+    explicit CDiskBlockIndex(const CBlockIndex* pindex) : CBlockIndex(*pindex) {
+        hashPrev = (pprev ? pprev->GetBlockHash() : uint256());
+    }
+
+    ADD_SERIALIZE_METHODS
+
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
+        if (!(nType & SER_GETHASH))
+            READWRITE(VARINT(nVersion));
+
+        READWRITE(VARINT(nHeight));
+        READWRITE(VARINT(nStatus));
+        READWRITE(VARINT(nTx));
+        if (nStatus & (BLOCK_HAVE_DATA | BLOCK_HAVE_UNDO))
+            READWRITE(VARINT(nFile));
+        if (nStatus & BLOCK_HAVE_DATA)
+            READWRITE(VARINT(nDataPos));
+        if (nStatus & BLOCK_HAVE_UNDO)
+            READWRITE(VARINT(nUndoPos));
+
+        // block header
+        READWRITE(this->nVersion);
+        READWRITE(hashPrev);
+        READWRITE(hashMerkleRoot);
+        READWRITE(nTime);
+        READWRITE(nBits);
+        READWRITE(nNonce);
+    }
+
+    uint256 GetBlockHash() const
+    {
+        CBlockHeader block;
+        block.nVersion        = nVersion;
+        block.hashPrevBlock   = hashPrev;
+        block.hashMerkleRoot  = hashMerkleRoot;
+        block.nTime           = nTime;
+        block.nBits           = nBits;
+        block.nNonce          = nNonce;
+        return block.GetHash();
+    }
+
+
+    std::string ToString() const
+    {
+        std::string str = "CDiskBlockIndex(";
+        str += CBlockIndex::ToString();
+        str += strprintf("\n                hashBlock=%s, hashPrev=%s)",
+            GetBlockHash().ToString(),
+            hashPrev.ToString());
+        return str;
+    }
+};
+
+/** An in-memory indexed chain of blocks. */
+class CChain {
+private:
+    std::vector<CBlockIndex*> vChain;
+
+public:
+    /** Returns the index entry for the genesis block of this chain, or NULL if none. */
+    CBlockIndex *Genesis() const {
+        return vChain.size() > 0 ? vChain[0] : NULL;
+    }
+
+    /** Returns the index entry for the tip of this chain, or NULL if none. */
+    CBlockIndex *Tip() const {
+        return vChain.size() > 0 ? vChain[vChain.size() - 1] : NULL;
+    }
+
+    /** Returns the index entry at a particular height in this chain, or NULL if no such height exists. */
+    CBlockIndex *operator[](int nHeight) const {
+        if (nHeight < 0 || nHeight >= (int)vChain.size())
+            return NULL;
+        return vChain[nHeight];
+    }
+
+    /** Compare two chains efficiently. */
+    friend bool operator==(const CChain &a, const CChain &b) {
+        return a.vChain.size() == b.vChain.size() &&
+               a.vChain[a.vChain.size() - 1] == b.vChain[b.vChain.size() - 1];
+    }
+
+    /** Efficiently check whether a block is present in this chain. */
+    bool Contains(const CBlockIndex *pindex) const {
+        return (*this)[pindex->nHeight] == pindex;
+    }
+
+    /** Find the successor of a block in this chain, or NULL if the given index is not found or is the tip. */
+    CBlockIndex *Next(const CBlockIndex *pindex) const {
+        if (Contains(pindex))
+            return (*this)[pindex->nHeight + 1];
+        else
+            return NULL;
+    }
+
+    /** Return the maximal height in the chain. Is equal to chain.Tip() ? chain.Tip()->nHeight : -1. */
+    int Height() const {
+        return vChain.size() - 1;
+    }
+
+    /** Set/initialize a chain with a given tip. */
+    void SetTip(CBlockIndex *pindex);
+
+    /** Return a CBlockLocator that refers to a block in this chain (by default the tip). */
+    CBlockLocator GetLocator(const CBlockIndex *pindex = NULL) const;
+
+    /** Find the last common block between this chain and a block index entry. */
+    const CBlockIndex *FindFork(const CBlockIndex *pindex) const;
+};
+
+#endif // BITCOIN_CHAIN_H

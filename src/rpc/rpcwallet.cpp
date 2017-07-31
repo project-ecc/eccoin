@@ -4,14 +4,13 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "wallet.h"
-#include "walletdb.h"
+#include "wallet/wallet.h"
+#include "wallet/walletdb.h"
 #include "bitcoinrpc.h"
 #include "init.h"
 #include "base58.h"
-#include "network/proxyutils.h"
+#include "p2p/proxyutils.h"
 #include <boost/thread.hpp>
-#include "daemon.h"
 
 using namespace json_spirit;
 using namespace std;
@@ -92,15 +91,16 @@ Value getinfo(const Array& params, bool fHelp)
     obj.push_back(Pair("balance",       ValueFromAmount(pwalletMain->GetBalance())));
     obj.push_back(Pair("newmint",       ValueFromAmount(pwalletMain->GetNewMint())));
     obj.push_back(Pair("stake",         ValueFromAmount(pwalletMain->GetStake())));
-    obj.push_back(Pair("blocks",        (int)pindexBest->nHeight));
+    obj.push_back(Pair("blocks",        (int)chainActive.Tip()->nHeight));
     obj.push_back(Pair("timeoffset",    (boost::int64_t)GetTimeOffset()));
-    obj.push_back(Pair("moneysupply",   ValueFromAmount(pindexBest->nMoneySupply)));
-    obj.push_back(Pair("connections",   (int)vNodes.size()));
+    obj.push_back(Pair("moneysupply",   ValueFromAmount(chainActive.Tip()->nMoneySupply)));
+    obj.push_back(Pair("connections",   (int)pconnman->GetNodeCount(CConnman::CONNECTIONS_ALL)));
     obj.push_back(Pair("proxy",         (proxy.first.IsValid() ? proxy.first.ToStringIPPort() : string())));
-    obj.push_back(Pair("ip",            addrSeenByPeer.ToStringIP()));
+// TODO reimplement ip into getinfo
+    //obj.push_back(Pair("ip",            addrSeenByPeer.ToStringIP()));
 
     diff.push_back(Pair("proof-of-work",  GetDifficulty()));
-    diff.push_back(Pair("proof-of-stake", GetDifficulty(GetLastBlockIndex(pindexBest, true))));
+    diff.push_back(Pair("proof-of-stake", GetDifficulty(GetLastBlockIndex(chainActive.Tip(), true))));
     obj.push_back(Pair("difficulty",    diff));
 
     obj.push_back(Pair("testnet",       fTestNet));
@@ -174,7 +174,7 @@ Value getnewaddress(const Array& params, bool fHelp)
 
 CBitcoinAddress GetAccountAddress(string strAccount, bool bForceNew=false)
 {
-    CWalletDB walletdb(pwalletMain->strWalletFile);
+    CWalletDB walletdb(pwalletMain->GetDBHandle());
 
     CAccount account;
     walletdb.ReadAccount(strAccount, account);
@@ -551,7 +551,7 @@ int64_t GetAccountBalance(CWalletDB& walletdb, const string& strAccount, int nMi
 
 int64_t GetAccountBalance(const string& strAccount, int nMinDepth)
 {
-    CWalletDB walletdb(pwalletMain->strWalletFile);
+    CWalletDB walletdb(pwalletMain->GetDBHandle());
     return GetAccountBalance(walletdb, strAccount, nMinDepth);
 }
 
@@ -629,8 +629,8 @@ Value movecmd(const Array& params, bool fHelp)
     if (params.size() > 4)
         strComment = params[4].get_str();
 
-    CWalletDB walletdb(pwalletMain->strWalletFile);
-    if (!walletdb.TxnBegin())
+    CWalletDB walletdb(pwalletMain->GetDBHandle());
+    if (!walletdb.getBatch()->TxnBegin())
         throw JSONRPCError(RPC_DATABASE_ERROR, "database error");
 
     int64_t nNow = GetAdjustedTime();
@@ -655,7 +655,7 @@ Value movecmd(const Array& params, bool fHelp)
     credit.strComment = strComment;
     walletdb.WriteAccountingEntry(credit);
 
-    if (!walletdb.TxnCommit())
+    if (!walletdb.getBatch()->TxnCommit())
         throw JSONRPCError(RPC_DATABASE_ERROR, "database error");
 
     return true;
@@ -1227,7 +1227,7 @@ Value listaccounts(const Array& params, bool fHelp)
     }
 
     list<CAccountingEntry> acentries;
-    CWalletDB(pwalletMain->strWalletFile).ListAccountCreditDebit("*", acentries);
+    CWalletDB(pwalletMain->GetDBHandle()).ListAccountCreditDebit("*", acentries);
     BOOST_FOREACH(const CAccountingEntry& entry, acentries)
         mapAccountBalances[entry.strAccount] += entry.nCreditDebit;
 
@@ -1250,7 +1250,8 @@ Value listsinceblock(const Array& params, bool fHelp)
 
     if (params.size() > 0)
     {
-        uint256 blockId = 0;
+        uint256 blockId;
+        blockId.SetNull();
 
         blockId.SetHex(params[0].get_str());
         pindex = CBlockLocator(blockId).GetBlockIndex();
@@ -1264,7 +1265,7 @@ Value listsinceblock(const Array& params, bool fHelp)
             throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter");
     }
 
-    int depth = pindex ? (1 + pindexBest->nHeight - pindex->nHeight) : -1;
+    int depth = pindex ? (1 + chainActive.Tip()->nHeight - pindex->nHeight) : -1;
 
     Array transactions;
 
@@ -1280,18 +1281,18 @@ Value listsinceblock(const Array& params, bool fHelp)
 
     if (target_confirms == 1)
     {
-        lastblock = pindexBest->GetBlockHash();
+        lastblock = chainActive.Tip()->GetBlockHash();
     }
     else
     {
-        int target_height = pindexBest->nHeight + 1 - target_confirms;
+        int target_height = chainActive.Tip()->nHeight + 1 - target_confirms;
 
         CBlockIndex *block;
-        for (block = pindexBest;
+        for (block = chainActive.Tip();
              block && block->nHeight > target_height;
              block = block->pprev)  { }
 
-        lastblock = block ? block->GetBlockHash() : 0;
+        lastblock = block ? block->GetBlockHash() : uint256();
     }
 
     Object ret;
@@ -1317,7 +1318,7 @@ Value gettransaction(const Array& params, bool fHelp)
     {
         const CWalletTx& wtx = pwalletMain->mapWallet[hash];
 
-        TxToJSON(wtx, 0, entry);
+        TxToJSON(wtx, uint256(), entry);
 
         int64_t nCredit = wtx.GetCredit();
         int64_t nDebit = wtx.GetDebit();
@@ -1337,11 +1338,12 @@ Value gettransaction(const Array& params, bool fHelp)
     else
     {
         CTransaction tx;
-        uint256 hashBlock = 0;
+        uint256 hashBlock;
+        hashBlock.SetNull();
         if (GetTransaction(hash, tx, hashBlock))
         {
-            TxToJSON(tx, 0, entry);
-            if (hashBlock == 0)
+            TxToJSON(tx, uint256(), entry);
+            if (hashBlock == uint256())
                 entry.push_back(Pair("confirmations", 0));
             else
             {
@@ -1351,7 +1353,7 @@ Value gettransaction(const Array& params, bool fHelp)
                 {
                     CBlockIndex* pindex = (*mi).second;
                     if (pindex->IsInMainChain())
-                        entry.push_back(Pair("confirmations", 1 + pindexBest->nHeight - pindex->nHeight));
+                        entry.push_back(Pair("confirmations", 1 + chainActive.Tip()->nHeight - pindex->nHeight));
                     else
                         entry.push_back(Pair("confirmations", 0));
                 }

@@ -9,7 +9,7 @@
 #include "main.h"
 
 static std::map<int, unsigned int> mapStakeModifierCheckpoints =
-	boost::assign::map_list_of
+    boost::assign::map_list_of
         (     0, 0x0e00670bu )
         (  1000, 0xd97d4595u )
         ( 10000, 0x1cf3438cu )
