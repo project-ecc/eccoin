@@ -1,0 +1,4 @@
+build/univalue/univalue_write.o: univalue/univalue_write.cpp \
+ univalue/univalue.h univalue/univalue_escapes.h
+univalue/univalue_write.cpp :
+ univalue/univalue.h univalue/univalue_escapes.h :

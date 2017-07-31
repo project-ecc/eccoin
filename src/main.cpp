@@ -9,7 +9,6 @@
 #include "alert.h"
 #include "arith_uint256.h"
 #include "bignum.h"
-#include "rpc/bitcoinrpc.h"
 #include "chainparams.h"
 #include "checkpoints.h"
 #include "checkqueue.h"

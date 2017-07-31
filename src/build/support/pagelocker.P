@@ -1,0 +1,6 @@
+build/support/pagelocker.o: support/pagelocker.cpp \
+ /home/griffith/test-ecc/src/support/pagelocker.h \
+ /home/griffith/test-ecc/src/support/cleanse.h
+support/pagelocker.cpp :
+ /home/griffith/test-ecc/src/support/pagelocker.h :
+ /home/griffith/test-ecc/src/support/cleanse.h :

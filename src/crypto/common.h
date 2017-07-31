@@ -11,7 +11,7 @@
 
 #include <stdint.h>
 
-#include "compat/endian.h"
+#include "compat/crypto_endian.h"
 
 uint16_t static inline ReadLE16(const unsigned char* ptr)
 {
