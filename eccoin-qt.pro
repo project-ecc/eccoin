@@ -190,7 +190,6 @@ HEADERS += \
     src/chain.h \
     src/chainparams.h \
     src/chainparamsbase.h \
-    src/chainparamsseeds.h \
     src/checkpoints.h \
     src/checkqueue.h \
     src/clientversion.h \
@@ -271,7 +270,7 @@ HEADERS += \
     src/consensus/params.h \
     src/consensus/validation.h \
     src/compat/byteswap.h \
-    src/compat/endian.h \
+    src/compat/crypto_endian.h \
     src/compat/sanity.h \
     src/init.h \
     src/crypto/scrypt.h \
