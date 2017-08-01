@@ -13,10 +13,18 @@
 #include "util.h"
 #include "chain.h"
 #include "timedata.h"
+#include "crypto/scrypt.h"
 
 uint256 CBlockHeader::GetHash() const
 {
-    return SerializeHash(*this);
+    uint256 thash;
+    void * scratchbuff = scrypt_buffer_alloc();
+
+    scrypt_hash_mine(((const void*)&(nVersion)), sizeof(CBlockHeader), ((uint32_t*)&(thash)), scratchbuff);
+
+    scrypt_buffer_free(scratchbuff);
+
+    return thash;
 }
 
 std::string CBlock::ToString() const
