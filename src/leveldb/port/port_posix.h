@@ -35,7 +35,7 @@
   #include <endian.h>
   #define PLATFORM_IS_LITTLE_ENDIAN  (_BYTE_ORDER == _LITTLE_ENDIAN)
 #else
-  #include <machine/endian.h>
+  #include <endian.h>
 #endif
 
 #include <pthread.h>
