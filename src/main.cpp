@@ -6052,7 +6052,7 @@ unsigned int GetNextTargetRequired(const CBlockIndex* pindexLast, bool fProofOfS
 
 int generateMTRandom(unsigned int s, int range)
 {
-    boost::mt19937 gen(s);
+    mt19937 gen(s);
     uniform_int_distribution<> dist(0, range);
     return dist(gen);
 }
