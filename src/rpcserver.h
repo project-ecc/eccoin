@@ -17,7 +17,7 @@
 
 #include <boost/function.hpp>
 
-#include <univalue.h>
+#include <univalue/univalue.h>
 
 class CRPCCommand;
 
