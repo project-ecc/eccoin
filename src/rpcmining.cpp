@@ -25,7 +25,7 @@
 #include <boost/assign/list_of.hpp>
 #include <boost/shared_ptr.hpp>
 
-#include <univalue.h>
+#include <univalue/univalue.h>
 
 using namespace std;
 

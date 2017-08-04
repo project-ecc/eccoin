@@ -19,7 +19,7 @@
 
 #include <boost/foreach.hpp>
 
-#include <univalue.h>
+#include <univalue/univalue.h>
 
 using namespace std;
 
