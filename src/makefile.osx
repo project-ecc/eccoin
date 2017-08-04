@@ -187,7 +187,7 @@ leveldb_make:
 leveldb: leveldb_make
 
 DEFS += $(addprefix -I,$(CURDIR)/secp256k1/include)
-LIBS += $(CURDIR)/secp256k1/lib/libsecp256k1.a
+LIBS += $(CURDIR)/secp256k1/.libs/libsecp256k1.a
 
 secp256k1_make:
 	cd secp256k1; ./autogen.sh; ./configure --prefix=$(CURDIR)/libsecp256k1 --enable-module-recovery; make; make install; cd ..;
