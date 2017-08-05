@@ -196,7 +196,6 @@ HEADERS += \
     src/coincontrol.h \
     src/coins.h \
     src/compat.h \
-    src/compressor.h \
     src/core_io.h \
     src/core_memusage.h \
     src/dbwrapper.h \
@@ -302,7 +301,6 @@ SOURCES += \
     src/checkpoints.cpp \
     src/clientversion.cpp \
     src/coins.cpp \
-    src/compressor.cpp \
     src/core_read.cpp \
     src/core_write.cpp \
     src/dbwrapper.cpp \
