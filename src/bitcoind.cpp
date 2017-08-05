@@ -122,8 +122,8 @@ bool AppInit(int argc, char* argv[])
 
         if (fCommandLine)
         {
-            fprintf(stderr, "Error: There is no RPC client functionality in bitcoind anymore. Use the bitcoin-cli utility instead.\n");
-            exit(1);
+            int ret = CommandLineRPC(argc, argv);
+            exit(ret);
         }
 #ifndef WIN32
         fDaemon = GetBoolArg("-daemon", false);

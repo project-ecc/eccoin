@@ -5,6 +5,8 @@
 
 #include "rpcserver.h"
 
+#include "rpcclient.h"
+
 #include "base58.h"
 #include "init.h"
 #include "random.h"
@@ -24,6 +26,13 @@
 #include <boost/signals2/signal.hpp>
 #include <boost/thread.hpp>
 #include <boost/algorithm/string/case_conv.hpp> // for to_upper()
+
+#include <boost/thread.hpp>
+#include <boost/asio.hpp>
+#include <boost/asio/ip/v6_only.hpp>
+#include <boost/algorithm/string.hpp>
+#include <boost/asio/ssl.hpp>
+#include <boost/filesystem/fstream.hpp>
 
 using namespace RPCServer;
 using namespace std;
@@ -567,6 +576,337 @@ void RPCRunLater(const std::string& name, boost::function<void(void)> func, int6
     RPCTimerInterface* timerInterface = timerInterfaces.back();
     LogPrint("rpc", "queue run of timer %s in %i seconds (using %s)\n", name, nSeconds, timerInterface->Name());
     deadlineTimers.insert(std::make_pair(name, boost::shared_ptr<RPCTimerBase>(timerInterface->NewTimer(func, nSeconds*1000))));
+}
+
+/** Interpret string as boolean, for converting */
+static bool strToBool(const std::string& strValue)
+{
+    if (strValue.empty())
+        return true;
+    return (atoi(strValue) != 0);
+}
+
+//
+// IOStream device that speaks SSL but can also speak non-SSL
+//
+template <typename Protocol>
+class SSLIOStreamDevice : public boost::iostreams::device<boost::iostreams::bidirectional> {
+public:
+    SSLIOStreamDevice(boost::asio::ssl::stream<typename Protocol::socket> &streamIn, bool fUseSSLIn) : stream(streamIn)
+    {
+        fUseSSL = fUseSSLIn;
+        fNeedHandshake = fUseSSLIn;
+    }
+
+    void handshake(boost::asio::ssl::stream_base::handshake_type role)
+    {
+        if (!fNeedHandshake) return;
+        fNeedHandshake = false;
+        stream.handshake(role);
+    }
+    std::streamsize read(char* s, std::streamsize n)
+    {
+        handshake(boost::asio::ssl::stream_base::server); // HTTPS servers read first
+        if (fUseSSL) return stream.read_some(boost::asio::buffer(s, n));
+        return stream.next_layer().read_some(boost::asio::buffer(s, n));
+    }
+    std::streamsize write(const char* s, std::streamsize n)
+    {
+        handshake(boost::asio::ssl::stream_base::client); // HTTPS clients write first
+        if (fUseSSL) return boost::asio::write(stream, boost::asio::buffer(s, n));
+        return boost::asio::write(stream.next_layer(), boost::asio::buffer(s, n));
+    }
+    bool connect(const std::string& server, const std::string& port)
+    {
+        boost::asio::ip::tcp::resolver resolver(stream.get_io_service());
+        boost::asio::ip::tcp::resolver::query query(server.c_str(), port.c_str());
+        boost::asio::ip::tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
+        boost::asio::ip::tcp::resolver::iterator end;
+        boost::system::error_code error = boost::asio::error::host_not_found;
+        while (error && endpoint_iterator != end)
+        {
+            stream.lowest_layer().close();
+            stream.lowest_layer().connect(*endpoint_iterator++, error);
+        }
+        if (error)
+            return false;
+        return true;
+    }
+
+private:
+    bool fNeedHandshake;
+    bool fUseSSL;
+    boost::asio::ssl::stream<typename Protocol::socket>& stream;
+};
+
+string HTTPPost(const string& strMsg, const map<string,string>& mapRequestHeaders)
+{
+    ostringstream s;
+    s << "POST / HTTP/1.1\r\n"
+      << "User-Agent: eccoin-json-rpc/" << FormatFullVersion() << "\r\n"
+      << "Host: 127.0.0.1\r\n"
+      << "Content-Type: application/json\r\n"
+      << "Content-Length: " << strMsg.size() << "\r\n"
+      << "Connection: close\r\n"
+      << "Accept: application/json\r\n";
+    BOOST_FOREACH(const PAIRTYPE(string, string)& item, mapRequestHeaders)
+        s << item.first << ": " << item.second << "\r\n";
+    s << "\r\n" << strMsg;
+
+    return s.str();
+}
+
+string rfc1123Time()
+{
+    char buffer[64];
+    time_t now;
+    time(&now);
+    struct tm* now_gmt = gmtime(&now);
+    string locale(setlocale(LC_TIME, NULL));
+    setlocale(LC_TIME, "C"); // we want POSIX (aka "C") weekday/month strings
+    strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S +0000", now_gmt);
+    setlocale(LC_TIME, locale.c_str());
+    return string(buffer);
+}
+
+static string HTTPReply(int nStatus, const string& strMsg, bool keepalive)
+{
+    if (nStatus == HTTP_UNAUTHORIZED)
+        return strprintf("HTTP/1.0 401 Authorization Required\r\n"
+            "Date: %s\r\n"
+            "Server: eccoin-json-rpc/%s\r\n"
+            "WWW-Authenticate: Basic realm=\"jsonrpc\"\r\n"
+            "Content-Type: text/html\r\n"
+            "Content-Length: 296\r\n"
+            "\r\n"
+            "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\"\r\n"
+            "\"http://www.w3.org/TR/1999/REC-html401-19991224/loose.dtd\">\r\n"
+            "<HTML>\r\n"
+            "<HEAD>\r\n"
+            "<TITLE>Error</TITLE>\r\n"
+            "<META HTTP-EQUIV='Content-Type' CONTENT='text/html; charset=ISO-8859-1'>\r\n"
+            "</HEAD>\r\n"
+            "<BODY><H1>401 Unauthorized.</H1></BODY>\r\n"
+            "</HTML>\r\n", rfc1123Time().c_str(), FormatFullVersion().c_str());
+    const char *cStatus;
+         if (nStatus == HTTP_OK) cStatus = "OK";
+    else if (nStatus == HTTP_BAD_REQUEST) cStatus = "Bad Request";
+    else if (nStatus == HTTP_FORBIDDEN) cStatus = "Forbidden";
+    else if (nStatus == HTTP_NOT_FOUND) cStatus = "Not Found";
+    else if (nStatus == HTTP_INTERNAL_SERVER_ERROR) cStatus = "Internal Server Error";
+    else cStatus = "";
+    return strprintf(
+            "HTTP/1.1 %d %s\r\n"
+            "Date: %s\r\n"
+            "Connection: %s\r\n"
+            "Content-Length: %u\r\n"
+            "Content-Type: application/json\r\n"
+            "Server: eccoin-json-rpc/%s\r\n"
+            "\r\n"
+            "%s",
+        nStatus,
+        cStatus,
+        rfc1123Time().c_str(),
+        keepalive ? "keep-alive" : "close",
+        strMsg.size(),
+        FormatFullVersion().c_str(),
+        strMsg.c_str());
+}
+
+
+int ReadHTTPStatus(std::basic_istream<char>& stream, int &proto)
+{
+    string str;
+    getline(stream, str);
+    vector<string> vWords;
+    boost::split(vWords, str, boost::is_any_of(" "));
+    if (vWords.size() < 2)
+        return HTTP_INTERNAL_SERVER_ERROR;
+    proto = 0;
+    const char *ver = strstr(str.c_str(), "HTTP/1.");
+    if (ver != NULL)
+        proto = atoi(ver+7);
+    return atoi(vWords[1].c_str());
+}
+
+int ReadHTTPHeader(std::basic_istream<char>& stream, map<string, string>& mapHeadersRet)
+{
+    int nLen = 0;
+    while (true)
+    {
+        string str;
+        std::getline(stream, str);
+        if (str.empty() || str == "\r")
+            break;
+        string::size_type nColon = str.find(":");
+        if (nColon != string::npos)
+        {
+            string strHeader = str.substr(0, nColon);
+            boost::trim(strHeader);
+            boost::to_lower(strHeader);
+            string strValue = str.substr(nColon+1);
+            boost::trim(strValue);
+            mapHeadersRet[strHeader] = strValue;
+            if (strHeader == "content-length")
+                nLen = atoi(strValue.c_str());
+        }
+    }
+    return nLen;
+}
+
+int ReadHTTP(std::basic_istream<char>& stream, map<string, string>& mapHeadersRet, string& strMessageRet)
+{
+    mapHeadersRet.clear();
+    strMessageRet = "";
+
+    // Read status
+    int nProto = 0;
+    int nStatus = ReadHTTPStatus(stream, nProto);
+
+    // Read header
+    int nLen = ReadHTTPHeader(stream, mapHeadersRet);
+    if (nLen < 0 || nLen > (int)MAX_SIZE)
+        return HTTP_INTERNAL_SERVER_ERROR;
+
+    // Read message
+    if (nLen > 0)
+    {
+        vector<char> vch(nLen);
+        stream.read(&vch[0], nLen);
+        strMessageRet = string(vch.begin(), vch.end());
+    }
+
+    string sConHdr = mapHeadersRet["connection"];
+
+    if ((sConHdr != "close") && (sConHdr != "keep-alive"))
+    {
+        if (nProto >= 1)
+            mapHeadersRet["connection"] = "keep-alive";
+        else
+            mapHeadersRet["connection"] = "close";
+    }
+
+    return nStatus;
+}
+
+static inline unsigned short GetDefaultRPCPort()
+{
+    return GetBoolArg("-testnet", false) ? 29119 : 19119;
+}
+
+UniValue CallRPC(const string& strMethod, const UniValue& params)
+{
+    if (GetArg("-rpcuser","") == "" && GetArg("-rpcpassword","") == "")
+        throw runtime_error(strprintf(
+            _("You must set rpcpassword=<password> in the configuration file:\n%s\n"
+              "If the file does not exist, create it with owner-readable-only file permissions."),
+                GetConfigFile().string().c_str()));
+
+    // Connect to localhost
+    bool fUseSSL = GetBoolArg("-rpcssl");
+    boost::asio::io_service io_service;
+    boost::asio::ssl::context context(io_service, boost::asio::ssl::context::sslv23);
+    context.set_options(boost::asio::ssl::context::no_sslv2);
+    boost::asio::ssl::stream<boost::asio::ip::tcp::socket> sslStream(io_service, context);
+    SSLIOStreamDevice<boost::asio::ip::tcp> d(sslStream, fUseSSL);
+    boost::iostreams::stream< SSLIOStreamDevice<boost::asio::ip::tcp> > stream(d);
+    if (!d.connect(GetArg("-rpcconnect", "127.0.0.1"), GetArg("-rpcport", itostr(GetDefaultRPCPort()))))
+        throw runtime_error("couldn't connect to server");
+
+    // HTTP basic authentication
+    string strUserPass64 = EncodeBase64(GetArg("-rpcuser","") + ":" + GetArg("-rpcpassword",""));
+    map<string, string> mapRequestHeaders;
+    mapRequestHeaders["Authorization"] = string("Basic ") + strUserPass64;
+
+    // Send request
+    string strRequest = JSONRPCRequest(strMethod, params, 1);
+    string strPost = HTTPPost(strRequest, mapRequestHeaders);
+    stream << strPost << std::flush;
+
+    // Receive reply
+    map<string, string> mapHeaders;
+    string strReply;
+    int nStatus = ReadHTTP(stream, mapHeaders, strReply);
+    if (nStatus == HTTP_UNAUTHORIZED)
+        throw runtime_error("incorrect rpcuser or rpcpassword (authorization failed)");
+    else if (nStatus >= 400 && nStatus != HTTP_BAD_REQUEST && nStatus != HTTP_NOT_FOUND && nStatus != HTTP_INTERNAL_SERVER_ERROR)
+        throw runtime_error(strprintf("server returned HTTP error %d", nStatus));
+    else if (strReply.empty())
+        throw runtime_error("no response from server");
+
+    // Parse reply
+    UniValue valReply;
+    if (!valReply.setStr(strReply))
+        throw runtime_error("couldn't parse reply from server");
+    const UniValue& reply = valReply.get_obj();
+    if (reply.empty())
+        throw runtime_error("expected reply to have result, error and id properties");
+
+    return reply;
+}
+
+int CommandLineRPC(int argc, char *argv[])
+{
+    string strPrint;
+    int nRet = 0;
+    try
+    {
+        // Skip switches
+        while (argc > 1 && IsSwitchChar(argv[1][0]))
+        {
+            argc--;
+            argv++;
+        }
+
+        // Method
+        if (argc < 2)
+            throw runtime_error("too few parameters");
+        string strMethod = argv[1];
+
+        // Parameters default to strings
+        std::vector<std::string> strParams(&argv[2], &argv[argc]);
+        UniValue params = RPCConvertValues(strMethod, strParams);
+
+        // Execute
+        UniValue reply = CallRPC(strMethod, params);
+
+        // Parse reply
+        const UniValue& result = find_value(reply, "result");
+        const UniValue& error  = find_value(reply, "error");
+
+        if (error.type() != UniValue::VNULL)
+        {
+            // Error
+            strPrint = "error: " + error.get_str();
+            int code = find_value(error.get_obj(), "code").get_int();
+            nRet = abs(code);
+        }
+        else
+        {
+            // Result
+            if (result.type() == UniValue::VNULL)
+                strPrint = "";
+            else if (result.type() == UniValue::VSTR)
+                strPrint = result.get_str();
+            else
+                strPrint = result.get_str();
+        }
+    }
+    catch (std::exception& e)
+    {
+        strPrint = string("error: ") + e.what();
+        nRet = 87;
+    }
+    catch (...)
+    {
+        PrintException(NULL, "CommandLineRPC()");
+    }
+
+    if (strPrint != "")
+    {
+        fprintf((nRet == 0 ? stdout : stderr), "%s\n", strPrint.c_str());
+    }
+    return nRet;
 }
 
 const CRPCTable tableRPC;
