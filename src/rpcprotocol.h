@@ -12,7 +12,7 @@
 #include <string>
 #include <boost/filesystem.hpp>
 
-#include <univalue.h>
+#include <univalue/univalue.h>
 
 //! HTTP status codes
 enum HTTPStatusCode

@@ -12,7 +12,7 @@
 #include <stdint.h>
 
 #include <boost/algorithm/string/case_conv.hpp> // for to_lower()
-#include <univalue.h>
+#include <univalue/univalue.h>
 
 using namespace std;
 
