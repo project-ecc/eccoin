@@ -3,17 +3,17 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "primitives/transaction.h"
+#include "transaction.h"
 
-#include "hash.h"
-#include "tinyformat.h"
-#include "utilstrencodings.h"
-#include "txdb.h"
-#include "timedata.h"
-#include "chainparams.h"
-#include "chain.h"
-#include "main.h"
-#include "consensus/consensus.h"
+#include "../hash.h"
+#include "../tinyformat.h"
+#include "../utilstrencodings.h"
+#include "../txdb.h"
+#include "../timedata.h"
+#include "../chainparams.h"
+#include "../chain.h"
+#include "../main.h"
+#include "../consensus/consensus.h"
 
 std::string COutPoint::ToString() const
 {
