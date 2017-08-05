@@ -4584,12 +4584,12 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         CAddress addrFrom;
         uint64_t nNonce = 1;
         vRecv >> pfrom->nVersion >> pfrom->nServices >> nTime >> addrMe;
-        if (pfrom->nVersion < MIN_PEER_PROTO_VERSION)
+        if (pfrom->nVersion < MIN_PROTO_VERSION)
         {
             // disconnect from peers older than this proto version
             LogPrintf("peer=%d using obsolete version %i; disconnecting\n", pfrom->id, pfrom->nVersion);
             pfrom->PushMessage(NetMsgType::REJECT, strCommand, REJECT_OBSOLETE,
-                               strprintf("Version must be %d or greater", MIN_PEER_PROTO_VERSION));
+                               strprintf("Version must be %d or greater", MIN_PROTO_VERSION));
             pfrom->fDisconnect = true;
             return false;
         }
@@ -4654,7 +4654,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
             }
 
             // Get recent addresses
-            if (pfrom->fOneShot || pfrom->nVersion >= CADDR_TIME_VERSION || addrman.size() < 1000)
+            if (pfrom->fOneShot || addrman.size() < 1000)
             {
                 pfrom->PushMessage(NetMsgType::GETADDR);
                 pfrom->fGetAddr = true;
@@ -4725,8 +4725,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         vector<CAddress> vAddr;
         vRecv >> vAddr;
 
-        // Don't want addr from older versions unless seeding
-        if (pfrom->nVersion < CADDR_TIME_VERSION && addrman.size() > 1000)
+        if (addrman.size() > 1000)
             return true;
         if (vAddr.size() > 1000)
         {
@@ -4762,8 +4761,6 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
                     multimap<uint256, CNode*> mapMix;
                     BOOST_FOREACH(CNode* pnode, vNodes)
                     {
-                        if (pnode->nVersion < CADDR_TIME_VERSION)
-                            continue;
                         unsigned int nPointer;
                         memcpy(&nPointer, &pnode, sizeof(nPointer));
                         uint256 hashKey = ArithToUint256(UintToArith256(hashRand) ^ nPointer);
@@ -4802,12 +4799,6 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
             Misbehaving(pfrom->GetId(), 20);
             return error("message inv size() = %u", vInv.size());
         }
-
-        bool fBlocksOnly = GetBoolArg("-blocksonly", DEFAULT_BLOCKSONLY);
-
-        // Allow whitelisted peers to send data other than blocks in blocks only mode if whitelistrelay is true
-        if (pfrom->fWhitelisted && GetBoolArg("-whitelistrelay", DEFAULT_WHITELISTRELAY))
-            fBlocksOnly = false;
 
         LOCK(cs_main);
 
@@ -4848,9 +4839,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
             }
             else
             {
-                if (fBlocksOnly)
-                    LogPrint("net", "transaction (%s) inv sent in violation of protocol peer=%d\n", inv.hash.ToString(), pfrom->id);
-                else if (!fAlreadyHave && !fImporting && !fReindex)
+                if(!fAlreadyHave && !fImporting && !fReindex)
                     pfrom->AskFor(inv);
             }
 
@@ -4984,14 +4973,6 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
 
     else if (strCommand == NetMsgType::TX)
     {
-        // Stop processing the transaction early if
-        // We are in blocks only mode and peer is either not whitelisted or whitelistrelay is off
-        if (GetBoolArg("-blocksonly", DEFAULT_BLOCKSONLY) && (!pfrom->fWhitelisted || !GetBoolArg("-whitelistrelay", DEFAULT_WHITELISTRELAY)))
-        {
-            LogPrint("net", "transaction sent in violation of protocol peer=%d\n", pfrom->id);
-            return true;
-        }
-
         vector<uint256> vWorkQueue;
         vector<uint256> vEraseQueue;
         CTransaction tx;
@@ -5300,7 +5281,6 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
 
     else if (strCommand == NetMsgType::PING)
     {
-        if (pfrom->nVersion > BIP0031_VERSION)
         {
             uint64_t nonce = 0;
             vRecv >> nonce;
@@ -5640,14 +5620,8 @@ bool SendMessages(CNode* pto)
             }
             pto->fPingQueued = false;
             pto->nPingUsecStart = GetTimeMicros();
-            if (pto->nVersion > BIP0031_VERSION) {
-                pto->nPingNonceSent = nonce;
-                pto->PushMessage(NetMsgType::PING, nonce);
-            } else {
-                // Peer is too old to support ping command with nonce, pong will never arrive.
-                pto->nPingNonceSent = 0;
-                pto->PushMessage(NetMsgType::PING);
-            }
+            pto->nPingNonceSent = nonce;
+            pto->PushMessage(NetMsgType::PING, nonce);
         }
 
         TRY_LOCK(cs_main, lockMain); // Acquire cs_main for IsInitialBlockDownload() and CNodeState()

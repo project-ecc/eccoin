@@ -441,7 +441,7 @@ void CNode::PushVersion()
     else
         LogPrint("net", "send version message: version %d, blocks=%d, us=%s, peer=%d\n", PROTOCOL_VERSION, nBestHeight, addrMe.ToString(), id);
     PushMessage(NetMsgType::VERSION, PROTOCOL_VERSION, nLocalServices, nTime, addrYou, addrMe,
-                nLocalHostNonce, strSubVersion, nBestHeight, !GetBoolArg("-blocksonly", DEFAULT_BLOCKSONLY));
+                nLocalHostNonce, strSubVersion, nBestHeight);
 }
 
 
@@ -1246,7 +1246,7 @@ void ThreadSocketHandler()
                     LogPrintf("socket sending timeout: %is\n", nTime - pnode->nLastSend);
                     pnode->fDisconnect = true;
                 }
-                else if (nTime - pnode->nLastRecv > (pnode->nVersion > BIP0031_VERSION ? TIMEOUT_INTERVAL : 90*60))
+                else if (nTime - pnode->nLastRecv > TIMEOUT_INTERVAL)
                 {
                     LogPrintf("socket receive timeout: %is\n", nTime - pnode->nLastRecv);
                     pnode->fDisconnect = true;
@@ -2308,13 +2308,13 @@ unsigned int ReceiveFloodSize() { return 1000*GetArg("-maxreceivebuffer", DEFAUL
 unsigned int SendBufferSize() { return 1000*GetArg("-maxsendbuffer", DEFAULT_MAXSENDBUFFER); }
 
 CNode::CNode(SOCKET hSocketIn, const CAddress& addrIn, const std::string& addrNameIn, bool fInboundIn) :
-    ssSend(SER_NETWORK, INIT_PROTO_VERSION),
+    ssSend(SER_NETWORK, MIN_PROTO_VERSION),
     addrKnown(5000, 0.001),
     filterInventoryKnown(50000, 0.000001)
 {
     nServices = 0;
     hSocket = hSocketIn;
-    nRecvVersion = INIT_PROTO_VERSION;
+    nRecvVersion = MIN_PROTO_VERSION;
     nLastSend = 0;
     nLastRecv = 0;
     nSendBytes = 0;
