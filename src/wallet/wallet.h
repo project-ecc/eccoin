@@ -12,9 +12,9 @@
 #include "ui_interface.h"
 #include "utilstrencodings.h"
 #include "validationinterface.h"
-#include "wallet/crypter.h"
-#include "wallet/wallet_ismine.h"
-#include "wallet/walletdb.h"
+#include "crypter.h"
+#include "wallet_ismine.h"
+#include "walletdb.h"
 
 #include <algorithm>
 #include <map>

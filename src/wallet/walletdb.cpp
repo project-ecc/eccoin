@@ -3,7 +3,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "wallet/walletdb.h"
+#include "walletdb.h"
 
 #include "base58.h"
 #include "consensus/validation.h"
@@ -13,7 +13,7 @@
 #include "sync.h"
 #include "util.h"
 #include "utiltime.h"
-#include "wallet/wallet.h"
+#include "wallet.h"
 
 #include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>

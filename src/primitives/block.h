@@ -7,9 +7,9 @@
 #define BITCOIN_PRIMITIVES_BLOCK_H
 
 #include "transaction.h"
-#include "../serialize.h"
-#include "../uint256.h"
-#include "../keystore.h"
+#include "serialize.h"
+#include "uint256.h"
+#include "keystore.h"
 
 class CBlockIndex;
 

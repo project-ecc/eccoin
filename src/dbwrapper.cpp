@@ -9,9 +9,9 @@
 
 #include <boost/filesystem.hpp>
 
-#include <leveldb/cache.h>
-#include <leveldb/env.h>
-#include <leveldb/filter_policy.h>
+#include <leveldb/include/leveldb/cache.h>
+#include <leveldb/include/leveldb/env.h>
+#include <leveldb/include/leveldb/filter_policy.h>
 #include <leveldb/helpers/memenv/memenv.h>
 #include <stdint.h>
 
