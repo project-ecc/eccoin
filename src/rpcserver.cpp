@@ -318,9 +318,7 @@ static const CRPCCommand vRPCCommands[] =
     { "rawtransactions",    "getrawtransaction",      &getrawtransaction,      true  },
     { "rawtransactions",    "sendrawtransaction",     &sendrawtransaction,     false },
     { "rawtransactions",    "signrawtransaction",     &signrawtransaction,     false }, /* uses wallet if enabled */
-#ifdef ENABLE_WALLET
     { "rawtransactions",    "fundrawtransaction",     &fundrawtransaction,     false },
-#endif
 
     /* Utility functions */
     { "util",               "createmultisig",         &createmultisig,         true  },
@@ -335,11 +333,8 @@ static const CRPCCommand vRPCCommands[] =
     { "hidden",             "invalidateblock",        &invalidateblock,        true  },
     { "hidden",             "reconsiderblock",        &reconsiderblock,        true  },
     { "hidden",             "setmocktime",            &setmocktime,            true  },
-#ifdef ENABLE_WALLET
     { "hidden",             "resendwallettransactions", &resendwallettransactions, true},
-#endif
 
-#ifdef ENABLE_WALLET
     /* Wallet */
     { "wallet",             "addmultisigaddress",     &addmultisigaddress,     true  },
     { "wallet",             "backupwallet",           &backupwallet,           true  },
@@ -382,7 +377,6 @@ static const CRPCCommand vRPCCommands[] =
     { "wallet",             "walletlock",             &walletlock,             true  },
     { "wallet",             "walletpassphrasechange", &walletpassphrasechange, true  },
     { "wallet",             "walletpassphrase",       &walletpassphrase,       true  },
-#endif // ENABLE_WALLET
 };
 
 CRPCTable::CRPCTable()
@@ -529,6 +523,7 @@ UniValue CRPCTable::execute(const std::string &strMethod, const UniValue &params
     const CRPCCommand *pcmd = tableRPC[strMethod];
     if (!pcmd)
         throw JSONRPCError(RPC_METHOD_NOT_FOUND, "Method not found");
+
 
     g_rpcSignals.PreCommand(*pcmd);
 
