@@ -833,11 +833,8 @@ UniValue CallRPC(const string& strMethod, const UniValue& params)
     UniValue valReply;
     if (!valReply.setStr(strReply))
         throw runtime_error("couldn't parse reply from server");
-    const UniValue& reply = valReply.get_obj();
-    if (reply.empty())
-        throw runtime_error("expected reply to have result, error and id properties");
 
-    return reply;
+    return valReply;
 }
 
 int CommandLineRPC(int argc, char *argv[])
@@ -864,28 +861,7 @@ int CommandLineRPC(int argc, char *argv[])
 
         // Execute
         UniValue reply = CallRPC(strMethod, params);
-
-        // Parse reply
-        const UniValue& result = find_value(reply, "result");
-        const UniValue& error  = find_value(reply, "error");
-
-        if (error.type() != UniValue::VNULL)
-        {
-            // Error
-            strPrint = "error: " + error.get_str();
-            int code = find_value(error.get_obj(), "code").get_int();
-            nRet = abs(code);
-        }
-        else
-        {
-            // Result
-            if (result.type() == UniValue::VNULL)
-                strPrint = "";
-            else if (result.type() == UniValue::VSTR)
-                strPrint = result.get_str();
-            else
-                strPrint = result.get_str();
-        }
+	strPrint = reply.get_str();
     }
     catch (std::exception& e)
     {
