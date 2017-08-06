@@ -298,7 +298,7 @@ void CWallet::SetBestChain(const CBlockLocator& loc)
     walletdb.WriteBestBlock(loc);
 }
 
-void CWallet::ForceSetMinVersion(enum WalletFeature nVersion)
+void CWallet::ForceSetMinVersion(int nVersion)
 {
     CWalletDB* pwalletdb = pwalletdbIn ? pwalletdbIn : new CWalletDB(strWalletFile);;
     pwalletdb->WriteMinVersion(nVersion);

@@ -1402,6 +1402,8 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
         nStart = GetTimeMillis();
         bool fFirstRun = true;
         pwalletMain = new CWallet(strWalletFile);
+
+        /// be very careful with this function. it will be removed in the future.
         if (IsArgSet("-forceupgradewallet"))
         {
             pwalletMain->ForceSetMinVersion(20502);
