@@ -220,7 +220,7 @@ leveldb_make:
 leveldb: leveldb_make
 
 secp256k1_make: 
-	cd secp256k1; ./autogen.sh; ./configure --prefix=$(CURDIR)/libsecp256k1 --enable-module-recovery; make; make install; cd ..;
+	cd secp256k1; ./autogen.sh; ./configure --prefix=$(CURDIR)/libsecp256k1 --enable-module-recovery --with-bignum=no; make; make install; cd ..;
 secp256k1: secp256k1_make
 
 
