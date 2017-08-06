@@ -109,7 +109,7 @@ xLDFLAGS=$(LDHARDENING) $(LDFLAGS)
 
 #add project specific libraries
 LIBS += $(CURDIR)/leveldb/out-static/libleveldb.a $(CURDIR)/leveldb/out-static/libmemenv.a
-LIBS += $(CURDIR)/secp256k1/lib/libsecp256k1.a
+LIBS += $(CURDIR)/secp256k1/.libs/libsecp256k1.a
 
 #add project specific dependencies 
 DEFS += $(addprefix -I,$(CURDIR)/leveldb/include)
@@ -199,12 +199,14 @@ OBJS= \
     build/rest.o \
     build/rpcblockchain.o \
     build/rpcclient.o \
+    build/rpcdump.o \
     build/rpcmining.o \
     build/rpcmisc.o \
     build/rpcnet.o \
     build/rpcprotocol.o \
     build/rpcrawtransaction.o \
     build/rpcserver.o \
+    build/rpcwallet.o \
     build/univalue/univalue.o \
     build/univalue/univalue_read.o \
     build/univalue/univalue_write.o \

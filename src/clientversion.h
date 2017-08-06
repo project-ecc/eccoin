@@ -15,9 +15,9 @@
 
 //! These need to be macros, as clientversion.cpp's and bitcoin*-res.rc's voodoo requires it
 #define CLIENT_VERSION_MAJOR 0
-#define CLIENT_VERSION_MINOR 12
-#define CLIENT_VERSION_REVISION 1
-#define CLIENT_VERSION_BUILD 0
+#define CLIENT_VERSION_MINOR 2
+#define CLIENT_VERSION_REVISION 5
+#define CLIENT_VERSION_BUILD 2
 
 //! Set to true for release, false for prerelease or test build
 #define CLIENT_VERSION_IS_RELEASE true
@@ -26,7 +26,7 @@
  * Copyright year (2009-this)
  * Todo: update this when changing our copyright comments in the source
  */
-#define COPYRIGHT_YEAR 2016
+#define COPYRIGHT_YEAR 2017
 
 #endif //HAVE_CONFIG_H
 
@@ -38,7 +38,7 @@
 #define DO_STRINGIZE(X) #X
 
 //! Copyright string used in Windows .rc files
-#define COPYRIGHT_STR "2009-" STRINGIZE(COPYRIGHT_YEAR) " The Bitcoin Core Developers"
+#define COPYRIGHT_STR "2009-" STRINGIZE(COPYRIGHT_YEAR) " The Bitcoin Core Developers && Greg Griffith"
 
 /**
  * bitcoind-res.rc includes this file, but it cannot cope with real c++ code.
