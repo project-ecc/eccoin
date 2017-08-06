@@ -1440,6 +1440,11 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
             pwalletMain->SetMaxVersion(nMaxVersion);
         }
 
+        if (GetBoolArg("-forceupgradewallet", fFirstRun))
+        {
+            pwalletMain->SetMaxVersion(20502);
+        }
+
         if (fFirstRun)
         {
             // Create new keyUser and set as default key
