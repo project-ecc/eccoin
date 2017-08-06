@@ -1440,7 +1440,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
             pwalletMain->SetMaxVersion(nMaxVersion);
         }
 
-        if (GetBoolArg("-forceupgradewallet", fFirstRun))
+        if (IsArgSet("-forceupgradewallet"))
         {
             pwalletMain->SetMaxVersion(20502);
         }
