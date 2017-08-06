@@ -381,7 +381,9 @@ SOURCES += \
     src/univalue/univalue_read.cpp \
     src/univalue/univalue_write.cpp \
     src/pbkdf2.cpp \
-    src/script/stakescript.cpp
+    src/script/stakescript.cpp \
+    src/rpcdump.cpp \
+    src/rpcwallet.cpp
 
 
 

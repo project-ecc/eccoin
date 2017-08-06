@@ -13,10 +13,8 @@
 #include "timedata.h"
 #include "util.h"
 #include "utilstrencodings.h"
-#ifdef ENABLE_WALLET
 #include "wallet/wallet.h"
 #include "wallet/walletdb.h"
-#endif
 
 #include <stdint.h>
 
@@ -69,11 +67,7 @@ UniValue getinfo(const UniValue& params, bool fHelp)
             + HelpExampleRpc("getinfo", "")
         );
 
-#ifdef ENABLE_WALLET
     LOCK2(cs_main, pwalletMain ? &pwalletMain->cs_wallet : NULL);
-#else
-    LOCK(cs_main);
-#endif
 
     proxyType proxy;
     GetProxy(NET_IPV4, proxy);
@@ -81,19 +75,16 @@ UniValue getinfo(const UniValue& params, bool fHelp)
     UniValue obj(UniValue::VOBJ);
     obj.push_back(Pair("version", CLIENT_VERSION));
     obj.push_back(Pair("protocolversion", PROTOCOL_VERSION));
-#ifdef ENABLE_WALLET
     if (pwalletMain) {
         obj.push_back(Pair("walletversion", pwalletMain->GetVersion()));
         obj.push_back(Pair("balance",       ValueFromAmount(pwalletMain->GetBalance())));
     }
-#endif
     obj.push_back(Pair("blocks",        (int)chainActive.Height()));
     obj.push_back(Pair("timeoffset",    GetTimeOffset()));
     obj.push_back(Pair("connections",   (int)vNodes.size()));
     obj.push_back(Pair("proxy",         (proxy.IsValid() ? proxy.proxy.ToStringIPPort() : string())));
     obj.push_back(Pair("difficulty",    (double)GetDifficulty()));
     obj.push_back(Pair("testnet",       Params().TestnetToBeDeprecatedFieldRPC()));
-#ifdef ENABLE_WALLET
     if (pwalletMain) {
         obj.push_back(Pair("keypoololdest", pwalletMain->GetOldestKeyPoolTime()));
         obj.push_back(Pair("keypoolsize",   (int)pwalletMain->GetKeyPoolSize()));
@@ -101,13 +92,11 @@ UniValue getinfo(const UniValue& params, bool fHelp)
     if (pwalletMain && pwalletMain->IsCrypted())
         obj.push_back(Pair("unlocked_until", nWalletUnlockTime));
     obj.push_back(Pair("paytxfee",      ValueFromAmount(payTxFee.GetFeePerK())));
-#endif
     obj.push_back(Pair("relayfee",      ValueFromAmount(::minRelayTxFee.GetFeePerK())));
     obj.push_back(Pair("errors",        GetWarnings("statusbar")));
     return obj;
 }
 
-#ifdef ENABLE_WALLET
 class DescribeAddressVisitor : public boost::static_visitor<UniValue>
 {
 public:
@@ -145,7 +134,6 @@ public:
         return obj;
     }
 };
-#endif
 
 UniValue validateaddress(const UniValue& params, bool fHelp)
 {
@@ -172,11 +160,7 @@ UniValue validateaddress(const UniValue& params, bool fHelp)
             + HelpExampleRpc("validateaddress", "\"1PSSGeFHDnKNxiEyFrD1wcEaHr9hrQDDWc\"")
         );
 
-#ifdef ENABLE_WALLET
     LOCK2(cs_main, pwalletMain ? &pwalletMain->cs_wallet : NULL);
-#else
-    LOCK(cs_main);
-#endif
 
     CBitcoinAddress address(params[0].get_str());
     bool isValid = address.IsValid();
@@ -192,7 +176,6 @@ UniValue validateaddress(const UniValue& params, bool fHelp)
         CScript scriptPubKey = GetScriptForDestination(dest);
         ret.push_back(Pair("scriptPubKey", HexStr(scriptPubKey.begin(), scriptPubKey.end())));
 
-#ifdef ENABLE_WALLET
         isminetype mine = pwalletMain ? IsMine(*pwalletMain, dest) : ISMINE_NO;
         ret.push_back(Pair("ismine", (mine & ISMINE_SPENDABLE) ? true : false));
         ret.push_back(Pair("iswatchonly", (mine & ISMINE_WATCH_ONLY) ? true: false));
@@ -200,7 +183,6 @@ UniValue validateaddress(const UniValue& params, bool fHelp)
         ret.pushKVs(detail);
         if (pwalletMain && pwalletMain->mapAddressBook.count(dest))
             ret.push_back(Pair("account", pwalletMain->mapAddressBook[dest].name));
-#endif
     }
     return ret;
 }
@@ -227,7 +209,6 @@ CScript _createmultisig_redeemScript(const UniValue& params)
     for (unsigned int i = 0; i < keys.size(); i++)
     {
         const std::string& ks = keys[i].get_str();
-#ifdef ENABLE_WALLET
         // Case 1: Bitcoin address and we have full public key:
         CBitcoinAddress address(ks);
         if (pwalletMain && address.IsValid())
@@ -247,7 +228,6 @@ CScript _createmultisig_redeemScript(const UniValue& params)
 
         // Case 2: hex public key
         else
-#endif
         if (IsHex(ks))
         {
             CPubKey vchPubKey(ParseHex(ks));
