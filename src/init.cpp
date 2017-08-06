@@ -1404,7 +1404,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
         pwalletMain = new CWallet(strWalletFile);
         if (IsArgSet("-forceupgradewallet"))
         {
-            pwalletMain->SetMinVersion(20502);
+            pwalletMain->ForceSetMinVersion(20502);
         }
         DBErrors nLoadWalletRet = pwalletMain->LoadWallet(fFirstRun);
         if (nLoadWalletRet != DB_LOAD_OK)
