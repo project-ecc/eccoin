@@ -300,6 +300,7 @@ void CWallet::SetBestChain(const CBlockLocator& loc)
 
 void CWallet::ForceSetMinVersion(int nVersion)
 {
+    CWalletDB* pwalletdbIn = NULL;
     CWalletDB* pwalletdb = pwalletdbIn ? pwalletdbIn : new CWalletDB(strWalletFile);;
     pwalletdb->WriteMinVersion(nVersion);
 }
