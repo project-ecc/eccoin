@@ -1402,6 +1402,10 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
         nStart = GetTimeMillis();
         bool fFirstRun = true;
         pwalletMain = new CWallet(strWalletFile);
+        if (IsArgSet("-forceupgradewallet"))
+        {
+            pwalletMain->SetMaxVersion(20502);
+        }
         DBErrors nLoadWalletRet = pwalletMain->LoadWallet(fFirstRun);
         if (nLoadWalletRet != DB_LOAD_OK)
         {
@@ -1438,11 +1442,6 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
             if (nMaxVersion < pwalletMain->GetVersion())
                 strErrors << _("Cannot downgrade wallet") << "\n";
             pwalletMain->SetMaxVersion(nMaxVersion);
-        }
-
-        if (IsArgSet("-forceupgradewallet"))
-        {
-            pwalletMain->SetMaxVersion(20502);
         }
 
         if (fFirstRun)
