@@ -66,7 +66,6 @@ OBJS= \
     build/txdb.o \
     build/key.o \
     build/addrman.o \
-    build/alert.o \
     build/amount.o \
     build/arith_uint256.o \
     build/base58.o \
