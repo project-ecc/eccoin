@@ -15,7 +15,6 @@
 #include <assert.h>
 #include <stdint.h>
 
-#include <boost/foreach.hpp>
 #include <boost/unordered_map.hpp>
 
 /** 
@@ -118,7 +117,7 @@ public:
     }
 
     void ClearUnspendable() {
-        BOOST_FOREACH(CTxOut &txout, vout) {
+        for (auto& txout: vout) {
             if (txout.scriptPubKey.IsUnspendable())
                 txout.SetNull();
         }
@@ -249,7 +248,7 @@ public:
     //! check whether the entire CCoins is spent
     //! note that only !IsPruned() CCoins can be serialized
     bool IsPruned() const {
-        BOOST_FOREACH(const CTxOut &out, vout)
+        for (auto const& out: vout)
             if (!out.IsNull())
                 return false;
         return true;
@@ -257,7 +256,7 @@ public:
 
     size_t DynamicMemoryUsage() const {
         size_t ret = memusage::DynamicUsage(vout);
-        BOOST_FOREACH(const CTxOut &out, vout) {
+        for (auto const& out: vout) {
             ret += RecursiveDynamicUsage(out.scriptPubKey);
         }
         return ret;
