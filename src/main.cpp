@@ -6,7 +6,6 @@
 #include "main.h"
 
 #include "addrman.h"
-#include "alert.h"
 #include "arith_uint256.h"
 #include "bignum.h"
 #include "chainparams.h"
