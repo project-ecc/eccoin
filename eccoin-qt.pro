@@ -284,7 +284,8 @@ HEADERS += \
     src/univalue/univalue.h \
     src/univalue/univalue_escapes.h \
     src/pbkdf2.h \
-    src/script/stakescript.h
+    src/script/stakescript.h \
+    src/messages.h
 
 
 # organize compiles of cpp files by section, this seems to be a logical order where the files lower down generally depend
@@ -383,7 +384,8 @@ SOURCES += \
     src/pbkdf2.cpp \
     src/script/stakescript.cpp \
     src/rpcdump.cpp \
-    src/rpcwallet.cpp
+    src/rpcwallet.cpp \
+    src/messages.cpp
 
 
 
