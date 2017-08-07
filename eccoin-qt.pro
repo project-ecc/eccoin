@@ -182,7 +182,6 @@ DEPENDPATH += src
 
 HEADERS += \
     src/addrman.h \
-    src/alert.h \
     src/amount.h \
     src/arith_uint256.h \
     src/base58.h \
@@ -292,7 +291,6 @@ HEADERS += \
 # on the ones higher up. also helps to observe how far into the compile process we are
 SOURCES += \
     src/addrman.cpp \
-    src/alert.cpp \
     src/amount.cpp \
     src/arith_uint256.cpp \
     src/base58.cpp \

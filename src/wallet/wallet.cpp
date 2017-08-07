@@ -1248,7 +1248,7 @@ void CWallet::ReacceptWalletTransactions()
     for (auto const& item: mapWallet)
     {
         const uint256& wtxid = item.first;
-        CWalletTx& wtx = item.second;
+        CWalletTx wtx = item.second;
         assert(wtx.GetHash() == wtxid);
 
         int nDepth = wtx.GetDepthInMainChain();
@@ -1512,7 +1512,7 @@ std::vector<uint256> CWallet::ResendWalletTransactionsBefore(int64_t nTime)
     multimap<unsigned int, CWalletTx*> mapSorted;
     for (auto const& item: mapWallet)
     {
-        CWalletTx& wtx = item.second;
+        CWalletTx wtx = item.second;
         // Don't rebroadcast if newer than nTime:
         if (wtx.nTimeReceived > nTime)
             continue;
