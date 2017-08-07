@@ -1622,7 +1622,6 @@ void CheckForkWarningConditions()
         {
             std::string warning = std::string("'Warning: Large-work fork detected, forking after block ") +
                 pindexBestForkBase->phashBlock->ToString() + std::string("'");
-            CAlert::Notify(warning, true);
         }
         if (pindexBestForkTip && pindexBestForkBase)
         {
@@ -2158,7 +2157,6 @@ void PartitionCheck(bool (*initialDownloadCheck)(), CCriticalSection& cs, const 
     if (!strWarning.empty())
     {
         strMiscWarning = strWarning;
-        CAlert::Notify(strWarning, true);
         lastAlertTime = now;
     }
 }
@@ -2593,7 +2591,6 @@ void static UpdateTip(CBlockIndex *pindexNew) {
                 if (state == THRESHOLD_ACTIVE) {
                     strMiscWarning = strprintf(_("Warning: unknown new rules activated (versionbit %i)"), bit);
                     if (!fWarned) {
-                        CAlert::Notify(strMiscWarning, true);
                         fWarned = true;
                     }
                 } else {
@@ -2615,7 +2612,6 @@ void static UpdateTip(CBlockIndex *pindexNew) {
             // strMiscWarning is read by GetWarnings(), called by Qt and the JSON-RPC code to warn the user:
             strMiscWarning = _("Warning: Unknown block versions being mined! It's possible unknown rules are in effect");
             if (!fWarned) {
-                CAlert::Notify(strMiscWarning, true);
                 fWarned = true;
             }
         }
@@ -4330,20 +4326,6 @@ std::string GetWarnings(const std::string& strFor)
         nPriority = 2000;
         strStatusBar = strRPC = "Warning: We do not appear to fully agree with our peers! You may need to upgrade, or other nodes may need to upgrade.";
         strGUI = _("Warning: We do not appear to fully agree with our peers! You may need to upgrade, or other nodes may need to upgrade.");
-    }
-
-    // Alerts
-    {
-        LOCK(cs_mapAlerts);
-        for (auto& item: mapAlerts)
-        {
-            const CAlert& alert = item.second;
-            if (alert.AppliesToMe() && alert.nPriority > nPriority)
-            {
-                nPriority = alert.nPriority;
-                strStatusBar = strGUI = alert.strStatusBar;
-            }
-        }
     }
 
     if (strFor == "gui")
