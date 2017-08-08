@@ -16,6 +16,7 @@
 #include "chain.h"
 #include "consensus/validation.h"
 #include "chainparams.h"
+#include "processblock.h"
 
 #include <algorithm>
 #include <vector>
@@ -30,6 +31,32 @@
 //
 
 uint256 hashRecentRejectsChainTip;
+
+
+// Requires cs_main.
+// Returns a bool indicating whether we requested this block.
+bool MarkBlockAsReceived(const uint256& hash)
+{
+    std::map<uint256, std::pair<NodeId, std::list<QueuedBlock>::iterator> >::iterator itInFlight = mapBlocksInFlight.find(hash);
+    if (itInFlight != mapBlocksInFlight.end()) {
+        CNodeState *state = State(itInFlight->second.first);
+        state->nBlocksInFlightValidHeaders -= itInFlight->second.second->fValidatedHeaders;
+        if (state->nBlocksInFlightValidHeaders == 0 && itInFlight->second.second->fValidatedHeaders) {
+            // Last validated block on the queue was received.
+            nPeersWithValidatedDownloads--;
+        }
+        if (state->vBlocksInFlight.begin() == itInFlight->second.second) {
+            // First block on the queue was received, update the start download time for the next one
+            state->nDownloadingSince = std::max(state->nDownloadingSince, GetTimeMicros());
+        }
+        state->vBlocksInFlight.erase(itInFlight->second.second);
+        state->nBlocksInFlight--;
+        state->nStallingSince = 0;
+        mapBlocksInFlight.erase(itInFlight);
+        return true;
+    }
+    return false;
+}
 
 /** Find the last common ancestor two blocks have.
  *  Both pa and pb must be non-NULL. */

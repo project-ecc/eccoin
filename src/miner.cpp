@@ -20,6 +20,8 @@
 #include "chainparams.h"
 #include "consensus/validation.h"
 #include "consensus/merkle.h"
+#include "processblock.h"
+
 #include <boost/thread.hpp>
 #include <openssl/sha.h>
 #include <queue>

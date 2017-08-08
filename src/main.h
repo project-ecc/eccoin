@@ -232,6 +232,31 @@ struct COrphanTx {
     CTransaction tx;
     NodeId fromPeer;
 };
+
+struct CBlockIndexWorkComparator
+{
+    bool operator()(CBlockIndex *pa, CBlockIndex *pb) const {
+        // First sort by most total work, ...
+        if (pa->nChainWork > pb->nChainWork) return false;
+        if (pa->nChainWork < pb->nChainWork) return true;
+
+        // ... then by earliest time received, ...
+        if (pa->nSequenceId < pb->nSequenceId) return false;
+        if (pa->nSequenceId > pb->nSequenceId) return true;
+
+        // Use pointer address as tie breaker (should only happen with blocks
+        // loaded from disk, as those all have id 0).
+        if (pa < pb) return false;
+        if (pa > pb) return true;
+
+        // Identical blocks.
+        return false;
+    }
+};
+
+extern CBlockIndex *pindexBestInvalid;
+extern std::multimap<CBlockIndex*, CBlockIndex*> mapBlocksUnlinked;
+extern std::map<uint256, NodeId> mapBlockSource;
 extern std::map<uint256, COrphanTx> mapOrphanTransactions GUARDED_BY(cs_main);;
 extern std::map<uint256, std::set<uint256> > mapOrphanTransactionsByPrev GUARDED_BY(cs_main);;
 
@@ -301,7 +326,6 @@ int64_t GetProofOfStakeReward(int64_t nCoinAge, int nHeight);
  * @param[out]  dbp     If pblock is stored to disk (or already there), this will be set to its location.
  * @return True if state.IsValid()
  */
-bool ProcessNewBlock(CValidationState& state, const CChainParams& chainparams, const CNode* pfrom, const CBlock* pblock, bool fForceProcessing, CDiskBlockPos* dbp);
 /** Check whether enough disk space is available for an incoming block */
 bool CheckDiskSpace(uint64_t nAdditionalBytes = 0);
 /** Open a block file (blk?????.dat) */
@@ -356,7 +380,6 @@ bool FlushStateToDisk(CValidationState &state, FlushStateMode mode);
 extern int nPreferredDownload;
 extern int nSyncStarted;
 extern int64_t nTimeBestReceived;
-bool MarkBlockAsReceived(const uint256& hash);
 extern int nPeersWithValidatedDownloads;
 bool AcceptBlockHeader(const CBlockHeader& block, CValidationState& state, const CChainParams& chainparams, CBlockIndex** ppindex=NULL);
 extern boost::scoped_ptr<CRollingBloomFilter> recentRejects;
@@ -396,7 +419,8 @@ void FlushStateToDisk();
 void PruneAndFlush();
 
 CNodeState *State(NodeId pnode);
-void CheckBlockIndex(const Consensus::Params& consensusParams);
+bool AbortNode(CValidationState& state, const std::string& strMessage, const std::string& userMessage="");
+
 
 /** (try to) add transaction to memory pool **/
 bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransaction &tx, bool fLimitFree,
@@ -563,12 +587,14 @@ bool DisconnectBlock(const CBlock& block, CValidationState& state, const CBlockI
 bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pindex, CCoinsViewCache& coins, bool fJustCheck = false);
 
 /** Context-independent validity checks */
-bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, bool fCheckPOW = true);
 bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW = true, bool fCheckMerkleRoot = true);
 
 /** Context-dependent validity checks */
-bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& state, CBlockIndex *pindexPrev);
 bool ContextualCheckBlock(const CBlock& block, CValidationState& state, CBlockIndex *pindexPrev);
+
+bool AcceptBlock(const CBlock& block, CValidationState& state, const CChainParams& chainparams, CBlockIndex** ppindex, bool fRequested, CDiskBlockPos* dbp);
+extern std::set<CBlockIndex*, CBlockIndexWorkComparator> setBlockIndexCandidates;
+
 
 /** Check a block is completely valid from start to finish (only works on top of our current best block, with cs_main held) */
 bool TestBlockValidity(CValidationState& state, const CChainParams& chainparams, const CBlock& block, CBlockIndex* pindexPrev, bool fCheckPOW = true, bool fCheckMerkleRoot = true);
