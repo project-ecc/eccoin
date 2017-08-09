@@ -139,11 +139,14 @@ OBJS= \
     build/keystore.o \
     build/main.o \
     build/merkleblock.o \
+    build/messages.o \
     build/miner.o \
     build/net.o \
     build/netbase.o \
     build/noui.o \
     build/pow.o \
+    build/processblock.o \
+    build/processheader.o \
     build/protocol.o \
     build/pubkey.o \
     build/random.o \
