@@ -9,6 +9,8 @@
 #include <boost/signals2/signal.hpp>
 #include <boost/shared_ptr.hpp>
 
+#include "consensus/validation.h"
+
 class CBlock;
 struct CBlockLocator;
 class CBlockIndex;

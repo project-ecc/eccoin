@@ -98,7 +98,7 @@ void EraseOrphansFor(NodeId peer) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
  * Returns true if there are nRequired or more blocks of minVersion or above
  * in the last Consensus::Params::nMajorityWindow blocks, starting at pstart and going backwards.
  */
-static bool IsSuperMajority(int minVersion, const CBlockIndex* pstart, unsigned nRequired, const Consensus::Params& consensusParams);
+bool IsSuperMajority(int minVersion, const CBlockIndex* pstart, unsigned nRequired, const Consensus::Params& consensusParams);
 
 /** Constant stuff for coinbase transactions we create: */
 CScript COINBASE_FLAGS;
@@ -598,7 +598,8 @@ bool CheckTransaction(const CTransaction& tx, CValidationState &state)
     return true;
 }
 
-void LimitMempoolSize(CTxMemPool& pool, size_t limit, unsigned long age) {
+void LimitMempoolSize(CTxMemPool& pool, size_t limit, unsigned long age)
+{
     int expired = pool.Expire(GetTime() - age);
     if (expired != 0)
         LogPrint("mempool", "Expired %i transactions from the memory pool\n", expired);
@@ -1211,83 +1212,6 @@ bool IsInitialBlockDownload()
     return state;
 }
 
-bool fLargeWorkForkFound = false;
-bool fLargeWorkInvalidChainFound = false;
-CBlockIndex *pindexBestForkTip = NULL, *pindexBestForkBase = NULL;
-
-void CheckForkWarningConditions()
-{
-    AssertLockHeld(cs_main);
-    // Before we get past initial download, we cannot reliably alert about forks
-    // (we assume we don't get stuck on a fork before the last checkpoint)
-    if (IsInitialBlockDownload())
-        return;
-
-    // If our best fork is no longer within 72 blocks (+/- 12 hours if no one mines it)
-    // of our head, drop it
-    if (pindexBestForkTip && chainActive.Height() - pindexBestForkTip->nHeight >= 72)
-        pindexBestForkTip = NULL;
-
-    if (pindexBestForkTip || (pindexBestInvalid && pindexBestInvalid->nChainWork > chainActive.Tip()->nChainWork + (GetBlockProof(*chainActive.Tip()) * 6)))
-    {
-        if (!fLargeWorkForkFound && pindexBestForkBase)
-        {
-            std::string warning = std::string("'Warning: Large-work fork detected, forking after block ") +
-                pindexBestForkBase->phashBlock->ToString() + std::string("'");
-        }
-        if (pindexBestForkTip && pindexBestForkBase)
-        {
-            LogPrintf("%s: Warning: Large valid fork found\n  forking the chain at height %d (%s)\n  lasting to height %d (%s).\nChain state database corruption likely.\n", __func__,
-                   pindexBestForkBase->nHeight, pindexBestForkBase->phashBlock->ToString(),
-                   pindexBestForkTip->nHeight, pindexBestForkTip->phashBlock->ToString());
-            fLargeWorkForkFound = true;
-        }
-        else
-        {
-            LogPrintf("%s: Warning: Found invalid chain at least ~6 blocks longer than our best chain.\nChain state database corruption likely.\n", __func__);
-            fLargeWorkInvalidChainFound = true;
-        }
-    }
-    else
-    {
-        fLargeWorkForkFound = false;
-        fLargeWorkInvalidChainFound = false;
-    }
-}
-
-void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
-{
-    AssertLockHeld(cs_main);
-    // If we are on a fork that is sufficiently large, set a warning flag
-    CBlockIndex* pfork = pindexNewForkTip;
-    CBlockIndex* plonger = chainActive.Tip();
-    while (pfork && pfork != plonger)
-    {
-        while (plonger && plonger->nHeight > pfork->nHeight)
-            plonger = plonger->pprev;
-        if (pfork == plonger)
-            break;
-        pfork = pfork->pprev;
-    }
-
-    // We define a condition where we should warn the user about as a fork of at least 7 blocks
-    // with a tip within 72 blocks (+/- 12 hours if no one mines it) of ours
-    // We use 7 blocks rather arbitrarily as it represents just under 10% of sustained network
-    // hash rate operating on the fork.
-    // or a chain that is entirely longer than ours and invalid (note that this should be detected by both)
-    // We define it this way because it allows us to only store the highest fork tip (+ base) which meets
-    // the 7-block condition and from this always have the most-likely-to-cause-warning fork
-    if (pfork && (!pindexBestForkTip || (pindexBestForkTip && pindexNewForkTip->nHeight > pindexBestForkTip->nHeight)) &&
-            pindexNewForkTip->nChainWork - pfork->nChainWork > (GetBlockProof(*pfork) * 7) &&
-            chainActive.Height() - pindexNewForkTip->nHeight < 72)
-    {
-        pindexBestForkTip = pindexNewForkTip;
-        pindexBestForkBase = pfork;
-    }
-
-    CheckForkWarningConditions();
-}
-
 // Requires cs_main.
 void Misbehaving(NodeId pnode, int howmuch)
 {
@@ -1306,43 +1230,6 @@ void Misbehaving(NodeId pnode, int howmuch)
         state->fShouldBan = true;
     } else
         LogPrintf("%s: %s (%d -> %d)\n", __func__, state->name, state->nMisbehavior-howmuch, state->nMisbehavior);
-}
-
-void static InvalidChainFound(CBlockIndex* pindexNew)
-{
-    if (!pindexBestInvalid || pindexNew->nChainWork > pindexBestInvalid->nChainWork)
-        pindexBestInvalid = pindexNew;
-
-    LogPrintf("%s: invalid block=%s  height=%d  log2_work=%.8g  date=%s\n", __func__,
-      pindexNew->GetBlockHash().ToString(), pindexNew->nHeight,
-      log(pindexNew->nChainWork.getdouble())/log(2.0), DateTimeStrFormat("%Y-%m-%d %H:%M:%S",
-      pindexNew->GetBlockTime()));
-    CBlockIndex *tip = chainActive.Tip();
-    assert (tip);
-    LogPrintf("%s:  current best=%s  height=%d  log2_work=%.8g  date=%s\n", __func__,
-      tip->GetBlockHash().ToString(), chainActive.Height(), log(tip->nChainWork.getdouble())/log(2.0),
-      DateTimeStrFormat("%Y-%m-%d %H:%M:%S", tip->GetBlockTime()));
-    CheckForkWarningConditions();
-}
-
-void InvalidBlockFound(CBlockIndex *pindex, const CValidationState &state) {
-    int nDoS = 0;
-    if (state.IsInvalid(nDoS)) {
-        std::map<uint256, NodeId>::iterator it = mapBlockSource.find(pindex->GetBlockHash());
-        if (it != mapBlockSource.end() && State(it->second)) {
-            assert (state.GetRejectCode() < REJECT_INTERNAL); // Blocks are never rejected with internal reject codes
-            CBlockReject reject = {(unsigned char)state.GetRejectCode(), state.GetRejectReason().substr(0, MAX_REJECT_MESSAGE_LENGTH), pindex->GetBlockHash()};
-            State(it->second)->rejects.push_back(reject);
-            if (nDoS > 0)
-                Misbehaving(it->second, nDoS);
-        }
-    }
-    if (!state.CorruptionPossible()) {
-        pindex->nStatus |= BLOCK_FAILED_VALID;
-        setDirtyBlockIndex.insert(pindex);
-        setBlockIndexCandidates.erase(pindex);
-        InvalidChainFound(pindex);
-    }
 }
 
 void UpdateCoins(const CTransaction& tx, CValidationState &state, CCoinsViewCache &inputs, CTxUndo &txundo, int nHeight)
@@ -1787,32 +1674,9 @@ int32_t ComputeBlockVersion(const CBlockIndex* pindexPrev, const Consensus::Para
     return nVersion;
 }
 
-/**
- * Threshold condition checker that triggers when unknown versionbits are seen on the network.
- */
-class WarningBitsConditionChecker : public AbstractThresholdConditionChecker
-{
-private:
-    int bit;
-
-public:
-    WarningBitsConditionChecker(int bitIn) : bit(bitIn) {}
-
-    int64_t BeginTime(const Consensus::Params& params) const { return 0; }
-    int64_t EndTime(const Consensus::Params& params) const { return std::numeric_limits<int64_t>::max(); }
-    int Period(const Consensus::Params& params) const { return params.nMinerConfirmationWindow; }
-    int Threshold(const Consensus::Params& params) const { return params.nRuleChangeActivationThreshold; }
-
-    bool Condition(const CBlockIndex* pindex, const Consensus::Params& params) const
-    {
-        return ((pindex->nVersion & VERSIONBITS_TOP_MASK) == VERSIONBITS_TOP_BITS) &&
-               ((pindex->nVersion >> bit) & 1) != 0 &&
-               ((ComputeBlockVersion(pindex->pprev, params) >> bit) & 1) == 0;
-    }
-};
 
 // Protected by cs_main
-static ThresholdConditionCache warningcache[VERSIONBITS_NUM_BITS];
+ThresholdConditionCache warningcache[VERSIONBITS_NUM_BITS];
 
 static int64_t nTimeCheck = 0;
 static int64_t nTimeForks = 0;
@@ -1820,7 +1684,6 @@ static int64_t nTimeVerify = 0;
 static int64_t nTimeConnect = 0;
 static int64_t nTimeIndex = 0;
 static int64_t nTimeCallbacks = 0;
-static int64_t nTimeTotal = 0;
 
 bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pindex, CCoinsViewCache& view, bool fJustCheck)
 {
@@ -2167,15 +2030,9 @@ void PruneAndFlush() {
     FlushStateToDisk(state, FLUSH_STATE_NONE);
 }
 
-static int64_t nTimeReadFromDisk = 0;
-static int64_t nTimeConnectTotal = 0;
-static int64_t nTimeFlush = 0;
-static int64_t nTimeChainState = 0;
-static int64_t nTimePostConnect = 0;
-
-
 /** Delete all entries in setBlockIndexCandidates that are worse than the current tip. */
-static void PruneBlockIndexCandidates() {
+void PruneBlockIndexCandidates()
+{
     // Note that we can't delete the current block itself, as we may need to return to it later in case a
     // reorganization to a better block fails.
     std::set<CBlockIndex*, CBlockIndexWorkComparator>::iterator it = setBlockIndexCandidates.begin();
@@ -2496,7 +2353,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
     return true;
 }
 
-static bool CheckIndexAgainstCheckpoint(const CBlockIndex* pindexPrev, CValidationState& state, const CChainParams& chainparams, const uint256& hash)
+bool CheckIndexAgainstCheckpoint(const CBlockIndex* pindexPrev, CValidationState& state, const CChainParams& chainparams, const uint256& hash)
 {
     if (*pindexPrev->phashBlock == chainparams.GetConsensus().hashGenesisBlock)
         return true;
@@ -2611,7 +2468,7 @@ bool AcceptBlock(const CBlock& block, CValidationState& state, const CChainParam
     return true;
 }
 
-static bool IsSuperMajority(int minVersion, const CBlockIndex* pstart, unsigned nRequired, const Consensus::Params& consensusParams)
+bool IsSuperMajority(int minVersion, const CBlockIndex* pstart, unsigned nRequired, const Consensus::Params& consensusParams)
 {
     unsigned int nFound = 0;
     for (int i = 0; i < consensusParams.nMajorityWindow && nFound < nRequired && pstart != NULL; i++)

@@ -259,7 +259,13 @@ extern std::multimap<CBlockIndex*, CBlockIndex*> mapBlocksUnlinked;
 extern std::map<uint256, NodeId> mapBlockSource;
 extern std::map<uint256, COrphanTx> mapOrphanTransactions GUARDED_BY(cs_main);;
 extern std::map<uint256, std::set<uint256> > mapOrphanTransactionsByPrev GUARDED_BY(cs_main);;
-
+void LimitMempoolSize(CTxMemPool& pool, size_t limit, unsigned long age);
+extern std::set<CBlockIndex*> setDirtyBlockIndex;
+extern ThresholdConditionCache warningcache[VERSIONBITS_NUM_BITS];
+void PruneBlockIndexCandidates();
+bool CheckIndexAgainstCheckpoint(const CBlockIndex* pindexPrev, CValidationState& state, const CChainParams& chainparams, const uint256& hash);
+bool IsSuperMajority(int minVersion, const CBlockIndex* pstart, unsigned nRequired, const Consensus::Params& consensusParams);
+CBlockIndex* AddToBlockIndex(const CBlockHeader& block);
 
 /** Best header we've seen so far (used for getheaders queries' starting points). */
 extern CBlockIndex *pindexBestHeader;

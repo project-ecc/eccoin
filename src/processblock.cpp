@@ -16,6 +16,36 @@
 
 
 
+bool fLargeWorkForkFound = false;
+bool fLargeWorkInvalidChainFound = false;
+CBlockIndex *pindexBestForkTip = NULL, *pindexBestForkBase = NULL;
+
+
+/**
+ * Threshold condition checker that triggers when unknown versionbits are seen on the network.
+ */
+class WarningBitsConditionChecker : public AbstractThresholdConditionChecker
+{
+private:
+    int bit;
+
+public:
+    WarningBitsConditionChecker(int bitIn) : bit(bitIn) {}
+
+    int64_t BeginTime(const Consensus::Params& params) const { return 0; }
+    int64_t EndTime(const Consensus::Params& params) const { return std::numeric_limits<int64_t>::max(); }
+    int Period(const Consensus::Params& params) const { return params.nMinerConfirmationWindow; }
+    int Threshold(const Consensus::Params& params) const { return params.nRuleChangeActivationThreshold; }
+
+    bool Condition(const CBlockIndex* pindex, const Consensus::Params& params) const
+    {
+        return ((pindex->nVersion & VERSIONBITS_TOP_MASK) == VERSIONBITS_TOP_BITS) &&
+               ((pindex->nVersion >> bit) & 1) != 0 &&
+               ((ComputeBlockVersion(pindex->pprev, params) >> bit) & 1) == 0;
+    }
+};
+
+
 bool ProcessNewBlock(CValidationState& state, const CChainParams& chainparams, const CNode* pfrom, const CBlock* pblock, bool fForceProcessing, CDiskBlockPos* dbp)
 {
     // Preliminary checks
@@ -151,6 +181,13 @@ bool DisconnectTip(CValidationState& state, const Consensus::Params& consensusPa
     return true;
 }
 
+static int64_t nTimeReadFromDisk = 0;
+static int64_t nTimeConnectTotal = 0;
+static int64_t nTimeFlush = 0;
+static int64_t nTimeChainState = 0;
+static int64_t nTimePostConnect = 0;
+static int64_t nTimeTotal = 0;
+
 
 /**
  * Connect a new block to chainActive. pblock is either NULL or a pointer to a CBlock
@@ -211,6 +248,80 @@ bool ConnectTip(CValidationState& state, const CChainParams& chainparams, CBlock
     LogPrint("bench", "  - Connect postprocess: %.2fms [%.2fs]\n", (nTime6 - nTime5) * 0.001, nTimePostConnect * 0.000001);
     LogPrint("bench", "- Connect block: %.2fms [%.2fs]\n", (nTime6 - nTime1) * 0.001, nTimeTotal * 0.000001);
     return true;
+}
+
+
+void CheckForkWarningConditions()
+{
+    AssertLockHeld(cs_main);
+    // Before we get past initial download, we cannot reliably alert about forks
+    // (we assume we don't get stuck on a fork before the last checkpoint)
+    if (IsInitialBlockDownload())
+        return;
+
+    // If our best fork is no longer within 72 blocks (+/- 12 hours if no one mines it)
+    // of our head, drop it
+    if (pindexBestForkTip && chainActive.Height() - pindexBestForkTip->nHeight >= 72)
+        pindexBestForkTip = NULL;
+
+    if (pindexBestForkTip || (pindexBestInvalid && pindexBestInvalid->nChainWork > chainActive.Tip()->nChainWork + (GetBlockProof(*chainActive.Tip()) * 6)))
+    {
+        if (!fLargeWorkForkFound && pindexBestForkBase)
+        {
+            std::string warning = std::string("'Warning: Large-work fork detected, forking after block ") +
+                pindexBestForkBase->phashBlock->ToString() + std::string("'");
+        }
+        if (pindexBestForkTip && pindexBestForkBase)
+        {
+            LogPrintf("%s: Warning: Large valid fork found\n  forking the chain at height %d (%s)\n  lasting to height %d (%s).\nChain state database corruption likely.\n", __func__,
+                   pindexBestForkBase->nHeight, pindexBestForkBase->phashBlock->ToString(),
+                   pindexBestForkTip->nHeight, pindexBestForkTip->phashBlock->ToString());
+            fLargeWorkForkFound = true;
+        }
+        else
+        {
+            LogPrintf("%s: Warning: Found invalid chain at least ~6 blocks longer than our best chain.\nChain state database corruption likely.\n", __func__);
+            fLargeWorkInvalidChainFound = true;
+        }
+    }
+    else
+    {
+        fLargeWorkForkFound = false;
+        fLargeWorkInvalidChainFound = false;
+    }
+}
+
+void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
+{
+    AssertLockHeld(cs_main);
+    // If we are on a fork that is sufficiently large, set a warning flag
+    CBlockIndex* pfork = pindexNewForkTip;
+    CBlockIndex* plonger = chainActive.Tip();
+    while (pfork && pfork != plonger)
+    {
+        while (plonger && plonger->nHeight > pfork->nHeight)
+            plonger = plonger->pprev;
+        if (pfork == plonger)
+            break;
+        pfork = pfork->pprev;
+    }
+
+    // We define a condition where we should warn the user about as a fork of at least 7 blocks
+    // with a tip within 72 blocks (+/- 12 hours if no one mines it) of ours
+    // We use 7 blocks rather arbitrarily as it represents just under 10% of sustained network
+    // hash rate operating on the fork.
+    // or a chain that is entirely longer than ours and invalid (note that this should be detected by both)
+    // We define it this way because it allows us to only store the highest fork tip (+ base) which meets
+    // the 7-block condition and from this always have the most-likely-to-cause-warning fork
+    if (pfork && (!pindexBestForkTip || (pindexBestForkTip && pindexNewForkTip->nHeight > pindexBestForkTip->nHeight)) &&
+            pindexNewForkTip->nChainWork - pfork->nChainWork > (GetBlockProof(*pfork) * 7) &&
+            chainActive.Height() - pindexNewForkTip->nHeight < 72)
+    {
+        pindexBestForkTip = pindexNewForkTip;
+        pindexBestForkBase = pfork;
+    }
+
+    CheckForkWarningConditions();
 }
 
 /**
@@ -615,4 +726,42 @@ CBlockIndex* FindMostWorkChain()
         if (!fInvalidAncestor)
             return pindexNew;
     } while(true);
+}
+
+void InvalidChainFound(CBlockIndex* pindexNew)
+{
+    if (!pindexBestInvalid || pindexNew->nChainWork > pindexBestInvalid->nChainWork)
+        pindexBestInvalid = pindexNew;
+
+    LogPrintf("%s: invalid block=%s  height=%d  log2_work=%.8g  date=%s\n", __func__,
+      pindexNew->GetBlockHash().ToString(), pindexNew->nHeight,
+      log(pindexNew->nChainWork.getdouble())/log(2.0), DateTimeStrFormat("%Y-%m-%d %H:%M:%S",
+      pindexNew->GetBlockTime()));
+    CBlockIndex *tip = chainActive.Tip();
+    assert (tip);
+    LogPrintf("%s:  current best=%s  height=%d  log2_work=%.8g  date=%s\n", __func__,
+      tip->GetBlockHash().ToString(), chainActive.Height(), log(tip->nChainWork.getdouble())/log(2.0),
+      DateTimeStrFormat("%Y-%m-%d %H:%M:%S", tip->GetBlockTime()));
+    CheckForkWarningConditions();
+}
+
+void InvalidBlockFound(CBlockIndex *pindex, const CValidationState &state)
+{
+    int nDoS = 0;
+    if (state.IsInvalid(nDoS)) {
+        std::map<uint256, NodeId>::iterator it = mapBlockSource.find(pindex->GetBlockHash());
+        if (it != mapBlockSource.end() && State(it->second)) {
+            assert (state.GetRejectCode() < REJECT_INTERNAL); // Blocks are never rejected with internal reject codes
+            CBlockReject reject = {(unsigned char)state.GetRejectCode(), state.GetRejectReason().substr(0, MAX_REJECT_MESSAGE_LENGTH), pindex->GetBlockHash()};
+            State(it->second)->rejects.push_back(reject);
+            if (nDoS > 0)
+                Misbehaving(it->second, nDoS);
+        }
+    }
+    if (!state.CorruptionPossible()) {
+        pindex->nStatus |= BLOCK_FAILED_VALID;
+        setDirtyBlockIndex.insert(pindex);
+        setBlockIndexCandidates.erase(pindex);
+        InvalidChainFound(pindex);
+    }
 }
