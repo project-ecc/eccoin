@@ -20,6 +20,8 @@
 #include "chainparams.h"
 #include "consensus/validation.h"
 #include "consensus/merkle.h"
+#include "processblock.h"
+
 #include <boost/thread.hpp>
 #include <openssl/sha.h>
 #include <queue>
@@ -115,7 +117,7 @@ public:
     {
         LogPrintf("COrphan(hash=%s, dPriority=%.1f, dFeePerKb=%.1f)\n",
                ptx->GetHash().ToString().substr(0,10).c_str(), dPriority, dFeePerKb);
-        BOOST_FOREACH(uint256 hash, setDependsOn)
+        for (auto hash: setDependsOn)
             LogPrintf("   setDependsOn %s\n", hash.ToString().substr(0,10).c_str());
     }
 };
@@ -319,7 +321,7 @@ CBlockTemplate* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
             const CTransaction& tx = iter->GetTx();
 
             bool fOrphan = false;
-            BOOST_FOREACH(CTxMemPool::txiter parent, mempool.GetMemPoolParents(iter))
+            for (auto parent: mempool.GetMemPoolParents(iter))
             {
                 if (!inBlock.count(parent)) {
                     fOrphan = true;
@@ -380,7 +382,7 @@ CBlockTemplate* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
             inBlock.insert(iter);
 
             // Add transactions that depend on this one to the priority queue
-            BOOST_FOREACH(CTxMemPool::txiter child, mempool.GetMemPoolChildren(iter))
+            for (auto child: mempool.GetMemPoolChildren(iter))
             {
                 if (fPriorityBlock) {
                     waitPriIter wpiter = waitPriMap.find(child);

@@ -179,7 +179,7 @@ void CBlock::UpdateTime(const CBlockIndex* pindexPrev)
 int64_t CBlock::GetMaxTransactionTime() const
 {
     int64_t maxTransactionTime = 0;
-    BOOST_FOREACH(const CTransaction& tx, vtx)
+    for (auto const& tx: vtx)
         maxTransactionTime = std::max(maxTransactionTime, (int64_t)tx.nTime);
     return maxTransactionTime;
 }

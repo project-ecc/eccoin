@@ -182,7 +182,6 @@ DEPENDPATH += src
 
 HEADERS += \
     src/addrman.h \
-    src/alert.h \
     src/amount.h \
     src/arith_uint256.h \
     src/base58.h \
@@ -284,14 +283,16 @@ HEADERS += \
     src/univalue/univalue.h \
     src/univalue/univalue_escapes.h \
     src/pbkdf2.h \
-    src/script/stakescript.h
+    src/script/stakescript.h \
+    src/messages.h \
+    src/processblock.h \
+    src/processheader.h
 
 
 # organize compiles of cpp files by section, this seems to be a logical order where the files lower down generally depend
 # on the ones higher up. also helps to observe how far into the compile process we are
 SOURCES += \
     src/addrman.cpp \
-    src/alert.cpp \
     src/amount.cpp \
     src/arith_uint256.cpp \
     src/base58.cpp \
@@ -383,7 +384,10 @@ SOURCES += \
     src/pbkdf2.cpp \
     src/script/stakescript.cpp \
     src/rpcdump.cpp \
-    src/rpcwallet.cpp
+    src/rpcwallet.cpp \
+    src/messages.cpp \
+    src/processblock.cpp \
+    src/processheader.cpp
 
 
 
