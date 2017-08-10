@@ -58,8 +58,6 @@
 #include <boost/thread.hpp>
 #include <openssl/crypto.h>
 
-using namespace std;
-
 bool fShutdown = false;
 CWallet* pwalletMain = NULL;
 bool fFeeEstimatesInitialized = false;
@@ -282,10 +280,10 @@ void OnRPCStopped()
 void OnRPCPreCommand(const CRPCCommand& cmd)
 {
     // Observe safe mode
-    string strWarning = GetWarnings("rpc");
+    std::string strWarning = GetWarnings("rpc");
     if (strWarning != "" && !GetBoolArg("-disablesafemode", DEFAULT_DISABLE_SAFEMODE) &&
         !cmd.okSafeMode)
-        throw JSONRPCError(RPC_FORBIDDEN_BY_SAFE_MODE, string("Safe mode: ") + strWarning);
+        throw JSONRPCError(RPC_FORBIDDEN_BY_SAFE_MODE, std::string("Safe mode: ") + strWarning);
 }
 
 std::string HelpMessage(HelpMessageMode mode)
@@ -294,7 +292,7 @@ std::string HelpMessage(HelpMessageMode mode)
 
     // When adding new options to the categories, please keep and ensure alphabetical ordering.
     // Do not translate _(...) -help-debug options, Many technical terms, and only a very small audience, so is unnecessary stress to translators.
-    string strUsage = HelpMessageGroup(_("Options:"));
+    std::string strUsage = HelpMessageGroup(_("Options:"));
     strUsage += HelpMessageOpt("-?", _("This help message"));
     strUsage += HelpMessageOpt("-version", _("Print version and exit"));
     strUsage += HelpMessageOpt("-alerts", strprintf(_("Receive and display P2P network alerts (default: %u)"), DEFAULT_ALERTS));
@@ -417,7 +415,7 @@ std::string HelpMessage(HelpMessageMode mode)
         strUsage += HelpMessageOpt("-limitdescendantcount=<n>", strprintf("Do not accept transactions if any ancestor would have <n> or more in-mempool descendants (default: %u)", DEFAULT_DESCENDANT_LIMIT));
         strUsage += HelpMessageOpt("-limitdescendantsize=<n>", strprintf("Do not accept transactions if any ancestor would have more than <n> kilobytes of in-mempool descendants (default: %u).", DEFAULT_DESCENDANT_SIZE_LIMIT));
     }
-    string debugCategories = "addrman, alert, bench, coindb, db, lock, rand, rpc, selectcoins, mempool, mempoolrej, net, proxy, prune, http, libevent, tor, zmq"; // Don't translate these and qt below
+    std::string debugCategories = "addrman, alert, bench, coindb, db, lock, rand, rpc, selectcoins, mempool, mempoolrej, net, proxy, prune, http, libevent, tor, zmq"; // Don't translate these and qt below
     if (mode == HMM_BITCOIN_QT)
         debugCategories += ", qt";
     strUsage += HelpMessageOpt("-debug=<category>", strprintf(_("Output debugging information (default: %u, supplying <category> is optional)"), 0) + ". " +
@@ -531,7 +529,7 @@ struct CImportingNow
 void CleanupBlockRevFiles()
 {
     using namespace boost::filesystem;
-    map<string, path> mapBlockFiles;
+    std::map<std::string, path> mapBlockFiles;
 
     // Glob all blk?????.dat and rev?????.dat files from the blocks directory.
     // Remove the rev files immediately and insert the blk file paths into an
@@ -831,8 +829,8 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
 
     fDebug = !mapMultiArgs["-debug"].empty();
     // Special-case: if -debug=0/-nodebug is set, turn off debugging messages
-    const vector<string>& categories = mapMultiArgs["-debug"];
-    if (GetBoolArg("-nodebug", false) || find(categories.begin(), categories.end(), string("0")) != categories.end())
+    const std::vector<std::string>& categories = mapMultiArgs["-debug"];
+    if (GetBoolArg("-nodebug", false) || find(categories.begin(), categories.end(), std::string("0")) != categories.end())
         fDebug = false;
 
     // Check for -debugnet
@@ -1084,7 +1082,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
     RegisterNodeSignals(GetNodeSignals());
 
     // sanitize comments per BIP-0014, format user agent and check total size
-    std::vector<string> uacomments;
+    std::vector<std::string> uacomments;
     for (auto cmt: mapMultiArgs["-uacomment"])
     {
         if (cmt != SanitizeString(cmt, SAFE_CHARS_UA_COMMENT))
