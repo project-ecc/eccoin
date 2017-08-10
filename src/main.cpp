@@ -38,6 +38,8 @@
 #include "processblock.h"
 #include "processheader.h"
 #include "random.h"
+#include "kernel.h"
+#include "chain.h"
 
 #include <sstream>
 #include <boost/random/mersenne_twister.hpp>
@@ -1717,6 +1719,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         }
     }
 
+
     int64_t nTime1 = GetTimeMicros(); nTimeCheck += nTime1 - nTimeStart;
     LogPrint("bench", "    - Sanity checks: %.2fms [%.2fs]\n", 0.001 * (nTime1 - nTimeStart), nTimeCheck * 0.000001);
 
@@ -1791,6 +1794,8 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 
     std::vector<int> prevheights;
     CAmount nFees = 0;
+    CAmount nValueIn = 0;
+    CAmount nValueOut = 0;
     int nInputs = 0;
     unsigned int nSigOps = 0;
     CDiskTxPos pos(pindex->GetBlockPos(), GetSizeOfCompactSize(block.vtx.size()));
@@ -1837,7 +1842,16 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                                      REJECT_INVALID, "bad-blk-sigops");
             }
 
-            nFees += view.GetValueIn(tx)-tx.GetValueOut();
+            CAmount nTxValueIn = view.GetValueIn(tx);
+            CAmount nTxValueOut = tx.GetValueOut();
+
+            if (!tx.IsCoinStake())
+            {
+                nFees += nTxValueIn - nTxValueOut;
+            }
+
+            nValueIn += nTxValueIn;
+            nValueOut += nTxValueOut;
 
             std::vector<CScriptCheck> vChecks;
             bool fCacheResults = fJustCheck; /* Don't cache results if we're actually connecting blocks (still consult the cache, though) */
@@ -1856,6 +1870,8 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         vPos.push_back(std::make_pair(tx.GetHash(), pos));
         pos.nTxOffset += ::GetSerializeSize(tx, SER_DISK, CLIENT_VERSION);
     }
+
+
     int64_t nTime3 = GetTimeMicros();
     nTimeConnect += nTime3 - nTime2;
     LogPrint("bench", "      - Connect %u transactions: %.2fms (%.3fms/tx, %.3fms/txin) [%.2fs]\n", (unsigned)block.vtx.size(), 0.001 * (nTime3 - nTime2), 0.001 * (nTime3 - nTime2) / block.vtx.size(), nInputs <= 1 ? 0 : 0.001 * (nTime3 - nTime2) / (nInputs-1), nTimeConnect * 0.000001);
@@ -1911,6 +1927,44 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 
     int64_t nTime6 = GetTimeMicros(); nTimeCallbacks += nTime6 - nTime5;
     LogPrint("bench", "    - Callbacks: %.2fms [%.2fs]\n", 0.001 * (nTime6 - nTime5), nTimeCallbacks * 0.000001);
+
+    // ppcoin: track money supply and mint amount info
+    pindex->nMint = nValueOut - nValueIn + nFees;
+    pindex->nMoneySupply = (pindex->pprev? pindex->pprev->nMoneySupply : 0) + nValueOut - nValueIn;
+
+    // Verify hash target and signature of coinstake tx
+    uint256 hashProofOfStake;
+    hashProofOfStake.SetNull();
+    if (block.IsProofOfStake())
+    {
+        if (!CheckProofOfStake(block.vtx[1], block.nBits, hashProofOfStake))
+        {
+            LogPrintf("WARNING: ProcessBlock(): check proof-of-stake failed for block %s\n", block.GetHash().ToString().c_str());
+            return false; // do not error here as we expect this during initial block download
+        }
+    }
+
+    // ppcoin: compute stake entropy bit for stake modifier
+    if (!pindex->SetStakeEntropyBit(block.GetStakeEntropyBit(pindex->nHeight)))
+    {
+        return error("AddToBlockIndex() : SetStakeEntropyBit() failed");
+    }
+    // ppcoin: record proof-of-stake hash value
+    pindex->hashProofOfStake = hashProofOfStake;
+
+    // ppcoin: compute stake modifier
+    uint64_t nStakeModifier = 0;
+    bool fGeneratedStakeModifier = false;
+    if (!ComputeNextStakeModifier(pindex->pprev, nStakeModifier, fGeneratedStakeModifier))
+        return error("AddToBlockIndex() : ComputeNextStakeModifier() failed");
+    pindex->SetStakeModifier(nStakeModifier, fGeneratedStakeModifier);
+    pindex->nStakeModifierChecksum = GetStakeModifierChecksum(pindex);
+    if (!CheckStakeModifierCheckpoints(pindex->nHeight, pindex))
+        return error("AddToBlockIndex() : Rejected by stake modifier checkpoint height=%d, checksum=%08x, correct checksum=%08x,"
+                     " nflags = %i, modifier=0x%016I64x  hashproofofstake = %s",
+                     pindex->nHeight, pindex->nStakeModifierChecksum, mapStakeModifierCheckpoints[pindex->nHeight],
+                     pindex->nFile, pindex->nStakeModifier, pindex->hashProofOfStake.ToString().c_str());
+
 
     return true;
 }
@@ -2326,17 +2380,35 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
     if (block.vtx.empty() || !block.vtx[0].IsCoinBase())
         return state.DoS(100, error("CheckBlock(): first tx is not coinbase"),
                          REJECT_INVALID, "bad-cb-missing");
+
     for (unsigned int i = 1; i < block.vtx.size(); i++)
         if (block.vtx[i].IsCoinBase())
             return state.DoS(100, error("CheckBlock(): more than one coinbase"),
                              REJECT_INVALID, "bad-cb-multiple");
 
+    // PoS: only the second transaction can be the optional coinstake
+    for (unsigned int i = 2; i < block.vtx.size(); i++)
+        if (block.vtx[i].IsCoinStake())
+            return state.DoS(100, error("CheckBlock() : coinstake in wrong position"));
+
+    // PoS: coinbase output should be empty if proof-of-stake block
+    if (block.IsProofOfStake() && (block.vtx[0].vout.size() != 1 || !block.vtx[0].vout[0].IsEmpty()))
+        return state.DoS(0, error("CheckBlock() : coinbase output not empty for proof-of-stake block"));
+
     // Check transactions
     for (auto const& tx: block.vtx)
+    {
         if (!CheckTransaction(tx, state))
+        {
             return error("CheckBlock(): CheckTransaction of %s failed with %s",
                 tx.GetHash().ToString(),
                 FormatStateMessage(state));
+        }
+
+        // PoS: check transaction timestamp
+        if (block.GetBlockTime() < (int64_t)tx.nTime)
+            return state.DoS(50, error("CheckBlock() : block timestamp earlier than transaction timestamp"));
+    }
 
     unsigned int nSigOps = 0;
     for (auto const& tx: block.vtx)
@@ -2346,6 +2418,10 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
     if (nSigOps > MAX_BLOCK_SIGOPS)
         return state.DoS(100, error("CheckBlock(): out-of-bounds SigOpCount"),
                          REJECT_INVALID, "bad-blk-sigops");
+
+    // PoS: check block signature
+    if (!block.CheckBlockSignature())
+        return state.DoS(100, error("CheckBlock() : bad block signature"));
 
     if (fCheckPOW && fCheckMerkleRoot)
         block.fChecked = true;
