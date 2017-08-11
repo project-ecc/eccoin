@@ -50,6 +50,7 @@
 #include <boost/math/distributions/poisson.hpp>
 #include <boost/thread.hpp>
 #include <boost/foreach.hpp>
+#include <random>
 
 #if defined(NDEBUG)
 # error "Bitcoin cannot be compiled without assertions."

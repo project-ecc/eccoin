@@ -16,7 +16,7 @@
 #ifdef __linux__
 #include <endian.h>
 #elif __APPLE__
-#include <sys/endian.h>
+#include <machine/endian.h>
 #else
 
 #if defined(WORDS_BIGENDIAN)
