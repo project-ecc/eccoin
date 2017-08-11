@@ -26,8 +26,6 @@
 #include <openssl/sha.h>
 #include <queue>
 
-using namespace std;
-
 extern CWallet* pwalletMain;
 
 typedef boost::tuple<double, double, CTransaction*> TxPriority;
@@ -38,8 +36,8 @@ int64_t nLastCoinStakeSearchInterval = 0;
 double dHashesPerSec;
 int64_t nHPSTimerStart;
 
-static string strMintMessage = "Info: Minting suspended due to locked wallet.";
-static string strMintWarning;
+static std::string strMintMessage = "Info: Minting suspended due to locked wallet.";
+static std::string strMintWarning;
 
 
 
@@ -103,7 +101,7 @@ class COrphan
 {
 public:
     CTransaction* ptx;
-    set<uint256> setDependsOn;
+    std::set<uint256> setDependsOn;
     double dPriority;
     double dFeePerKb;
 
@@ -169,7 +167,7 @@ CBlockTemplate* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
     CReserveKey reservekey(pwallet);
 
     // Create new block
-    auto_ptr<CBlockTemplate> pblocktemplate(new CBlockTemplate());
+    std::auto_ptr<CBlockTemplate> pblocktemplate(new CBlockTemplate());
     if(!pblocktemplate.get())
         return NULL;
     CBlock *pblock = &pblocktemplate->block; // pointer for convenience
@@ -250,7 +248,7 @@ CBlockTemplate* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
             // LogPrintf(">>> OK1\n");
             if (pwallet->CreateCoinStake(*pwallet, pblock->nBits, nSearchTime-nLastCoinStakeSearchTime, txCoinStake))
             {
-                if (txCoinStake.nTime >= max(pindexPrev->GetMedianTimePast()+1, pindexPrev->GetBlockTime() - nMaxClockDrift))
+                if (txCoinStake.nTime >= std::max(pindexPrev->GetMedianTimePast()+1, pindexPrev->GetBlockTime() - nMaxClockDrift))
                 {   // make sure coinstake would meet timestamp protocol
                     // as it would be the same as the block timestamp
                     pblock->vtx[0].vout[0].SetEmpty();
@@ -409,14 +407,14 @@ CBlockTemplate* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
         if (pblock->IsProofOfStake())
         {
             pblock->nTime      = pblock->vtx[1].nTime; //same as coinstake timestamp
-            pblock->nTime      = max(pindexPrev->GetMedianTimePast()+1, pblock->GetMaxTransactionTime());
-            pblock->nTime      = max(pblock->GetBlockTime(), pindexPrev->GetBlockTime() - nMaxClockDrift);
+            pblock->nTime      = std::max(pindexPrev->GetMedianTimePast()+1, pblock->GetMaxTransactionTime());
+            pblock->nTime      = std::max(pblock->GetBlockTime(), pindexPrev->GetBlockTime() - nMaxClockDrift);
 
         }
         else
         {
-            pblock->nTime          = max(pindexPrev->GetMedianTimePast()+1, pblock->GetMaxTransactionTime());
-            pblock->nTime          = max(pblock->GetBlockTime(), pindexPrev->GetBlockTime() - nMaxClockDrift);
+            pblock->nTime          = std::max(pindexPrev->GetMedianTimePast()+1, pblock->GetMaxTransactionTime());
+            pblock->nTime          = std::max(pblock->GetBlockTime(), pindexPrev->GetBlockTime() - nMaxClockDrift);
         }
         if (pblock->IsProofOfWork())
             pblock->UpdateTime(pindexPrev);
@@ -571,7 +569,7 @@ void ScryptMiner(CWallet *pwallet)
         unsigned int nTransactionsUpdatedLast = mempool.GetTransactionsUpdated();
         CBlockIndex* pindexPrev = chainActive.Tip();
 
-        auto_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(pwallet, true));
+        std::auto_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(pwallet, true));
         if (!pblocktemplate.get())
         {
             LogPrintf("Error in BitcoinMiner: Keypool ran out, please call keypoolrefill before restarting the mining thread\n");
@@ -700,8 +698,8 @@ void ScryptMiner(CWallet *pwallet)
                 break;
 
             // Update nTime every few seconds
-            pblock->nTime = max(pindexPrev->GetMedianTimePast()+1, pblock->GetMaxTransactionTime());
-            pblock->nTime = max(pblock->GetBlockTime(), pindexPrev->GetBlockTime() - nMaxClockDrift);
+            pblock->nTime = std::max(pindexPrev->GetMedianTimePast()+1, pblock->GetMaxTransactionTime());
+            pblock->nTime = std::max(pblock->GetBlockTime(), pindexPrev->GetBlockTime() - nMaxClockDrift);
             pblock->UpdateTime(pindexPrev);
             nBlockTime = ByteReverse(pblock->nTime);
 

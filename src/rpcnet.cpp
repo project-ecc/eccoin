@@ -19,12 +19,10 @@
 
 #include <univalue.h>
 
-using namespace std;
-
 UniValue getconnectioncount(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 0)
-        throw runtime_error(
+        throw std::runtime_error(
             "getconnectioncount\n"
             "\nReturns the number of connections to other nodes.\n"
             "\nResult:\n"
@@ -42,7 +40,7 @@ UniValue getconnectioncount(const UniValue& params, bool fHelp)
 UniValue ping(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 0)
-        throw runtime_error(
+        throw std::runtime_error(
             "ping\n"
             "\nRequests that a ping be sent to all other nodes, to measure ping time.\n"
             "Results provided in getpeerinfo, pingtime and pingwait fields are decimal seconds.\n"
@@ -78,7 +76,7 @@ static void CopyNodeStats(std::vector<CNodeStats>& vstats)
 UniValue getpeerinfo(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 0)
-        throw runtime_error(
+        throw std::runtime_error(
             "getpeerinfo\n"
             "\nReturns data about each connected network node as a json array of objects.\n"
             "\nResult:\n"
@@ -99,7 +97,7 @@ UniValue getpeerinfo(const UniValue& params, bool fHelp)
             "    \"minping\": n,              (numeric) minimum observed ping time\n"
             "    \"pingwait\": n,             (numeric) ping wait\n"
             "    \"version\": v,              (numeric) The peer version, such as 7001\n"
-            "    \"subver\": \"/Satoshi:0.8.5/\",  (string) The string version\n"
+            "    \"subver\": \"/Satoshi:0.8.5/\",  (string) The std::string version\n"
             "    \"inbound\": true|false,     (boolean) Inbound (true) or Outbound (false)\n"
             "    \"startingheight\": n,       (numeric) The starting height (block) of the peer\n"
             "    \"banscore\": n,             (numeric) The ban score\n"
@@ -119,7 +117,7 @@ UniValue getpeerinfo(const UniValue& params, bool fHelp)
 
     LOCK(cs_main);
 
-    vector<CNodeStats> vstats;
+    std::vector<CNodeStats> vstats;
     CopyNodeStats(vstats);
 
     UniValue ret(UniValue::VARR);
@@ -171,12 +169,12 @@ UniValue getpeerinfo(const UniValue& params, bool fHelp)
 
 UniValue addnode(const UniValue& params, bool fHelp)
 {
-    string strCommand;
+    std::string strCommand;
     if (params.size() == 2)
         strCommand = params[1].get_str();
     if (fHelp || params.size() != 2 ||
         (strCommand != "onetry" && strCommand != "add" && strCommand != "remove"))
-        throw runtime_error(
+        throw std::runtime_error(
             "addnode \"node\" \"add|remove|onetry\"\n"
             "\nAttempts add or remove a node from the addnode list.\n"
             "Or try a connection to a node once.\n"
@@ -188,7 +186,7 @@ UniValue addnode(const UniValue& params, bool fHelp)
             + HelpExampleRpc("addnode", "\"192.168.0.6:8333\", \"onetry\"")
         );
 
-    string strNode = params[0].get_str();
+    std::string strNode = params[0].get_str();
 
     if (strCommand == "onetry")
     {
@@ -198,7 +196,7 @@ UniValue addnode(const UniValue& params, bool fHelp)
     }
 
     LOCK(cs_vAddedNodes);
-    vector<string>::iterator it = vAddedNodes.begin();
+    std::vector<std::string>::iterator it = vAddedNodes.begin();
     for(; it != vAddedNodes.end(); it++)
         if (strNode == *it)
             break;
@@ -222,7 +220,7 @@ UniValue addnode(const UniValue& params, bool fHelp)
 UniValue disconnectnode(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
-        throw runtime_error(
+        throw std::runtime_error(
             "disconnectnode \"node\" \n"
             "\nImmediately disconnects from the specified node.\n"
             "\nArguments:\n"
@@ -244,7 +242,7 @@ UniValue disconnectnode(const UniValue& params, bool fHelp)
 UniValue getaddednodeinfo(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() < 1 || params.size() > 2)
-        throw runtime_error(
+        throw std::runtime_error(
             "getaddednodeinfo dns ( \"node\" )\n"
             "\nReturns information about the given added node, or all added nodes\n"
             "(note that onetry addnodes are not listed here)\n"
@@ -276,7 +274,7 @@ UniValue getaddednodeinfo(const UniValue& params, bool fHelp)
 
     bool fDns = params[0].get_bool();
 
-    list<string> laddedNodes(0);
+    std::list<std::string> laddedNodes(0);
     if (params.size() == 1)
     {
         LOCK(cs_vAddedNodes);
@@ -285,7 +283,7 @@ UniValue getaddednodeinfo(const UniValue& params, bool fHelp)
     }
     else
     {
-        string strNode = params[1].get_str();
+        std::string strNode = params[1].get_str();
         LOCK(cs_vAddedNodes);
         for (auto const& strAddNode: vAddedNodes) {
             if (strAddNode == strNode)
@@ -309,11 +307,11 @@ UniValue getaddednodeinfo(const UniValue& params, bool fHelp)
         return ret;
     }
 
-    list<pair<string, vector<CService> > > laddedAddreses(0);
+    std::list<std::pair<std::string, std::vector<CService> > > laddedAddreses(0);
     for (auto const& strAddNode: laddedNodes) {
-        vector<CService> vservNode(0);
+        std::vector<CService> vservNode(0);
         if(Lookup(strAddNode.c_str(), vservNode, Params().GetDefaultPort(), fNameLookup, 0))
-            laddedAddreses.push_back(make_pair(strAddNode, vservNode));
+            laddedAddreses.push_back(std::make_pair(strAddNode, vservNode));
         else
         {
             UniValue obj(UniValue::VOBJ);
@@ -325,7 +323,7 @@ UniValue getaddednodeinfo(const UniValue& params, bool fHelp)
     }
 
     LOCK(cs_vNodes);
-    for (list<pair<string, vector<CService> > >::iterator it = laddedAddreses.begin(); it != laddedAddreses.end(); it++)
+    for (std::list<std::pair<std::string, std::vector<CService> > >::iterator it = laddedAddreses.begin(); it != laddedAddreses.end(); it++)
     {
         UniValue obj(UniValue::VOBJ);
         obj.push_back(Pair("addednode", it->first));
@@ -360,7 +358,7 @@ UniValue getaddednodeinfo(const UniValue& params, bool fHelp)
 UniValue getnettotals(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() > 0)
-        throw runtime_error(
+        throw std::runtime_error(
             "getnettotals\n"
             "\nReturns information about network traffic, including bytes in, bytes out,\n"
             "and current time.\n"
@@ -414,7 +412,7 @@ static UniValue GetNetworksInfo()
         obj.push_back(Pair("name", GetNetworkName(network)));
         obj.push_back(Pair("limited", IsLimited(network)));
         obj.push_back(Pair("reachable", IsReachable(network)));
-        obj.push_back(Pair("proxy", proxy.IsValid() ? proxy.proxy.ToStringIPPort() : string()));
+        obj.push_back(Pair("proxy", proxy.IsValid() ? proxy.proxy.ToStringIPPort() : std::string()));
         obj.push_back(Pair("proxy_randomize_credentials", proxy.randomize_credentials));
         networks.push_back(obj);
     }
@@ -424,7 +422,7 @@ static UniValue GetNetworksInfo()
 UniValue getnetworkinfo(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 0)
-        throw runtime_error(
+        throw std::runtime_error(
             "getnetworkinfo\n"
             "Returns an object containing various state info regarding P2P networking.\n"
             "\nResult:\n"
@@ -490,12 +488,12 @@ UniValue getnetworkinfo(const UniValue& params, bool fHelp)
 
 UniValue setban(const UniValue& params, bool fHelp)
 {
-    string strCommand;
+    std::string strCommand;
     if (params.size() >= 2)
         strCommand = params[1].get_str();
     if (fHelp || params.size() < 2 ||
         (strCommand != "add" && strCommand != "remove"))
-        throw runtime_error(
+        throw std::runtime_error(
                             "setban \"ip(/netmask)\" \"add|remove\" (bantime) (absolute)\n"
                             "\nAttempts add or remove a IP/Subnet from the banned list.\n"
                             "\nArguments:\n"
@@ -513,7 +511,7 @@ UniValue setban(const UniValue& params, bool fHelp)
     CNetAddr netAddr;
     bool isSubnet = false;
 
-    if (params[0].get_str().find("/") != string::npos)
+    if (params[0].get_str().find("/") != std::string::npos)
         isSubnet = true;
 
     if (!isSubnet)
@@ -558,7 +556,7 @@ UniValue setban(const UniValue& params, bool fHelp)
 UniValue listbanned(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 0)
-        throw runtime_error(
+        throw std::runtime_error(
                             "listbanned\n"
                             "\nList all banned IPs/Subnets.\n"
                             "\nExamples:\n"
@@ -588,7 +586,7 @@ UniValue listbanned(const UniValue& params, bool fHelp)
 UniValue clearbanned(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 0)
-        throw runtime_error(
+        throw std::runtime_error(
                             "clearbanned\n"
                             "\nClear all banned IPs.\n"
                             "\nExamples:\n"

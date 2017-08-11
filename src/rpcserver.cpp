@@ -34,7 +34,6 @@
 #include <boost/filesystem/fstream.hpp>
 
 using namespace RPCServer;
-using namespace std;
 
 static bool fRPCRunning = false;
 static bool fRPCInWarmup = true;
@@ -75,7 +74,7 @@ void RPCServer::OnPostCommand(boost::function<void (const CRPCCommand&)> slot)
 }
 
 void RPCTypeCheck(const UniValue& params,
-                  const list<UniValue::VType>& typesExpected,
+                  const std::list<UniValue::VType>& typesExpected,
                   bool fAllowNull)
 {
     unsigned int i = 0;
@@ -87,7 +86,7 @@ void RPCTypeCheck(const UniValue& params,
         const UniValue& v = params[i];
         if (!((v.type() == t) || (fAllowNull && (v.isNull()))))
         {
-            string err = strprintf("Expected type %s, got %s",
+            std::string err = strprintf("Expected type %s, got %s",
                                    uvTypeName(t), uvTypeName(v.type()));
             throw JSONRPCError(RPC_TYPE_ERROR, err);
         }
@@ -96,7 +95,7 @@ void RPCTypeCheck(const UniValue& params,
 }
 
 void RPCTypeCheckObj(const UniValue& o,
-                  const map<string, UniValue::VType>& typesExpected,
+                  const std::map<std::string, UniValue::VType>& typesExpected,
                   bool fAllowNull)
 {
     for (auto const& t: typesExpected)
@@ -107,7 +106,7 @@ void RPCTypeCheckObj(const UniValue& o,
 
         if (!((v.type() == t.second) || (fAllowNull && (v.isNull()))))
         {
-            string err = strprintf("Expected type %s for %s, got %s",
+            std::string err = strprintf("Expected type %s for %s, got %s",
                                    uvTypeName(t.second), t.first, uvTypeName(v.type()));
             throw JSONRPCError(RPC_TYPE_ERROR, err);
         }
@@ -136,9 +135,9 @@ UniValue ValueFromAmount(const CAmount& amount)
             strprintf("%s%d.%08d", sign ? "-" : "", quotient, remainder));
 }
 
-uint256 ParseHashV(const UniValue& v, string strName)
+uint256 ParseHashV(const UniValue& v, std::string strName)
 {
-    string strHex;
+    std::string strHex;
     if (v.isStr())
         strHex = v.get_str();
     if (!IsHex(strHex)) // Note: IsHex("") is false
@@ -147,20 +146,20 @@ uint256 ParseHashV(const UniValue& v, string strName)
     result.SetHex(strHex);
     return result;
 }
-uint256 ParseHashO(const UniValue& o, string strKey)
+uint256 ParseHashO(const UniValue& o, std::string strKey)
 {
     return ParseHashV(find_value(o, strKey), strKey);
 }
-vector<unsigned char> ParseHexV(const UniValue& v, string strName)
+std::vector<unsigned char> ParseHexV(const UniValue& v, std::string strName)
 {
-    string strHex;
+    std::string strHex;
     if (v.isStr())
         strHex = v.get_str();
     if (!IsHex(strHex))
         throw JSONRPCError(RPC_INVALID_PARAMETER, strName+" must be hexadecimal string (not '"+strHex+"')");
     return ParseHex(strHex);
 }
-vector<unsigned char> ParseHexO(const UniValue& o, string strKey)
+std::vector<unsigned char> ParseHexO(const UniValue& o, std::string strKey)
 {
     return ParseHexV(find_value(o, strKey), strKey);
 }
@@ -171,21 +170,21 @@ vector<unsigned char> ParseHexO(const UniValue& o, string strKey)
 
 std::string CRPCTable::help(const std::string& strCommand) const
 {
-    string strRet;
-    string category;
-    set<rpcfn_type> setDone;
-    vector<pair<string, const CRPCCommand*> > vCommands;
+    std::string strRet;
+    std::string category;
+    std::set<rpcfn_type> setDone;
+    std::vector<std::pair<std::string, const CRPCCommand*> > vCommands;
 
-    for (map<string, const CRPCCommand*>::const_iterator mi = mapCommands.begin(); mi != mapCommands.end(); ++mi)
+    for (std::map<std::string, const CRPCCommand*>::const_iterator mi = mapCommands.begin(); mi != mapCommands.end(); ++mi)
         vCommands.push_back(make_pair(mi->second->category + mi->first, mi->second));
-    sort(vCommands.begin(), vCommands.end());
+    std::sort(vCommands.begin(), vCommands.end());
 
     for (auto const& command: vCommands)
     {
         const CRPCCommand *pcmd = command.second;
-        string strMethod = pcmd->name;
+        std::string strMethod = pcmd->name;
         // We already filter duplicates, but these deprecated screw up the sort order
-        if (strMethod.find("label") != string::npos)
+        if (strMethod.find("label") != std::string::npos)
             continue;
         if ((strCommand != "" || pcmd->category == "hidden") && strMethod != strCommand)
             continue;
@@ -199,10 +198,10 @@ std::string CRPCTable::help(const std::string& strCommand) const
         catch (const std::exception& e)
         {
             // Help text is returned in an exception
-            string strHelp = string(e.what());
+            std::string strHelp = std::string(e.what());
             if (strCommand == "")
             {
-                if (strHelp.find('\n') != string::npos)
+                if (strHelp.find('\n') != std::string::npos)
                     strHelp = strHelp.substr(0, strHelp.find('\n'));
 
                 if (category != pcmd->category)
@@ -210,7 +209,7 @@ std::string CRPCTable::help(const std::string& strCommand) const
                     if (!category.empty())
                         strRet += "\n";
                     category = pcmd->category;
-                    string firstLetter = category.substr(0,1);
+                    std::string firstLetter = category.substr(0,1);
                     boost::to_upper(firstLetter);
                     strRet += "== " + firstLetter + category.substr(1) + " ==\n";
                 }
@@ -227,7 +226,7 @@ std::string CRPCTable::help(const std::string& strCommand) const
 UniValue help(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() > 1)
-        throw runtime_error(
+        throw std::runtime_error(
             "help ( \"command\" )\n"
             "\nList all commands, or get help for a specified command.\n"
             "\nArguments:\n"
@@ -236,7 +235,7 @@ UniValue help(const UniValue& params, bool fHelp)
             "\"text\"     (string) The help text\n"
         );
 
-    string strCommand;
+    std::string strCommand;
     if (params.size() > 0)
         strCommand = params[0].get_str();
 
@@ -248,7 +247,7 @@ UniValue stop(const UniValue& params, bool fHelp)
 {
     // Accept the deprecated and ignored 'detach' boolean argument
     if (fHelp || params.size() > 1)
-        throw runtime_error(
+        throw std::runtime_error(
             "stop\n"
             "\nStop Bitcoin server.");
     // Event loop will exit after current HTTP requests have been handled, so
@@ -392,7 +391,7 @@ CRPCTable::CRPCTable()
 
 const CRPCCommand *CRPCTable::operator[](const std::string &name) const
 {
-    map<string, const CRPCCommand*>::const_iterator it = mapCommands.find(name);
+    std::map<std::string, const CRPCCommand*>::const_iterator it = mapCommands.find(name);
     if (it == mapCommands.end())
         return NULL;
     return (*it).second;
@@ -633,9 +632,9 @@ private:
     boost::asio::ssl::stream<typename Protocol::socket>& stream;
 };
 
-string HTTPPost(const string& strMsg, const map<string,string>& mapRequestHeaders)
+std::string HTTPPost(const std::string& strMsg, const std::map<std::string,std::string>& mapRequestHeaders)
 {
-    ostringstream s;
+    std::ostringstream s;
     s << "POST / HTTP/1.1\r\n"
       << "User-Agent: eccoin-json-rpc/" << FormatFullVersion() << "\r\n"
       << "Host: 127.0.0.1\r\n"
@@ -650,20 +649,20 @@ string HTTPPost(const string& strMsg, const map<string,string>& mapRequestHeader
     return s.str();
 }
 
-string rfc1123Time()
+std::string rfc1123Time()
 {
     char buffer[64];
     time_t now;
     time(&now);
     struct tm* now_gmt = gmtime(&now);
-    string locale(setlocale(LC_TIME, NULL));
+    std::string locale(setlocale(LC_TIME, NULL));
     setlocale(LC_TIME, "C"); // we want POSIX (aka "C") weekday/month strings
     strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S +0000", now_gmt);
     setlocale(LC_TIME, locale.c_str());
-    return string(buffer);
+    return std::string(buffer);
 }
 
-static string HTTPReply(int nStatus, const string& strMsg, bool keepalive)
+static std::string HTTPReply(int nStatus, const std::string& strMsg, bool keepalive)
 {
     if (nStatus == HTTP_UNAUTHORIZED)
         return strprintf("HTTP/1.0 401 Authorization Required\r\n"
@@ -710,9 +709,9 @@ static string HTTPReply(int nStatus, const string& strMsg, bool keepalive)
 
 int ReadHTTPStatus(std::basic_istream<char>& stream, int &proto)
 {
-    string str;
+    std::string str;
     getline(stream, str);
-    vector<string> vWords;
+    std::vector<std::string> vWords;
     boost::split(vWords, str, boost::is_any_of(" "));
     if (vWords.size() < 2)
         return HTTP_INTERNAL_SERVER_ERROR;
@@ -723,22 +722,22 @@ int ReadHTTPStatus(std::basic_istream<char>& stream, int &proto)
     return atoi(vWords[1].c_str());
 }
 
-int ReadHTTPHeader(std::basic_istream<char>& stream, map<string, string>& mapHeadersRet)
+int ReadHTTPHeader(std::basic_istream<char>& stream, std::map<std::string, std::string>& mapHeadersRet)
 {
     int nLen = 0;
     while (true)
     {
-        string str;
+        std::string str;
         std::getline(stream, str);
         if (str.empty() || str == "\r")
             break;
-        string::size_type nColon = str.find(":");
-        if (nColon != string::npos)
+        std::string::size_type nColon = str.find(":");
+        if (nColon != std::string::npos)
         {
-            string strHeader = str.substr(0, nColon);
+            std::string strHeader = str.substr(0, nColon);
             boost::trim(strHeader);
             boost::to_lower(strHeader);
-            string strValue = str.substr(nColon+1);
+            std::string strValue = str.substr(nColon+1);
             boost::trim(strValue);
             mapHeadersRet[strHeader] = strValue;
             if (strHeader == "content-length")
@@ -748,7 +747,7 @@ int ReadHTTPHeader(std::basic_istream<char>& stream, map<string, string>& mapHea
     return nLen;
 }
 
-int ReadHTTP(std::basic_istream<char>& stream, map<string, string>& mapHeadersRet, string& strMessageRet)
+int ReadHTTP(std::basic_istream<char>& stream, std::map<std::string, std::string>& mapHeadersRet, std::string& strMessageRet)
 {
     mapHeadersRet.clear();
     strMessageRet = "";
@@ -765,12 +764,12 @@ int ReadHTTP(std::basic_istream<char>& stream, map<string, string>& mapHeadersRe
     // Read message
     if (nLen > 0)
     {
-        vector<char> vch(nLen);
+        std::vector<char> vch(nLen);
         stream.read(&vch[0], nLen);
-        strMessageRet = string(vch.begin(), vch.end());
+        strMessageRet = std::string(vch.begin(), vch.end());
     }
 
-    string sConHdr = mapHeadersRet["connection"];
+    std::string sConHdr = mapHeadersRet["connection"];
 
     if ((sConHdr != "close") && (sConHdr != "keep-alive"))
     {
@@ -788,10 +787,10 @@ static inline unsigned short GetDefaultRPCPort()
     return GetBoolArg("-testnet", false) ? 29119 : 19119;
 }
 
-UniValue CallRPC(const string& strMethod, const UniValue& params)
+UniValue CallRPC(const std::string& strMethod, const UniValue& params)
 {
     if (GetArg("-rpcuser","") == "" && GetArg("-rpcpassword","") == "")
-        throw runtime_error(strprintf(
+        throw std::runtime_error(strprintf(
             _("You must set rpcpassword=<password> in the configuration file:\n%s\n"
               "If the file does not exist, create it with owner-readable-only file permissions."),
                 GetConfigFile().string().c_str()));
@@ -805,40 +804,40 @@ UniValue CallRPC(const string& strMethod, const UniValue& params)
     SSLIOStreamDevice<boost::asio::ip::tcp> d(sslStream, fUseSSL);
     boost::iostreams::stream< SSLIOStreamDevice<boost::asio::ip::tcp> > stream(d);
     if (!d.connect(GetArg("-rpcconnect", "127.0.0.1"), GetArg("-rpcport", itostr(GetDefaultRPCPort()))))
-        throw runtime_error("couldn't connect to server");
+        throw std::runtime_error("couldn't connect to server");
 
     // HTTP basic authentication
-    string strUserPass64 = EncodeBase64(GetArg("-rpcuser","") + ":" + GetArg("-rpcpassword",""));
-    map<string, string> mapRequestHeaders;
-    mapRequestHeaders["Authorization"] = string("Basic ") + strUserPass64;
+    std::string strUserPass64 = EncodeBase64(GetArg("-rpcuser","") + ":" + GetArg("-rpcpassword",""));
+    std::map<std::string, std::string> mapRequestHeaders;
+    mapRequestHeaders["Authorization"] = std::string("Basic ") + strUserPass64;
 
     // Send request
-    string strRequest = JSONRPCRequest(strMethod, params, 1);
-    string strPost = HTTPPost(strRequest, mapRequestHeaders);
+    std::string strRequest = JSONRPCRequest(strMethod, params, 1);
+    std::string strPost = HTTPPost(strRequest, mapRequestHeaders);
     stream << strPost << std::flush;
 
     // Receive reply
-    map<string, string> mapHeaders;
-    string strReply;
+    std::map<std::string, std::string> mapHeaders;
+    std::string strReply;
     int nStatus = ReadHTTP(stream, mapHeaders, strReply);
     if (nStatus == HTTP_UNAUTHORIZED)
-        throw runtime_error("incorrect rpcuser or rpcpassword (authorization failed)");
+        throw std::runtime_error("incorrect rpcuser or rpcpassword (authorization failed)");
     else if (nStatus >= 400 && nStatus != HTTP_BAD_REQUEST && nStatus != HTTP_NOT_FOUND && nStatus != HTTP_INTERNAL_SERVER_ERROR)
-        throw runtime_error(strprintf("server returned HTTP error %d", nStatus));
+        throw std::runtime_error(strprintf("server returned HTTP error %d", nStatus));
     else if (strReply.empty())
-        throw runtime_error("no response from server");
+        throw std::runtime_error("no response from server");
 
     // Parse reply
     UniValue valReply;
     if (!valReply.setStr(strReply))
-        throw runtime_error("couldn't parse reply from server");
+        throw std::runtime_error("couldn't parse reply from server");
 
     return valReply;
 }
 
 int CommandLineRPC(int argc, char *argv[])
 {
-    string strPrint;
+    std::string strPrint;
     int nRet = 0;
     try
     {
@@ -851,8 +850,8 @@ int CommandLineRPC(int argc, char *argv[])
 
         // Method
         if (argc < 2)
-            throw runtime_error("too few parameters");
-        string strMethod = argv[1];
+            throw std::runtime_error("too few parameters");
+        std::string strMethod = argv[1];
 
         // Parameters default to strings
         std::vector<std::string> strParams(&argv[2], &argv[argc]);
@@ -864,7 +863,7 @@ int CommandLineRPC(int argc, char *argv[])
     }
     catch (std::exception& e)
     {
-        strPrint = string("error: ") + e.what();
+        strPrint = std::string("error: ") + e.what();
         nRet = 87;
     }
     catch (...)
