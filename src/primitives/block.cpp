@@ -14,6 +14,7 @@
 #include "chain.h"
 #include "timedata.h"
 #include "crypto/scrypt.h"
+#include "chainparams.h"
 
 uint256 CBlockHeader::GetHash() const
 {
@@ -130,7 +131,7 @@ bool CBlock::SignScryptBlock(const CKeyStore& keystore)
 
 bool CBlock::CheckBlockSignature() const
 {
-        if (GetHash() == chainActive.Genesis()->GetBlockHash())
+        if (GetHash() == Params().GetConsensus().hashGenesisBlock)
             return vchBlockSig.empty();
 
         std::vector<std::vector<unsigned char> > vSolutions;
@@ -167,6 +168,7 @@ bool CBlock::CheckBlockSignature() const
                 }
             }
         }
+        LogPrintf("CheckBlockSignature failed \n");
         return false;
 }
 

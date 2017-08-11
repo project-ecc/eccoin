@@ -2419,7 +2419,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
 
     // PoS: check block signature
     if (!block.CheckBlockSignature())
-        return state.DoS(100, error("CheckBlock() : bad block signature"));
+        return state.DoS(100, error("CheckBlock() : bad block signature"), REJECT_INVALID, "bad-block-sig");
 
     if (fCheckPOW && fCheckMerkleRoot)
         block.fChecked = true;
