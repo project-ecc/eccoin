@@ -85,6 +85,7 @@ public:
         genesis.hashMerkleRoot = BlockMerkleRoot(genesis);
 
         consensus.hashGenesisBlock = genesis.GetHash();
+        LogPrintf("calculated Genesis Block Hash = %s \n", consensus.hashGenesisBlock.ToString().c_str());
         assert(consensus.hashGenesisBlock == uint256S("0xa60ac43c88dbc44b826cf315352a8a7b373d2af8b6e1c4c4a0638859c5e9ecd1"));
         assert(genesis.hashMerkleRoot == uint256S("0x4db82fe8b45f3dae2b7c7b8be5ec4c37e72e25eaf989b9db24ce1d0fd37eed8b"));
 
