@@ -36,7 +36,7 @@ namespace Checkpoints {
         double fWorkAfter = 0.0;  // Amount of work left after pindex (estimated)
         // Work is defined as: 1.0 per transaction before the last checkpoint, and
         // fSigcheckVerificationFactor per transaction after.
-
+/*
         if (pindex->nChainTx <= data.nTransactionsLastCheckpoint) {
             double nCheapBefore = pindex->nChainTx;
             double nCheapAfter = data.nTransactionsLastCheckpoint - pindex->nChainTx;
@@ -50,8 +50,9 @@ namespace Checkpoints {
             fWorkBefore = nCheapBefore + nExpensiveBefore*fSigcheckVerificationFactor;
             fWorkAfter = nExpensiveAfter*fSigcheckVerificationFactor;
         }
-
-        return fWorkBefore / (fWorkBefore + fWorkAfter);
+*/
+        //return fWorkBefore / (fWorkBefore + fWorkAfter);
+        return 0;
     }
 
     int GetTotalBlocksEstimate(const CCheckpointData& data)
