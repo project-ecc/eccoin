@@ -1182,10 +1182,14 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
                 LOCK(cs_main);
                 Misbehaving(pfrom->GetId(), nDoS);
             }
+            if(pfrom->nVersion < SENDHEADERS_VERSION)
+            {
+                uint256 emptyHash;
+                emptyHash.SetNull();
+                pfrom->PushMessage(NetMsgType::GETBLOCKS, chainActive.GetLocator(chainActive.Tip()), emptyHash);
+            }
         }
-
     }
-
 
     // This asymmetric behavior for inbound and outbound connections was introduced
     // to prevent a fingerprinting attack: an attacker can send specific fake addresses
