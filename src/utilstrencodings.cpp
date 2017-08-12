@@ -772,5 +772,6 @@ std::string ParseJson(const std::string& str) {
         }
     }
     std::cout << parsed;
+    return parsed;
 }
 

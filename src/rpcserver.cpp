@@ -873,7 +873,7 @@ int CommandLineRPC(int argc, char *argv[])
 
     if (strPrint != "")
     {
-        fprintf((nRet == 0 ? stdout : stderr), "%s\n", ParseJson(strPrint.c_str()));
+        ParseJson(strPrint.c_str());
     }
     return nRet;
 }
