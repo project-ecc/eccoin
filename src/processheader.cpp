@@ -69,7 +69,7 @@ bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& sta
 {
     const Consensus::Params& consensusParams = Params().GetConsensus();
     // Check proof of work
-    bool fProofOfStake = (pindexPrev->nHeight < 86400);
+    bool fProofOfStake = (pindexPrev->nHeight > 86400);
     if (block.nBits != GetNextWorkRequired(pindexPrev, consensusParams, fProofOfStake))
         return state.DoS(100, error("%s: incorrect proof of work", __func__),
                          REJECT_INVALID, "bad-diffbits");
