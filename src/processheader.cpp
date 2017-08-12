@@ -56,23 +56,6 @@ bool AcceptBlockHeader(const CBlockHeader& block, CValidationState& state, const
 bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, bool fCheckPOW)
 {
 
-    // need to have this special check for the genesis block because at this point chainActive tip is null
-    // so directly comparing against it will cause a null pointer exception and a segfault
-    if(Params().GetConsensus().hashGenesisBlock == block.GetHash())
-    {
-        if (fCheckPOW && !CheckProofOfWork(block.GetHash(), block.nBits, Params().GetConsensus()))
-            return state.DoS(50, error("CheckBlockHeader(): proof of work failed"),
-                             REJECT_INVALID, "high-hash");
-    }
-
-    // Check proof of work matches claimed amount but only check for PoW blocks. last PoW block was block 86400
-    else if(chainActive.Tip()->nHeight <= 86400)
-    {
-        if (fCheckPOW && !CheckProofOfWork(block.GetHash(), block.nBits, Params().GetConsensus()))
-            return state.DoS(50, error("CheckBlockHeader(): proof of work failed"),
-                             REJECT_INVALID, "high-hash");
-    }
-
     // Check timestamp
     if (block.GetBlockTime() > GetAdjustedTime() + 2 * 60 * 60)
         return state.Invalid(error("CheckBlockHeader(): block timestamp too far in the future"),
