@@ -3046,6 +3046,13 @@ bool InitBlockIndex(const CChainParams& chainparams)
             if (!WriteBlockToDisk(block, blockPos, chainparams.MessageStart()))
                 return error("LoadBlockIndex(): writing genesis block to disk failed");
             CBlockIndex *pindex = AddToBlockIndex(block);
+            // ppcoin: compute stake modifier
+            uint64_t nStakeModifier = 0;
+            bool fGeneratedStakeModifier = false;
+            if (!ComputeNextStakeModifier(pindex->pprev, nStakeModifier, fGeneratedStakeModifier))
+                return error("AddToBlockIndex() : ComputeNextStakeModifier() failed");
+            pindex->SetStakeModifier(nStakeModifier, fGeneratedStakeModifier);
+            pindex->nStakeModifierChecksum = GetStakeModifierChecksum(pindex);
             if (!ReceivedBlockTransactions(block, state, pindex, blockPos))
                 return error("LoadBlockIndex(): genesis block not accepted");
             if (!ActivateBestChain(state, chainparams, &block))
