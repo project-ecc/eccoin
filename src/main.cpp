@@ -1674,7 +1674,6 @@ int32_t ComputeBlockVersion(const CBlockIndex* pindexPrev, const Consensus::Para
     return nVersion;
 }
 
-
 // Protected by cs_main
 ThresholdConditionCache warningcache[VERSIONBITS_NUM_BITS];
 
@@ -1873,8 +1872,25 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     int64_t nTime3 = GetTimeMicros();
     nTimeConnect += nTime3 - nTime2;
     LogPrint("bench", "      - Connect %u transactions: %.2fms (%.3fms/tx, %.3fms/txin) [%.2fs]\n", (unsigned)block.vtx.size(), 0.001 * (nTime3 - nTime2), 0.001 * (nTime3 - nTime2) / block.vtx.size(), nInputs <= 1 ? 0 : 0.001 * (nTime3 - nTime2) / (nInputs-1), nTimeConnect * 0.000001);
-
-    CAmount blockReward = nFees + GetBlockSubsidy(pindex->nHeight, chainparams.GetConsensus());
+    CAmount blockSubsidy = 0;
+    if(block.IsProofOfWork())
+    {
+        blockSubsidy = GetProofOfWorkReward(nFees, pindex->nHeight, block.hashPrevBlock);
+    }
+    else
+    {
+        for(auto tx : block.vtx)
+        {
+            if(tx.IsCoinStake())
+            {
+                uint64_t nCoinAge;
+                if (!tx.GetCoinAge(nCoinAge))
+                    return state.DoS(100, error("ConnectBlock() : %s unable to get coin age for coinstake", tx.GetHash().ToString().substr(0,10).c_str()));
+                blockSubsidy = blockSubsidy + GetProofOfStakeReward(tx.GetCoinAge(nCoinAge, true), pindex->nHeight);
+            }
+        }
+    }
+    CAmount blockReward = blockSubsidy; //GetBlockSubsidy(pindex->nHeight, chainparams.GetConsensus());
     if (block.vtx[0].GetValueOut() > blockReward)
         return state.DoS(100,
                          error("ConnectBlock(): coinbase pays too much (actual=%d vs limit=%d)",
