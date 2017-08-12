@@ -146,6 +146,8 @@ bool CBlock::CheckBlockSignature() const
             if (whichType == TX_PUBKEY)
             {
                 std::vector<unsigned char>& vchPubKey = vSolutions[0];
+                if (vchBlockSig.empty())
+                    return false;
                 return CPubKey(vchPubKey).Verify(GetHash(), vchBlockSig);
             }
         }
@@ -157,13 +159,16 @@ bool CBlock::CheckBlockSignature() const
 
                 if (!Solver(txout.scriptPubKey, whichType, vSolutions))
                     return false;
-
                 if (whichType == TX_PUBKEY)
                 {
                     // Verify
                     std::vector<unsigned char>& vchPubKey = vSolutions[0];
-                    if(CPubKey(vchPubKey).Verify(GetHash(), vchBlockSig))
+                    if (vchBlockSig.empty())
                         continue;
+                    if(!CPubKey(vchPubKey).Verify(GetHash(), vchBlockSig))
+                    {
+                        continue;
+                    }
                     return true;
                 }
             }

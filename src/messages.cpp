@@ -1178,14 +1178,19 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
             assert (state.GetRejectCode() < REJECT_INTERNAL); // Blocks are never rejected with internal reject codes
             pfrom->PushMessage(NetMsgType::REJECT, strCommand, (unsigned char)state.GetRejectCode(),
                                state.GetRejectReason().substr(0, MAX_REJECT_MESSAGE_LENGTH), inv.hash);
-            if (nDoS > 0) {
+            if (nDoS > 0 && pfrom->nVersion >= SENDHEADERS_VERSION)
+            {
                 LOCK(cs_main);
                 Misbehaving(pfrom->GetId(), nDoS);
             }
+            if(pfrom->nVersion < SENDHEADERS_VERSION)
+            {
+                uint256 emptyHash;
+                emptyHash.SetNull();
+                pfrom->PushMessage(NetMsgType::GETBLOCKS, chainActive.GetLocator(chainActive.Tip()), emptyHash);
+            }
         }
-
     }
-
 
     // This asymmetric behavior for inbound and outbound connections was introduced
     // to prevent a fingerprinting attack: an attacker can send specific fake addresses
