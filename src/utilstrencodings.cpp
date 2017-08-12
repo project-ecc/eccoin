@@ -660,3 +660,117 @@ bool ParseFixedPoint(const std::string &val, int decimals, int64_t *amount_out)
     return true;
 }
 
+std::string ParseJson(const std::string& str) {
+    std::string parsed;
+
+    bool        quoted  = false;
+    bool        escaped = false;
+    std::string INDENT  = "    ";
+    int         indent  = 0;
+    int         length  = (int) str.length();
+    int         i;
+
+    for (i = 0 ; i < length ; i++)
+    {
+        char ch = str[i];
+
+        switch (ch)
+        {
+            case '{':
+            case '[':
+                parsed += ch;
+
+                if (!quoted)
+                {
+                    parsed += "\n";
+
+                    if (!(str[i+1] == '}' || str[i+1] == ']'))
+                    {
+                        ++indent;
+
+                        for (int j = 0 ; j < indent ; j++)
+                        {
+                            parsed += INDENT;
+                        }
+                    }
+                }
+
+                break;
+
+            case '}':
+            case ']':
+                if (!quoted)
+                {
+                    if ((i > 0) && (!(str[i-1] == '{' || str[i-1] == '[')))
+                    {
+                        parsed += "\n";
+                        --indent;
+
+                        for (int j = 0 ; j < indent ; j++)
+                        {
+                            parsed += INDENT;
+                        }
+                    }
+                    else if ((i > 0) && ((str[i-1] == '[' && ch == ']') || (str[i-1] == '{' && ch == '}')))
+                    {
+                        for (int j = 0 ; j < indent ; j++)
+                        {
+                            parsed += INDENT;
+                        }
+                    }
+                }
+
+                parsed += ch;
+
+                break;
+
+            case '"':
+                parsed += ch;
+                escaped = false;
+
+                if (i > 0 && str[i-1] == '\\')
+                {
+                    escaped = !escaped;
+                }
+
+                if (!escaped)
+                {
+                    quoted = !quoted;
+                }
+
+                break;
+
+            case ',':
+                parsed += ch;
+
+                if (!quoted)
+                {
+                    parsed += "\n";
+
+                    for (int j = 0 ; j < indent ; j++)
+                    {
+                        parsed += INDENT;
+                    }
+                }
+
+                break;
+
+            case ':':
+                parsed += ch;
+
+                if (!quoted)
+                {
+                    parsed += " ";
+                }
+
+                break;
+
+            default:
+                parsed += ch;
+
+                break;
+        }
+    }
+    return parsed;
+}
+
