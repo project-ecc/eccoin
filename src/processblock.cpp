@@ -62,7 +62,8 @@ bool ProcessNewBlock(CValidationState& state, const CChainParams& chainparams, c
         // Store to disk
         CBlockIndex *pindex = NULL;
         bool ret = AcceptBlock(*pblock, state, chainparams, &pindex, fRequested, dbp);
-        if (pindex && pfrom) {
+        if (pindex && pfrom)
+        {
             mapBlockSource[pindex->GetBlockHash()] = pfrom->GetId();
         }
         CheckBlockIndex(chainparams.GetConsensus());
