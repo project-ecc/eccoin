@@ -3060,9 +3060,9 @@ bool InitBlockIndex(const CChainParams& chainparams)
             pindex->nStakeModifierChecksum = GetStakeModifierChecksum(pindex);
             if (!CheckStakeModifierCheckpoints(pindex->nHeight, pindex))
                 return error("LoadBlockIndex() : Rejected by stake modifier checkpoint height=%d, checksum=%08x, correct checksum=%08x,"
-                             " nflags = %i, modifier=0x%016I64x  hashproofofstake = %s",
-                             pindexNew->nHeight, pindexNew->nStakeModifierChecksum, mapStakeModifierCheckpoints[pindexNew->nHeight],
-                             pindexNew->nFile, pindexNew->nStakeModifier, pindexNew->hashProofOfStake.ToString().c_str());
+                             " nflags = %i, modifier=0x%016x  hashproofofstake = %s",
+                             pindex->nHeight, pindex->nStakeModifierChecksum, mapStakeModifierCheckpoints[pindex->nHeight],
+                             pindex->nFlags, pindex->nStakeModifier, pindex->hashProofOfStake.ToString().c_str());
             if (!ReceivedBlockTransactions(block, state, pindex, blockPos))
                 return error("LoadBlockIndex(): genesis block not accepted");
             if (!ActivateBestChain(state, chainparams, &block))
