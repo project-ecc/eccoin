@@ -3051,6 +3051,11 @@ bool InitBlockIndex(const CChainParams& chainparams)
             if (!WriteBlockToDisk(block, blockPos, chainparams.MessageStart()))
                 return error("LoadBlockIndex(): writing genesis block to disk failed");
             CBlockIndex *pindex = AddToBlockIndex(block);
+            // ppcoin: compute stake entropy bit for stake modifier
+            if (!pindex->SetStakeEntropyBit(block.GetStakeEntropyBit(pindex->nHeight)))
+            {
+                return error("AddToBlockIndex() : SetStakeEntropyBit() failed");
+            }
             // ppcoin: compute stake modifier
             uint64_t nStakeModifier = 0;
             bool fGeneratedStakeModifier = false;
