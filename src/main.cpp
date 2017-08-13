@@ -1964,7 +1964,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     }
 
     // ppcoin: compute stake entropy bit for stake modifier
-    if (!pindex->SetStakeEntropyBit(block.GetStakeEntropyBit(pindex->nHeight)))
+    if (!pindex->SetStakeEntropyBit(block.GetStakeEntropyBit()))
     {
         return error("AddToBlockIndex() : SetStakeEntropyBit() failed");
     }
@@ -3051,8 +3051,9 @@ bool InitBlockIndex(const CChainParams& chainparams)
             if (!WriteBlockToDisk(block, blockPos, chainparams.MessageStart()))
                 return error("LoadBlockIndex(): writing genesis block to disk failed");
             CBlockIndex *pindex = AddToBlockIndex(block);
+
             // ppcoin: compute stake entropy bit for stake modifier
-            if (!pindex->SetStakeEntropyBit(block.GetStakeEntropyBit(pindex->nHeight)))
+            if (!pindex->SetStakeEntropyBit(block.GetStakeEntropyBit()))
             {
                 return error("AddToBlockIndex() : SetStakeEntropyBit() failed");
             }

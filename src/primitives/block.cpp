@@ -46,14 +46,6 @@ std::string CBlock::ToString() const
 }
 
 
-// entropy bit for stake modifier if chosen by modifier
-unsigned int CBlock::GetStakeEntropyBit(unsigned int nHeight) const
-{
-    // Take last bit of block hash as entropy bit
-    unsigned int nEntropyBit = static_cast<unsigned int>((GetHash().Get64()) & uint64_t(1));
-    return nEntropyBit;
-}
-
 // ppcoin: two types of block: proof-of-work or proof-of-stake
 bool CBlock::IsProofOfStake() const
 {

@@ -73,7 +73,7 @@ public:
     }
 
     // entropy bit for stake modifier if chosen by modifier
-    unsigned int GetStakeEntropyBit(unsigned int nHeight) const
+    unsigned int GetStakeEntropyBit() const
     {
         // Take last bit of block hash as entropy bit
         unsigned int nEntropyBit = static_cast<unsigned int>((GetHash().Get64()) & uint64_t(1));
@@ -136,7 +136,6 @@ public:
     }
 
     std::string ToString() const;
-    unsigned int GetStakeEntropyBit(unsigned int nHeight) const;
     bool IsProofOfStake() const;
     bool IsProofOfWork() const;
     std::pair<COutPoint, unsigned int> GetProofOfStake() const;
