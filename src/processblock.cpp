@@ -205,6 +205,7 @@ bool ConnectTip(CValidationState& state, const CChainParams& chainparams, CBlock
             return AbortNode(state, "Failed to read block");
         pblock = &block;
     }
+    pindexNew->updateForPos(block);
     // Apply the block atomically to the chain state.
     int64_t nTime2 = GetTimeMicros(); nTimeReadFromDisk += nTime2 - nTime1;
     int64_t nTime3;

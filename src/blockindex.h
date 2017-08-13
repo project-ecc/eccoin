@@ -296,6 +296,16 @@ public:
         return false;
     }
 
+    void updateForPos(CBlock& block)
+    {
+        if(block.IsProofOfStake())
+        {
+            SetProofOfStake();
+            prevoutStake = block.vtx[1].vin[0].prevout;
+            nStakeTime = block.vtx[1].nTime;
+        }
+    }
+
     //! Build the skiplist pointer for this entry.
     void BuildSkip();
 
