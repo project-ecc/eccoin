@@ -67,7 +67,7 @@ public:
         Invalidate();
     }
 
-    std::vector<unsigned char> Raw()
+    std::vector<unsigned char> Raw() const
     {
         std::vector<unsigned char> ch;
         for( unsigned int i = 0; i < size(); i++)

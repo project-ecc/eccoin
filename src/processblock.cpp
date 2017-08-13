@@ -437,7 +437,8 @@ bool ActivateBestChain(CValidationState &state, const CChainParams& chainparams,
 
         // Notifications/callbacks that can run without cs_main
         // Always notify the UI if a new block tip was connected
-        if (pindexFork != pindexNewTip) {
+        if (pindexFork != pindexNewTip)
+        {
             uiInterface.NotifyBlockTip(fInitialDownload, pindexNewTip);
 
             if (!fInitialDownload) {

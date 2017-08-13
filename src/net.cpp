@@ -1506,7 +1506,6 @@ void ThreadOpenConnections()
     }
 
     // Initiate network connections
-    int64_t nStart = GetTime();
     while (true)
     {
         ProcessOneShot();

@@ -20,6 +20,7 @@
 #include "utilstrencodings.h"
 #include "validationinterface.h"
 #include "processblock.h"
+#include "processheader.h"
 
 #include <stdint.h>
 
@@ -427,7 +428,29 @@ UniValue getblocktemplate(const UniValue& params, bool fHelp)
             if (block.hashPrevBlock != pindexPrev->GetBlockHash())
                 return "inconclusive-not-best-prevblk";
             CValidationState state;
-            TestBlockValidity(state, Params(), block, pindexPrev, false, true);
+
+            while(true)
+            {
+                AssertLockHeld(cs_main);
+                assert(pindexPrev && pindexPrev == chainActive.Tip());
+                if (fCheckpointsEnabled && !CheckIndexAgainstCheckpoint(pindexPrev, state, Params(), block.GetHash()))
+                    return error("%s: CheckIndexAgainstCheckpoint(): %s", __func__, state.GetRejectReason().c_str());
+                CCoinsViewCache viewNew(pcoinsTip);
+                CBlockIndex indexDummy(block);
+                indexDummy.pprev = pindexPrev;
+                indexDummy.nHeight = pindexPrev->nHeight + 1;
+                // NOTE: CheckBlockHeader is called by CheckBlock
+                if (!ContextualCheckBlockHeader(block, state, pindexPrev))
+                    break;
+                if (!CheckBlock(block, state, false, true))
+                    break;
+                if (!ContextualCheckBlock(block, state, pindexPrev))
+                    break;
+                if (!ConnectBlock(block, state, &indexDummy, viewNew, true))
+                    break;
+                assert(state.IsValid());
+                break;
+            }
             return BIP22ValidationResult(state);
         }
     }
@@ -520,7 +543,7 @@ UniValue getblocktemplate(const UniValue& params, bool fHelp)
     CBlock* pblock = &pblocktemplate->block; // pointer for convenience
 
     // Update nTime
-    pblock->UpdateTime(pindexPrev);
+    pblock->UpdateTime();
     pblock->nNonce = 0;
 
     UniValue aCaps(UniValue::VARR); aCaps.push_back("proposal");

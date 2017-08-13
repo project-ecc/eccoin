@@ -67,8 +67,8 @@ public:
     const std::vector<CDNSSeedData>& DNSSeeds() const { return vSeeds; }
     const std::vector<unsigned char>& Base58Prefix(Base58Type type) const { return base58Prefixes[type]; }
     const CCheckpointData& Checkpoints() const { return checkpointData; }
-    unsigned int getStakeMaxAge() { return nStakeMaxAge; }
-    unsigned int getStakeMinAge() { return nStakeMinAge; }
+    const unsigned int getStakeMaxAge() { return nStakeMaxAge; }
+    const unsigned int getStakeMinAge() { return nStakeMinAge; }
 
 protected:
     CChainParams() {}
