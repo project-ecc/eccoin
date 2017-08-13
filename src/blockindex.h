@@ -304,6 +304,12 @@ public:
             prevoutStake = block.vtx[1].vin[0].prevout;
             nStakeTime = block.vtx[1].nTime;
         }
+        else
+        {
+            nFlags = 0;
+            prevoutStake.SetNull();
+            nStakeTime = 0;
+        }
     }
 
     //! Build the skiplist pointer for this entry.
