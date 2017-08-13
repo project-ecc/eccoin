@@ -130,7 +130,6 @@ bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, uint64_t& nStakeMod
     fGeneratedStakeModifier = false;
     if (!pindexPrev)
     {
-        printf("modifier true for genesis block. this should only print once\n");
         fGeneratedStakeModifier = true;
         return true;  // genesis block's modifier is 0
     }

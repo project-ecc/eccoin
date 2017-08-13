@@ -1461,9 +1461,13 @@ bool ProcessMessages(CNode* pfrom)
         unsigned int nChecksum = ReadLE32((unsigned char*)&hash);
         if (nChecksum != hdr.nChecksum)
         {
-            LogPrintf("%s(%s, %u bytes): CHECKSUM ERROR nChecksum=%08x hdr.nChecksum=%08x\n", __func__,
-               SanitizeString(strCommand), nMessageSize, nChecksum, hdr.nChecksum);
-            continue;
+            // sometimes random headers from older version are all 0, try to process anyway in this case
+            if(pfrom->nVersion < GETHEADERS_VERSION && hdr.nChecksum != 0)
+            {
+                LogPrintf("%s(%s, %u bytes): CHECKSUM ERROR nChecksum=%08x hdr.nChecksum=%08x\n", __func__,
+                    SanitizeString(strCommand), nMessageSize, nChecksum, hdr.nChecksum);
+                continue;
+            }
         }
 
         // Process message
