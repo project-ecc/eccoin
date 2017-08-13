@@ -304,7 +304,7 @@ public:
             prevoutStake = block.vtx[1].vin[0].prevout;
             nStakeTime = block.vtx[1].nTime;
         }
-        else
+        else //block is PoW
         {
             nFlags = 0;
             prevoutStake.SetNull();

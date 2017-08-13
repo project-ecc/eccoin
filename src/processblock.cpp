@@ -205,9 +205,13 @@ bool ConnectTip(CValidationState& state, const CChainParams& chainparams, CBlock
             return AbortNode(state, "Failed to read block");
         pblock = &block;
     }
-    if(block.GetHash() != chainparams.GenesisBlock().GetHash())
+    if(!pindexNew->pprev)
     {
         pindexNew->updateForPos(block);
+    }
+    else
+    {
+        printf("indicated that the current block is the genesis block \n");
     }
     // Apply the block atomically to the chain state.
     int64_t nTime2 = GetTimeMicros(); nTimeReadFromDisk += nTime2 - nTime1;
