@@ -663,6 +663,7 @@ bool ParseFixedPoint(const std::string &val, int decimals, int64_t *amount_out)
 std::string ParseJson(const std::string& str) {
     std::string parsed;
 
+    bool        flagged = false;
     bool        quoted  = false;
     bool        escaped = false;
     std::string INDENT  = "    ";
@@ -725,7 +726,28 @@ std::string ParseJson(const std::string& str) {
                 break;
 
             case '"':
-                parsed += ch;
+
+                if (str[i+1] == '=')
+                {
+                    flagged = true;
+                    parsed += '\n';
+                    parsed += " ";
+                    parsed += INDENT;
+                    parsed += INDENT;
+                    ++indent;
+                }
+
+                if (str[i-1] == '"' && str[i+1] == ',' && str[i-2] != ':')
+                {
+                    flagged = true;
+                    --indent;
+                }
+
+                if (!flagged)
+                {
+                    parsed += ch;
+                }
+
                 escaped = false;
 
                 if (i > 0 && str[i-1] == '\\')
@@ -738,6 +760,7 @@ std::string ParseJson(const std::string& str) {
                     quoted = !quoted;
                 }
 
+                flagged = false;
                 break;
 
             case ',':
@@ -763,6 +786,27 @@ std::string ParseJson(const std::string& str) {
                     parsed += " ";
                 }
 
+                break;
+
+            case '\\':
+                if (i > 0 && str[i+1] == 'n')
+                {
+                    parsed += '\n';
+
+                    for (int j = 0 ; j < indent ; j++)
+                    {
+                        parsed += INDENT;
+                    }
+                }
+                break;
+
+            case 'n':
+                if (i > 0 && str[i-1] == '\\')
+                {
+                    parsed += " ";
+                    break;
+                }
+                parsed += ch;
                 break;
 
             default:
