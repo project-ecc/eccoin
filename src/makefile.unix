@@ -124,6 +124,7 @@ OBJS= \
     build/amount.o \
     build/arith_uint256.o \
     build/base58.o \
+    build/blockindex.o \
     build/bloom.o \
     build/chain.o \
     build/chainparams.o \

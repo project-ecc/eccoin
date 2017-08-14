@@ -169,7 +169,7 @@ bool CBlock::CheckBlockSignature() const
         return false;
 }
 
-void CBlock::UpdateTime(const CBlockIndex* pindexPrev)
+void CBlock::UpdateTime()
 {
     nTime = std::max(GetBlockTime(), GetAdjustedTime());
 }

@@ -11,8 +11,6 @@
 #include "uint256.h"
 #include "keystore.h"
 
-class CBlockIndex;
-
 /** Nodes collect new transactions into a block, hash them into a hash tree,
  * and scan through nonce values to make the block's hash satisfy proof-of-work
  * requirements.  When they solve the proof-of-work, they broadcast the block
@@ -141,7 +139,7 @@ public:
     std::pair<COutPoint, unsigned int> GetProofOfStake() const;
     bool SignScryptBlock(const CKeyStore& keystore);
     bool CheckBlockSignature() const;
-    void UpdateTime(const CBlockIndex* pindexPrev);
+    void UpdateTime();
     int64_t GetMaxTransactionTime() const;
 };
 

@@ -57,7 +57,6 @@ public:
     /** Policy: Filter transactions that do not match well-defined patterns */
     bool RequireStandard() const { return fRequireStandard; }
     int64_t MaxTipAge() const { return nMaxTipAge; }
-    uint64_t PruneAfterHeight() const { return nPruneAfterHeight; }
     /** Make miner stop after a block is found. In RPC, don't return until nGenProcLimit blocks are generated */
     bool MineBlocksOnDemand() const { return fMineBlocksOnDemand; }
     /** In the future use NetworkIDString() for RPC fields */
@@ -67,8 +66,8 @@ public:
     const std::vector<CDNSSeedData>& DNSSeeds() const { return vSeeds; }
     const std::vector<unsigned char>& Base58Prefix(Base58Type type) const { return base58Prefixes[type]; }
     const CCheckpointData& Checkpoints() const { return checkpointData; }
-    unsigned int getStakeMaxAge() { return nStakeMaxAge; }
-    unsigned int getStakeMinAge() { return nStakeMinAge; }
+    const unsigned int getStakeMaxAge() { return nStakeMaxAge; }
+    const unsigned int getStakeMinAge() { return nStakeMinAge; }
 
 protected:
     CChainParams() {}
@@ -79,7 +78,6 @@ protected:
     std::vector<unsigned char> vAlertPubKey;
     int nDefaultPort;
     long nMaxTipAge;
-    uint64_t nPruneAfterHeight;
     std::vector<CDNSSeedData> vSeeds;
     std::vector<unsigned char> base58Prefixes[MAX_BASE58_TYPES];
     std::string strNetworkID;

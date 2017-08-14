@@ -417,7 +417,7 @@ CBlockTemplate* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
             pblock->nTime          = std::max(pblock->GetBlockTime(), pindexPrev->GetBlockTime() - nMaxClockDrift);
         }
         if (pblock->IsProofOfWork())
-            pblock->UpdateTime(pindexPrev);
+            pblock->UpdateTime();
         pblock->nNonce         = 0;
     }
 
@@ -700,7 +700,7 @@ void ScryptMiner(CWallet *pwallet)
             // Update nTime every few seconds
             pblock->nTime = std::max(pindexPrev->GetMedianTimePast()+1, pblock->GetMaxTransactionTime());
             pblock->nTime = std::max(pblock->GetBlockTime(), pindexPrev->GetBlockTime() - nMaxClockDrift);
-            pblock->UpdateTime(pindexPrev);
+            pblock->UpdateTime();
             nBlockTime = ByteReverse(pblock->nTime);
 
             if (pblock->GetBlockTime() >= (int64_t)pblock->vtx[0].nTime + nMaxClockDrift)
