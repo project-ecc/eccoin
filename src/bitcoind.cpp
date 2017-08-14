@@ -36,7 +36,6 @@
  * Use the buttons <code>Namespaces</code>, <code>Classes</code> or <code>Files</code> at the top of the page to start navigating the code.
  */
 
-static bool fDaemon;
 
 void WaitForShutdown(boost::thread_group* threadGroup)
 {
