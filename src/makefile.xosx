@@ -1,0 +1,290 @@
+# Copyright (c) 2009-2010 Satoshi Nakamoto
+# Distributed under the MIT/X11 software license, see the accompanying
+# file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
+USE_UPNP:=1
+USE_IPV6:=1
+
+
+LINK:=$(CXX)
+ARCH:=$(system lscpu | head -n 1 | awk '{print $2}')
+
+DEFS=-DBOOST_SPIRIT_THREADSAFE
+
+DEFS += $(addprefix -I,/home/parallels/Documents/osxcross/target/macports/pkgs/opt/local/include/openssl /home/parallels/Documents/osxcross/target/macports/pkgs/opt/local/include/db48 $(CURDIR) $(CURDIR)/build $(BOOST_INCLUDE_PATH) $(BDB_INCLUDE_PATH) $(OPENSSL_INCLUDE_PATH) $(EVENT_INCLUDE_PATH) $(CURDIR)/univalue)
+LIBS = $(addprefix -L,/home/parallels/Documents/osxcross/target/macports/pkgs/opt/local/lib/db48 $(BOOST_LIB_PATH) $(BDB_LIB_PATH) $(OPENSSL_LIB_PATH) $(EVENT_LIB_PATH))
+
+LMODE = dynamic
+LMODE2 = dynamic
+ifdef STATIC
+	LMODE = static
+	ifeq (${STATIC}, all)
+		LMODE2 = static
+	endif
+endif
+
+# for boost 1.37, add -mt to the boost libraries
+LIBS += \
+ -Wl,-B$(LMODE) \
+   -l boost_system$(BOOST_LIB_SUFFIX) \
+   -l boost_filesystem$(BOOST_LIB_SUFFIX) \
+   -l boost_program_options$(BOOST_LIB_SUFFIX) \
+   -l boost_thread$(BOOST_LIB_SUFFIX) \
+   -l boost_chrono$(BOOST_LIB_SUFFIX) \
+   -l db_cxx$(BDB_LIB_SUFFIX) \
+   -l ssl \
+   -l event \
+   -l event_pthreads \
+   -l crypto
+
+ifndef USE_UPNP
+	override USE_UPNP = -
+endif
+ifneq (${USE_UPNP}, -)
+	LIBS += -l miniupnpc
+	DEFS += -DUSE_UPNP=$(USE_UPNP)
+endif
+
+ifneq (${USE_IPV6}, -)
+	DEFS += -DUSE_IPV6=$(USE_IPV6)
+endif
+
+LIBS+= \
+ -Wl,-B$(LMODE2) \
+   -l z \
+   -l dl \
+   -l pthread
+
+
+# Hardening
+# Make some classes of vulnerabilities unexploitable in case one is discovered.
+#
+    # This is a workaround for Ubuntu bug #691722, the default -fstack-protector causes
+    # -fstack-protector-all to be ignored unless -fno-stack-protector is used first.
+    # see: https://bugs.launchpad.net/ubuntu/+source/gcc-4.5/+bug/691722
+    HARDENING=-fno-stack-protector
+
+    # Stack Canaries
+    # Put numbers at the beginning of each stack frame and check that they are the same.
+    # If a stack buffer if overflowed, it writes over the canary number and then on return
+    # when that number is checked, it won't be the same and the program will exit with
+    # a "Stack smashing detected" error instead of being exploited.
+    HARDENING+=-fstack-protector-all -Wstack-protector
+
+    # Make some important things such as the global offset table read only as soon as
+    # the dynamic linker is finished building it. This will prevent overwriting of addresses
+    # which would later be jumped to.
+    LDHARDENING+=-Wl,-z,relro -Wl,-z,now
+
+    # Build position independent code to take advantage of Address Space Layout Randomization
+    # offered by some kernels.
+    # see doc/build-unix.txt for more information.
+    ifdef PIE
+        HARDENING+=-fPIE
+        LDHARDENING+=-pie
+    endif
+
+    # -D_FORTIFY_SOURCE=2 does some checking for potentially exploitable code patterns in
+    # the source such overflowing a statically defined buffer.
+    HARDENING+=-D_FORTIFY_SOURCE=2
+#
+
+
+DEBUGFLAGS=-g
+
+
+ifeq (${ARCH}, i686)
+    EXT_OPTIONS=-msse2
+endif
+
+
+# CXXFLAGS can be specified on the make command line, so we use xCXXFLAGS that only
+# adds some defaults in front. Unfortunately, CXXFLAGS=... $(CXXFLAGS) does not work.
+xCXXFLAGS=-O2 $(EXT_OPTIONS) -pthread -w -Wextra -Wno-ignored-qualifiers -Wformat -Wformat-security -Wno-unused-parameter -std=c++11  -DBOOST_NO_CXX11_SCOPED_ENUMS -fpermissive \
+    $(DEBUGFLAGS) $(DEFS) $(HARDENING) $(CXXFLAGS)
+
+# LDFLAGS can be specified on the make command line, so we use xLDFLAGS that only
+# adds some defaults in front. Unfortunately, LDFLAGS=... $(LDFLAGS) does not work.
+xLDFLAGS=$(LDHARDENING) $(LDFLAGS)
+
+#add project specific libraries
+LIBS += $(CURDIR)/leveldb/out-static/libleveldb.a $(CURDIR)/leveldb/out-static/libmemenv.a
+LIBS += $(CURDIR)/secp256k1/.libs/libsecp256k1.a
+
+#add project specific dependencies
+DEFS += $(addprefix -I,$(CURDIR)/leveldb/include)
+DEFS += $(addprefix -I,$(CURDIR)/leveldb/helpers)
+DEFS += $(addprefix -I,$(CURDIR)/secp256k1/include)
+
+
+OBJS= \
+    build/txdb.o \
+    build/key.o \
+    build/addrman.o \
+    build/amount.o \
+    build/arith_uint256.o \
+    build/base58.o \
+    build/blockindex.o \
+    build/bloom.o \
+    build/chain.o \
+    build/chainparams.o \
+    build/chainparamsbase.o \
+    build/checkpoints.o \
+    build/clientversion.o \
+    build/coins.o \
+    build/compressor.o \
+    build/core_read.o \
+    build/core_write.o \
+    build/dbwrapper.o \
+    build/hash.o \
+    build/keystore.o \
+    build/main.o \
+    build/merkleblock.o \
+    build/messages.o \
+    build/miner.o \
+    build/net.o \
+    build/netbase.o \
+    build/noui.o \
+    build/pow.o \
+    build/processblock.o \
+    build/processheader.o \
+    build/protocol.o \
+    build/pubkey.o \
+    build/random.o \
+    build/scheduler.o \
+    build/sync.o \
+    build/timedata.o \
+    build/torcontrol.o \
+    build/txmempool.o \
+    build/uint256.o \
+    build/util.o \
+    build/utilmoneystr.o \
+    build/utilstrencodings.o \
+    build/utiltime.o \
+    build/validationinterface.o \
+    build/versionbits.o \
+    build/wallet/crypter.o \
+    build/wallet/db.o \
+    build/wallet/wallet.o \
+    build/wallet/wallet_ismine.o \
+    build/wallet/walletdb.o \
+    build/support/cleanse.o \
+    build/support/pagelocker.o \
+    build/script/bitcoinconsensus.o \
+    build/script/interpreter.o \
+    build/script/script.o \
+    build/script/script_error.o \
+    build/script/sigcache.o \
+    build/script/sign.o \
+    build/script/standard.o \
+    build/primitives/block.o \
+    build/primitives/transaction.o \
+    build/policy/fees.o \
+    build/policy/policy.o \
+    build/policy/rbf.o \
+    build/crypto/hmac_sha256.o \
+    build/crypto/hmac_sha512.o \
+    build/crypto/ripemd160.o \
+    build/crypto/sha1.o \
+    build/crypto/sha256.o \
+    build/crypto/sha512.o \
+    build/consensus/merkle.o \
+    build/compat/glibc_compat.o \
+    build/compat/glibc_sanity.o \
+    build/compat/glibcxx_sanity.o \
+    build/compat/strnlen.o \
+    build/init.o \
+    build/bitcoind.o \
+    build/crypto/scrypt.o \
+    build/kernel.o \
+    build/httprpc.o \
+    build/httpserver.o \
+    build/rest.o \
+    build/rpcblockchain.o \
+    build/rpcclient.o \
+    build/rpcdump.o \
+    build/rpcmining.o \
+    build/rpcmisc.o \
+    build/rpcnet.o \
+    build/rpcprotocol.o \
+    build/rpcrawtransaction.o \
+    build/rpcserver.o \
+    build/rpcwallet.o \
+    build/univalue/univalue.o \
+    build/univalue/univalue_read.o \
+    build/univalue/univalue_write.o \
+    build/pbkdf2.o \
+    build/script/stakescript.o
+
+all: leveldb secp256k1 ECCoind
+
+leveldb_make:
+	cd leveldb; make; cd ..;
+leveldb: leveldb_make
+
+secp256k1_make:
+	cd secp256k1; ./autogen.sh; ./configure --prefix=$(CURDIR)/libsecp256k1 --enable-module-recovery --with-bignum=no; make; make install; cd ..;
+secp256k1: secp256k1_make
+
+
+
+# auto-generated dependencies:
+-include build/*.P
+
+build/build.h: FORCE
+	/bin/sh ../share/genbuild.sh build/build.h
+clientversion.cpp: build/build.h
+DEFS += -DHAVE_BUILD_INFO
+
+
+build/%.o: %.c
+	$(CXX) -c $(xCXXFLAGS) -fpermissive -MMD -MF $(@:%.o=%.d) -o $@ $<
+	@cp $(@:%.o=%.d) $(@:%.o=%.P); \
+	  sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
+              -e '/^$$/ d' -e 's/$$/ :/' < $(@:%.o=%.d) >> $(@:%.o=%.P); \
+
+build/scrypt-x86.o: scrypt-x86.S
+	$(CXX) -c $(xCXXFLAGS) -MMD -o $@ $<
+
+build/scrypt-x86_64.o: scrypt-x86_64.S
+	$(CXX) -c $(xCXXFLAGS) -MMD -o $@ $<
+
+	rm -f $(@:%.o=%.d)
+build/%.o: %.cpp
+	$(CXX) -c $(xCXXFLAGS) -MMD -MF $(@:%.o=%.d) -o $@ $<
+	@cp $(@:%.o=%.d) $(@:%.o=%.P); \
+	  sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
+	      -e '/^$$/ d' -e 's/$$/ :/' < $(@:%.o=%.d) >> $(@:%.o=%.P); \
+	  rm -f $(@:%.o=%.d)
+
+ECCoind: $(OBJS:build/%=build/%)
+	$(LINK) $(xCXXFLAGS) -o $@ $^ $(xLDFLAGS) $(LIBS)
+
+clean:
+	-rm -f ECCoind
+	-rm -f build/*.o
+	-rm -f build/*.P
+	-rm -f build/build.h
+	-rm -f build/compat/*.o
+	-rm -f build/compat/*.P
+	-rm -f build/consensus/*.o
+	-rm -f build/consensus/*.P
+	-rm -f build/crypto/*.o
+	-rm -f build/crypto/*.P
+	-rm -f build/policy/*.o
+	-rm -f build/policy/*.P
+	-rm -f build/primitives/*.o
+	-rm -f build/primitives/*.P
+	-rm -f build/script/*.o
+	-rm -f build/script/*.P
+	-rm -f build/support/*.o
+	-rm -f build/support/*.P
+	-rm -f build/univalue/*.o
+	-rm -f build/univalue/*.P
+	-rm -f build/wallet/*.o
+	-rm -f build/wallet/*.P
+	cd leveldb && make clean
+
+
+
+FORCE:

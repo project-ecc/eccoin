@@ -13,6 +13,7 @@
 #include "crypto/scrypt.h"
 #include "utiltime.h"
 #include "timedata.h"
+#include "args.h""
 
 #include "script/stakescript.h"
 
@@ -106,7 +107,7 @@ static bool SelectBlockFromCandidates(
             *pindexSelected = (const CBlockIndex*) pindex;
         }
     }
-    if (fDebug && GetBoolArg("-printstakemodifier", false))
+    if (fDebug && gArgs.GetBoolArg("-printstakemodifier", false))
         LogPrintf("SelectBlockFromCandidates: selection hash=%s\n", hashBest.ToString().c_str());
     return fSelected;
 }
@@ -198,7 +199,7 @@ bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, uint64_t& nStakeMod
     }
 
     // Print selection map for visualization of the selected blocks
-    if (fDebug && GetBoolArg("-printstakemodifier", false))
+    if (fDebug && gArgs.GetBoolArg("-printstakemodifier", false))
     {
         std::string strSelectionMap = "";
         // '-' indicates proof-of-work blocks not selected

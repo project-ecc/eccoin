@@ -10,6 +10,7 @@
 #include "noui.h"
 #include "scheduler.h"
 #include "util.h"
+#include "args.h"
 #include "httpserver.h"
 #include "httprpc.h"
 #include "rpcserver.h"
@@ -125,7 +126,7 @@ bool AppInit(int argc, char* argv[])
             exit(ret);
         }
 #ifndef WIN32
-        fDaemon = GetBoolArg("-daemon", false);
+        fDaemon = gArgs.GetBoolArg("-daemon", false);
         if (fDaemon)
         {
             fprintf(stdout, "Bitcoin server starting\n");
@@ -148,7 +149,7 @@ bool AppInit(int argc, char* argv[])
                 fprintf(stderr, "Error: setsid() returned %d errno %d\n", sid, errno);
         }
 #endif
-        SoftSetBoolArg("-server", true);
+        gArgs.SoftSetBoolArg("-server", true);
 
         // Set this early so that parameter interactions go to console
         InitLogging();

@@ -7,6 +7,7 @@
 #include "config/bitcoin-config.h"
 #endif
 
+#include "util.h"
 #include "args.h"
 
 #include "chainparamsbase.h"

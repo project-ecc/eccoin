@@ -8,6 +8,7 @@
 #endif
 
 #include "util.h"
+#include "args.h"
 
 #include "chainparamsbase.h"
 #include "random.h"
@@ -455,7 +456,7 @@ void ClearDatadirCache()
 
 boost::filesystem::path GetConfigFile()
 {
-    boost::filesystem::path pathConfigFile(GetArg("-conf", CONF_FILENAME));
+    boost::filesystem::path pathConfigFile(gArgs.GetArg("-conf", CONF_FILENAME));
     if (!pathConfigFile.is_complete())
         pathConfigFile = GetDataDir(false) / pathConfigFile;
 
@@ -489,7 +490,7 @@ void ReadConfigFile(std::map<std::string, std::string>& mapSettingsRet,
 #ifndef WIN32
 boost::filesystem::path GetPidFile()
 {
-    boost::filesystem::path pathPidFile(GetArg("-pid", PID_FILENAME));
+    boost::filesystem::path pathPidFile(gArgs.GetArg("-pid", PID_FILENAME));
     if (!pathPidFile.is_complete()) pathPidFile = GetDataDir() / pathPidFile;
     return pathPidFile;
 }
