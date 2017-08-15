@@ -99,8 +99,6 @@ namespace boost {
 const char * const CONF_FILENAME = "eccoin.conf";
 const char * const PID_FILENAME = "eccoind.pid";
 
-std::map<std::string, std::string> mapArgs;
-std::map<std::string, std::vector<std::string> > mapMultiArgs;
 bool fDebug = false;
 bool fPrintToConsole = false;
 bool fPrintToDebugLog = true;
@@ -337,94 +335,6 @@ static void InterpretNegativeSetting(std::string& strKey, std::string& strValue)
         strKey = "-" + strKey.substr(3);
         strValue = InterpretBool(strValue) ? "0" : "1";
     }
-}
-
-void ParseParameters(int argc, const char* const argv[])
-{
-    mapArgs.clear();
-    mapMultiArgs.clear();
-
-    for (int i = 1; i < argc; i++)
-    {
-        std::string str(argv[i]);
-        std::string strValue;
-        size_t is_index = str.find('=');
-        if (is_index != std::string::npos)
-        {
-            strValue = str.substr(is_index+1);
-            str = str.substr(0, is_index);
-        }
-#ifdef WIN32
-        boost::to_lower(str);
-        if (boost::algorithm::starts_with(str, "/"))
-            str = "-" + str.substr(1);
-#endif
-
-        if (str[0] != '-')
-            break;
-
-        // Interpret --foo as -foo.
-        // If both --foo and -foo are set, the last takes effect.
-        if (str.length() > 1 && str[1] == '-')
-            str = str.substr(1);
-        InterpretNegativeSetting(str, strValue);
-
-        mapArgs[str] = strValue;
-        mapMultiArgs[str].push_back(strValue);
-    }
-}
-
-bool IsArgSet(const std::string& strArg)
-{
-    return mapArgs.count(strArg);
-}
-
-std::vector<std::string> GetArgs(const std::string& strArg)
-{
-    try{
-        return mapMultiArgs.at(strArg);
-    }
-    catch(...)
-    {
-        LogPrintf("could find arg %s \n", strArg.c_str());
-    }
-}
-
-std::string GetArg(const std::string& strArg, const std::string& strDefault)
-{
-    if (mapArgs.count(strArg))
-        return mapArgs[strArg];
-    return strDefault;
-}
-
-int64_t GetArg(const std::string& strArg, int64_t nDefault)
-{
-    if (mapArgs.count(strArg))
-        return atoi64(mapArgs[strArg]);
-    return nDefault;
-}
-
-bool GetBoolArg(const std::string& strArg, bool fDefault)
-{
-    if (mapArgs.count(strArg))
-        return InterpretBool(mapArgs[strArg]);
-    return fDefault;
-}
-
-bool SoftSetArg(const std::string& strArg, const std::string& strValue)
-{
-    if (mapArgs.count(strArg))
-        return false;
-    mapArgs[strArg] = strValue;
-    return true;
-}
-
-bool SoftSetBoolArg(const std::string& strArg, bool fValue)
-{
-    if (fValue)
-        return SoftSetArg(strArg, std::string("1"));
-    else
-        return SoftSetArg(strArg, std::string("0"));
 }
 
 static const int screenWidth = 79;

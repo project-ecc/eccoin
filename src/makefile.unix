@@ -158,6 +158,8 @@ OBJS= \
     build/txmempool.o \
     build/uint256.o \
     build/util.o \
+    build/fs.o \
+    build/args.o \
     build/utilmoneystr.o \
     build/utilstrencodings.o \
     build/utiltime.o \
