@@ -320,12 +320,25 @@ fs::path GetConfigFile(const std::string& confPath)
     return pathConfigFile;
 }
 
-void ArgsManager::ReadConfigFile(const std::string& confPath)
+void ArgsManager::ReadConfigFile()
 {
-    fs::ifstream streamConfig(GetConfigFile(confPath));
-    if (!streamConfig.good())
-        return; // No bitcoin.conf file is OK
 
+    init:
+
+    fs::ifstream streamConfig(GetConfigFile());
+    if (!streamConfig.good())
+    {
+        fs::path ConfPath = GetDefaultDataDir() / "eccoin.conf";
+        FILE* ConfFile = fopen(ConfPath.string().c_str(), "w");
+        fprintf(ConfFile, "maxconnections=100\n");
+        fprintf(ConfFile, "rpcuser=yourusername\n");
+        fprintf(ConfFile, "rpcpassword=yourpassword\n");
+        fprintf(ConfFile, "addnode=www.cryptounited.io\n");
+        fprintf(ConfFile, "rpcport=19119\n");
+        fprintf(ConfFile, "rpcconnect=127.0.0.1\n");
+        fclose(ConfFile);
+        goto init;
+    }
     {
         LOCK(cs_args);
         std::set<std::string> setOptions;

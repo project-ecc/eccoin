@@ -221,8 +221,8 @@ UniValue setgenerate(const UniValue& params, bool fHelp)
             fGenerate = false;
     }
 
-    mapArgs["-gen"] = (fGenerate ? "1" : "0");
-    mapArgs ["-genproclimit"] = itostr(nGenProcLimit);
+    gArgs.GetArg("-gen") = (fGenerate ? "1" : "0");
+    gArgs.GetArg("-genproclimit") = itostr(nGenProcLimit);
     ScryptMiner(fGenerate, nGenProcLimit, Params());
 
     return NullUniValue;

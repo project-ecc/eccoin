@@ -236,7 +236,7 @@ bool LogAcceptCategory(const char* category)
         static boost::thread_specific_ptr<std::set<std::string> > ptrCategory;
         if (ptrCategory.get() == NULL)
         {
-            const std::vector<std::string>& categories = mapMultiArgs["-debug"];
+            const std::vector<std::string>& categories = gArgs.GetArgs("-debug");
             ptrCategory.reset(new std::set<std::string>(categories.begin(), categories.end()));
             // thread_specific_ptr automatically deletes the set when the thread ends.
         }
@@ -431,8 +431,8 @@ const boost::filesystem::path &GetDataDir(bool fNetSpecific)
     if (!path.empty())
         return path;
 
-    if (mapArgs.count("-datadir")) {
-        path = fs::system_complete(mapArgs["-datadir"]);
+    if (gArgs.IsArgSet("-datadir")) {
+        path = fs::system_complete(gArgs.GetArg("-datadir", ""));
         if (!fs::is_directory(path)) {
             path = "";
             return path;
@@ -461,30 +461,6 @@ boost::filesystem::path GetConfigFile()
         pathConfigFile = GetDataDir(false) / pathConfigFile;
 
     return pathConfigFile;
-}
-
-void ReadConfigFile(std::map<std::string, std::string>& mapSettingsRet,
-                    std::map<std::string, std::vector<std::string> >& mapMultiSettingsRet)
-{
-    boost::filesystem::ifstream streamConfig(GetConfigFile());
-    if (!streamConfig.good())
-        return; // No eccoin.conf file is OK
-
-    std::set<std::string> setOptions;
-    setOptions.insert("*");
-
-    for (boost::program_options::detail::config_file_iterator it(streamConfig, setOptions), end; it != end; ++it)
-    {
-        // Don't overwrite existing settings so command line settings override eccoin.conf
-        std::string strKey = std::string("-") + it->string_key;
-        std::string strValue = it->value[0];
-        InterpretNegativeSetting(strKey, strValue);
-        if (mapSettingsRet.count(strKey) == 0)
-            mapSettingsRet[strKey] = strValue;
-        mapMultiSettingsRet[strKey].push_back(strValue);
-    }
-    // If datadir is changed in .conf file:
-    ClearDatadirCache();
 }
 
 #ifndef WIN32
