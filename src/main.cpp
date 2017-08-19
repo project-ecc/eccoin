@@ -1891,6 +1891,44 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     int64_t nTime4 = GetTimeMicros(); nTimeVerify += nTime4 - nTime2;
     LogPrint("bench", "    - Verify %u txins: %.2fms (%.3fms/txin) [%.2fs]\n", nInputs - 1, 0.001 * (nTime4 - nTime2), nInputs <= 1 ? 0 : 0.001 * (nTime4 - nTime2) / (nInputs-1), nTimeVerify * 0.000001);
 
+
+    // ppcoin: track money supply and mint amount info
+    pindex->nMint = nValueOut - nValueIn + nFees;
+    pindex->nMoneySupply = (pindex->pprev? pindex->pprev->nMoneySupply : 0) + nValueOut - nValueIn;
+
+    // Verify hash target and signature of coinstake tx
+    uint256 hashProofOfStake;
+    hashProofOfStake.SetNull();
+    if (block.IsProofOfStake())
+    {
+        if (!CheckProofOfStake(block.vtx[1], block.nBits, hashProofOfStake))
+        {
+            LogPrintf("WARNING: ProcessBlock(): check proof-of-stake failed for block %s\n", block.GetHash().ToString().c_str());
+            return false; // do not error here as we expect this during initial block download
+        }
+    }
+
+    // ppcoin: compute stake entropy bit for stake modifier
+    if (!pindex->SetStakeEntropyBit(block.GetStakeEntropyBit()))
+    {
+        return error("AddToBlockIndex() : SetStakeEntropyBit() failed");
+    }
+    // ppcoin: record proof-of-stake hash value
+    pindex->hashProofOfStake = hashProofOfStake;
+
+    // ppcoin: compute stake modifier
+    uint64_t nStakeModifier = 0;
+    bool fGeneratedStakeModifier = false;
+    if (!ComputeNextStakeModifier(pindex->pprev, nStakeModifier, fGeneratedStakeModifier))
+        return error("AddToBlockIndex() : ComputeNextStakeModifier() failed");
+    pindex->SetStakeModifier(nStakeModifier, fGeneratedStakeModifier);
+    pindex->nStakeModifierChecksum = GetStakeModifierChecksum(pindex);
+    if (!CheckStakeModifierCheckpoints(pindex->nHeight, pindex))
+        return error("AddToBlockIndex() : Rejected by stake modifier checkpoint height=%d, checksum=%08x, correct checksum=%08x,"
+                     " nflags = %i, modifier=0x%016x  hashproofofstake = %s",
+                     pindex->nHeight, pindex->nStakeModifierChecksum, mapStakeModifierCheckpoints[pindex->nHeight],
+                     pindex->nFile, pindex->nStakeModifier, pindex->hashProofOfStake.ToString().c_str());
+
     if (fJustCheck)
         return true;
 
@@ -1930,44 +1968,6 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 
     int64_t nTime6 = GetTimeMicros(); nTimeCallbacks += nTime6 - nTime5;
     LogPrint("bench", "    - Callbacks: %.2fms [%.2fs]\n", 0.001 * (nTime6 - nTime5), nTimeCallbacks * 0.000001);
-
-    // ppcoin: track money supply and mint amount info
-    pindex->nMint = nValueOut - nValueIn + nFees;
-    pindex->nMoneySupply = (pindex->pprev? pindex->pprev->nMoneySupply : 0) + nValueOut - nValueIn;
-
-    // Verify hash target and signature of coinstake tx
-    uint256 hashProofOfStake;
-    hashProofOfStake.SetNull();
-    if (block.IsProofOfStake())
-    {
-        if (!CheckProofOfStake(block.vtx[1], block.nBits, hashProofOfStake))
-        {
-            LogPrintf("WARNING: ProcessBlock(): check proof-of-stake failed for block %s\n", block.GetHash().ToString().c_str());
-            return false; // do not error here as we expect this during initial block download
-        }
-    }
-
-    // ppcoin: compute stake entropy bit for stake modifier
-    if (!pindex->SetStakeEntropyBit(block.GetStakeEntropyBit()))
-    {
-        return error("AddToBlockIndex() : SetStakeEntropyBit() failed");
-    }
-    // ppcoin: record proof-of-stake hash value
-    pindex->hashProofOfStake = hashProofOfStake;
-
-    // ppcoin: compute stake modifier
-    uint64_t nStakeModifier = 0;
-    bool fGeneratedStakeModifier = false;
-    if (!ComputeNextStakeModifier(pindex->pprev, nStakeModifier, fGeneratedStakeModifier))
-        return error("AddToBlockIndex() : ComputeNextStakeModifier() failed");
-    pindex->SetStakeModifier(nStakeModifier, fGeneratedStakeModifier);
-    pindex->nStakeModifierChecksum = GetStakeModifierChecksum(pindex);
-    if (!CheckStakeModifierCheckpoints(pindex->nHeight, pindex))
-        return error("AddToBlockIndex() : Rejected by stake modifier checkpoint height=%d, checksum=%08x, correct checksum=%08x,"
-                     " nflags = %i, modifier=0x%016x  hashproofofstake = %s",
-                     pindex->nHeight, pindex->nStakeModifierChecksum, mapStakeModifierCheckpoints[pindex->nHeight],
-                     pindex->nFile, pindex->nStakeModifier, pindex->hashProofOfStake.ToString().c_str());
-
 
     return true;
 }
