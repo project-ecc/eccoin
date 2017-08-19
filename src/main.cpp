@@ -1335,13 +1335,13 @@ bool CheckTxInputs(const CTransaction& tx, CValidationState& state, const CCoins
             // ppcoin: coin stake tx earns reward instead of paying fee
             uint64_t nCoinAge;
             if (!tx.GetCoinAge(nCoinAge))
-                return state.DoS(100, false, REJECT_INVALID, "bad-txns-cant-get-coin-age", false , strprintf("ConnectInputs() : %s unable to get coin age for coinstake", GetHash().ToString().substr(0,10).c_str()));
+                return state.DoS(100, false, REJECT_INVALID, "bad-txns-cant-get-coin-age", false , strprintf("ConnectInputs() : %s unable to get coin age for coinstake", tx.GetHash().ToString().substr(0,10).c_str()));
 
-            int64_t nStakeReward = GetValueOut() - nValueIn;
-            if (nStakeReward > GetProofOfStakeReward(GetCoinAge(txdb, nCoinAge, true), pindexBlock->nHeight) - GetMinFee() + MIN_TX_FEE(nTime))
+            int64_t nStakeReward = tx.GetValueOut() - nValueIn;
+            if (nStakeReward > GetProofOfStakeReward(tx.GetCoinAge(nCoinAge, true), nSpendHeight) - tx.GetMinFee() + MIN_TX_FEE(tx.nTime))
             {
                 LogPrintf("nStakeReward = %d , CoinAge = %d \n", nStakeReward, nCoinAge);
-                return state.DoS(100, false, REJECT_INVALID, "bad-txns-stake-reward-too-high", false, strprintf("ConnectInputs() : %s stake reward exceeded", GetHash().ToString().substr(0,10).c_str()));
+                return state.DoS(100, false, REJECT_INVALID, "bad-txns-stake-reward-too-high", false, strprintf("ConnectInputs() : %s stake reward exceeded", tx.GetHash().ToString().substr(0,10).c_str()));
 
             }
             LogPrintf("END: nStakeReward = %d , CoinAge = %d \n", nStakeReward, nCoinAge);
