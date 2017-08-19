@@ -141,7 +141,6 @@ extern CConditionVariable cvBlockChange;
 extern bool fImporting;
 extern bool fReindex;
 extern int nScriptCheckThreads;
-extern bool fTxIndex;
 extern bool fIsBareMultisigStd;
 extern bool fRequireStandard;
 extern unsigned int nBytesPerSigOp;
