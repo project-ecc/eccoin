@@ -222,15 +222,8 @@ uint64_t CTransaction::GetCoinAge(uint64_t nCoinAge, bool byValue) const
             continue; // only count coins meeting min age requirement
 
         CTransaction txPrev;
-        for(CTransaction vtxtx: block.vtx)
-        {
-            if(vtxtx.GetHash() == txin.prevout.hash)
-            {
-                txPrev = vtxtx;
-                break;
-            }
-        }
-        if(txPrev.IsNull())
+        uint256 blockHashOfTx;
+        if (!GetTransaction(txin.prevout.hash, txPrev, Params().GetConsensus(), blockHashOfTx))
         {
             return false;
         }
@@ -276,15 +269,8 @@ bool CTransaction::GetCoinAge(uint64_t& nCoinAge) const
             continue; // only count coins meeting min age requirement
 
         CTransaction txPrev;
-        for(CTransaction vtxtx: block.vtx)
-        {
-            if(vtxtx.GetHash() == txin.prevout.hash)
-            {
-                txPrev = vtxtx;
-                break;
-            }
-        }
-        if(txPrev.IsNull())
+        uint256 blockHashOfTx;
+        if (!GetTransaction(txin.prevout.hash, txPrev, Params().GetConsensus(), blockHashOfTx))
         {
             return false;
         }
