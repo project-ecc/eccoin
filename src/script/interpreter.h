@@ -18,6 +18,8 @@ class CScript;
 class CTransaction;
 class uint256;
 
+typedef std::vector<unsigned char> valtype;
+
 /** Signature hash types/flags */
 enum
 {
@@ -140,6 +142,6 @@ public:
 
 bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& script, unsigned int flags, const BaseSignatureChecker& checker, ScriptError* error = NULL);
 bool VerifyScript(const CScript& scriptSig, const CScript& scriptPubKey, unsigned int flags, const BaseSignatureChecker& checker, ScriptError* error = NULL);
-bool CastToBool(const std::vector<unsigned char>& vch);
+bool CastToBool(const valtype &vch);
 
 #endif // BITCOIN_SCRIPT_INTERPRETER_H

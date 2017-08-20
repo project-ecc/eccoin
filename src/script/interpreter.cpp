@@ -13,7 +13,6 @@
 #include "script/script.h"
 #include "uint256.h"
 
-typedef std::vector<unsigned char> valtype;
 
 namespace {
 
@@ -33,7 +32,7 @@ inline bool set_error(ScriptError* ret, const ScriptError serror)
 
 } // anon namespace
 
-bool CastToBool(const std::vector<unsigned char> &vch)
+bool CastToBool(const valtype& vch)
 {
     for (unsigned int i = 0; i < vch.size(); i++)
     {
