@@ -310,9 +310,9 @@ CBlockPolicyEstimator::CBlockPolicyEstimator(const CFeeRate& _minRelayFee)
     vfeelist.push_back(INF_FEERATE);
     feeStats.Initialize(vfeelist, MAX_BLOCK_CONFIRMS, DEFAULT_DECAY, "FeeRate");
 
-    minTrackedPriority = AllowFreeThreshold() < MIN_PRIORITY ? MIN_PRIORITY : AllowFreeThreshold();
+    minTrackedPriority = AllowFreeThreshold() < MIN_FEE_PRIORITY ? MIN_FEE_PRIORITY : AllowFreeThreshold();
     std::vector<double> vprilist;
-    for (double bucketBoundary = minTrackedPriority; bucketBoundary <= MAX_PRIORITY; bucketBoundary *= PRI_SPACING) {
+    for (double bucketBoundary = minTrackedPriority; bucketBoundary <= MAX_FEE_PRIORITY; bucketBoundary *= PRI_SPACING) {
         vprilist.push_back(bucketBoundary);
     }
     vprilist.push_back(INF_PRIORITY);

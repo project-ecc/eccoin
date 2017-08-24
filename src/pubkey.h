@@ -13,16 +13,6 @@
 #include <stdexcept>
 #include <vector>
 
-/** 
- * secp256k1:
- * const unsigned int PRIVATE_KEY_SIZE = 279;
- * const unsigned int PUBLIC_KEY_SIZE  = 65;
- * const unsigned int SIGNATURE_SIZE   = 72;
- *
- * see www.keylength.com
- * script supports up to 75 for single byte push
- */
-
 /** A reference to a CKey: the Hash160 of its serialized public key */
 class CKeyID : public uint160
 {
@@ -187,6 +177,8 @@ public:
      */
     bool Verify(const uint256& hash, const std::vector<unsigned char>& vchSig) const;
 
+    bool VerifyCompact(const uint256 &hash, const std::vector<unsigned char>& vchSig) const;
+
     /**
      * Check whether a signature is normalized (lower-S).
      */
@@ -199,20 +191,19 @@ public:
     bool Decompress();
 
     //! Derive BIP32 child pubkey.
-    bool Derive(CPubKey& pubkeyChild, ChainCode &ccChild, unsigned int nChild, const ChainCode& cc) const;
+    bool Derive(CPubKey& pubkeyChild, unsigned char ccChild[32], unsigned int nChild, const unsigned char cc[32]) const;
 };
 
 struct CExtPubKey {
     unsigned char nDepth;
     unsigned char vchFingerprint[4];
     unsigned int nChild;
-    ChainCode chaincode;
+    unsigned char vchChainCode[32];
     CPubKey pubkey;
 
-    friend bool operator==(const CExtPubKey &a, const CExtPubKey &b)
-    {
+    friend bool operator==(const CExtPubKey &a, const CExtPubKey &b) {
         return a.nDepth == b.nDepth && memcmp(&a.vchFingerprint[0], &b.vchFingerprint[0], 4) == 0 && a.nChild == b.nChild &&
-               a.chaincode == b.chaincode && a.pubkey == b.pubkey;
+               memcmp(&a.vchChainCode[0], &b.vchChainCode[0], 32) == 0 && a.pubkey == b.pubkey;
     }
 
     void Encode(unsigned char code[74]) const;

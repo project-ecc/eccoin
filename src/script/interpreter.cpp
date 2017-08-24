@@ -868,10 +868,12 @@ bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& 
                     // Drop the signature, since there's no way for a signature to sign itself
                     scriptCode.FindAndDelete(CScript(vchSig));
 
-                    if (!CheckSignatureEncoding(vchSig, flags, serror) || !CheckPubKeyEncoding(vchPubKey, flags, serror)) {
+                    if (!CheckSignatureEncoding(vchSig, flags, serror) || !CheckPubKeyEncoding(vchPubKey, flags, serror))
+                    {
                         //serror is set
                         return false;
                     }
+
                     bool fSuccess = checker.CheckSig(vchSig, vchPubKey, scriptCode);
 
                     popstack(stack);

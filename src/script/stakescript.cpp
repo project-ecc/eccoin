@@ -193,18 +193,33 @@ bool VerifyScript(const CScript& scriptSig, const CScript& scriptPubKey, const C
     return true;
 }
 
+inline bool set_error_stake(ScriptError* ret, const ScriptError serror)
+{
+    if (ret)
+        *ret = serror;
+    return false;
+}
+
+
 bool VerifyScript(const CScript& scriptSig, const CScript& scriptPubKey, const CTransaction& txTo, unsigned int nIn,
                   bool fValidatePayToScriptHash)
 {
+
+    ScriptError serror = SCRIPT_ERR_OK;
+    set_error_stake(&serror, SCRIPT_ERR_UNKNOWN_ERROR);
+
     std::vector<std::vector<unsigned char> > stack, stackCopy;
-    if (!EvalScript(stack, scriptSig, STANDARD_SCRIPT_VERIFY_FLAGS, TransactionSignatureChecker(&txTo, nIn), NULL))
+    if (!EvalScript(stack, scriptSig, STANDARD_SCRIPT_VERIFY_FLAGS, TransactionSignatureChecker(&txTo, nIn), &serror))
     {
         LogPrintf("script error 1\n");
+        printf("%i \n", serror);
         return false;
     }
     if (fValidatePayToScriptHash)
+    {
         stackCopy = stack;
-    if (!EvalScript(stack, scriptPubKey, STANDARD_SCRIPT_VERIFY_FLAGS, TransactionSignatureChecker(&txTo, nIn), NULL))
+    }
+    if (!EvalScript(stack, scriptPubKey, STANDARD_SCRIPT_VERIFY_FLAGS, TransactionSignatureChecker(&txTo, nIn), &serror))
     {
         LogPrintf("script error 2\n");
         return false;
