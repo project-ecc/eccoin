@@ -10,6 +10,11 @@
 #include "pubkey.h"
 #include "random.h"
 
+#include <secp256k1.h>
+#include <secp256k1_recovery.h>
+
+static secp256k1_context* secp256k1_context_sign = nullptr;
+
 // Generate a private key from just the secret parameter
 int EC_KEY_regenerate_key(EC_KEY *eckey, BIGNUM *priv_key)
 {
@@ -384,4 +389,44 @@ bool ECC_InitSanityCheck() {
 
     // TODO Is there more EC functionality that could be missing?
     return true;
+}
+
+bool CKey::VerifyPubKey(const CPubKey& pubkey) const {
+    if (pubkey.IsCompressed() != fCompressed) {
+        return false;
+    }
+    unsigned char rnd[8];
+    std::string str = "Bitcoin key verification\n";
+    GetRandBytes(rnd, sizeof(rnd));
+    uint256 hash;
+    CHash256().Write((unsigned char*)str.data(), str.size()).Write(rnd, sizeof(rnd)).Finalize(hash.begin());
+    std::vector<unsigned char> vchSig;
+    Sign(hash, vchSig);
+    return pubkey.Verify(hash, vchSig);
+}
+
+void ECC_Start() {
+    assert(secp256k1_context_sign == nullptr);
+
+    secp256k1_context *ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN);
+    assert(ctx != nullptr);
+
+    {
+        // Pass in a random blinding seed to the secp256k1 context.
+        std::vector<unsigned char, secure_allocator<unsigned char>> vseed(32);
+        GetRandBytes(vseed.data(), 32);
+        bool ret = secp256k1_context_randomize(ctx, vseed.data());
+        assert(ret);
+    }
+
+    secp256k1_context_sign = ctx;
+}
+
+void ECC_Stop() {
+    secp256k1_context *ctx = secp256k1_context_sign;
+    secp256k1_context_sign = nullptr;
+
+    if (ctx) {
+        secp256k1_context_destroy(ctx);
+    }
 }
