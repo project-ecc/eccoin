@@ -14,6 +14,7 @@
 #include "uint256.h"
 #include "util.h"
 #include "streams.h"
+#include "main.h"
 
 
 namespace {
@@ -870,10 +871,14 @@ bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& 
                     // Drop the signature, since there's no way for a signature to sign itself
                     scriptCode.FindAndDelete(CScript(vchSig));
 
-                    if (!CheckSignatureEncoding(vchSig, flags, serror) || !CheckPubKeyEncoding(vchPubKey, flags, serror))
+                    /// TODO: for backwards compatability, this should be implemented in a different way but for now it will do
+                    if(chainActive.Tip()->nHeight > 1600000)
                     {
-                        //serror is set
-                        return false;
+                        if (!CheckSignatureEncoding(vchSig, flags, serror) || !CheckPubKeyEncoding(vchPubKey, flags, serror))
+                        {
+                            //serror is set
+                            return false;
+                        }
                     }
 
                     bool fSuccess = checker.CheckSig(vchSig, vchPubKey, scriptCode);
@@ -938,11 +943,14 @@ bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& 
                         // Note how this makes the exact order of pubkey/signature evaluation
                         // distinguishable by CHECKMULTISIG NOT if the STRICTENC flag is set.
                         // See the script_(in)valid tests for details.
-                        if (!CheckSignatureEncoding(vchSig, flags, serror) || !CheckPubKeyEncoding(vchPubKey, flags, serror)) {
-                            // serror is set
-                            return false;
+                        /// TODO: for backwards compatability, this should be implemented in a different way but for now it will do
+                        if(chainActive.Tip()->nHeight > 1600000)
+                        {
+                            if (!CheckSignatureEncoding(vchSig, flags, serror) || !CheckPubKeyEncoding(vchPubKey, flags, serror)) {
+                                // serror is set
+                                return false;
+                            }
                         }
-
                         // Check signature
                         bool fOk = checker.CheckSig(vchSig, vchPubKey, scriptCode);
 
