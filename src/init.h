@@ -30,13 +30,8 @@ void InitLogging();
 void InitParameterInteraction();
 bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler);
 
-/** The help message mode determines what help message to show */
-enum HelpMessageMode {
-    HMM_ECCCOIND,
-};
-
 /** Help for options shared between UI and daemon (for -help) */
-std::string HelpMessage(HelpMessageMode mode);
+std::string HelpMessage();
 /** Returns licensing information (for -version) */
 std::string LicenseInfo();
 

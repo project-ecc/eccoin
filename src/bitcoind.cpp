@@ -84,7 +84,7 @@ bool AppInit(int argc, char* argv[])
             strUsage += "\n" + _("Usage:") + "\n" +
                   "  eccoind [options]                     " + _("Start E-CurrencyCoin Core Daemon") + "\n";
 
-            strUsage += "\n" + HelpMessage(HMM_BITCOIND);
+            strUsage += "\n" + HelpMessage();
         }
 
         fprintf(stdout, "%s", strUsage.c_str());
