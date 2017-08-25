@@ -183,6 +183,7 @@ public:
         nNonce         = 0;
 
         // proof-of-stake specific fields
+        nFlags = 0;
         nMint = 0;
         nMoneySupply = 0;
         nStakeModifier = 0;

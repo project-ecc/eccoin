@@ -1707,6 +1707,8 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 
     if(pindex->GetBlockHash() != chainActive.Genesis()->GetBlockHash())
     {
+        /// once updateForPos runs the only flags that should be enabled are the ones that determine if PoS block or not
+        /// before this runs there should have been no flags set. so it is ok to reset the flags to 0
         pindex->updateForPos(block);
     }
 
@@ -2902,21 +2904,21 @@ bool InitBlockIndex(const CChainParams& chainparams)
             CDiskBlockPos blockPos;
             CValidationState state;
             if (!FindBlockPos(state, blockPos, nBlockSize+8, 0, block.GetBlockTime()))
-                return error("LoadBlockIndex(): FindBlockPos failed");
+                return error("InitBlockIndex(): FindBlockPos failed");
             if (!WriteBlockToDisk(block, blockPos, chainparams.MessageStart()))
-                return error("LoadBlockIndex(): writing genesis block to disk failed");
+                return error("InitBlockIndex(): writing genesis block to disk failed");
             CBlockIndex *pindex = AddToBlockIndex(block);
 
             // ppcoin: compute stake entropy bit for stake modifier
             if (!pindex->SetStakeEntropyBit(block.GetStakeEntropyBit()))
             {
-                return error("AddToBlockIndex() : SetStakeEntropyBit() failed");
+                return error("InitBlockIndex() : SetStakeEntropyBit() failed");
             }
             // ppcoin: compute stake modifier
             uint64_t nStakeModifier = 0;
             bool fGeneratedStakeModifier = false;
             if (!ComputeNextStakeModifier(pindex->pprev, nStakeModifier, fGeneratedStakeModifier))
-                return error("AddToBlockIndex() : ComputeNextStakeModifier() failed");
+                return error("InitBlockIndex() : ComputeNextStakeModifier() failed");
             pindex->SetStakeModifier(nStakeModifier, fGeneratedStakeModifier);
             pindex->nStakeModifierChecksum = GetStakeModifierChecksum(pindex);
             if (!CheckStakeModifierCheckpoints(pindex->nHeight, pindex))
@@ -2925,13 +2927,13 @@ bool InitBlockIndex(const CChainParams& chainparams)
                              pindex->nHeight, pindex->nStakeModifierChecksum, mapStakeModifierCheckpoints[pindex->nHeight],
                              pindex->nFlags, pindex->nStakeModifier, pindex->hashProofOfStake.ToString().c_str());
             if (!ReceivedBlockTransactions(block, state, pindex, blockPos))
-                return error("LoadBlockIndex(): genesis block not accepted");
+                return error("InitBlockIndex(): genesis block not accepted");
             if (!ActivateBestChain(state, chainparams, &block))
-                return error("LoadBlockIndex(): genesis block cannot be activated");
+                return error("InitBlockIndex(): genesis block cannot be activated");
             // Force a chainstate write so that when we VerifyDB in a moment, it doesn't check stale data
             return FlushStateToDisk(state, FLUSH_STATE_ALWAYS);
         } catch (const std::runtime_error& e) {
-            return error("LoadBlockIndex(): failed to initialize block database: %s", e.what());
+            return error("InitBlockIndex(): failed to initialize block database: %s", e.what());
         }
     }
 
