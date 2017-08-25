@@ -205,7 +205,7 @@ bool ConnectTip(CValidationState& state, const CChainParams& chainparams, CBlock
             return AbortNode(state, "Failed to read block");
         pblock = &block;
     }
-    if(pindexNew->pprev != NULL)
+    if(pindexNew->GetBlockHash() != chainActive.Genesis()->GetBlockHash())
     {
         pindexNew->updateForPos(block);
     }
