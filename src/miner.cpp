@@ -495,10 +495,10 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reservekey)
     arith_uint256 hashTarget = UintToArith256(CBigNum().SetCompact(pblock->nBits).getuint256());
 
     if (hash > hashTarget && pblock->IsProofOfWork())
-        return error("BitcoinMiner : proof-of-work not meeting target");
+        return error("Miner : proof-of-work not meeting target");
 
     //// debug print
-    LogPrintf("BitcoinMiner:\n");
+    LogPrintf("Miner:\n");
     LogPrintf("new block found  \n  hash: %s  \ntarget: %s\n", hash.GetHex().c_str(), hashTarget.GetHex().c_str());
     LogPrintf("generated %s\n", FormatMoney(pblock->vtx[0].vout[0].nValue).c_str());
 
@@ -506,7 +506,7 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reservekey)
     {
         LOCK(cs_main);
         if (pblock->hashPrevBlock != chainActive.Tip()->GetBlockHash())
-            return error("BitcoinMiner : generated block is stale");
+            return error("BMiner : generated block is stale");
 
         // Remove key from key pool
         reservekey.KeepKey();
@@ -521,7 +521,7 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reservekey)
         CValidationState state;
         const CChainParams& chainparams = Params();
         if (!ProcessNewBlock(state, chainparams, NULL, pblock, true, NULL))
-            return error("BitcoinMiner : ProcessBlock, block not accepted");
+            return error("Miner : ProcessBlock, block not accepted");
     }
 
     return true;
@@ -572,7 +572,7 @@ void ScryptMiner(CWallet *pwallet)
         std::auto_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(pwallet, true));
         if (!pblocktemplate.get())
         {
-            LogPrintf("Error in BitcoinMiner: Keypool ran out, please call keypoolrefill before restarting the mining thread\n");
+            LogPrintf("Error in Miner: Keypool ran out, please call keypoolrefill before restarting the mining thread\n");
             return;
         }
         CBlock *pblock = &pblocktemplate->block;
@@ -598,7 +598,7 @@ void ScryptMiner(CWallet *pwallet)
             continue;
         }
 
-        LogPrintf("Running BitcoinMiner with %u transactions in block (%u bytes)\n", pblock->vtx.size(),
+        LogPrintf("Running Miner with %u transactions in block (%u bytes)\n", pblock->vtx.size(),
                ::GetSerializeSize(*pblock, SER_NETWORK, PROTOCOL_VERSION));
 
         //
