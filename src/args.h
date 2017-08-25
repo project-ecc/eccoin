@@ -32,6 +32,7 @@ protected:
     std::map<std::string, std::vector<std::string> > mapMultiArgs;
 public:
     void ParseParameters(int argc, const char*const argv[]);
+    boost::filesystem::path GetConfigFile();
     void ReadConfigFile();
     std::vector<std::string> GetArgs(const std::string& strArg);
 

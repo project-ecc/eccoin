@@ -454,15 +454,6 @@ void ClearDatadirCache()
     pathCachedNetSpecific = boost::filesystem::path();
 }
 
-boost::filesystem::path GetConfigFile()
-{
-    boost::filesystem::path pathConfigFile(gArgs.GetArg("-conf", CONF_FILENAME));
-    if (!pathConfigFile.is_complete())
-        pathConfigFile = GetDataDir(false) / pathConfigFile;
-
-    return pathConfigFile;
-}
-
 #ifndef WIN32
 boost::filesystem::path GetPidFile()
 {

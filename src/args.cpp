@@ -7,8 +7,8 @@
 #include "config/bitcoin-config.h"
 #endif
 
-#include "util.h"
 #include "args.h"
+#include "util.h"
 
 #include "chainparamsbase.h"
 #include "random.h"
@@ -85,7 +85,6 @@
 #include <openssl/conf.h>
 
 ArgsManager gArgs;
-
 
 /** Interpret string as boolean, for argument parsing */
 static bool InterpretBool(const std::string& strValue)
@@ -204,23 +203,6 @@ void ArgsManager::ForceSetArg(const std::string& strArg, const std::string& strV
     mapMultiArgs[strArg].push_back(strValue);
 }
 
-
-
-static const int screenWidth = 79;
-static const int optIndent = 2;
-static const int msgIndent = 7;
-
-std::string HelpMessageGroup(const std::string &message) {
-    return std::string(message) + std::string("\n\n");
-}
-
-std::string HelpMessageOpt(const std::string &option, const std::string &message) {
-    return std::string(optIndent,' ') + std::string(option) +
-           std::string("\n") + std::string(msgIndent,' ') +
-           FormatParagraph(message, screenWidth - msgIndent, msgIndent) +
-           std::string("\n\n");
-}
-
 static std::string FormatException(const std::exception* pex, const char* pszThread)
 {
 #ifdef WIN32
@@ -237,91 +219,20 @@ static std::string FormatException(const std::exception* pex, const char* pszThr
                 "UNKNOWN EXCEPTION       \n%s in %s       \n", pszModule, pszThread);
 }
 
-void PrintExceptionContinue(const std::exception* pex, const char* pszThread)
-{
-    std::string message = FormatException(pex, pszThread);
-    LogPrintf("\n\n************************\n%s\n", message);
-    fprintf(stderr, "\n\n************************\n%s\n", message.c_str());
-}
-
-fs::path GetDefaultDataDir()
-{
-    // Windows < Vista: C:\Documents and Settings\Username\Application Data\Bitcoin
-    // Windows >= Vista: C:\Users\Username\AppData\Roaming\Bitcoin
-    // Mac: ~/Library/Application Support/Bitcoin
-    // Unix: ~/.bitcoin
-#ifdef WIN32
-    // Windows
-    return GetSpecialFolderPath(CSIDL_APPDATA) / "Bitcoin";
-#else
-    fs::path pathRet;
-    char* pszHome = getenv("HOME");
-    if (pszHome == nullptr || strlen(pszHome) == 0)
-        pathRet = fs::path("/");
-    else
-        pathRet = fs::path(pszHome);
-#ifdef MAC_OSX
-    // Mac
-    return pathRet / "Library/Application Support/Bitcoin";
-#else
-    // Unix
-    return pathRet / ".bitcoin";
-#endif
-#endif
-}
-
 static fs::path pathCached;
 static fs::path pathCachedNetSpecific;
 static CCriticalSection csPathCached;
 
-const fs::path &GetDataDir(bool fNetSpecific)
+boost::filesystem::path ArgsManager::GetConfigFile()
 {
-
-    LOCK(csPathCached);
-
-    fs::path &path = fNetSpecific ? pathCachedNetSpecific : pathCached;
-
-    // This can be called during exceptions by LogPrintf(), so we cache the
-    // value so we don't have to do memory allocations after that.
-    if (!path.empty())
-        return path;
-
-    if (gArgs.IsArgSet("-datadir")) {
-        path = fs::system_complete(gArgs.GetArg("-datadir", ""));
-        if (!fs::is_directory(path)) {
-            path = "";
-            return path;
-        }
-    } else {
-        path = GetDefaultDataDir();
-    }
-    if (fNetSpecific)
-        path /= BaseParams().DataDir();
-
-    fs::create_directories(path);
-
-    return path;
-}
-
-void ClearDatadirCache()
-{
-    LOCK(csPathCached);
-
-    pathCached = fs::path();
-    pathCachedNetSpecific = fs::path();
-}
-
-fs::path GetConfigFile(const std::string& confPath)
-{
-    fs::path pathConfigFile(confPath);
+    boost::filesystem::path pathConfigFile(GetArg("-conf", CONF_FILENAME));
     if (!pathConfigFile.is_complete())
         pathConfigFile = GetDataDir(false) / pathConfigFile;
 
     return pathConfigFile;
 }
 
-void ArgsManager::ReadConfigFile(std::map<std::string, std::string>& mapSettingsRet,
-                                      std::map<std::string, std::vector<std::string> >& mapMultiSettingsRet)
+void ArgsManager::ReadConfigFile()
 {
     init:
     boost::filesystem::ifstream streamConfig(GetConfigFile());
@@ -348,9 +259,9 @@ void ArgsManager::ReadConfigFile(std::map<std::string, std::string>& mapSettings
         std::string strKey = std::string("-") + it->string_key;
         std::string strValue = it->value[0];
         InterpretNegativeSetting(strKey, strValue);
-        if (mapSettingsRet.count(strKey) == 0)
-            mapSettingsRet[strKey] = strValue;
-        mapMultiSettingsRet[strKey].push_back(strValue);
+        if (mapArgs.count(strKey) == 0)
+            mapArgs[strKey] = strValue;
+        mapMultiArgs[strKey].push_back(strValue);
     }
     // If datadir is changed in .conf file:
     ClearDatadirCache();
