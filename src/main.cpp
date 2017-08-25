@@ -1705,7 +1705,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 
     int64_t nTimeStart = GetTimeMicros();
 
-    if(pindex->GetBlockHash() != chainActive.Genesis()->GetBlockHash())
+    if(pindex->GetBlockHash() != chainparams.GetConsensus().hashGenesisBlock)
     {
         /// once updateForPos runs the only flags that should be enabled are the ones that determine if PoS block or not
         /// before this runs there should have been no flags set. so it is ok to reset the flags to 0
