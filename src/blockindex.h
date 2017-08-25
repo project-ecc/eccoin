@@ -296,7 +296,7 @@ public:
         return false;
     }
 
-    void updateForPos(CBlock& block);
+    void updateForPos(const CBlock &block);
 
     //! Build the skiplist pointer for this entry.
     void BuildSkip();
