@@ -1337,11 +1337,12 @@ bool CheckTxInputs(const CTransaction& tx, CValidationState& state, const CCoins
             int64_t nStakeReward = tx.GetValueOut() - nValueIn;
             if (nStakeReward > GetProofOfStakeReward(tx.GetCoinAge(nCoinAge, true), nSpendHeight) - tx.GetMinFee() + MIN_TX_FEE(tx.nTime))
             {
-                LogPrintf("nStakeReward = %d , CoinAge = %d \n", nStakeReward, nCoinAge);
+                if(fDebug)
+                {
+                    LogPrintf("nStakeReward = %d , CoinAge = %d \n", nStakeReward, nCoinAge);
+                }
                 return state.DoS(100, false, REJECT_INVALID, "bad-txns-stake-reward-too-high", false, strprintf("ConnectInputs() : %s stake reward exceeded", tx.GetHash().ToString().substr(0,10).c_str()));
-
             }
-            LogPrintf("END: nStakeReward = %d , CoinAge = %d \n", nStakeReward, nCoinAge);
         }
     return true;
 }
