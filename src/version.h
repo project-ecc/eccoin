@@ -1,36 +1,16 @@
-// Copyright (c) 2012 The Bitcoin developers
-// Distributed under the MIT/X11 software license, see the accompanying
+// Copyright (c) 2012-2014 The Bitcoin Core developers
+// Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #ifndef BITCOIN_VERSION_H
 #define BITCOIN_VERSION_H
 
-#include "clientversion.h"
-#include <string>
+/**
+ * network protocol versioning
+ */
 
-//
-// client versioning
-//
 
-static const int CLIENT_VERSION =
-                           1000000 * CLIENT_VERSION_MAJOR
-                         +   10000 * CLIENT_VERSION_MINOR
-                         +     100 * CLIENT_VERSION_REVISION
-                         +       1 * CLIENT_VERSION_BUILD;
-
-extern const std::string CLIENT_NAME;
-extern const std::string CLIENT_BUILD;
-extern const std::string CLIENT_DATE;
-
-//
-// database format versioning
-//
-static const int DATABASE_VERSION = 70508;
-
-//
-// network protocol versioning
-//
-
-static const int PROTOCOL_VERSION = 60033;
+static const int PROTOCOL_VERSION = 60035;
 
 // earlier versions not supported as of Feb 2012, and are disconnected
 static const int MIN_PROTO_VERSION = 60033;
@@ -38,14 +18,11 @@ static const int MIN_PROTO_VERSION = 60033;
 // "sendheaders" command and announcing blocks with headers starts with this version
 static const int SENDHEADERS_VERSION = 60035;
 
-// nTime field added to CAddress, starting with this version;
-// if possible, avoid requesting addresses nodes older than this
-static const int CADDR_TIME_VERSION = 31402;
+//! In this version, 'getheaders' was introduced.
+static const int GETHEADERS_VERSION = 60035;
 
-// BIP 0031, pong message, is enabled for all versions AFTER this one
-static const int BIP0031_VERSION = 60000;
+//! "filter*" commands are disabled without NODE_BLOOM after and including this version
+static const int NO_BLOOM_VERSION = 60034;
 
-// "mempool" command, enhanced "getdata" behavior starts with this version:
-static const int MEMPOOL_GD_VERSION = 60002;
 
-#endif
+#endif // BITCOIN_VERSION_H

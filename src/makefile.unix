@@ -11,7 +11,7 @@ ARCH:=$(system lscpu | head -n 1 | awk '{print $2}')
 
 DEFS=-DBOOST_SPIRIT_THREADSAFE
 
-DEFS += $(addprefix -I,$(CURDIR) $(CURDIR)/build $(BOOST_INCLUDE_PATH) $(BDB_INCLUDE_PATH) $(OPENSSL_INCLUDE_PATH) $(EVENT_INCLUDE_PATH))
+DEFS += $(addprefix -I,$(CURDIR) $(CURDIR)/build $(BOOST_INCLUDE_PATH) $(BDB_INCLUDE_PATH) $(OPENSSL_INCLUDE_PATH) $(EVENT_INCLUDE_PATH) $(CURDIR)/univalue)
 LIBS = $(addprefix -L,$(BOOST_LIB_PATH) $(BDB_LIB_PATH) $(OPENSSL_LIB_PATH) $(EVENT_LIB_PATH))
 
 LMODE = dynamic
@@ -30,6 +30,7 @@ LIBS += \
    -l boost_filesystem$(BOOST_LIB_SUFFIX) \
    -l boost_program_options$(BOOST_LIB_SUFFIX) \
    -l boost_thread$(BOOST_LIB_SUFFIX) \
+   -l boost_chrono$(BOOST_LIB_SUFFIX) \
    -l db_cxx$(BDB_LIB_SUFFIX) \
    -l ssl \
    -l event \
@@ -99,87 +100,142 @@ endif
 
 # CXXFLAGS can be specified on the make command line, so we use xCXXFLAGS that only
 # adds some defaults in front. Unfortunately, CXXFLAGS=... $(CXXFLAGS) does not work.
-xCXXFLAGS=-O2 $(EXT_OPTIONS) -pthread -w -Wextra -Wno-ignored-qualifiers -Wformat -Wformat-security -Wno-unused-parameter -std=c++11  -DBOOST_NO_CXX11_SCOPED_ENUMS -fpermissive\
+xCXXFLAGS=-O2 $(EXT_OPTIONS) -pthread -w -Wextra -Wno-ignored-qualifiers -Wformat -Wformat-security -Wno-unused-parameter -std=c++11  -DBOOST_NO_CXX11_SCOPED_ENUMS -fpermissive \
     $(DEBUGFLAGS) $(DEFS) $(HARDENING) $(CXXFLAGS)
 
 # LDFLAGS can be specified on the make command line, so we use xLDFLAGS that only
 # adds some defaults in front. Unfortunately, LDFLAGS=... $(LDFLAGS) does not work.
 xLDFLAGS=$(LDHARDENING) $(LDFLAGS)
 
-OBJS= \
-    build/version.o \
-    build/checkpoints.o \
-    build/network/netaddr.o \
-    build/network/addrman.o \
-    build/crypter.o \
-    build/key.o \
-    build/db.o \
-    build/init.o \
-    build/keystore.o \
-    build/miner.o \
-    build/main.o \
-    build/net.o \
-    build/network/protocol.o \
-    build/script.o \
-    build/sync.o \
-    build/util/util.o \
-    build/wallet.o \
-    build/walletdb.o \
-    build/noui.o \
-    build/kernel.o \
-    build/pbkdf2.o \
-    build/messages.o \
-    build/block.o \
-    build/global.o \
-    build/points.o \
-    build/chain.o \
-    build/blockindex.o \
-    build/crypto/hash.o \
-    build/locator.o \
-    build/transaction.o \
-    build/merkle_transaction.o \
-    build/mempool.o \
-    build/crypto/scrypt.o \
-    build/network/netutils.o \
-    build/network/node.o \
-    build/network/proxyutils.o \
-    build/network/requests.o \
-    build/network/service.o \
-    build/network/socketutils.o \
-    build/util/utilexceptions.o \
-    build/util/utilmoneystr.o \
-    build/util/utilstrencodings.o \
-    build/util/utiltime.o \
-    build/random.o \
-    build/rpc/bitcoinrpc.o \
-    build/rpc/rpcblockchain.o \
-    build/rpc/rpcdump.o \
-    build/rpc/rpcmining.o \
-    build/rpc/rpcnet.o \
-    build/rpc/rpcrawtransaction.o \
-    build/rpc/rpcwallet.o \
-    build/network/subnet.o \
-    build/disk.o \
-    build/fs.o \
-    build/daemon.o
+#add project specific libraries
+LIBS += $(CURDIR)/leveldb/out-static/libleveldb.a $(CURDIR)/leveldb/out-static/libmemenv.a
+LIBS += $(CURDIR)/secp256k1/.libs/libsecp256k1.a
 
-all: ECCoind
-
-LIBS += $(CURDIR)/leveldb/libleveldb.a $(CURDIR)/leveldb/libmemenv.a
+#add project specific dependencies 
 DEFS += $(addprefix -I,$(CURDIR)/leveldb/include)
 DEFS += $(addprefix -I,$(CURDIR)/leveldb/helpers)
-OBJS += build/txdb-leveldb.o
-leveldb/libleveldb.a:
-	@echo "Building LevelDB ..."; cd leveldb; make libleveldb.a libmemenv.a; cd ..;
-build/txdb-leveldb.o: leveldb/libleveldb.a
+DEFS += $(addprefix -I,$(CURDIR)/secp256k1/include)
+
+
+OBJS= \
+    build/txdb.o \
+    build/key.o \
+    build/addrman.o \
+    build/amount.o \
+    build/arith_uint256.o \
+    build/base58.o \
+    build/blockindex.o \
+    build/bloom.o \
+    build/chain.o \
+    build/chainparams.o \
+    build/chainparamsbase.o \
+    build/checkpoints.o \
+    build/clientversion.o \
+    build/coins.o \
+    build/compressor.o \
+    build/core_read.o \
+    build/core_write.o \
+    build/dbwrapper.o \
+    build/hash.o \
+    build/keystore.o \
+    build/main.o \
+    build/merkleblock.o \
+    build/messages.o \
+    build/miner.o \
+    build/net.o \
+    build/netbase.o \
+    build/noui.o \
+    build/pow.o \
+    build/processblock.o \
+    build/processheader.o \
+    build/protocol.o \
+    build/pubkey.o \
+    build/random.o \
+    build/scheduler.o \
+    build/sync.o \
+    build/timedata.o \
+    build/torcontrol.o \
+    build/txmempool.o \
+    build/uint256.o \
+    build/util.o \
+    build/utilmoneystr.o \
+    build/utilstrencodings.o \
+    build/utiltime.o \
+    build/validationinterface.o \
+    build/versionbits.o \
+    build/wallet/crypter.o \
+    build/wallet/db.o \
+    build/wallet/wallet.o \
+    build/wallet/wallet_ismine.o \
+    build/wallet/walletdb.o \
+    build/support/cleanse.o \
+    build/support/pagelocker.o \
+    build/script/bitcoinconsensus.o \
+    build/script/interpreter.o \
+    build/script/script.o \
+    build/script/script_error.o \
+    build/script/sigcache.o \
+    build/script/sign.o \
+    build/script/standard.o \
+    build/primitives/block.o \
+    build/primitives/transaction.o \
+    build/policy/fees.o \
+    build/policy/policy.o \
+    build/policy/rbf.o \
+    build/crypto/hmac_sha256.o \
+    build/crypto/hmac_sha512.o \
+    build/crypto/ripemd160.o \
+    build/crypto/sha1.o \
+    build/crypto/sha256.o \
+    build/crypto/sha512.o \
+    build/consensus/merkle.o \
+    build/compat/glibc_compat.o \
+    build/compat/glibc_sanity.o \
+    build/compat/glibcxx_sanity.o \
+    build/compat/strnlen.o \
+    build/init.o \
+    build/bitcoind.o \
+    build/crypto/scrypt.o \
+    build/kernel.o \
+    build/httprpc.o \
+    build/httpserver.o \
+    build/rest.o \
+    build/rpcblockchain.o \
+    build/rpcclient.o \
+    build/rpcdump.o \
+    build/rpcmining.o \
+    build/rpcmisc.o \
+    build/rpcnet.o \
+    build/rpcprotocol.o \
+    build/rpcrawtransaction.o \
+    build/rpcserver.o \
+    build/rpcwallet.o \
+    build/univalue/univalue.o \
+    build/univalue/univalue_read.o \
+    build/univalue/univalue_write.o \
+    build/pbkdf2.o \
+    build/script/stakescript.o
+
+all: leveldb secp256k1 ECCoind 
+
+leveldb_make:
+	cd leveldb; make; cd ..; 
+leveldb: leveldb_make
+
+secp256k1_make: 
+	cd secp256k1; ./autogen.sh; ./configure --prefix=$(CURDIR)/libsecp256k1 --enable-module-recovery --with-bignum=no; make; make install; cd ..;
+secp256k1: secp256k1_make
+
+
 
 # auto-generated dependencies:
 -include build/*.P
 
 build/build.h: FORCE
 	/bin/sh ../share/genbuild.sh build/build.h
-version.cpp: build/build.h
+clientversion.cpp: build/build.h
 DEFS += -DHAVE_BUILD_INFO
+
 
 build/%.o: %.c
 	$(CXX) -c $(xCXXFLAGS) -fpermissive -MMD -MF $(@:%.o=%.d) -o $@ $<
@@ -207,21 +263,27 @@ ECCoind: $(OBJS:build/%=build/%)
 clean:
 	-rm -f ECCoind
 	-rm -f build/*.o
-	-rm -f build/zerocoin/*.o
 	-rm -f build/*.P
-	-rm -f build/zerocoin/*.P
 	-rm -f build/build.h
-	-rm -f build/network/*.o
-	-rm -f build/network/*.P
-	-rm -f build/util/*.o
-	-rm -f build/util/*.P
-	-rm -f build/rpc/*.o
-	-rm -f build/rpc/*.P
+	-rm -f build/compat/*.o
+	-rm -f build/compat/*.P
+	-rm -f build/consensus/*.o
+	-rm -f build/consensus/*.P
 	-rm -f build/crypto/*.o
 	-rm -f build/crypto/*.P
+	-rm -f build/policy/*.o
+	-rm -f build/policy/*.P
+	-rm -f build/primitives/*.o
+	-rm -f build/primitives/*.P
+	-rm -f build/script/*.o
+	-rm -f build/script/*.P
+	-rm -f build/support/*.o
+	-rm -f build/support/*.P
 	-rm -f build/univalue/*.o
 	-rm -f build/univalue/*.P
-
+	-rm -f build/wallet/*.o
+	-rm -f build/wallet/*.P
+	cd leveldb && make clean
 
 
 

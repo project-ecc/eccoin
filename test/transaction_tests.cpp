@@ -24,7 +24,7 @@ BOOST_AUTO_TEST_CASE(tx_valid)
     // ... where all scripts are stringified scripts.
     Array tests = read_json("tx_valid.json");
 
-    BOOST_FOREACH(Value& tv, tests)
+    for (auto& tv: tests)
     {
         Array test = tv.get_array();
         string strTest = write_string(tv, false);
@@ -39,7 +39,7 @@ BOOST_AUTO_TEST_CASE(tx_valid)
             map<COutPoint, CScript> mapprevOutScriptPubKeys;
             Array inputs = test[0].get_array();
             bool fValid = true;
-            BOOST_FOREACH(Value& input, inputs)
+            for (auto& input: inputs)
             {
                 if (input.type() != array_type)
                 {
@@ -91,7 +91,7 @@ BOOST_AUTO_TEST_CASE(tx_invalid)
     // ... where all scripts are stringified scripts.
     Array tests = read_json("tx_invalid.json");
 
-    BOOST_FOREACH(Value& tv, tests)
+    for (auto& tv: tests)
     {
         Array test = tv.get_array();
         string strTest = write_string(tv, false);
@@ -106,7 +106,7 @@ BOOST_AUTO_TEST_CASE(tx_invalid)
             map<COutPoint, CScript> mapprevOutScriptPubKeys;
             Array inputs = test[0].get_array();
             bool fValid = true;
-            BOOST_FOREACH(Value& input, inputs)
+            for (auto& input: inputs)
             {
                 if (input.type() != array_type)
                 {

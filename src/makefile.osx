@@ -63,63 +63,98 @@ CFLAGS += -Wall -Wextra -Wformat -Wno-ignored-qualifiers -Wformat-security -Wno-
     $(DEBUGFLAGS) $(DEFS) $(INCLUDEPATHS)
 
 OBJS= \
-    build/version.o \
-    build/checkpoints.o \
-    build/network/netaddr.o \
-    build/network/addrman.o \
-    build/crypter.o \
+    build/txdb.o \
     build/key.o \
-    build/db.o \
-    build/init.o \
-    build/keystore.o \
-    build/miner.o \
-    build/main.o \
-    build/net.o \
-    build/network/protocol.o \
-    build/script.o \
-    build/sync.o \
-    build/util/util.o \
-    build/wallet.o \
-    build/walletdb.o \
-    build/noui.o \
-    build/kernel.o \
-    build/pbkdf2.o \
-    build/messages.o \
-    build/block.o \
-    build/global.o \
-    build/points.o \
+    build/addrman.o \
+    build/amount.o \
+    build/arith_uint256.o \
+    build/base58.o \
+    build/bloom.o \
     build/chain.o \
-    build/blockindex.o \
-    build/crypto/hash.o \
-    build/locator.o \
-    build/transaction.o \
-    build/merkle_transaction.o \
-    build/mempool.o \
-    build/crypto/scrypt.o \
-    build/network/netutils.o \
-    build/network/node.o \
-    build/network/proxyutils.o \
-    build/network/requests.o \
-    build/network/service.o \
-    build/network/socketutils.o \
-    build/util/utilexceptions.o \
-    build/util/utilmoneystr.o \
-    build/util/utilstrencodings.o \
-    build/util/utiltime.o \
+    build/chainparams.o \
+    build/chainparamsbase.o \
+    build/checkpoints.o \
+    build/clientversion.o \
+    build/coins.o \
+    build/compressor.o \
+    build/core_read.o \
+    build/core_write.o \
+    build/dbwrapper.o \
+    build/hash.o \
+    build/keystore.o \
+    build/main.o \
+    build/merkleblock.o \
+    build/miner.o \
+    build/net.o \
+    build/netbase.o \
+    build/noui.o \
+    build/pow.o \
+    build/protocol.o \
+    build/pubkey.o \
     build/random.o \
-    build/rpc/bitcoinrpc.o \
-    build/rpc/rpcblockchain.o \
-    build/rpc/rpcdump.o \
-    build/rpc/rpcmining.o \
-    build/rpc/rpcnet.o \
-    build/rpc/rpcrawtransaction.o \
-    build/rpc/rpcwallet.o \
+    build/scheduler.o \
+    build/sync.o \
+    build/timedata.o \
+    build/torcontrol.o \
+    build/txmempool.o \
+    build/uint256.o \
+    build/util.o \
+    build/utilmoneystr.o \
+    build/utilstrencodings.o \
+    build/utiltime.o \
+    build/validationinterface.o \
+    build/versionbits.o \
+    build/wallet/crypter.o \
+    build/wallet/db.o \
+    build/wallet/wallet.o \
+    build/wallet/wallet_ismine.o \
+    build/wallet/walletdb.o \
+    build/support/cleanse.o \
+    build/support/pagelocker.o \
+    build/script/bitcoinconsensus.o \
+    build/script/interpreter.o \
+    build/script/script.o \
+    build/script/script_error.o \
+    build/script/sigcache.o \
+    build/script/sign.o \
+    build/script/standard.o \
+    build/primitives/block.o \
+    build/primitives/transaction.o \
+    build/policy/fees.o \
+    build/policy/policy.o \
+    build/policy/rbf.o \
     build/crypto/hmac_sha256.o \
+    build/crypto/hmac_sha512.o \
+    build/crypto/ripemd160.o \
+    build/crypto/sha1.o \
     build/crypto/sha256.o \
-    build/network/subnet.o \
-    build/disk.o \
-    build/fs.o \
-    build/daemon.o
+    build/crypto/sha512.o \
+    build/consensus/merkle.o \
+    build/compat/glibc_compat.o \
+    build/compat/glibc_sanity.o \
+    build/compat/glibcxx_sanity.o \
+    build/compat/strnlen.o \
+    build/init.o \
+    build/bitcoind.o \
+    build/crypto/scrypt.o \
+    build/kernel.o \
+    build/httprpc.o \
+    build/httpserver.o \
+    build/rest.o \
+    build/rpcblockchain.o \
+    build/rpcclient.o \
+    build/rpcmining.o \
+    build/rpcmisc.o \
+    build/rpcnet.o \
+    build/rpcprotocol.o \
+    build/rpcrawtransaction.o \
+    build/rpcserver.o \
+    build/univalue/univalue.o \
+    build/univalue/univalue_read.o \
+    build/univalue/univalue_write.o \
+    build/pbkdf2.o \
+    build/script/stakescript.o
+
     
 
 ifndef USE_UPNP
@@ -138,15 +173,23 @@ ifneq (${USE_IPV6}, -)
 	DEFS += -DUSE_IPV6=$(USE_IPV6)
 endif
 
-all: ECCoind
+all: leveldb secp256k1 ECCoind
 
 LIBS += $(CURDIR)/leveldb/libleveldb.a $(CURDIR)/leveldb/libmemenv.a
 DEFS += $(addprefix -I,$(CURDIR)/leveldb/include)
 DEFS += $(addprefix -I,$(CURDIR)/leveldb/helpers)
 OBJS += build/txdb-leveldb.o
-leveldb/libleveldb.a:
-	@echo "Building LevelDB ..."; cd leveldb; make; cd ..
-build/txdb-leveldb.o: leveldb/libleveldb.a
+
+leveldb_make:
+	cd leveldb; make; cd ..; 
+leveldb: leveldb_make
+
+DEFS += $(addprefix -I,$(CURDIR)/secp256k1/include)
+LIBS += $(CURDIR)/secp256k1/lib/libsecp256k1.a
+
+secp256k1_make: 
+	cd secp256k1; ./autogen.sh; ./configure --prefix=$(CURDIR)/libsecp256k1 --enable-module-recovery; make; make install; cd ..;
+secp256k1: secp256k1_make
 
 # auto-generated dependencies:
 -include build/*.P

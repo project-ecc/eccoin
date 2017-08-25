@@ -279,12 +279,17 @@ public:
     {
         unsigned int nSize = BN_bn2mpi(this, NULL);
         if (nSize < 4)
-            return 0;
+        {
+            uint256 empty;
+            empty.SetNull();
+            return empty;
+        }
         std::vector<unsigned char> vch(nSize);
         BN_bn2mpi(this, &vch[0]);
         if (vch.size() > 4)
             vch[4] &= 0x7f;
-        uint256 n = 0;
+        uint256 n;
+        n.SetNull();
         for (unsigned int i = 0, j = vch.size()-1; i < sizeof(n) && j >= 4; i++, j--)
             ((unsigned char*)&n)[i] = vch[j];
         return n;
@@ -455,7 +460,7 @@ public:
         CBigNum ret;
         if (!BN_mod_mul(&ret, this, &b, &m, pctx))
             throw bignum_error("CBigNum::mul_mod : BN_mod_mul failed");
-        
+
         return ret;
     }
 

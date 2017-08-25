@@ -1,7 +1,7 @@
-TEMPLATE = app
+fTEMPLATE = app
 TARGET = eccoin-windows-daemon
 VERSION = 0.7.2
-INCLUDEPATH += src src/json src/qt
+INCLUDEPATH += src src/univalue src/qt
 DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE
 CONFIG += no_include_pwd
 CONFIG += thread
@@ -29,11 +29,11 @@ win32{
     OPENSSL_INCLUDE_PATH=C:/deps/openssl-1.0.1l/include
     OPENSSL_LIB_PATH=C:/deps/openssl-1.0.1l
     MINIUPNPC_INCLUDE_PATH=C:/deps/
-    MINIUPNPC_LIB_PATH=C:/deps/miniupnpc
+    MINIUPNPC_LIB_PATH=C:/deps/miniupnpc/
     QRENCODE_INCLUDE_PATH=C:/deps/qrencode-3.4.4
     QRENCODE_LIB_PATH=C:/deps/qrencode-3.4.4/.libs
-    LIBEVENT_LIB_PATH=C:/deps/libevent-2.1.8/.libs
     LIBEVENT_INCLUDE_PATH=C:/deps/libevent-2.1.8/include
+    LIBEVENT_LIB_PATH=C:/deps/libevent-2.1.8/.libs
 }
 
 
@@ -96,11 +96,11 @@ contains(USE_UPNP, -) {
         USE_UPNP=1
     }
     DEFINES += DMINIUPNP_STATICLIB
-
     INCLUDEPATH += $$MINIUPNPC_INCLUDE_PATH
     LIBS += $$join(MINIUPNPC_LIB_PATH,,-L,) -lminiupnpc
     win32:LIBS += -liphlpapi
 }
+
 
 # use: qmake "USE_DBUS=1"
 contains(USE_DBUS, 1) {
@@ -127,7 +127,9 @@ contains(BITCOIN_NEED_QT_PLUGINS, 1) {
 }
 
 INCLUDEPATH += src/leveldb/include src/leveldb/helpers
-LIBS += $$PWD/src/leveldb/libleveldb.a $$PWD/src/leveldb/libmemenv.a
+LIBS += $$PWD/src/leveldb/out-static/libleveldb.a $$PWD/src/leveldb/out-static/libmemenv.a
+INCLUDEPATH += src/secp256k1/include
+LIBS += $$PWD/src/secp256k1/.libs/libsecp256k1.a
 
 !win32 {
     # we use QMAKE_CXXFLAGS_RELEASE even without RELEASE=1 because we use RELEASE to indicate linking preferences not -O preferences
@@ -176,146 +178,220 @@ QMAKE_CXXFLAGS_WARN_ON = -fdiagnostics-show-option -Wall -Wextra -Wformat -Wform
 
 
 # Input
-DEPENDPATH += src src/json
+DEPENDPATH += src
 
 HEADERS += \
-    src/network/addrman.h \
-    src/allocators.h \
+    src/addrman.h \
+    src/amount.h \
+    src/arith_uint256.h \
     src/base58.h \
-    src/bignum.h \
+    src/bloom.h \
+    src/chain.h \
+    src/chainparams.h \
+    src/chainparamsbase.h \
     src/checkpoints.h \
+    src/checkqueue.h \
     src/clientversion.h \
     src/coincontrol.h \
+    src/coins.h \
     src/compat.h \
-    src/crypter.h \
-    src/db.h \
-    src/init.h \
+    src/compressor.h \
+    src/core_io.h \
+    src/core_memusage.h \
+    src/dbwrapper.h \
+    src/hash.h \
     src/key.h \
     src/keystore.h \
+    src/limitedmap.h \
     src/main.h \
-    src/messages.h \
+    src/memusage.h \
+    src/merkleblock.h \
     src/miner.h \
-    src/mruset.h \
     src/net.h \
-    src/pbkdf2.h \
-    src/network/protocol.h \
-    src/script.h \
+    src/netbase.h \
+    src/noui.h \
+    src/pow.h \
+    src/prevector.h \
+    src/protocol.h \
+    src/pubkey.h \
+    src/random.h \
+    src/reverselock.h \
+    src/scheduler.h \
     src/serialize.h \
-    src/strlcpy.h \
+    src/streams.h \
     src/sync.h \
     src/threadsafety.h \
-    src/txdb-leveldb.h \
-    src/uint256.h \
-    src/ui_interface.h \
-    src/version.h \
-    src/wallet.h \
-    src/walletdb.h \
-    src/kernel.h \
-    src/block.h \
-    src/blockindex.h \
-    src/chain.h \
-    src/disk.h \
-    src/global.h \
-    src/locator.h \
-    src/mempool.h \
-    src/merkle_transaction.h \
-    src/points.h \
-    src/transaction.h \
-    src/batchscanner.h \
-    src/validation.h \
-    src/network/node.h \
-    src/network/nodestats.h \
-    src/network/requests.h \
-    src/network/netaddr.h \
-    src/network/service.h \
-    src/network/netutils.h \
-    src/network/proxyutils.h \
-    src/network/socketutils.h \
+    src/timedata.h \
     src/tinyformat.h \
-    src/fs.h \
-    src/util/util.h \
-    src/util/utilmoneystr.h \
-    src/util/utilstrencodings.h \
-    src/util/utiltime.h \
-    src/random.h \
-    src/util/utilexceptions.h \
-    src/amount.h \
-    src/network/subnet.h \
-    src/crypto_endian.h \
-    src/byteswap.h \
-    src/noui.h \
-    src/json/json_spirit.h \
-    src/json/json_spirit_error_position.h \
-    src/json/json_spirit_reader.h \
-    src/json/json_spirit_reader_template.h \
-    src/json/json_spirit_stream_reader.h \
-    src/json/json_spirit_utils.h \
-    src/json/json_spirit_value.h \
-    src/json/json_spirit_writer.h \
-    src/json/json_spirit_writer_template.h \
-    src/daemon.h \
-    src/crypto/hash.h \
+    src/torcontrol.h \
+    src/txdb.h \
+    src/txmempool.h \
+    src/ui_interface.h \
+    src/uint256.h \
+    src/undo.h \
+    src/util.h \
+    src/utilmoneystr.h \
+    src/utilstrencodings.h \
+    src/utiltime.h \
+    src/validationinterface.h \
+    src/version.h \
+    src/versionbits.h \
+    src/wallet/crypter.h \
+    src/wallet/db.h \
+    src/wallet/wallet.h \
+    src/wallet/wallet_ismine.h \
+    src/wallet/walletdb.h \
+    src/support/cleanse.h \
+    src/support/pagelocker.h \
+    src/support/allocators/secure.h \
+    src/support/allocators/zeroafterfree.h \
+    src/script/bitcoinconsensus.h \
+    src/script/interpreter.h \
+    src/script/script.h \
+    src/script/script_error.h \
+    src/script/sigcache.h \
+    src/script/sign.h \
+    src/script/standard.h \
+    src/primitives/block.h \
+    src/primitives/transaction.h \
+    src/policy/fees.h \
+    src/policy/policy.h \
+    src/policy/rbf.h \
+    src/crypto/common.h \
+    src/crypto/hmac_sha256.h \
+    src/crypto/hmac_sha512.h \
+    src/crypto/ripemd160.h \
+    src/crypto/sha1.h \
+    src/crypto/sha256.h \
+    src/crypto/sha512.h \
+    src/consensus/consensus.h \
+    src/consensus/merkle.h \
+    src/consensus/params.h \
+    src/consensus/validation.h \
+    src/compat/byteswap.h \
+    src/compat/crypto_endian.h \
+    src/compat/sanity.h \
+    src/init.h \
     src/crypto/scrypt.h \
-    src/rpc/bitcoinrpc.h
+    src/kernel.h \
+    src/bignum.h \
+    src/httprpc.h \
+    src/httpserver.h \
+    src/rpcclient.h \
+    src/rpcprotocol.h \
+    src/rpcserver.h \
+    src/univalue/univalue.h \
+    src/univalue/univalue_escapes.h \
+    src/pbkdf2.h \
+    src/script/stakescript.h \
+    src/messages.h \
+    src/processblock.h \
+    src/processheader.h \
+    src/blockindex.h
 
 
+# organize compiles of cpp files by section, this seems to be a logical order where the files lower down generally depend
+# on the ones higher up. also helps to observe how far into the compile process we are
 SOURCES += \
-    src/txdb-leveldb.cpp \
-    src/network/node.cpp \
-    src/network/requests.cpp \
-    src/network/netaddr.cpp \
-    src/network/service.cpp \
-    src/network/netutils.cpp \
-    src/network/proxyutils.cpp \
-    src/network/socketutils.cpp \
-    src/fs.cpp \
-    src/util/util.cpp \
-    src/util/utiltime.cpp \
-    src/util/utilstrencodings.cpp \
-    src/util/utilmoneystr.cpp \
-    src/random.cpp \
-    src/util/utilexceptions.cpp \
-    src/network/subnet.cpp \
-    src/rpc/rpcnet.cpp \
-    src/rpc/rpcwallet.cpp \
-    src/daemon.cpp \
-    src/network/addrman.cpp \
-    src/block.cpp \
-    src/blockindex.cpp \
+    src/addrman.cpp \
+    src/amount.cpp \
+    src/arith_uint256.cpp \
+    src/base58.cpp \
+    src/bloom.cpp \
     src/chain.cpp \
+    src/chainparams.cpp \
+    src/chainparamsbase.cpp \
     src/checkpoints.cpp \
-    src/crypter.cpp \
-    src/db.cpp \
-    src/disk.cpp \
-    src/global.cpp \
-    src/init.cpp \
-    src/kernel.cpp \
+    src/clientversion.cpp \
+    src/coins.cpp \
+    src/compressor.cpp \
+    src/core_read.cpp \
+    src/core_write.cpp \
+    src/dbwrapper.cpp \
+    src/hash.cpp \
     src/key.cpp \
     src/keystore.cpp \
-    src/locator.cpp \
     src/main.cpp \
-    src/mempool.cpp \
-    src/merkle_transaction.cpp \
-    src/messages.cpp \
+    src/merkleblock.cpp \
     src/miner.cpp \
     src/net.cpp \
+    src/netbase.cpp \
     src/noui.cpp \
-    src/pbkdf2.cpp \
-    src/points.cpp \
-    src/network/protocol.cpp \
-    src/script.cpp \
+    src/pow.cpp \
+    src/protocol.cpp \
+    src/pubkey.cpp \
+    src/random.cpp \
+    src/scheduler.cpp \
     src/sync.cpp \
-    src/transaction.cpp \
-    src/version.cpp \
-    src/walletdb.cpp \
-    src/wallet.cpp \
-    src/crypto/hash.cpp \
+    src/timedata.cpp \
+    src/torcontrol.cpp \
+    src/txdb.cpp \
+    src/txmempool.cpp \
+    src/uint256.cpp \
+    src/util.cpp \
+    src/utilmoneystr.cpp \
+    src/utilstrencodings.cpp \
+    src/utiltime.cpp \
+    src/validationinterface.cpp \
+    src/versionbits.cpp \
+    src/wallet/crypter.cpp \
+    src/wallet/db.cpp \
+    src/wallet/wallet.cpp \
+    src/wallet/wallet_ismine.cpp \
+    src/wallet/walletdb.cpp \
+    src/support/cleanse.cpp \
+    src/support/pagelocker.cpp \
+    src/script/bitcoinconsensus.cpp \
+    src/script/interpreter.cpp \
+    src/script/script.cpp \
+    src/script/script_error.cpp \
+    src/script/sigcache.cpp \
+    src/script/sign.cpp \
+    src/script/standard.cpp \
+    src/primitives/block.cpp \
+    src/primitives/transaction.cpp \
+    src/policy/fees.cpp \
+    src/policy/policy.cpp \
+    src/policy/rbf.cpp \
+    src/crypto/hmac_sha256.cpp \
+    src/crypto/hmac_sha512.cpp \
+    src/crypto/ripemd160.cpp \
+    src/crypto/sha1.cpp \
+    src/crypto/sha256.cpp \
+    src/crypto/sha512.cpp \
+    src/consensus/merkle.cpp \
+    src/compat/glibc_compat.cpp \
+    src/compat/glibc_sanity.cpp \
+    src/compat/glibcxx_sanity.cpp \
+    src/compat/strnlen.cpp \
+    src/init.cpp \
+    src/bitcoind.cpp \
     src/crypto/scrypt.cpp \
-    src/rpc/bitcoinrpc.cpp \
-    src/rpc/rpcblockchain.cpp \
-    src/rpc/rpcdump.cpp \
-    src/rpc/rpcmining.cpp \
-    src/rpc/rpcrawtransaction.cpp
+    src/kernel.cpp \
+    src/httprpc.cpp \
+    src/httpserver.cpp \
+    src/rest.cpp \
+    src/rpcblockchain.cpp \
+    src/rpcclient.cpp \
+    src/rpcmining.cpp \
+    src/rpcmisc.cpp \
+    src/rpcnet.cpp \
+    src/rpcprotocol.cpp \
+    src/rpcrawtransaction.cpp \
+    src/rpcserver.cpp \
+    src/univalue/univalue.cpp \
+    src/univalue/univalue_read.cpp \
+    src/univalue/univalue_write.cpp \
+    src/pbkdf2.cpp \
+    src/script/stakescript.cpp \
+    src/rpcdump.cpp \
+    src/rpcwallet.cpp \
+    src/messages.cpp \
+    src/processblock.cpp \
+    src/processheader.cpp \
+    src/blockindex.cpp
+
+
 
 
 CODECFORTR = UTF-8
@@ -383,7 +459,7 @@ windows:!contains(MINGW_THREAD_BUGFIX, 0) {
 
 macx:LIBS += -framework Foundation -framework ApplicationServices -framework AppKit
 macx:DEFINES += MAC_OSX MSG_NOSIGNAL=0
-macx:TARGET = "Eccoind"
+macx:TARGET = "ECCoind"
 macx:QMAKE_CFLAGS_THREAD += -pthread
 macx:QMAKE_LFLAGS_THREAD += -pthread
 macx:QMAKE_CXXFLAGS_THREAD += -pthread
@@ -402,6 +478,7 @@ macx:LIBS += -lboost_chrono$$BOOST_LIB_SUFFIX
 }
 
 
+
 contains(RELEASE, 1) {
     !windows:!macx {
         # Linux: turn dynamic linking back on for c/c++ runtime libraries
@@ -410,4 +487,6 @@ contains(RELEASE, 1) {
 }
 
 system($$QMAKE_LRELEASE -silent $$_PRO_FILE_)
+
+DISTFILES +=
 

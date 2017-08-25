@@ -1,22 +1,21 @@
 // Copyright (c) 2010 Satoshi Nakamoto
-// Copyright (c) 2012 The Bitcoin developers
-// Distributed under the MIT/X11 software license, see the accompanying
+// Copyright (c) 2012-2015 The Bitcoin Core developers
+// Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #ifndef BITCOIN_UI_INTERFACE_H
 #define BITCOIN_UI_INTERFACE_H
 
-#include <boost/signals2/last_value.hpp>
-#include <boost/signals2/signal.hpp>
-
+#include <stdint.h>
 #include <string>
 
-#include <stdint.h>
-#include "blockindex.h"
+#include <boost/signals2/last_value.hpp>
+#include <boost/signals2/signal.hpp>
 
 class CBasicKeyStore;
 class CWallet;
 class uint256;
+class CBlockIndex;
 
 /** General change type (added, updated, removed). */
 enum ChangeType
@@ -75,14 +74,33 @@ public:
     };
 
     /** Show message box. */
-    boost::signals2::signal<void (const std::string& message, const std::string& caption, int style)> ThreadSafeMessageBox;
+    boost::signals2::signal<bool (const std::string& message, const std::string& caption, unsigned int style), boost::signals2::last_value<bool> > ThreadSafeMessageBox;
 
-    /** If possible, ask the user a question. If not, falls back to ThreadSafeMessageBox(noninteractive_message, caption, style) and returns false. */
-    boost::signals2::signal<bool (const std::string& message, const std::string& noninteractive_message, const std::string& caption, unsigned int style), boost::signals2::last_value<bool> > ThreadSafeQuestion;
+    /** Progress message during initialization. */
+    boost::signals2::signal<void (const std::string &message)> InitMessage;
 
+    /** Number of network connections changed. */
+    boost::signals2::signal<void (int newNumConnections)> NotifyNumConnectionsChanged;
 
+    /**
+     * New, updated or cancelled alert.
+     * @note called with lock cs_mapAlerts held.
+     */
+    boost::signals2::signal<void (const uint256 &hash, ChangeType status)> NotifyAlertChanged;
+
+    /** A wallet has been loaded. */
+    boost::signals2::signal<void (CWallet* wallet)> LoadWallet;
+
+    /** Show progress e.g. for verifychain */
+    boost::signals2::signal<void (const std::string &title, int nProgress)> ShowProgress;
+
+    /** New block has been accepted */
+    boost::signals2::signal<void (bool, const CBlockIndex *)> NotifyBlockTip;
+
+    /** Banlist did change. */
+    boost::signals2::signal<void (void)> BannedListChanged;
 };
 
 extern CClientUIInterface uiInterface;
 
-#endif
+#endif // BITCOIN_UI_INTERFACE_H
