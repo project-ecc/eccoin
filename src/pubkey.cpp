@@ -181,9 +181,13 @@ bool CPubKey::Verify(const uint256 &hash, const std::vector<unsigned char>& vchS
         return false;
     CECKey key;
     if (!key.SetPubKey(*this))
+    {
         return false;
+    }
     if (!key.Verify(hash, vchSig))
+    {
         return false;
+    }
     return true;
 }
 
