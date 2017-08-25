@@ -71,7 +71,6 @@ CConditionVariable cvBlockChange;
 int nScriptCheckThreads = 0;
 bool fImporting = false;
 bool fReindex = false;
-bool fTxIndex = false;
 bool fIsBareMultisigStd = DEFAULT_PERMIT_BAREMULTISIG;
 bool fRequireStandard = true;
 unsigned int nBytesPerSigOp = DEFAULT_BYTES_PER_SIGOP;
@@ -1065,25 +1064,23 @@ bool GetTransaction(const uint256 &hash, CTransaction &txOut, const Consensus::P
         return true;
     }
 
-    if (fTxIndex) {
-        CDiskTxPos postx;
-        if (pblocktree->ReadTxIndex(hash, postx)) {
-            CAutoFile file(OpenBlockFile(postx, true), SER_DISK, CLIENT_VERSION);
-            if (file.IsNull())
-                return error("%s: OpenBlockFile failed", __func__);
-            CBlockHeader header;
-            try {
-                file >> header;
-                fseek(file.Get(), postx.nTxOffset, SEEK_CUR);
-                file >> txOut;
-            } catch (const std::exception& e) {
-                return error("%s: Deserialize or I/O error - %s", __func__, e.what());
-            }
-            hashBlock = header.GetHash();
-            if (txOut.GetHash() != hash)
-                return error("%s: txid mismatch", __func__);
-            return true;
+    CDiskTxPos postx;
+    if (pblocktree->ReadTxIndex(hash, postx)) {
+        CAutoFile file(OpenBlockFile(postx, true), SER_DISK, CLIENT_VERSION);
+        if (file.IsNull())
+            return error("%s: OpenBlockFile failed", __func__);
+        CBlockHeader header;
+        try {
+            file >> header;
+            fseek(file.Get(), postx.nTxOffset, SEEK_CUR);
+            file >> txOut;
+        } catch (const std::exception& e) {
+            return error("%s: Deserialize or I/O error - %s", __func__, e.what());
         }
+        hashBlock = header.GetHash();
+        if (txOut.GetHash() != hash)
+            return error("%s: txid mismatch", __func__);
+        return true;
     }
 
     if (fAllowSlow) { // use coin database to locate block that contains transaction, and scan it
@@ -1318,17 +1315,36 @@ bool CheckTxInputs(const CTransaction& tx, CValidationState& state, const CCoins
 
         }
 
-        if (nValueIn < tx.GetValueOut())
-            return state.DoS(100, false, REJECT_INVALID, "bad-txns-in-belowout", false,
-                strprintf("value in (%s) < value out (%s)", FormatMoney(nValueIn), FormatMoney(tx.GetValueOut())));
+        if(!tx.IsCoinStake())
+        {
+            if (nValueIn < tx.GetValueOut())
+                return state.DoS(100, false, REJECT_INVALID, "bad-txns-in-belowout", false,
+                    strprintf("value in (%s) < value out (%s)", FormatMoney(nValueIn), FormatMoney(tx.GetValueOut())));
+            // Tally transaction fees
+            CAmount nTxFee = nValueIn - tx.GetValueOut();
+            if (nTxFee < 0)
+                return state.DoS(100, false, REJECT_INVALID, "bad-txns-fee-negative");
+            nFees += nTxFee;
+            if (!MoneyRange(nFees))
+                return state.DoS(100, false, REJECT_INVALID, "bad-txns-fee-outofrange");
+        }
+        else
+        {
+            // ppcoin: coin stake tx earns reward instead of paying fee
+            uint64_t nCoinAge;
+            if (!tx.GetCoinAge(nCoinAge))
+                return state.DoS(100, false, REJECT_INVALID, "bad-txns-cant-get-coin-age", false , strprintf("ConnectInputs() : %s unable to get coin age for coinstake", tx.GetHash().ToString().substr(0,10).c_str()));
 
-        // Tally transaction fees
-        CAmount nTxFee = nValueIn - tx.GetValueOut();
-        if (nTxFee < 0)
-            return state.DoS(100, false, REJECT_INVALID, "bad-txns-fee-negative");
-        nFees += nTxFee;
-        if (!MoneyRange(nFees))
-            return state.DoS(100, false, REJECT_INVALID, "bad-txns-fee-outofrange");
+            int64_t nStakeReward = tx.GetValueOut() - nValueIn;
+            if (nStakeReward > GetProofOfStakeReward(tx.GetCoinAge(nCoinAge, true), nSpendHeight) - tx.GetMinFee() + MIN_TX_FEE(tx.nTime))
+            {
+                if(fDebug)
+                {
+                    LogPrintf("nStakeReward = %d , CoinAge = %d \n", nStakeReward, nCoinAge);
+                }
+                return state.DoS(100, false, REJECT_INVALID, "bad-txns-stake-reward-too-high", false, strprintf("ConnectInputs() : %s stake reward exceeded", tx.GetHash().ToString().substr(0,10).c_str()));
+            }
+        }
     return true;
 }
 }// namespace Consensus
@@ -1691,6 +1707,13 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 
     int64_t nTimeStart = GetTimeMicros();
 
+    if(pindex->GetBlockHash() != chainparams.GetConsensus().hashGenesisBlock)
+    {
+        /// once updateForPos runs the only flags that should be enabled are the ones that determine if PoS block or not
+        /// before this runs there should have been no flags set. so it is ok to reset the flags to 0
+        pindex->updateForPos(block);
+    }
+
     // Check it again in case a previous version let a bad block in
     if (!CheckBlock(block, state, !fJustCheck, !fJustCheck))
         return false;
@@ -1874,45 +1897,6 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     int64_t nTime4 = GetTimeMicros(); nTimeVerify += nTime4 - nTime2;
     LogPrint("bench", "    - Verify %u txins: %.2fms (%.3fms/txin) [%.2fs]\n", nInputs - 1, 0.001 * (nTime4 - nTime2), nInputs <= 1 ? 0 : 0.001 * (nTime4 - nTime2) / (nInputs-1), nTimeVerify * 0.000001);
 
-    if (fJustCheck)
-        return true;
-
-    // Write undo information to disk
-    if (pindex->GetUndoPos().IsNull() || !pindex->IsValid(BLOCK_VALID_SCRIPTS))
-    {
-        if (pindex->GetUndoPos().IsNull()) {
-            CDiskBlockPos pos;
-            if (!FindUndoPos(state, pindex->nFile, pos, ::GetSerializeSize(blockundo, SER_DISK, CLIENT_VERSION) + 40))
-                return error("ConnectBlock(): FindUndoPos failed");
-            if (!UndoWriteToDisk(blockundo, pos, pindex->pprev->GetBlockHash(), chainparams.MessageStart()))
-                return AbortNode(state, "Failed to write undo data");
-
-            // update nUndoPos in block index
-            pindex->nUndoPos = pos.nPos;
-            pindex->nStatus |= BLOCK_HAVE_UNDO;
-        }
-
-        pindex->RaiseValidity(BLOCK_VALID_SCRIPTS);
-        setDirtyBlockIndex.insert(pindex);
-    }
-
-    if (fTxIndex)
-        if (!pblocktree->WriteTxIndex(vPos))
-            return AbortNode(state, "Failed to write transaction index");
-
-    // add this block to the view's block chain
-    view.SetBestBlock(pindex->GetBlockHash());
-
-    int64_t nTime5 = GetTimeMicros(); nTimeIndex += nTime5 - nTime4;
-    LogPrint("bench", "    - Index writing: %.2fms [%.2fs]\n", 0.001 * (nTime5 - nTime4), nTimeIndex * 0.000001);
-
-    // Watch for changes to the previous coinbase transaction.
-    static uint256 hashPrevBestCoinBase;
-    GetMainSignals().UpdatedTransaction(hashPrevBestCoinBase);
-    hashPrevBestCoinBase = block.vtx[0].GetHash();
-
-    int64_t nTime6 = GetTimeMicros(); nTimeCallbacks += nTime6 - nTime5;
-    LogPrint("bench", "    - Callbacks: %.2fms [%.2fs]\n", 0.001 * (nTime6 - nTime5), nTimeCallbacks * 0.000001);
 
     // ppcoin: track money supply and mint amount info
     pindex->nMint = nValueOut - nValueIn + nFees;
@@ -1942,15 +1926,55 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     uint64_t nStakeModifier = 0;
     bool fGeneratedStakeModifier = false;
     if (!ComputeNextStakeModifier(pindex->pprev, nStakeModifier, fGeneratedStakeModifier))
-        return error("AddToBlockIndex() : ComputeNextStakeModifier() failed");
+        return error("ConnectBlock() : ComputeNextStakeModifier() failed");
     pindex->SetStakeModifier(nStakeModifier, fGeneratedStakeModifier);
     pindex->nStakeModifierChecksum = GetStakeModifierChecksum(pindex);
     if (!CheckStakeModifierCheckpoints(pindex->nHeight, pindex))
-        return error("AddToBlockIndex() : Rejected by stake modifier checkpoint height=%d, checksum=%08x, correct checksum=%08x,"
+        return error("ConnectBlock() : Rejected by stake modifier checkpoint height=%d, checksum=%08x, correct checksum=%08x,"
                      " nflags = %i, modifier=0x%016x  hashproofofstake = %s",
                      pindex->nHeight, pindex->nStakeModifierChecksum, mapStakeModifierCheckpoints[pindex->nHeight],
                      pindex->nFile, pindex->nStakeModifier, pindex->hashProofOfStake.ToString().c_str());
 
+    if (fJustCheck)
+        return true;
+
+    // Write undo information to disk
+    if (pindex->GetUndoPos().IsNull() || !pindex->IsValid(BLOCK_VALID_SCRIPTS))
+    {
+        if (pindex->GetUndoPos().IsNull()) {
+            CDiskBlockPos pos;
+            if (!FindUndoPos(state, pindex->nFile, pos, ::GetSerializeSize(blockundo, SER_DISK, CLIENT_VERSION) + 40))
+                return error("ConnectBlock(): FindUndoPos failed");
+            if (!UndoWriteToDisk(blockundo, pos, pindex->pprev->GetBlockHash(), chainparams.MessageStart()))
+                return AbortNode(state, "Failed to write undo data");
+
+            // update nUndoPos in block index
+            pindex->nUndoPos = pos.nPos;
+            pindex->nStatus |= BLOCK_HAVE_UNDO;
+        }
+
+        pindex->RaiseValidity(BLOCK_VALID_SCRIPTS);
+        setDirtyBlockIndex.insert(pindex);
+    }
+
+    if (!pblocktree->WriteTxIndex(vPos))
+    {
+        return AbortNode(state, "Failed to write transaction index");
+    }
+
+    // add this block to the view's block chain
+    view.SetBestBlock(pindex->GetBlockHash());
+
+    int64_t nTime5 = GetTimeMicros(); nTimeIndex += nTime5 - nTime4;
+    LogPrint("bench", "    - Index writing: %.2fms [%.2fs]\n", 0.001 * (nTime5 - nTime4), nTimeIndex * 0.000001);
+
+    // Watch for changes to the previous coinbase transaction.
+    static uint256 hashPrevBestCoinBase;
+    GetMainSignals().UpdatedTransaction(hashPrevBestCoinBase);
+    hashPrevBestCoinBase = block.vtx[0].GetHash();
+
+    int64_t nTime6 = GetTimeMicros(); nTimeCallbacks += nTime6 - nTime5;
+    LogPrint("bench", "    - Callbacks: %.2fms [%.2fs]\n", 0.001 * (nTime6 - nTime5), nTimeCallbacks * 0.000001);
 
     return true;
 }
@@ -2713,10 +2737,6 @@ bool static LoadBlockIndexDB()
     pblocktree->ReadReindexing(fReindexing);
     fReindex |= fReindexing;
 
-    // Check whether we have a transaction index
-    pblocktree->ReadFlag("txindex", fTxIndex);
-    LogPrintf("%s: transaction index %s\n", __func__, fTxIndex ? "enabled" : "disabled");
-
     // Load pointer to end of best chain
     BlockMap::iterator it = mapBlockIndex.find(pcoinsTip->GetBestBlock());
     if (it == mapBlockIndex.end())
@@ -2874,8 +2894,7 @@ bool InitBlockIndex(const CChainParams& chainparams)
         return true;
 
     // Use the provided setting for -txindex in the new database
-    fTxIndex = gArgs.GetBoolArg("-txindex", DEFAULT_TXINDEX);
-    pblocktree->WriteFlag("txindex", fTxIndex);
+    pblocktree->WriteFlag("txindex", true);
     LogPrintf("Initializing databases...\n");
 
     // Only add the genesis block if not reindexing (in which case we reuse the one already on disk)
@@ -2887,21 +2906,21 @@ bool InitBlockIndex(const CChainParams& chainparams)
             CDiskBlockPos blockPos;
             CValidationState state;
             if (!FindBlockPos(state, blockPos, nBlockSize+8, 0, block.GetBlockTime()))
-                return error("LoadBlockIndex(): FindBlockPos failed");
+                return error("InitBlockIndex(): FindBlockPos failed");
             if (!WriteBlockToDisk(block, blockPos, chainparams.MessageStart()))
-                return error("LoadBlockIndex(): writing genesis block to disk failed");
+                return error("InitBlockIndex(): writing genesis block to disk failed");
             CBlockIndex *pindex = AddToBlockIndex(block);
 
             // ppcoin: compute stake entropy bit for stake modifier
             if (!pindex->SetStakeEntropyBit(block.GetStakeEntropyBit()))
             {
-                return error("AddToBlockIndex() : SetStakeEntropyBit() failed");
+                return error("InitBlockIndex() : SetStakeEntropyBit() failed");
             }
             // ppcoin: compute stake modifier
             uint64_t nStakeModifier = 0;
             bool fGeneratedStakeModifier = false;
             if (!ComputeNextStakeModifier(pindex->pprev, nStakeModifier, fGeneratedStakeModifier))
-                return error("AddToBlockIndex() : ComputeNextStakeModifier() failed");
+                return error("InitBlockIndex() : ComputeNextStakeModifier() failed");
             pindex->SetStakeModifier(nStakeModifier, fGeneratedStakeModifier);
             pindex->nStakeModifierChecksum = GetStakeModifierChecksum(pindex);
             if (!CheckStakeModifierCheckpoints(pindex->nHeight, pindex))
@@ -2910,13 +2929,13 @@ bool InitBlockIndex(const CChainParams& chainparams)
                              pindex->nHeight, pindex->nStakeModifierChecksum, mapStakeModifierCheckpoints[pindex->nHeight],
                              pindex->nFlags, pindex->nStakeModifier, pindex->hashProofOfStake.ToString().c_str());
             if (!ReceivedBlockTransactions(block, state, pindex, blockPos))
-                return error("LoadBlockIndex(): genesis block not accepted");
+                return error("InitBlockIndex(): genesis block not accepted");
             if (!ActivateBestChain(state, chainparams, &block))
-                return error("LoadBlockIndex(): genesis block cannot be activated");
+                return error("InitBlockIndex(): genesis block cannot be activated");
             // Force a chainstate write so that when we VerifyDB in a moment, it doesn't check stale data
             return FlushStateToDisk(state, FLUSH_STATE_ALWAYS);
         } catch (const std::runtime_error& e) {
-            return error("LoadBlockIndex(): failed to initialize block database: %s", e.what());
+            return error("InitBlockIndex(): failed to initialize block database: %s", e.what());
         }
     }
 

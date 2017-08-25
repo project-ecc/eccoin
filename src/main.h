@@ -111,7 +111,7 @@ static const bool DEFAULT_RELAYPRIORITY = true;
 static const bool DEFAULT_PERMIT_BAREMULTISIG = true;
 static const unsigned int DEFAULT_BYTES_PER_SIGOP = 20;
 static const bool DEFAULT_CHECKPOINTS_ENABLED = true;
-static const bool DEFAULT_TXINDEX = false;
+static const bool DEFAULT_TXINDEX = true;
 static const unsigned int DEFAULT_BANSCORE_THRESHOLD = 100;
 
 static const bool DEFAULT_TESTSAFEMODE = false;
@@ -141,7 +141,6 @@ extern CConditionVariable cvBlockChange;
 extern bool fImporting;
 extern bool fReindex;
 extern int nScriptCheckThreads;
-extern bool fTxIndex;
 extern bool fIsBareMultisigStd;
 extern bool fRequireStandard;
 extern unsigned int nBytesPerSigOp;

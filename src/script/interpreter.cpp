@@ -12,8 +12,10 @@
 #include "pubkey.h"
 #include "script/script.h"
 #include "uint256.h"
+#include "util.h"
+#include "streams.h"
+#include "main.h"
 
-typedef std::vector<unsigned char> valtype;
 
 namespace {
 
@@ -33,7 +35,7 @@ inline bool set_error(ScriptError* ret, const ScriptError serror)
 
 } // anon namespace
 
-bool CastToBool(const std::vector<unsigned char> &vch)
+bool CastToBool(const valtype& vch)
 {
     for (unsigned int i = 0; i < vch.size(); i++)
     {
@@ -869,10 +871,16 @@ bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& 
                     // Drop the signature, since there's no way for a signature to sign itself
                     scriptCode.FindAndDelete(CScript(vchSig));
 
-                    if (!CheckSignatureEncoding(vchSig, flags, serror) || !CheckPubKeyEncoding(vchPubKey, flags, serror)) {
-                        //serror is set
-                        return false;
+                    /// TODO: for backwards compatability, this should be implemented in a different way but for now it will do
+                    if(chainActive.Tip()->nHeight > 1600000)
+                    {
+                        if (!CheckSignatureEncoding(vchSig, flags, serror) || !CheckPubKeyEncoding(vchPubKey, flags, serror))
+                        {
+                            //serror is set
+                            return false;
+                        }
                     }
+
                     bool fSuccess = checker.CheckSig(vchSig, vchPubKey, scriptCode);
 
                     popstack(stack);
@@ -935,11 +943,14 @@ bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& 
                         // Note how this makes the exact order of pubkey/signature evaluation
                         // distinguishable by CHECKMULTISIG NOT if the STRICTENC flag is set.
                         // See the script_(in)valid tests for details.
-                        if (!CheckSignatureEncoding(vchSig, flags, serror) || !CheckPubKeyEncoding(vchPubKey, flags, serror)) {
-                            // serror is set
-                            return false;
+                        /// TODO: for backwards compatability, this should be implemented in a different way but for now it will do
+                        if(chainActive.Tip()->nHeight > 1600000)
+                        {
+                            if (!CheckSignatureEncoding(vchSig, flags, serror) || !CheckPubKeyEncoding(vchPubKey, flags, serror)) {
+                                // serror is set
+                                return false;
+                            }
                         }
-
                         // Check signature
                         bool fOk = checker.CheckSig(vchSig, vchPubKey, scriptCode);
 
@@ -1106,27 +1117,65 @@ public:
 
 uint256 SignatureHash(const CScript& scriptCode, const CTransaction& txTo, unsigned int nIn, int nHashType)
 {
-    static const uint256 one(uint256S("0000000000000000000000000000000000000000000000000000000000000001"));
-    if (nIn >= txTo.vin.size()) {
-        //  nIn out of range
-        return one;
+    static const uint256 ret1(uint256S("0000000000000000000000000000000000000000000000000000000000000001"));
+    if (nIn >= txTo.vin.size())
+    {
+        LogPrintf("ERROR: SignatureHash() : nIn=%d out of range\n", nIn);
+        return ret1;
     }
+    CTransaction txTmp(txTo);
 
-    // Check for invalid use of SIGHASH_SINGLE
-    if ((nHashType & 0x1f) == SIGHASH_SINGLE) {
-        if (nIn >= txTo.vout.size()) {
-            //  nOut out of range
-            return one;
+    // In case concatenating two scripts ends up with two codeseparators,
+    // or an extra one at the end, this prevents all those possible incompatibilities.
+    scriptCode.FindAndDelete(CScript(OP_CODESEPARATOR));
+
+    // Blank out other inputs' signatures
+    for (unsigned int i = 0; i < txTmp.vin.size(); i++)
+        txTmp.vin[i].scriptSig = CScript();
+    txTmp.vin[nIn].scriptSig = scriptCode;
+
+    // Blank out some of the outputs
+    if ((nHashType & 0x1f) == SIGHASH_NONE)
+    {
+        // Wildcard payee
+        txTmp.vout.clear();
+
+        // Let the others update at will
+        for (unsigned int i = 0; i < txTmp.vin.size(); i++)
+            if (i != nIn)
+                txTmp.vin[i].nSequence = 0;
+    }
+    else if ((nHashType & 0x1f) == SIGHASH_SINGLE)
+    {
+        // Only lock-in the txout payee at same index as txin
+        unsigned int nOut = nIn;
+        if (nOut >= txTmp.vout.size())
+        {
+            LogPrintf("ERROR: SignatureHash() : nOut=%d out of range\n", nOut);
+            return ret1;
         }
+        txTmp.vout.resize(nOut+1);
+        for (unsigned int i = 0; i < nOut; i++)
+            txTmp.vout[i].SetNull();
+
+        // Let the others update at will
+        for (unsigned int i = 0; i < txTmp.vin.size(); i++)
+            if (i != nIn)
+                txTmp.vin[i].nSequence = 0;
     }
 
-    // Wrapper to serialize only the necessary parts of the transaction being signed
-    CTransactionSignatureSerializer txTmp(txTo, scriptCode, nIn, nHashType);
+    // Blank out other inputs completely, not recommended for open transactions
+    if (nHashType & SIGHASH_ANYONECANPAY)
+    {
+        txTmp.vin[0] = txTmp.vin[nIn];
+        txTmp.vin.resize(1);
+    }
 
     // Serialize and hash
-    CHashWriter ss(SER_GETHASH, 0);
+    CDataStream ss(SER_GETHASH, 0);
+    ss.reserve(10000);
     ss << txTmp << nHashType;
-    return ss.GetHash();
+    return Hash(ss.begin(), ss.end());
 }
 
 bool TransactionSignatureChecker::VerifySignature(const std::vector<unsigned char>& vchSig, const CPubKey& pubkey, const uint256& sighash) const

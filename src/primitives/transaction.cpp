@@ -210,14 +210,9 @@ uint64_t CTransaction::GetCoinAge(uint64_t nCoinAge, bool byValue) const
 
     for(const CTxIn& txin: vin)
     {
-        // First try finding the previous transaction in database
-        CTransaction txPrev;
         CDiskTxPos txindex;
         if (!pblocktree->ReadTxIndex(txin.prevout.hash, txindex))
             continue;  // previous transaction not in main chain
-
-        //if (nTime < txPrev.nTime)
-        //    return false;  // Transaction timestamp violation
 
         // Read block header
         CBlock block;
@@ -226,6 +221,16 @@ uint64_t CTransaction::GetCoinAge(uint64_t nCoinAge, bool byValue) const
             return false; // unable to read block of previous transaction
         if (block.GetBlockTime() + Params().getStakeMinAge() > nTime)
             continue; // only count coins meeting min age requirement
+
+        CTransaction txPrev;
+        uint256 blockHashOfTx;
+        if (!GetTransaction(txin.prevout.hash, txPrev, Params().GetConsensus(), blockHashOfTx))
+        {
+            return false;
+        }
+
+        if (nTime < txPrev.nTime)
+            return false;  // Transaction timestamp violation
 
         int64_t nValueIn = txPrev.vout[txin.prevout.n].nValue;
         bnCentSecond += CBigNum(nValueIn) * (nTime-txPrev.nTime) / CENT;
@@ -252,13 +257,9 @@ bool CTransaction::GetCoinAge(uint64_t& nCoinAge) const
 
     for(const CTxIn& txin: vin)
     {
-        CTransaction txPrev;
         CDiskTxPos txindex;
         if (!pblocktree->ReadTxIndex(txin.prevout.hash, txindex))
             continue;  // previous transaction not in main chain
-
-        //if (nTime < txPrev.nTime)
-        //    return false;  // Transaction timestamp violation
 
         // Read block header
         CBlock block;
@@ -268,6 +269,15 @@ bool CTransaction::GetCoinAge(uint64_t& nCoinAge) const
         if (block.GetBlockTime() + Params().getStakeMinAge() > nTime)
             continue; // only count coins meeting min age requirement
 
+        CTransaction txPrev;
+        uint256 blockHashOfTx;
+        if (!GetTransaction(txin.prevout.hash, txPrev, Params().GetConsensus(), blockHashOfTx))
+        {
+            return false;
+        }
+
+        if (nTime < txPrev.nTime)
+            return false;  // Transaction timestamp violation
 
         int64_t nValueIn = txPrev.vout[txin.prevout.n].nValue;
         bnCentSecond += CBigNum(nValueIn) * (nTime-txPrev.nTime) / CENT;

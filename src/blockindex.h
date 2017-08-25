@@ -183,6 +183,7 @@ public:
         nNonce         = 0;
 
         // proof-of-stake specific fields
+        nFlags = 0;
         nMint = 0;
         nMoneySupply = 0;
         nStakeModifier = 0;
@@ -296,21 +297,7 @@ public:
         return false;
     }
 
-    void updateForPos(CBlock& block)
-    {
-        if(block.IsProofOfStake())
-        {
-            SetProofOfStake();
-            prevoutStake = block.vtx[1].vin[0].prevout;
-            nStakeTime = block.vtx[1].nTime;
-        }
-        else //block is PoW
-        {
-            nFlags = 0;
-            prevoutStake.SetNull();
-            nStakeTime = 0;
-        }
-    }
+    void updateForPos(const CBlock &block);
 
     //! Build the skiplist pointer for this entry.
     void BuildSkip();

@@ -320,15 +320,14 @@ fs::path GetConfigFile(const std::string& confPath)
     return pathConfigFile;
 }
 
-void ArgsManager::ReadConfigFile()
+void ArgsManager::ReadConfigFile(std::map<std::string, std::string>& mapSettingsRet,
+                                      std::map<std::string, std::vector<std::string> >& mapMultiSettingsRet)
 {
-
     init:
-
-    fs::ifstream streamConfig(GetConfigFile());
+    boost::filesystem::ifstream streamConfig(GetConfigFile());
     if (!streamConfig.good())
     {
-        fs::path ConfPath = GetDefaultDataDir() / "eccoin.conf";
+        boost::filesystem::path ConfPath = GetDefaultDataDir() / "eccoin.conf";
         FILE* ConfFile = fopen(ConfPath.string().c_str(), "w");
         fprintf(ConfFile, "maxconnections=100\n");
         fprintf(ConfFile, "rpcuser=yourusername\n");
@@ -339,21 +338,19 @@ void ArgsManager::ReadConfigFile()
         fclose(ConfFile);
         goto init;
     }
-    {
-        LOCK(cs_args);
-        std::set<std::string> setOptions;
-        setOptions.insert("*");
 
-        for (boost::program_options::detail::config_file_iterator it(streamConfig, setOptions), end; it != end; ++it)
-        {
-            // Don't overwrite existing settings so command line settings override bitcoin.conf
-            std::string strKey = std::string("-") + it->string_key;
-            std::string strValue = it->value[0];
-            InterpretNegativeSetting(strKey, strValue);
-            if (mapArgs.count(strKey) == 0)
-                mapArgs[strKey] = strValue;
-            mapMultiArgs[strKey].push_back(strValue);
-        }
+    std::set<std::string> setOptions;
+    setOptions.insert("*");
+
+    for (boost::program_options::detail::config_file_iterator it(streamConfig, setOptions), end; it != end; ++it)
+    {
+        // Don't overwrite existing settings so command line settings override eccoin.conf
+        std::string strKey = std::string("-") + it->string_key;
+        std::string strValue = it->value[0];
+        InterpretNegativeSetting(strKey, strValue);
+        if (mapSettingsRet.count(strKey) == 0)
+            mapSettingsRet[strKey] = strValue;
+        mapMultiSettingsRet[strKey].push_back(strValue);
     }
     // If datadir is changed in .conf file:
     ClearDatadirCache();

@@ -352,7 +352,7 @@ bool CheckProofOfStake(const CTransaction& tx, unsigned int nBits, uint256& hash
     if (!GetTransaction(txin.prevout.hash, txPrev, Params().GetConsensus(), blockHashOfTx))
         return error("CheckProofOfStake() : INFO: read txPrev failed");  // previous transaction not in main chain, may occur during initial download
     // Verify signature
-    if (!VerifySignature(txPrev, tx, 0, true, 0))
+    if (!VerifySignature(txPrev, tx, 0, true))
         return error("CheckProofOfStake() : VerifySignature failed on coinstake %s", tx.GetHash().ToString().c_str());
 
     // Read block header
@@ -364,7 +364,8 @@ bool CheckProofOfStake(const CTransaction& tx, unsigned int nBits, uint256& hash
 
     CDiskTxPos txindex;
     pblocktree->ReadTxIndex(txPrev.GetHash(), txindex);
-    if (!CheckStakeKernelHash(nBits, block, txindex.nTxOffset, txPrev, txin.prevout, tx.nTime, hashProofOfStake, fDebug))
+    unsigned int txOffset = txindex.nTxOffset + 80; // header is 80 bytes, and nTxOffset doesnt inclde header
+    if (!CheckStakeKernelHash(nBits, block, txOffset, txPrev, txin.prevout, tx.nTime, hashProofOfStake, fDebug))
         return error("CheckProofOfStake() : INFO: check kernel failed on coinstake %s, hashProof=%s", tx.GetHash().ToString().c_str(), hashProofOfStake.ToString().c_str()); // may occur during initial download or if behind on block chain sync
 
     return true;
