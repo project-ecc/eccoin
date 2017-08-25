@@ -559,7 +559,7 @@ void ReadConfigFile(std::map<std::string, std::string>& mapSettingsRet,
     boost::filesystem::ifstream streamConfig(GetConfigFile());
     if (!streamConfig.good())
     {
-        fs::path ConfPath = GetDefaultDataDir() / "eccoin.conf";
+        boost::filesystem::path ConfPath = GetDefaultDataDir() / "eccoin.conf";
         FILE* ConfFile = fopen(ConfPath.string().c_str(), "w");
         fprintf(ConfFile, "maxconnections=100\n");
         fprintf(ConfFile, "rpcuser=yourusername\n");
