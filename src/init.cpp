@@ -665,7 +665,7 @@ void InitParameterInteraction()
             LogPrintf("%s: parameter interaction: -whitebind set -> setting -listen=1\n", __func__);
     }
 
-    if (gArgs.IsArgSet("-connect") && gArgs.IsArgSet("-connect").size() > 0) {
+    if (gArgs.IsArgSet("-connect") && gArgs.IsArgSet("-connect")) {
         // when only connecting to trusted nodes, do not seed via DNS, or listen by default
         if (gArgs.SoftSetBoolArg("-dnsseed", false))
             LogPrintf("%s: parameter interaction: -connect set -> setting -dnsseed=0\n", __func__);
@@ -816,7 +816,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
 
     fDebug = gArgs.IsArgSet("-debug");
     // Special-case: if -debug=0/-nodebug is set, turn off debugging messages
-    const std::vector<std::string>& categories = gArgs.GetArgs("-debug", "");
+    const std::vector<std::string>& categories = gArgs.GetArgs("-debug");
     if (gArgs.GetBoolArg("-nodebug", false) || find(categories.begin(), categories.end(), std::string("0")) != categories.end())
         fDebug = false;
 
@@ -876,10 +876,10 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
     if (gArgs.IsArgSet("-minrelaytxfee"))
     {
         CAmount n = 0;
-        if (ParseMoney(gArgs.GetArg("-minrelaytxfee"), n) && n > 0)
+        if (ParseMoney(gArgs.GetArg("-minrelaytxfee", MIN_TX_FEE), n) && n > 0)
             ::minRelayTxFee = CFeeRate(n);
         else
-            return InitError(strprintf(_("Invalid amount for -minrelaytxfee=<amount>: '%s'"), gArgs.GetArg("-minrelaytxfee", 0)));
+            return InitError(strprintf(_("Invalid amount for -minrelaytxfee=<amount>: '%s'"), gArgs.GetArg("-minrelaytxfee", MIN_TX_FEE)));
     }
 
     fRequireStandard = !gArgs.GetBoolArg("-acceptnonstdtxn", !Params().RequireStandard());
@@ -891,16 +891,16 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
     if (gArgs.IsArgSet("-mintxfee"))
     {
         CAmount n = 0;
-        if (ParseMoney(gArgs.GetArg("-mintxfee"), n) && n > 0)
+        if (ParseMoney(gArgs.GetArg("-mintxfee", MIN_TX_FEE), n) && n > 0)
             CWallet::minTxFee = CFeeRate(n);
         else
-            return InitError(strprintf(_("Invalid amount for -mintxfee=<amount>: '%s'"), gArgs.GetArg("-mintxfee")));
+            return InitError(strprintf(_("Invalid amount for -mintxfee=<amount>: '%s'"), gArgs.GetArg("-mintxfee", MIN_TX_FEE)));
     }
     if (gArgs.IsArgSet("-fallbackfee"))
     {
         CAmount nFeePerK = 0;
-        if (!ParseMoney(gArgs.GetArg("-fallbackfee"), nFeePerK))
-            return InitError(strprintf(_("Invalid amount for -fallbackfee=<amount>: '%s'"), gArgs.GetArg("-fallbackfee")));
+        if (!ParseMoney(gArgs.GetArg("-fallbackfee", MIN_TX_FEE), nFeePerK))
+            return InitError(strprintf(_("Invalid amount for -fallbackfee=<amount>: '%s'"), gArgs.GetArg("-fallbackfee", MIN_TX_FEE)));
         if (nFeePerK > nHighTransactionFeeWarning)
             InitWarning(_("-fallbackfee is set very high! This is the transaction fee you may pay when fee estimates are not available."));
         CWallet::fallbackFee = CFeeRate(nFeePerK);
@@ -908,29 +908,29 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
     if (gArgs.IsArgSet("-paytxfee"))
     {
         CAmount nFeePerK = 0;
-        if (!ParseMoney(gArgs.GetArg("-paytxfee"), nFeePerK))
-            return InitError(strprintf(_("Invalid amount for -paytxfee=<amount>: '%s'"), gArgs.GetArg("-paytxfee")));
+        if (!ParseMoney(gArgs.GetArg("-paytxfee", MIN_TX_FEE), nFeePerK))
+            return InitError(strprintf(_("Invalid amount for -paytxfee=<amount>: '%s'"), gArgs.GetArg("-paytxfee", MIN_TX_FEE)));
         if (nFeePerK > nHighTransactionFeeWarning)
             InitWarning(_("-paytxfee is set very high! This is the transaction fee you will pay if you send a transaction."));
         payTxFee = CFeeRate(nFeePerK, 1000);
         if (payTxFee < ::minRelayTxFee)
         {
             return InitError(strprintf(_("Invalid amount for -paytxfee=<amount>: '%s' (must be at least %s)"),
-                                       gArgs.GetArg("-paytxfee"), ::minRelayTxFee.ToString()));
+                                       gArgs.GetArg("-paytxfee", MIN_TX_FEE), ::minRelayTxFee.ToString()));
         }
     }
     if (gArgs.IsArgSet("-maxtxfee"))
     {
         CAmount nMaxFee = 0;
-        if (!ParseMoney(gArgs.GetArg("-maxtxfee"), nMaxFee))
-            return InitError(strprintf(_("Invalid amount for -maxtxfee=<amount>: '%s'"), gArgs.GetArg("-maxtxfee")));
+        if (!ParseMoney(gArgs.GetArg("-maxtxfee", DEFAULT_TRANSACTION_MAXFEE), nMaxFee))
+            return InitError(strprintf(_("Invalid amount for -maxtxfee=<amount>: '%s'"), gArgs.GetArg("-maxtxfee", DEFAULT_TRANSACTION_MAXFEE)));
         if (nMaxFee > nHighTransactionMaxFeeWarning)
             InitWarning(_("-maxtxfee is set very high! Fees this large could be paid on a single transaction."));
         maxTxFee = nMaxFee;
         if (CFeeRate(maxTxFee, 1000) < ::minRelayTxFee)
         {
             return InitError(strprintf(_("Invalid amount for -maxtxfee=<amount>: '%s' (must be at least the minrelay fee of %s to prevent stuck transactions)"),
-                                       gArgs.GetArg("-maxtxfee"), ::minRelayTxFee.ToString()));
+                                       gArgs.GetArg("-maxtxfee", DEFAULT_TRANSACTION_MAXFEE), ::minRelayTxFee.ToString()));
         }
     }
     nTxConfirmTarget = gArgs.GetArg("-txconfirmtarget", DEFAULT_TX_CONFIRM_TARGET);
