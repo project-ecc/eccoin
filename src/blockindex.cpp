@@ -55,14 +55,12 @@ void CBlockIndex::updateForPos(const CBlock& block)
         prevoutStake = block.vtx[1].vin[0].prevout;
         nStakeTime = block.vtx[1].nTime;
     }
-    /*
     else //block is PoW
     {
         nFlags = 0;
         prevoutStake.SetNull();
         nStakeTime = 0;
     }
-    */
 }
 
 void CBlockIndex::BuildSkip()
