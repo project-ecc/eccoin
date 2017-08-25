@@ -44,6 +44,27 @@ const CBlockIndex* CBlockIndex::GetAncestor(int height) const
     return const_cast<CBlockIndex*>(this)->GetAncestor(height);
 }
 
+void CBlockIndex::updateForPos(CBlock& block)
+{
+    if(block.IsProofOfStake())
+    {
+        if(!this->IsProofOfStake())
+        {
+            SetProofOfStake();
+        }
+        prevoutStake = block.vtx[1].vin[0].prevout;
+        nStakeTime = block.vtx[1].nTime;
+    }
+    /*
+    else //block is PoW
+    {
+        nFlags = 0;
+        prevoutStake.SetNull();
+        nStakeTime = 0;
+    }
+    */
+}
+
 void CBlockIndex::BuildSkip()
 {
     if (pprev)
