@@ -555,9 +555,21 @@ boost::filesystem::path GetConfigFile()
 void ReadConfigFile(std::map<std::string, std::string>& mapSettingsRet,
                     std::map<std::string, std::vector<std::string> >& mapMultiSettingsRet)
 {
+    init:
     boost::filesystem::ifstream streamConfig(GetConfigFile());
     if (!streamConfig.good())
-        return; // No eccoin.conf file is OK
+    {
+        fs::path ConfPath = GetDefaultDataDir() / "eccoin.conf";
+        FILE* ConfFile = fopen(ConfPath.string().c_str(), "w");
+        fprintf(ConfFile, "maxconnections=100\n");
+        fprintf(ConfFile, "rpcuser=yourusername\n");
+        fprintf(ConfFile, "rpcpassword=yourpassword\n");
+        fprintf(ConfFile, "addnode=www.cryptounited.io\n");
+        fprintf(ConfFile, "rpcport=19119\n");
+        fprintf(ConfFile, "rpcconnect=127.0.0.1\n");
+        fclose(ConfFile);
+        goto init;
+    }
 
     std::set<std::string> setOptions;
     setOptions.insert("*");
