@@ -1705,6 +1705,11 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 
     int64_t nTimeStart = GetTimeMicros();
 
+    if(pindex->GetBlockHash() != chainActive.Genesis()->GetBlockHash())
+    {
+        pindex->updateForPos(block);
+    }
+
     // Check it again in case a previous version let a bad block in
     if (!CheckBlock(block, state, !fJustCheck, !fJustCheck))
         return false;
@@ -1917,11 +1922,11 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     uint64_t nStakeModifier = 0;
     bool fGeneratedStakeModifier = false;
     if (!ComputeNextStakeModifier(pindex->pprev, nStakeModifier, fGeneratedStakeModifier))
-        return error("AddToBlockIndex() : ComputeNextStakeModifier() failed");
+        return error("ConnectBlock() : ComputeNextStakeModifier() failed");
     pindex->SetStakeModifier(nStakeModifier, fGeneratedStakeModifier);
     pindex->nStakeModifierChecksum = GetStakeModifierChecksum(pindex);
     if (!CheckStakeModifierCheckpoints(pindex->nHeight, pindex))
-        return error("AddToBlockIndex() : Rejected by stake modifier checkpoint height=%d, checksum=%08x, correct checksum=%08x,"
+        return error("ConnectBlock() : Rejected by stake modifier checkpoint height=%d, checksum=%08x, correct checksum=%08x,"
                      " nflags = %i, modifier=0x%016x  hashproofofstake = %s",
                      pindex->nHeight, pindex->nStakeModifierChecksum, mapStakeModifierCheckpoints[pindex->nHeight],
                      pindex->nFile, pindex->nStakeModifier, pindex->hashProofOfStake.ToString().c_str());
