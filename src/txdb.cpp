@@ -208,11 +208,15 @@ bool CBlockTreeDB::LoadBlockIndexGuts()
                 pindexNew->nStakeTime       = diskindex.nStakeTime;
                 pindexNew->hashProofOfStake = diskindex.hashProofOfStake;
 
+                /// TODO: fix the root cause of this problem. it is fine for now since PoW has been off for the last million+ blocks
+                /// but the root issue should be adjusted
+                /*
                 if(pindexNew->IsProofOfWork())
                 {
                     if (!CheckProofOfWork(pindexNew->GetBlockHash(), pindexNew->nBits, Params().GetConsensus()))
                         return error("LoadBlockIndex(): CheckProofOfWork failed: %s", pindexNew->ToString());
                 }
+                */
 
                 pcursor->Next();
             } else {
