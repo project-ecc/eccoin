@@ -29,8 +29,8 @@ static std::map<int, unsigned int> mapStakeChecksumCheckpoints =
 
 static std::map<unsigned int, unsigned int> mapModifierCheckpoints =
     boost::assign::map_list_of
-        (1419033631, 16777702570188849269)
-        (1486579307, 12347469112240434862)
+        (389423, 0xe9d45f987343c075u)
+        (1241829, 0xab5b05bce632eeaeu)
         ;
 
 
