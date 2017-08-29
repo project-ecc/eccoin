@@ -126,11 +126,12 @@ static bool SelectBlockFromCandidates(
 // blocks.
 bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, uint64_t& nStakeModifier, bool& fGeneratedStakeModifier)
 {
-    if (mapModifierCheckpoints.count(pindexPrev->nHeight))
-    {
-        nStakeModifier = mapModifierCheckpoints[pindexPrev->nHeight];
-        return true;
-    }
+    //if (mapModifierCheckpoints.count(pindexPrev->nHeight))
+    //{
+    //    nStakeModifier = mapModifierCheckpoints[pindexPrev->nHeight];
+    //    fGeneratedStakeModifier = true;
+    //    return true;
+    //}
 
     nStakeModifier = 0;
     fGeneratedStakeModifier = false;
@@ -343,7 +344,7 @@ bool CheckStakeKernelHash(unsigned int nBits, const CBlock& blockFrom, unsigned 
 }
 
 // Check kernel hash target and coinstake signature
-bool CheckProofOfStake(const CTransaction& tx, unsigned int nBits, uint256& hashProofOfStake)
+bool CheckProofOfStake(int nHeight, const CTransaction& tx, unsigned int nBits, uint256& hashProofOfStake)
 {
     if (!tx.IsCoinStake())
         return error("CheckProofOfStake() : called on non-coinstake %s", tx.GetHash().ToString().c_str());
@@ -370,7 +371,8 @@ bool CheckProofOfStake(const CTransaction& tx, unsigned int nBits, uint256& hash
     CDiskTxPos txindex;
     pblocktree->ReadTxIndex(txPrev.GetHash(), txindex);
     unsigned int txOffset = txindex.nTxOffset + 80; // header is 80 bytes, and nTxOffset doesnt inclde header
-    if (!CheckStakeKernelHash(nBits, block, txOffset, txPrev, txin.prevout, tx.nTime, hashProofOfStake, fDebug))
+    ///height check is a core upgrade quickfix
+    if (nHeight >= 1500000 && !CheckStakeKernelHash(nBits, block, txOffset, txPrev, txin.prevout, tx.nTime, hashProofOfStake, fDebug))
         return error("CheckProofOfStake() : INFO: check kernel failed on coinstake %s, hashProof=%s", tx.GetHash().ToString().c_str(), hashProofOfStake.ToString().c_str()); // may occur during initial download or if behind on block chain sync
 
     return true;
@@ -388,8 +390,6 @@ unsigned int GetStakeModifierChecksum(const CBlockIndex* pindex)
 {
     assert (pindex->pprev || pindex->GetBlockHash() == Params().GenesisBlock().GetHash());
     // Hash previous checksum with flags, hashProofOfStake and nStakeModifier
-
-
     CDataStream ss(SER_GETHASH, 0);
     if (pindex->pprev)
         ss << pindex->pprev->nStakeModifierChecksum;
@@ -397,9 +397,13 @@ unsigned int GetStakeModifierChecksum(const CBlockIndex* pindex)
     arith_uint256 hashChecksum = UintToArith256(Hash(ss.begin(), ss.end()));
     hashChecksum >>= (256 - 32);
     uint64_t hash64u= hashChecksum.GetLow64();
+    //if(pindex->GetBlockHash() == uint256S("0xf618ab95a16f9c86874aec9b3acfc18ec335ae0fcd3110cbbdc773ab3e30d10d"))
+    //{
+    //  uint64_t correctCheck = 4221981197;
+    //  hash64u = correctCheck;
+    //}
     return hash64u;
 }
-
 // Check stake modifier hard checkpoints
 bool CheckStakeModifierCheckpoints(int nHeight, CBlockIndex* pindexNew)
 {
