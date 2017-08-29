@@ -127,6 +127,12 @@ static bool SelectBlockFromCandidates(
 // blocks.
 bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, uint64_t& nStakeModifier, bool& fGeneratedStakeModifier)
 {
+    if (mapModifierCheckpoints.count(pindexPrev->nHeight))
+    {
+        nStakeModifier = mapModifierCheckpoints[pindexPrev->nHeight];
+        return true;
+    }
+
     nStakeModifier = 0;
     fGeneratedStakeModifier = false;
     if (!pindexPrev)
@@ -398,9 +404,9 @@ unsigned int GetStakeModifierChecksum(const CBlockIndex* pindex)
 // Check stake modifier hard checkpoints
 bool CheckStakeModifierCheckpoints(int nHeight, CBlockIndex* pindexNew)
 {
-    if (mapStakeModifierCheckpoints.count(nHeight))
+    if (mapStakeChecksumCheckpoints.count(nHeight))
     {
-        return pindexNew->nStakeModifierChecksum == mapStakeModifierCheckpoints[nHeight];
+        return pindexNew->nStakeModifierChecksum == mapStakeChecksumCheckpoints[nHeight];
     }
     return true;
 }

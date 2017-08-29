@@ -8,7 +8,7 @@
 
 #include "main.h"
 
-static std::map<int, unsigned int> mapStakeModifierCheckpoints =
+static std::map<int, unsigned int> mapStakeChecksumCheckpoints =
     boost::assign::map_list_of
         (     0, 0x0e00670bu )
         (  1000, 0xd97d4595u )
@@ -26,6 +26,13 @@ static std::map<int, unsigned int> mapStakeModifierCheckpoints =
         (185000, 0xa28ede88u )
         (197712, 0x4dbd9ac4u )
         ;
+
+static std::map<unsigned int, unsigned int> mapModifierCheckpoints =
+    boost::assign::map_list_of
+        (389423, 0xe9d45f987343c075u)
+        (1241829, 0xab5b05bce632eeaeu)
+        ;
+
 
 // MODIFIER_INTERVAL: time to elapse before new modifier is computed
 static const unsigned int MODIFIER_INTERVAL = 6 * 60 * 60;
