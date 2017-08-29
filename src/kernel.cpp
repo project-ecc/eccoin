@@ -126,11 +126,14 @@ static bool SelectBlockFromCandidates(
 // blocks.
 bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, uint64_t& nStakeModifier, bool& fGeneratedStakeModifier)
 {
-    if (mapModifierCheckpoints.count(pindexPrev->nHeight))
+    if(pindexPrev)
     {
-        nStakeModifier = mapModifierCheckpoints[pindexPrev->nHeight];
-        fGeneratedStakeModifier = true;
-        return true;
+        if (mapModifierCheckpoints.count(pindexPrev->nHeight))
+        {
+            nStakeModifier = mapModifierCheckpoints[pindexPrev->nHeight];
+            fGeneratedStakeModifier = true;
+            return true;
+        }
     }
 
     nStakeModifier = 0;
