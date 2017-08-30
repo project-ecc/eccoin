@@ -1930,14 +1930,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     bool fGeneratedStakeModifier = false;
     if (!ComputeNextStakeModifier(pindex->pprev, nStakeModifier, fGeneratedStakeModifier))
         return error("ConnectBlock() : ComputeNextStakeModifier() failed");
-    pindex->SetStakeModifier(nStakeModifier, fGeneratedStakeModifier);
-    pindex->nStakeModifierChecksum = GetStakeModifierChecksum(pindex);
-    if (!CheckStakeModifierCheckpoints(pindex->nHeight, pindex))
-        return error("ConnectBlock() : Rejected by stake modifier checkpoint height=%d, checksum=%08x, correct checksum=%08x,"
-                     " nflags = %i, modifier=0x%016x  hashproofofstake = %s",
-                     pindex->nHeight, pindex->nStakeModifierChecksum, mapStakeChecksumCheckpoints[pindex->nHeight],
-                     pindex->nFile, pindex->nStakeModifier, pindex->hashProofOfStake.ToString().c_str());
-
+    pindex->SetStakeModifier(nStakeModifier);
     if (fJustCheck)
         return true;
 
@@ -2695,9 +2688,6 @@ bool static LoadBlockIndexDB()
             pindex->BuildSkip();
         if (pindex->IsValid(BLOCK_VALID_TREE) && (pindexBestHeader == NULL || CBlockIndexWorkComparator()(pindexBestHeader, pindex)))
             pindexBestHeader = pindex;
-        pindex->nStakeModifierChecksum = GetStakeModifierChecksum(pindex);
-        if (!CheckStakeModifierCheckpoints(pindex->nHeight, pindex))
-         return error("CTxDB::LoadBlockIndex() : Failed stake modifier checkpoint height=%d, checksum=%08x, correct checksum=%08x, nflags = %i, modifier=0x%016I64x  hashproofofstake = %s", pindex->nHeight, pindex->nStakeModifierChecksum, mapStakeChecksumCheckpoints[pindex->nHeight], pindex->nFile, pindex->nStakeModifier, pindex->hashProofOfStake.ToString().c_str());
     }
 
     // Load block file info
@@ -2924,13 +2914,7 @@ bool InitBlockIndex(const CChainParams& chainparams)
             bool fGeneratedStakeModifier = false;
             if (!ComputeNextStakeModifier(pindex->pprev, nStakeModifier, fGeneratedStakeModifier))
                 return error("InitBlockIndex() : ComputeNextStakeModifier() failed");
-            pindex->SetStakeModifier(nStakeModifier, fGeneratedStakeModifier);
-            pindex->nStakeModifierChecksum = GetStakeModifierChecksum(pindex);
-            if (!CheckStakeModifierCheckpoints(pindex->nHeight, pindex))
-                return error("LoadBlockIndex() : Rejected by stake modifier checkpoint height=%d, checksum=%08x, correct checksum=%08x,"
-                             " nflags = %i, modifier=0x%016x  hashproofofstake = %s",
-                             pindex->nHeight, pindex->nStakeModifierChecksum, mapStakeChecksumCheckpoints[pindex->nHeight],
-                             pindex->nFlags, pindex->nStakeModifier, pindex->hashProofOfStake.ToString().c_str());
+            pindex->SetStakeModifier(nStakeModifier);
             if (!ReceivedBlockTransactions(block, state, pindex, blockPos))
                 return error("InitBlockIndex(): genesis block not accepted");
             if (!ActivateBestChain(state, chainparams, &block))

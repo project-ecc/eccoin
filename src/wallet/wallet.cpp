@@ -3248,7 +3248,7 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
             uint256 hashProofOfStake;
             hashProofOfStake.SetNull();
             COutPoint prevoutStake = COutPoint(pcoin.first->GetHash(), pcoin.second);
-            if (CheckStakeKernelHash(nBits, block, txindex.nTxOffset, *pcoin.first, prevoutStake, txNew.nTime - n, hashProofOfStake))
+            if (CheckStakeKernelHash(chainActive.Tip()->nHeight, nBits, block, txindex.nTxOffset, *pcoin.first, prevoutStake, txNew.nTime - n, hashProofOfStake))
             {
                // Found a kernel
                 if (fDebug && GetBoolArg("-printcoinstake", false))

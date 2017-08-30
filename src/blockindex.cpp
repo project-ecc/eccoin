@@ -92,14 +92,7 @@ bool CBlockIndex::SetStakeEntropyBit(unsigned int nEntropyBit)
     return true;
 }
 
-bool CBlockIndex::GeneratedStakeModifier() const
-{
-    return (nFlags & BLOCK_STAKE_MODIFIER);
-}
-
-void CBlockIndex::SetStakeModifier(uint64_t nModifier, bool fGeneratedStakeModifier)
+void CBlockIndex::SetStakeModifier(uint64_t nModifier)
 {
     nStakeModifier = nModifier;
-    if (fGeneratedStakeModifier)
-        nFlags |= BLOCK_STAKE_MODIFIER;
 }

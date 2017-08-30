@@ -34,7 +34,7 @@ public:
         consensus.nMajorityRejectBlockOutdated = 950;
         consensus.nMajorityWindow = 1000;
         consensus.powLimit  = uint256S("00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
-        consensus.posLimit  = uint256S("00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+        consensus.posLimit  = uint256S("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
         consensus.nTargetTimespan = 30 * 45;
         consensus.nTargetSpacing = 45;
         consensus.fPowAllowMinDifficultyBlocks = false;
