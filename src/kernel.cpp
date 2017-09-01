@@ -1,4 +1,4 @@
-// Copyright (c) 2012-2013 The PPCoin developers
+/// Copyright (c) 2012-2013 The PPCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -178,7 +178,11 @@ static bool GetKernelStakeModifier(uint256 hashBlockFrom, uint64_t& nStakeModifi
         return error("GetKernelStakeModifier() : block not indexed");
     const CBlockIndex* pindex = mapBlockIndex[hashBlockFrom];
 
-    int blocksToGo = 140; // should represent about 1.8 hours into the future and min stake age is 2 hours so this works
+    int blocksToGo = 5;
+    if (chainActive.Tip()->nHeight >= 1493600)
+    {
+        blocksToGo = 180;
+    }
     while(chainActive.Next(pindex) && blocksToGo > 0)
     {
         pindex = chainActive.Next(pindex);
@@ -186,6 +190,7 @@ static bool GetKernelStakeModifier(uint256 hashBlockFrom, uint64_t& nStakeModifi
     }
     if(blocksToGo > 0)
     {
+        LogPrintf("blocks to go was still greater than 0 even though we ran out of next indexs \n");
         return false;
     }
 
@@ -249,7 +254,7 @@ bool CheckStakeKernelHash(int nHeight, unsigned int nBits, const CBlock& blockFr
 
     if (!GetKernelStakeModifier(blockFrom.GetHash(), nStakeModifier))
     {
-        // LogPrintf(">>> CheckStakeKernelHash: GetKernelStakeModifier return false\n");
+        LogPrintf(">>> CheckStakeKernelHash: GetKernelStakeModifier return false\n");
         return false;
     }
     // LogPrintf(">>> CheckStakeKernelHash: passed GetKernelStakeModifier\n");
