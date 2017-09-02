@@ -1926,7 +1926,8 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     pindex->hashProofOfStake = hashProofOfStake;
 
     // ppcoin: compute stake modifier
-    uint64_t nStakeModifier = 0;
+    uint256 nStakeModifier;
+    nStakeModifier.SetNull();
     if(block.IsProofOfStake())
     {
         if (!ComputeNextStakeModifier(pindex->pprev, block.vtx[1], nStakeModifier))
@@ -2917,7 +2918,8 @@ bool InitBlockIndex(const CChainParams& chainparams)
                 return error("InitBlockIndex() : SetStakeEntropyBit() failed");
             }
             // ppcoin: compute stake modifier
-            uint64_t nStakeModifier = 0;
+            uint256 nStakeModifier;
+            nStakeModifier.SetNull();
             CTransaction nullTx;
             if (!ComputeNextStakeModifier(pindex->pprev, nullTx, nStakeModifier))
                 return error("InitBlockIndex() : ComputeNextStakeModifier() failed");

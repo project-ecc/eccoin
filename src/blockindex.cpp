@@ -92,7 +92,7 @@ bool CBlockIndex::SetStakeEntropyBit(unsigned int nEntropyBit)
     return true;
 }
 
-void CBlockIndex::SetStakeModifier(uint64_t nModifier)
+void CBlockIndex::SetStakeModifier(uint256 nModifier)
 {
     nStakeModifier = nModifier;
 }

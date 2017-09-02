@@ -16,13 +16,11 @@
 #include "timedata.h"
 #include "script/stakescript.h"
 
-unsigned int nModifierInterval = 60*60;
-
 // The stake modifier used to hash for a stake kernel is chosen as the stake
 // modifier about a selection interval later than the coin generating the kernel
-static bool GetKernelStakeModifier(uint256 hashBlockFrom, uint64_t& nStakeModifier)
+static bool GetKernelStakeModifier(uint256 hashBlockFrom, uint256& nStakeModifier)
 {
-    nStakeModifier = 0;
+    nStakeModifier.SetNull();
     if (!mapBlockIndex.count(hashBlockFrom))
         return error("GetKernelStakeModifier() : block not indexed");
     const CBlockIndex* pindex = mapBlockIndex[hashBlockFrom];
@@ -45,10 +43,13 @@ static bool GetKernelStakeModifier(uint256 hashBlockFrom, uint64_t& nStakeModifi
 
     CDataStream ss(SER_GETHASH, 0);
     ss << pindex->nStakeModifier;
+    ss << pindex->hashProofOfStake;
     ss << pindex->pprev->nStakeModifier;
+    ss << pindex->pprev->hashProofOfStake;
     ss << pindex->pprev->pprev->nStakeModifier;
+    ss << pindex->pprev->pprev->hashProofOfStake;
     uint256 nStakeModifierNew = Hash(ss.begin(), ss.end());
-    nStakeModifier = nStakeModifierNew.Get64();
+    nStakeModifier = nStakeModifierNew;
     return true;
 }
 
@@ -65,9 +66,9 @@ static bool GetKernelStakeModifier(uint256 hashBlockFrom, uint64_t& nStakeModifi
 // block. This is to make it difficult for an attacker to gain control of
 // additional bits in the stake modifier, even after generating a chain of
 // blocks.
-bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, const CTransaction& tx, uint64_t& nStakeModifier)
+bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, const CTransaction& tx, uint256& nStakeModifier)
 {
-    nStakeModifier = 0;
+    nStakeModifier.SetNull();
     if (tx.IsNull())
     {
         if(!pindexPrev)
@@ -83,10 +84,13 @@ bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, const CTransaction&
         {
             CDataStream ss(SER_GETHASH, 0);
             ss << pindexPrev->nStakeModifier;
+            ss << pindexPrev->hashProofOfStake;
             ss << pindexPrev->pprev->nStakeModifier;
+            ss << pindexPrev->pprev->hashProofOfStake;
             ss << pindexPrev->pprev->pprev->nStakeModifier;
+            ss << pindexPrev->pprev->pprev->hashProofOfStake;
             uint256 nStakeModifierNew = Hash(ss.begin(), ss.end());
-            nStakeModifier = nStakeModifierNew.Get64();
+            nStakeModifier = nStakeModifierNew;
         }
         return true;
     }
@@ -162,7 +166,8 @@ bool CheckStakeKernelHash(int nHeight, unsigned int nBits, const CBlock& blockFr
     // LogPrintf(">>> CheckStakeKernelHash: nTimeWeight = %"PRI64d"\n", nTimeWeight);
     // Calculate hash
     CDataStream ss(SER_GETHASH, 0);
-    uint64_t nStakeModifier = 0;
+    uint256 nStakeModifier;
+    nStakeModifier.SetNull();
 
     if (!GetKernelStakeModifier(blockFrom.GetHash(), nStakeModifier))
     {

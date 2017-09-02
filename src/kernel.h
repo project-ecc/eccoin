@@ -9,7 +9,7 @@
 #include "main.h"
 
 // Compute the hash modifier for proof-of-stake
-bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, const CTransaction& tx, uint64_t & nStakeModifier);
+bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, const CTransaction& tx, uint256 &nStakeModifier);
 
 // Check whether stake kernel meets hash target
 // Sets hashProofOfStake on success return
