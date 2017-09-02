@@ -78,6 +78,7 @@ bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, const CTransaction&
     }
     if(tx.IsCoinBase())
     {
+        /// if it isnt one of first 3 blocks run this calc then return. otherwise just return
         if(pindexPrev->pprev && pindexPrev->pprev->pprev)
         {
             CDataStream ss(SER_GETHASH, 0);
@@ -87,11 +88,7 @@ bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, const CTransaction&
             uint256 nStakeModifierNew = Hash(ss.begin(), ss.end());
             nStakeModifier = nStakeModifierNew.Get64();
         }
-        else
-        {
-            /// this block is one of the first 3 so just return true
-            return true;
-        }
+        return true;
     }
 
     // Kernel (input 0) must match the stake hash target per coin age (nBits)
