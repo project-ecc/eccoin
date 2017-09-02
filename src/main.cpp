@@ -1927,8 +1927,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 
     // ppcoin: compute stake modifier
     uint64_t nStakeModifier = 0;
-    bool fGeneratedStakeModifier = false;
-    if (!ComputeNextStakeModifier(pindex->pprev, nStakeModifier, fGeneratedStakeModifier))
+    if (!ComputeNextStakeModifier(pindex->pprev, block.vtx[1], nStakeModifier))
         return error("ConnectBlock() : ComputeNextStakeModifier() failed");
     pindex->SetStakeModifier(nStakeModifier);
     if (fJustCheck)
@@ -2911,8 +2910,8 @@ bool InitBlockIndex(const CChainParams& chainparams)
             }
             // ppcoin: compute stake modifier
             uint64_t nStakeModifier = 0;
-            bool fGeneratedStakeModifier = false;
-            if (!ComputeNextStakeModifier(pindex->pprev, nStakeModifier, fGeneratedStakeModifier))
+            CTransaction nullTx;
+            if (!ComputeNextStakeModifier(pindex->pprev, nullTx, nStakeModifier))
                 return error("InitBlockIndex() : ComputeNextStakeModifier() failed");
             pindex->SetStakeModifier(nStakeModifier);
             if (!ReceivedBlockTransactions(block, state, pindex, blockPos))
