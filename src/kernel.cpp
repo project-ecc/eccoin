@@ -76,6 +76,23 @@ bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, const CTransaction&
         }
         return false;
     }
+    if(tx.IsCoinBase())
+    {
+        if(pindexPrev->pprev && pindexPrev->pprev->pprev)
+        {
+            CDataStream ss(SER_GETHASH, 0);
+            ss << pindexPrev->nStakeModifier;
+            ss << pindexPrev->pprev->nStakeModifier;
+            ss << pindexPrev->pprev->pprev->nStakeModifier;
+            uint256 nStakeModifierNew = Hash(ss.begin(), ss.end());
+            nStakeModifier = nStakeModifierNew.Get64();
+        }
+        else
+        {
+            /// this block is one of the first 3 so just return true
+            return true;
+        }
+    }
 
     // Kernel (input 0) must match the stake hash target per coin age (nBits)
     const CTxIn& txin = tx.vin[0];

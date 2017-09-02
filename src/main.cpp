@@ -1927,8 +1927,16 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 
     // ppcoin: compute stake modifier
     uint64_t nStakeModifier = 0;
-    if (!ComputeNextStakeModifier(pindex->pprev, block.vtx[1], nStakeModifier))
-        return error("ConnectBlock() : ComputeNextStakeModifier() failed");
+    if(block.IsProofOfStake())
+    {
+        if (!ComputeNextStakeModifier(pindex->pprev, block.vtx[1], nStakeModifier))
+            return error("ConnectBlock() : ComputeNextStakeModifier() failed");
+    }
+    else
+    {
+        if (!ComputeNextStakeModifier(pindex->pprev, block.vtx[0], nStakeModifier))
+            return error("ConnectBlock() : ComputeNextStakeModifier() failed");
+    }
     pindex->SetStakeModifier(nStakeModifier);
     if (fJustCheck)
         return true;
