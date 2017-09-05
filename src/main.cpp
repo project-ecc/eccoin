@@ -1802,8 +1802,10 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         if (!tx.IsCoinBase())
         {
             if (!view.HaveInputs(tx))
+            {
                 return state.DoS(100, error("ConnectBlock(): inputs missing/spent"),
                                  REJECT_INVALID, "bad-txns-inputs-missingorspent");
+            }
 
             // Check that transaction is BIP68 final
             // BIP68 lock checks (as opposed to nLockTime checks) must
@@ -1862,7 +1864,13 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     nTimeConnect += nTime3 - nTime2;
     LogPrint("bench", "      - Connect %u transactions: %.2fms (%.3fms/tx, %.3fms/txin) [%.2fs]\n", (unsigned)block.vtx.size(), 0.001 * (nTime3 - nTime2), 0.001 * (nTime3 - nTime2) / block.vtx.size(), nInputs <= 1 ? 0 : 0.001 * (nTime3 - nTime2) / (nInputs-1), nTimeConnect * 0.000001);
     CAmount blockReward = 0;
-    if(block.IsProofOfWork())
+
+    /// height >= 1504000 for legacy compatibility
+    /// someone made some blocks at 1493605 to roughly 1495000 that which didnt conform to the ideal blocks, but at the time the client allowed it
+    /// that person didnt break any rules and no funds were stolen from other people.
+    /// but we need to have this check now to prevent future blocks from doing the same thing.
+
+    if(block.IsProofOfWork() && pindex->nHeight >= 1504000)
     {
         blockReward = GetProofOfWorkReward(nFees, pindex->nHeight, block.hashPrevBlock);
         if (block.vtx[0].GetValueOut() > blockReward)
@@ -1884,7 +1892,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                 blockReward = blockReward + GetProofOfStakeReward(tx.GetCoinAge(nCoinAge, true), pindex->nHeight);
             }
         }
-        if (block.vtx[0].GetValueOut() > blockReward)
+        if (block.vtx[0].GetValueOut() > blockReward && pindex->nHeight >= 1504000)
         {
             return state.DoS(100,
                          error("ConnectBlock(): coinstake pays too much"), REJECT_INVALID, "bad-cb-amount");
@@ -1956,7 +1964,6 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
             pindex->nUndoPos = pos.nPos;
             pindex->nStatus |= BLOCK_HAVE_UNDO;
         }
-
         pindex->RaiseValidity(BLOCK_VALID_SCRIPTS);
         setDirtyBlockIndex.insert(pindex);
     }
