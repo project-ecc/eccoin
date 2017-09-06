@@ -26,7 +26,7 @@ static bool GetKernelStakeModifier(uint256 hashBlockFrom, uint256& nStakeModifie
     const CBlockIndex* pindex = mapBlockIndex[hashBlockFrom];
 
     int blocksToGo = 5;
-    if (chainActive.Tip()->nHeight >= 1504500)
+    if (chainActive.Tip()->nHeight >= 1504350)
     {
         blocksToGo = 180;
     }
@@ -180,7 +180,7 @@ bool CheckStakeKernelHash(int nHeight, unsigned int nBits, const CBlock& blockFr
     ss << nTimeBlockFrom << nTxPrevOffset << txPrev.nTime << prevout.n << nTimeTx;
     hashProofOfStake = Hash(ss.begin(), ss.end());
 
-    if(nHeight > 1504500)
+    if(nHeight > 1504350)
     {
         arith_uint256 arith_hashProofOfStake = UintToArith256(hashProofOfStake);
 
