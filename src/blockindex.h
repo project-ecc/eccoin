@@ -137,11 +137,9 @@ public:
     {
         BLOCK_PROOF_OF_STAKE = (1 << 0), // is proof-of-stake block
         BLOCK_STAKE_ENTROPY  = (1 << 1), // entropy bit for stake modifier
-        BLOCK_STAKE_MODIFIER = (1 << 2), // regenerated stake modifier
     };
 
-    uint64_t nStakeModifier; // hash modifier for proof-of-stake
-    unsigned int nStakeModifierChecksum; // checksum of index; in-memeory only
+    uint256 nStakeModifier; // hash modifier for proof-of-stake
 
     // proof-of-stake specific fields
     COutPoint prevoutStake;
@@ -186,8 +184,7 @@ public:
         nFlags = 0;
         nMint = 0;
         nMoneySupply = 0;
-        nStakeModifier = 0;
-        nStakeModifierChecksum = 0;
+        nStakeModifier.SetNull();
         prevoutStake.SetNull();
         nStakeTime = 0;
         hashProofOfStake.SetNull();
@@ -312,8 +309,7 @@ public:
     void SetProofOfStake();
     unsigned int GetStakeEntropyBit() const;
     bool SetStakeEntropyBit(unsigned int nEntropyBit);
-    bool GeneratedStakeModifier() const;
-    void SetStakeModifier(uint64_t nModifier, bool fGeneratedStakeModifier);
+    void SetStakeModifier(uint256 nModifier);
 };
 
 /** Used to marshal pointers into hashes for db storage. */

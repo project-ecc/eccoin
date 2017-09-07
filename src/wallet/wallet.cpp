@@ -9,6 +9,7 @@
 #include "checkpoints.h"
 #include "chain.h"
 #include "coincontrol.h"
+#include "coins.h"
 #include "consensus/consensus.h"
 #include "consensus/validation.h"
 #include "kernel.h"
@@ -1679,7 +1680,8 @@ void CWallet::AvailableCoins(std::vector<COutput>& vCoins, bool fOnlyConfirmed, 
             if (nDepth == 0 && !pcoin->InMempool())
                 continue;
 
-            for (unsigned int i = 0; i < pcoin->vout.size(); i++) {
+            for (unsigned int i = 0; i < pcoin->vout.size(); i++)
+            {
                 isminetype mine = IsMine(pcoin->vout[i]);
                 if (!(IsSpent(wtxid, i)) && mine != ISMINE_NO &&
                     !IsLockedCoin((*it).first, i) && (pcoin->vout[i].nValue > 0 || fIncludeZeroValue) &&
@@ -3159,13 +3161,15 @@ bool CWallet::SelectCoins(CAmount nTargetValue, unsigned int nSpendTime, std::se
                           int64_t& nValueRet, const CCoinControl* coinControl) const
 {
     std::vector<COutput> vCoins;
-    AvailableCoins(vCoins, true, coinControl);
+    AvailableCoins(vCoins, true, coinControl); 
 
     // coin control -> return all selected outputs (we want all selected to go into the transaction for sure)
-    if (coinControl && coinControl->HasSelected())
+    if (coinControl && coinControl->HasSelected() && !coinControl->fAllowOtherInputs)
     {
         for (auto const& out: vCoins)
         {
+            if (!out.fSpendable)
+                 continue;
             nValueRet += out.tx->vout[out.i].nValue;
             setCoinsRet.insert(std::make_pair(out.tx, out.i));
         }
@@ -3249,7 +3253,7 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
             uint256 hashProofOfStake;
             hashProofOfStake.SetNull();
             COutPoint prevoutStake = COutPoint(pcoin.first->GetHash(), pcoin.second);
-            if (CheckStakeKernelHash(nBits, block, txindex.nTxOffset, *pcoin.first, prevoutStake, txNew.nTime - n, hashProofOfStake))
+            if (CheckStakeKernelHash(chainActive.Tip()->nHeight, nBits, block, txindex.nTxOffset, *pcoin.first, prevoutStake, txNew.nTime - n, hashProofOfStake))
             {
                // Found a kernel
                 if (fDebug && gArgs.GetBoolArg("-printcoinstake", false))
