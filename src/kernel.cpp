@@ -186,18 +186,23 @@ bool CheckStakeKernelHash(int nHeight, unsigned int nBits, const CBlock& blockFr
 
         arith_uint256 dayWeight = UintToArith256(bnCoinDayWeight.getuint256());
         arith_uint256 coinDay = UintToArith256(bnTargetPerCoinDay.getuint256());
-        arith_uint256 hashTarget = GetNextTargetRequired(chainActive.Tip(), true);
+        arith_uint256 hashTarget;
+        bool fNegative;
+        bool fOverflow;
+        hashTarget.SetCompact(GetNextTargetRequired(chainActive.Tip(), true), &fNegative, &fOverflow);
+        if (fNegative || bnTarget == 0 || fOverflow || bnTarget > UintToArith256(params.powLimit))
+            return error("CheckStakeKernelHash(): nBits below minimum work");
         /// the older the coins are, the higher the day weight. this means with a higher dayWeight you get a bigger reduction in your hashProofOfStake
         /// this should lead to older and older coins needing to be selected as the difficulty rises due to fast block minting. larger inputs will also help this
         /// but not nearly as much as older coins will. RNG with the result of the hash is also always a factor
         arith_hashProofOfStake = arith_hashProofOfStake - (dayWeight / coinDay);
-
         // Now check if proof-of-stake hash meets target protocol
         if(arith_hashProofOfStake > hashTarget)
         {
-            // LogPrintf(">>> bnCoinDayWeight = %s, bnTargetPerCoinDay=%s\n",
-            //	bnCoinDayWeight.ToString().c_str(), bnTargetPerCoinDay.ToString().c_str());
-            // LogPrintf(">>> CheckStakeKernelHash - hashProofOfStake too much\n");
+            if(fDebug)
+            {
+                LogPrintf("CheckStakeKernelHash(): ERROR: hashProofOfStake %s > %s hashTarget\n", arith_hashProofOfStake.GetHex().c_str(), hashTarget.GetHex().c_str());
+            }
             return false;
         }
     }

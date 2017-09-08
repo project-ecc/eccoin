@@ -3219,6 +3219,8 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
 
     int64_t nCredit = 0;
     CScript scriptPubKeyKernel;
+    int64_t timeRedux = GetTime();
+    bool fKernelFound = false;
     for (auto pcoin: setCoins)
     {
         CDiskTxPos txindex;
@@ -3243,8 +3245,6 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
         if (block.GetBlockTime() + Params().getStakeMinAge() > txNew.nTime - nMaxStakeSearchInterval)
             continue; // only count coins meeting min age requirement
 
-        bool fKernelFound = false;
-        for (unsigned int n=0; n<std::min(nSearchInterval,(int64_t)nMaxStakeSearchInterval) && !fKernelFound; n++)
         {
             // LogPrintf(">> In.....\n");
             // Search backward in time from the given txNew timestamp
@@ -3252,6 +3252,7 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
             uint256 hashProofOfStake;
             hashProofOfStake.SetNull();
             COutPoint prevoutStake = COutPoint(pcoin.first->GetHash(), pcoin.second);
+            unsigned int n = (unsigned int)(GetTime() - timeRedux);
             if (CheckStakeKernelHash(chainActive.Tip()->nHeight, nBits, block, txindex.nTxOffset, *pcoin.first, prevoutStake, txNew.nTime - n, hashProofOfStake))
             {
                // Found a kernel
@@ -3303,10 +3304,21 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
                 fKernelFound = true;
                 break;
             }
+            else
+            {
+                /// TODO
+                /// sleep very briefly before trying next pcoin for kernel. removing this would be an obvious opimization but it is here to keep cpu temps
+                /// lower in times of high difficulty staking, possible change to configurable parameter later so i will mark this with todo
+                MilliSleep(100);
+            }
         }
         if (fKernelFound)
             break; // if kernel is found stop searching
 
+    }
+    if(!fKernelFound)
+    {
+        return false;
     }
     if (nCredit == 0 || nCredit > nBalance - nReserveBalance)
     {
