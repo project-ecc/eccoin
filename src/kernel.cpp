@@ -190,7 +190,7 @@ bool CheckStakeKernelHash(int nHeight, unsigned int nBits, const CBlock& blockFr
         bool fNegative;
         bool fOverflow;
         hashTarget.SetCompact(GetNextTargetRequired(chainActive.Tip(), true), &fNegative, &fOverflow);
-        if (fNegative || bnTarget == 0 || fOverflow || bnTarget > UintToArith256(params.powLimit))
+        if (fNegative || hashTarget == 0 || fOverflow || bnTarget > UintToArith256(Params().GetConsensus().powLimit))
             return error("CheckStakeKernelHash(): nBits below minimum work");
         /// the older the coins are, the higher the day weight. this means with a higher dayWeight you get a bigger reduction in your hashProofOfStake
         /// this should lead to older and older coins needing to be selected as the difficulty rises due to fast block minting. larger inputs will also help this
