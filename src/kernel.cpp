@@ -204,9 +204,13 @@ bool CheckStakeKernelHash(int nHeight, unsigned int nBits, const CBlock& blockFr
         arith_uint256 reduction = dayWeight;
         LogPrintf("reduction = %s \n", reduction.GetHex().c_str());
         LogPrintf("pre reduction hashProofOfStake = %s \n", arith_hashProofOfStake.GetHex().c_str());
-        /// before we apply reduction, we want to shift the hash 5 bits to the right. the PoS limit is lead by 5 0's so we want our reduction to apply to a hashproofofstake that is also lead by 5 0's
-        arith_hashProofOfStake = arith_hashProofOfStake >> 5;
+
+
+        /// before we apply reduction, we want to shift the hash 20 bits to the right. the PoS limit is lead by 20 0's so we want our reduction to apply to a hashproofofstake that is also lead by 20 0's
+        arith_hashProofOfStake = arith_hashProofOfStake >> 20;
         LogPrintf("mid reduction hashProofOfStake = %s \n", arith_hashProofOfStake.GetHex().c_str());
+
+
         /// apply the reduction in hash we got from the coins weight
         arith_hashProofOfStake = arith_hashProofOfStake - reduction;
         LogPrintf("post reduction hashProofOfStake = %s \n", arith_hashProofOfStake.GetHex().c_str());
