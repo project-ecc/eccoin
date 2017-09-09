@@ -37,7 +37,7 @@ static bool GetKernelStakeModifier(uint256 hashBlockFrom, uint256& nStakeModifie
     }
     if(blocksToGo > 0)
     {
-        LogPrintf("blocks to go was still greater than 0 even though we ran out of next indexs \n");
+        LogPrintf("blocks to go was %i and it should be 0 but we ran out of indexes \n", blocksToGo);
         return false;
     }
 
@@ -151,8 +151,6 @@ bool CheckStakeKernelHash(int nHeight, unsigned int nBits, const CBlock& blockFr
     if (nTimeBlockFrom + Params().getStakeMinAge() > nTimeTx) // Min age requirement
         return error("CheckStakeKernelHash() : min age violation");
 
-    CBigNum bnTargetPerCoinDay;
-    bnTargetPerCoinDay.SetCompact(nBits);
     int64_t nValueIn = txPrev.vout[prevout.n].nValue;
 
     // v0.3 protocol kernel hash weight starts from 0 at the min age
@@ -160,8 +158,11 @@ bool CheckStakeKernelHash(int nHeight, unsigned int nBits, const CBlock& blockFr
     // to secure the network when proof-of-stake difficulty is low
     int64_t nTimeWeight = ((int64_t)nTimeTx - txPrev.nTime) - Params().getStakeMinAge();
 
-    /// this works out to be (number of coins / number of seconds in a day) * age where age is number of seconds that have past since utxo was created
-    CBigNum bnCoinDayWeight = CBigNum(nTimeWeight) * (CBigNum(nValueIn) / COIN / (86400)); // 86400 = 24 * 60 * 60
+    if(nTimeWeight <= 0)
+    {
+        LogPrintf("time weight was somehow <= 0 \n");
+        return false;
+    }
 
     // LogPrintf(">>> CheckStakeKernelHash: nTimeWeight = %"PRI64d"\n", nTimeWeight);
     // Calculate hash
@@ -184,27 +185,41 @@ bool CheckStakeKernelHash(int nHeight, unsigned int nBits, const CBlock& blockFr
     {
         arith_uint256 arith_hashProofOfStake = UintToArith256(hashProofOfStake);
 
-        arith_uint256 dayWeight = UintToArith256(bnCoinDayWeight.getuint256());
-        arith_uint256 coinDay = UintToArith256(bnTargetPerCoinDay.getuint256());
+        /// the older the coins are, the higher the day weight. this means with a higher dayWeight you get a bigger reduction in your hashProofOfStake
+        /// this should lead to older and older coins needing to be selected as the difficulty rises due to fast block minting. larger inputs will also help this
+        /// but not nearly as much as older coins will because seconds in age are easier to earn compared to coin amount. RNG with the result of the hash is also always a factor
+
+        // nTimeWeight is the number of seconds old the coins are past the min stake age 
+        // nValueIn is the number of satoshis being staked so we divide by COIN to get the number of coins
+
+        // This basically works out to: amount of satoshi * seconds old
+        arith_uint256 dayWeight = UintToArith256(CBigNum(CBigNum(nTimeWeight) * (CBigNum(nValueIn))).getuint256());
         arith_uint256 hashTarget;
         bool fNegative;
         bool fOverflow;
         hashTarget.SetCompact(GetNextTargetRequired(chainActive.Tip(), true), &fNegative, &fOverflow);
         if (fNegative || hashTarget == 0 || fOverflow || hashTarget > UintToArith256(Params().GetConsensus().posLimit))
-            return error("CheckStakeKernelHash(): nBits below minimum work");
-        /// the older the coins are, the higher the day weight. this means with a higher dayWeight you get a bigger reduction in your hashProofOfStake
-        /// this should lead to older and older coins needing to be selected as the difficulty rises due to fast block minting. larger inputs will also help this
-        /// but not nearly as much as older coins will. RNG with the result of the hash is also always a factor
-        arith_hashProofOfStake = arith_hashProofOfStake - (dayWeight / coinDay);
+            return error("CheckStakeKernelHash(): nBits below minimum work for proof of stake");
+        LogPrintf("dayWeight = %s \n", dayWeight.GetHex().c_str());
+        arith_uint256 reduction = dayWeight;
+        LogPrintf("reduction = %s \n", reduction.GetHex().c_str());
+        LogPrintf("pre reduction hashProofOfStake = %s \n", arith_hashProofOfStake.GetHex().c_str());
+        /// before we apply reduction, we want to shift the hash 5 bits to the right. the PoS limit is lead by 5 0's so we want our reduction to apply to a hashproofofstake that is also lead by 5 0's
+        arith_hashProofOfStake = arith_hashProofOfStake >> 5;
+        LogPrintf("mid reduction hashProofOfStake = %s \n", arith_hashProofOfStake.GetHex().c_str());
+        /// apply the reduction in hash we got from the coins weight
+        arith_hashProofOfStake = arith_hashProofOfStake - reduction;
+        LogPrintf("post reduction hashProofOfStake = %s \n", arith_hashProofOfStake.GetHex().c_str());
         // Now check if proof-of-stake hash meets target protocol
         if(arith_hashProofOfStake > hashTarget)
         {
-            if(fDebug)
+//            if(fDebug)
             {
                 LogPrintf("CheckStakeKernelHash(): ERROR: hashProofOfStake %s > %s hashTarget\n", arith_hashProofOfStake.GetHex().c_str(), hashTarget.GetHex().c_str());
             }
             return false;
         }
+        LogPrintf("CheckStakeKernelHash(): SUCCESS: hashProofOfStake %s < %s hashTarget\n", arith_hashProofOfStake.GetHex().c_str(), hashTarget.GetHex().c_str());
     }
 
     return true;
