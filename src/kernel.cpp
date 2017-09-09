@@ -3,6 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <boost/assign/list_of.hpp>
+#include <algorithm>
 
 #include "chain.h"
 #include "chainparams.h"
@@ -193,26 +194,23 @@ bool CheckStakeKernelHash(int nHeight, unsigned int nBits, const CBlock& blockFr
         // nValueIn is the number of satoshis being staked so we divide by COIN to get the number of coins
 
         // This basically works out to: amount of satoshi * seconds old
-        arith_uint256 dayWeight = UintToArith256(CBigNum(CBigNum(nTimeWeight) * (CBigNum(nValueIn))).getuint256());
+        arith_uint256 reduction = UintToArith256(CBigNum(CBigNum(nTimeWeight) * (CBigNum(nValueIn))).getuint256());
         arith_uint256 hashTarget;
         bool fNegative;
         bool fOverflow;
         hashTarget.SetCompact(GetNextTargetRequired(chainActive.Tip(), true), &fNegative, &fOverflow);
         if (fNegative || hashTarget == 0 || fOverflow || hashTarget > UintToArith256(Params().GetConsensus().posLimit))
             return error("CheckStakeKernelHash(): nBits below minimum work for proof of stake");
-        LogPrintf("dayWeight = %s \n", dayWeight.GetHex().c_str());
-        arith_uint256 reduction = dayWeight;
-        LogPrintf("reduction = %s \n", reduction.GetHex().c_str());
+
+        std::string reductionHex = reduction.GetHex();
+        unsigned int n = std::count(reductionHex.begin(), reductionHex.end(), '0');
+        unsigned int redux = 64 - n; // 64 is max 0's in a 256 bit hex string
+        LogPrintf("reduction = %u \n", redux);
         LogPrintf("pre reduction hashProofOfStake = %s \n", arith_hashProofOfStake.GetHex().c_str());
-
-
         /// before we apply reduction, we want to shift the hash 20 bits to the right. the PoS limit is lead by 20 0's so we want our reduction to apply to a hashproofofstake that is also lead by 20 0's
         arith_hashProofOfStake = arith_hashProofOfStake >> 20;
         LogPrintf("mid reduction hashProofOfStake = %s \n", arith_hashProofOfStake.GetHex().c_str());
-
-
-        /// apply the reduction in hash we got from the coins weight
-        arith_hashProofOfStake = arith_hashProofOfStake - reduction;
+        arith_hashProofOfStake = arith_hashProofOfStake >> redux;
         LogPrintf("post reduction hashProofOfStake = %s \n", arith_hashProofOfStake.GetHex().c_str());
         // Now check if proof-of-stake hash meets target protocol
         if(arith_hashProofOfStake > hashTarget)
