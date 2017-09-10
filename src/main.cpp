@@ -1865,6 +1865,13 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     LogPrint("bench", "      - Connect %u transactions: %.2fms (%.3fms/tx, %.3fms/txin) [%.2fs]\n", (unsigned)block.vtx.size(), 0.001 * (nTime3 - nTime2), 0.001 * (nTime3 - nTime2) / block.vtx.size(), nInputs <= 1 ? 0 : 0.001 * (nTime3 - nTime2) / (nInputs-1), nTimeConnect * 0.000001);
     CAmount blockReward = 0;
 
+    /// after 1504000 no Pow blocks are allowed
+    if(block.IsProofOfWork() && pindex->nHeight >= 1504000)
+    {
+        state.DoS(100, error("CheckBlock(): proof of work failed, invalid PoW height "),
+                                 REJECT_INVALID, "Pow after cutoff");
+    }
+
     /// height >= 1504000 for legacy compatibility
     /// someone made some blocks at 1493605 to roughly 1495000 that which didnt conform to the ideal blocks, but at the time the client allowed it
     /// that person didnt break any rules and no funds were stolen from other people.
@@ -2350,12 +2357,6 @@ bool FindUndoPos(CValidationState &state, int nFile, CDiskBlockPos &pos, unsigne
 bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bool fCheckMerkleRoot)
 {
     // These are checks that are independent of context.
-
-    if(block.IsProofOfWork() && chainActive.Tip()->nHeight >= 1504000)
-    {
-        state.DoS(100, error("CheckBlock(): proof of work failed, invalid PoW height "),
-                                 REJECT_INVALID, "Pow after cutoff");
-    }
 
     if (block.fChecked)
         return true;
