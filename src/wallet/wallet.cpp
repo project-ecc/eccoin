@@ -9,6 +9,7 @@
 #include "checkpoints.h"
 #include "chain.h"
 #include "coincontrol.h"
+#include "coins.h"
 #include "consensus/consensus.h"
 #include "consensus/validation.h"
 #include "kernel.h"
@@ -1678,7 +1679,8 @@ void CWallet::AvailableCoins(std::vector<COutput>& vCoins, bool fOnlyConfirmed, 
             if (nDepth == 0 && !pcoin->InMempool())
                 continue;
 
-            for (unsigned int i = 0; i < pcoin->vout.size(); i++) {
+            for (unsigned int i = 0; i < pcoin->vout.size(); i++)
+            {
                 isminetype mine = IsMine(pcoin->vout[i]);
                 if (!(IsSpent(wtxid, i)) && mine != ISMINE_NO &&
                     !IsLockedCoin((*it).first, i) && (pcoin->vout[i].nValue > 0 || fIncludeZeroValue) &&
@@ -3158,13 +3160,15 @@ bool CWallet::SelectCoins(CAmount nTargetValue, unsigned int nSpendTime, std::se
                           int64_t& nValueRet, const CCoinControl* coinControl) const
 {
     std::vector<COutput> vCoins;
-    AvailableCoins(vCoins, true, coinControl);
+    AvailableCoins(vCoins, true, coinControl); 
 
     // coin control -> return all selected outputs (we want all selected to go into the transaction for sure)
-    if (coinControl && coinControl->HasSelected())
+    if (coinControl && coinControl->HasSelected() && !coinControl->fAllowOtherInputs)
     {
         for (auto const& out: vCoins)
         {
+            if (!out.fSpendable)
+                 continue;
             nValueRet += out.tx->vout[out.i].nValue;
             setCoinsRet.insert(std::make_pair(out.tx, out.i));
         }
@@ -3215,6 +3219,8 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
 
     int64_t nCredit = 0;
     CScript scriptPubKeyKernel;
+    int64_t timeRedux = GetTime();
+    bool fKernelFound = false;
     for (auto pcoin: setCoins)
     {
         CDiskTxPos txindex;
@@ -3239,8 +3245,6 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
         if (block.GetBlockTime() + Params().getStakeMinAge() > txNew.nTime - nMaxStakeSearchInterval)
             continue; // only count coins meeting min age requirement
 
-        bool fKernelFound = false;
-        for (unsigned int n=0; n<std::min(nSearchInterval,(int64_t)nMaxStakeSearchInterval) && !fKernelFound; n++)
         {
             // LogPrintf(">> In.....\n");
             // Search backward in time from the given txNew timestamp
@@ -3248,10 +3252,11 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
             uint256 hashProofOfStake;
             hashProofOfStake.SetNull();
             COutPoint prevoutStake = COutPoint(pcoin.first->GetHash(), pcoin.second);
-            if (CheckStakeKernelHash(nBits, block, txindex.nTxOffset, *pcoin.first, prevoutStake, txNew.nTime - n, hashProofOfStake))
+            unsigned int n = (unsigned int)(GetTime() - timeRedux);
+            if (CheckStakeKernelHash(chainActive.Tip()->nHeight+1, nBits, block, txindex.nTxOffset, *pcoin.first, prevoutStake, txNew.nTime - n, hashProofOfStake))
             {
                // Found a kernel
-                if (fDebug && GetBoolArg("-printcoinstake", false))
+                if (fDebug)
                     LogPrintf("CreateCoinStake : kernel found\n");
                 std::vector<std::vector<unsigned char> > vSolutions;
                 txnouttype whichType;
@@ -3259,15 +3264,15 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
                 scriptPubKeyKernel = pcoin.first->vout[pcoin.second].scriptPubKey;
                 if (!Solver(scriptPubKeyKernel, whichType, vSolutions))
                 {
-                    if (fDebug && GetBoolArg("-printcoinstake", false))
+                    if (fDebug)
                         LogPrintf("CreateCoinStake : failed to parse kernel\n");
                     break;
                 }
-                if (fDebug && GetBoolArg("-printcoinstake", false))
+                if (fDebug)
                     LogPrintf("CreateCoinStake : parsed kernel type=%d\n", whichType);
                 if (whichType != TX_PUBKEY && whichType != TX_PUBKEYHASH)
                 {
-                    if (fDebug && GetBoolArg("-printcoinstake", false))
+                    if (fDebug)
                         LogPrintf("CreateCoinStake : no support for kernel type=%d\n", whichType);
                     break;  // only support pay to public key and pay to address
                 }
@@ -3277,7 +3282,7 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
                     CKey key;
                     if (!keystore.GetKey(uint160(vSolutions[0]), key))
                     {
-                        if (fDebug && GetBoolArg("-printcoinstake", false))
+                        if (fDebug)
                             LogPrintf("CreateCoinStake : failed to get key for kernel type=%d\n", whichType);
                         break;  // unable to find corresponding public key
                     }
@@ -3294,15 +3299,26 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
                 if (block.GetBlockTime() + nStakeSplitAge > txNew.nTime)
                     txNew.vout.push_back(CTxOut(0, scriptPubKeyOut)); //split stake
 
-                if (fDebug && GetBoolArg("-printcoinstake", false))
+                if (fDebug)
                     LogPrintf("CreateCoinStake : added kernel type=%d\n", whichType);
                 fKernelFound = true;
                 break;
+            }
+            else
+            {
+                /// TODO
+                /// sleep very briefly before trying next pcoin for kernel. removing this would be an obvious opimization but it is here to keep cpu temps
+                /// lower in times of high difficulty staking, possible change to configurable parameter later so i will mark this with todo
+                MilliSleep(100);
             }
         }
         if (fKernelFound)
             break; // if kernel is found stop searching
 
+    }
+    if(!fKernelFound)
+    {
+        return false;
     }
     if (nCredit == 0 || nCredit > nBalance - nReserveBalance)
     {

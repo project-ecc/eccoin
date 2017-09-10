@@ -1802,8 +1802,10 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         if (!tx.IsCoinBase())
         {
             if (!view.HaveInputs(tx))
+            {
                 return state.DoS(100, error("ConnectBlock(): inputs missing/spent"),
                                  REJECT_INVALID, "bad-txns-inputs-missingorspent");
+            }
 
             // Check that transaction is BIP68 final
             // BIP68 lock checks (as opposed to nLockTime checks) must
@@ -1861,10 +1863,22 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     int64_t nTime3 = GetTimeMicros();
     nTimeConnect += nTime3 - nTime2;
     LogPrint("bench", "      - Connect %u transactions: %.2fms (%.3fms/tx, %.3fms/txin) [%.2fs]\n", (unsigned)block.vtx.size(), 0.001 * (nTime3 - nTime2), 0.001 * (nTime3 - nTime2) / block.vtx.size(), nInputs <= 1 ? 0 : 0.001 * (nTime3 - nTime2) / (nInputs-1), nTimeConnect * 0.000001);
-    CAmount blockSubsidy = 0;
-    if(block.IsProofOfWork())
+    CAmount blockReward = 0;
+
+    /// height >= 1504000 for legacy compatibility
+    /// someone made some blocks at 1493605 to roughly 1495000 that which didnt conform to the ideal blocks, but at the time the client allowed it
+    /// that person didnt break any rules and no funds were stolen from other people.
+    /// but we need to have this check now to prevent future blocks from doing the same thing.
+
+    if(block.IsProofOfWork() && pindex->nHeight >= 1504000)
     {
-        blockSubsidy = GetProofOfWorkReward(nFees, pindex->nHeight, block.hashPrevBlock);
+        blockReward = GetProofOfWorkReward(nFees, pindex->nHeight, block.hashPrevBlock);
+        if (block.vtx[0].GetValueOut() > blockReward)
+        {
+            return state.DoS(100,
+                         error("ConnectBlock(): coinbase pays too much (actual=%d vs limit=%d)",
+                               block.vtx[0].GetValueOut(), blockReward), REJECT_INVALID, "bad-cb-amount");
+        }
     }
     else
     {
@@ -1875,17 +1889,15 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                 uint64_t nCoinAge;
                 if (!tx.GetCoinAge(nCoinAge))
                     return state.DoS(100, error("ConnectBlock() : %s unable to get coin age for coinstake", tx.GetHash().ToString().substr(0,10).c_str()));
-                blockSubsidy = blockSubsidy + GetProofOfStakeReward(tx.GetCoinAge(nCoinAge, true), pindex->nHeight);
+                blockReward = blockReward + GetProofOfStakeReward(tx.GetCoinAge(nCoinAge, true), pindex->nHeight);
             }
         }
+        if (block.vtx[0].GetValueOut() > blockReward && pindex->nHeight >= 1504000)
+        {
+            return state.DoS(100,
+                         error("ConnectBlock(): coinstake pays too much"), REJECT_INVALID, "bad-cb-amount");
+        }
     }
-    CAmount blockReward = blockSubsidy; //GetBlockSubsidy(pindex->nHeight, chainparams.GetConsensus());
-    if (block.vtx[0].GetValueOut() > blockReward)
-        return state.DoS(100,
-                         error("ConnectBlock(): coinbase pays too much (actual=%d vs limit=%d)",
-                               block.vtx[0].GetValueOut(), blockReward),
-                               REJECT_INVALID, "bad-cb-amount");
-
     retry:
     if (!control.Wait())
     {
@@ -1906,7 +1918,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     hashProofOfStake.SetNull();
     if (block.IsProofOfStake())
     {
-        if (!CheckProofOfStake(block.vtx[1], block.nBits, hashProofOfStake))
+        if (!CheckProofOfStake(pindex->nHeight, block.vtx[1], block.nBits, hashProofOfStake))
         {
             LogPrintf("WARNING: ProcessBlock(): check proof-of-stake failed for block %s\n", block.GetHash().ToString().c_str());
             return false; // do not error here as we expect this during initial block download
@@ -1922,18 +1934,19 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     pindex->hashProofOfStake = hashProofOfStake;
 
     // ppcoin: compute stake modifier
-    uint64_t nStakeModifier = 0;
-    bool fGeneratedStakeModifier = false;
-    if (!ComputeNextStakeModifier(pindex->pprev, nStakeModifier, fGeneratedStakeModifier))
-        return error("ConnectBlock() : ComputeNextStakeModifier() failed");
-    pindex->SetStakeModifier(nStakeModifier, fGeneratedStakeModifier);
-    pindex->nStakeModifierChecksum = GetStakeModifierChecksum(pindex);
-    if (!CheckStakeModifierCheckpoints(pindex->nHeight, pindex))
-        return error("ConnectBlock() : Rejected by stake modifier checkpoint height=%d, checksum=%08x, correct checksum=%08x,"
-                     " nflags = %i, modifier=0x%016x  hashproofofstake = %s",
-                     pindex->nHeight, pindex->nStakeModifierChecksum, mapStakeModifierCheckpoints[pindex->nHeight],
-                     pindex->nFile, pindex->nStakeModifier, pindex->hashProofOfStake.ToString().c_str());
-
+    uint256 nStakeModifier;
+    nStakeModifier.SetNull();
+    if(block.IsProofOfStake())
+    {
+        if (!ComputeNextStakeModifier(pindex->pprev, block.vtx[1], nStakeModifier))
+            return error("ConnectBlock() : ComputeNextStakeModifier() failed");
+    }
+    else
+    {
+        if (!ComputeNextStakeModifier(pindex->pprev, block.vtx[0], nStakeModifier))
+            return error("ConnectBlock() : ComputeNextStakeModifier() failed");
+    }
+    pindex->SetStakeModifier(nStakeModifier);
     if (fJustCheck)
         return true;
 
@@ -1951,7 +1964,6 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
             pindex->nUndoPos = pos.nPos;
             pindex->nStatus |= BLOCK_HAVE_UNDO;
         }
-
         pindex->RaiseValidity(BLOCK_VALID_SCRIPTS);
         setDirtyBlockIndex.insert(pindex);
     }
@@ -2691,9 +2703,6 @@ bool static LoadBlockIndexDB()
             pindex->BuildSkip();
         if (pindex->IsValid(BLOCK_VALID_TREE) && (pindexBestHeader == NULL || CBlockIndexWorkComparator()(pindexBestHeader, pindex)))
             pindexBestHeader = pindex;
-        pindex->nStakeModifierChecksum = GetStakeModifierChecksum(pindex);
-        if (!CheckStakeModifierCheckpoints(pindex->nHeight, pindex))
-         return error("CTxDB::LoadBlockIndex() : Failed stake modifier checkpoint height=%d, checksum=%08x, correct checksum=%08x, nflags = %i, modifier=0x%016I64x  hashproofofstake = %s", pindex->nHeight, pindex->nStakeModifierChecksum, mapStakeModifierCheckpoints[pindex->nHeight], pindex->nFile, pindex->nStakeModifier, pindex->hashProofOfStake.ToString().c_str());
     }
 
     // Load block file info
@@ -2916,17 +2925,12 @@ bool InitBlockIndex(const CChainParams& chainparams)
                 return error("InitBlockIndex() : SetStakeEntropyBit() failed");
             }
             // ppcoin: compute stake modifier
-            uint64_t nStakeModifier = 0;
-            bool fGeneratedStakeModifier = false;
-            if (!ComputeNextStakeModifier(pindex->pprev, nStakeModifier, fGeneratedStakeModifier))
+            uint256 nStakeModifier;
+            nStakeModifier.SetNull();
+            CTransaction nullTx;
+            if (!ComputeNextStakeModifier(pindex->pprev, nullTx, nStakeModifier))
                 return error("InitBlockIndex() : ComputeNextStakeModifier() failed");
-            pindex->SetStakeModifier(nStakeModifier, fGeneratedStakeModifier);
-            pindex->nStakeModifierChecksum = GetStakeModifierChecksum(pindex);
-            if (!CheckStakeModifierCheckpoints(pindex->nHeight, pindex))
-                return error("LoadBlockIndex() : Rejected by stake modifier checkpoint height=%d, checksum=%08x, correct checksum=%08x,"
-                             " nflags = %i, modifier=0x%016x  hashproofofstake = %s",
-                             pindex->nHeight, pindex->nStakeModifierChecksum, mapStakeModifierCheckpoints[pindex->nHeight],
-                             pindex->nFlags, pindex->nStakeModifier, pindex->hashProofOfStake.ToString().c_str());
+            pindex->SetStakeModifier(nStakeModifier);
             if (!ReceivedBlockTransactions(block, state, pindex, blockPos))
                 return error("InitBlockIndex(): genesis block not accepted");
             if (!ActivateBestChain(state, chainparams, &block))
@@ -3257,7 +3261,7 @@ int64_t GetProofOfStakeReward(int64_t nCoinAge, int nHeight)
             nSubsidy = 0;
         }
     }
-    if (fDebug && GetBoolArg("-printcreation", false))
+    if (fDebug)
     {
         LogPrintf("GetProofOfStakeReward(): create=%s nCoinAge=%d\n", FormatMoney(nSubsidy).c_str(), nCoinAge);
     }

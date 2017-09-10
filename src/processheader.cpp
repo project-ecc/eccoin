@@ -67,15 +67,6 @@ bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, bool f
 
 bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& state, CBlockIndex * const pindexPrev)
 {
-    const Consensus::Params& consensusParams = Params().GetConsensus();
-    // Check proof of work
-    bool fProofOfStake = (pindexPrev->nHeight > 86400);
-    if (block.nBits != GetNextWorkRequired(pindexPrev, consensusParams, fProofOfStake) && fProofOfStake)
-    {
-        return state.DoS(100, error("%s: incorrect proof of work", __func__),
-                         REJECT_INVALID, "bad-diffbits");
-    }
-
     // Check timestamp against prev
     if (block.GetBlockTime() <= pindexPrev->GetMedianTimePast())
         return state.Invalid(error("%s: block's timestamp is too early", __func__),

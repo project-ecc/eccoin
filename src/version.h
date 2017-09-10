@@ -13,7 +13,7 @@
 static const int PROTOCOL_VERSION = 60035;
 
 // earlier versions not supported as of Feb 2012, and are disconnected
-static const int MIN_PROTO_VERSION = 60033;
+static const int MIN_PROTO_VERSION = 60035;
 
 // "sendheaders" command and announcing blocks with headers starts with this version
 static const int SENDHEADERS_VERSION = 60035;
