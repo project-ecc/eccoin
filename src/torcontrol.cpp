@@ -2,6 +2,7 @@
 #include "utilstrencodings.h"
 #include "net.h"
 #include "util.h"
+#include "args.h"
 #include "crypto/hmac_sha256.h"
 
 #include <vector>
@@ -451,7 +452,7 @@ void TorController::auth_cb(TorControlConnection& conn, const TorControlReply& r
 
         // Now that we know Tor is running setup the proxy for onion addresses
         // if -onion isn't set to something else.
-        if (GetArg("-onion", "") == "") {
+        if (gArgs.GetArg("-onion", "") == "") {
             proxyType addrOnion = proxyType(CService("127.0.0.1", 9050), true);
             SetProxy(NET_TOR, addrOnion);
             SetReachable(NET_TOR);
@@ -565,7 +566,7 @@ void TorController::protocolinfo_cb(TorControlConnection& conn, const TorControl
          *   cookie:   hex-encoded ~/.tor/control_auth_cookie
          *   password: "password"
          */
-        std::string torpassword = GetArg("-torpassword", "");
+        std::string torpassword = gArgs.GetArg("-torpassword", "");
         if (methods.count("NULL")) {
             LogPrint("tor", "tor: Using NULL authentication\n");
             conn.Command("AUTHENTICATE", boost::bind(&TorController::auth_cb, this, _1, _2));
@@ -656,7 +657,7 @@ boost::thread torControlThread;
 
 static void TorControlThread()
 {
-    TorController ctrl(base, GetArg("-torcontrol", DEFAULT_TOR_CONTROL));
+    TorController ctrl(base, gArgs.GetArg("-torcontrol", DEFAULT_TOR_CONTROL));
 
     event_base_dispatch(base);
 }
