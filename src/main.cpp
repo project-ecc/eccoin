@@ -2351,6 +2351,12 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
 {
     // These are checks that are independent of context.
 
+    if(block.IsProofOfWork() && chainActive.Tip()->nHeight >= 1504000)
+    {
+        state.DoS(100, error("CheckBlock(): proof of work failed, invalid PoW height "),
+                                 REJECT_INVALID, "Pow after cutoff");
+    }
+
     if (block.fChecked)
         return true;
 
