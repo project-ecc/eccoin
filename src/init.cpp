@@ -1533,7 +1533,10 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
     // --- end disabled ---
 
     // Generate coins in the background
-    ThreadScryptMiner(pwalletMain);
+    if(GetBoolArg("-staking", false))
+    {
+        ThreadScryptMiner(pwalletMain);
+    }
 
     // ********************************************************* Step 12: finished
 
