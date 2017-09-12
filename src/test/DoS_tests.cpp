@@ -6,7 +6,6 @@
 #include <boost/assign/list_of.hpp> // for 'map_list_of()'
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 #include <boost/test/unit_test.hpp>
-#include <boost/foreach.hpp>
 
 #include "main.h"
 #include "wallet.h"
@@ -110,9 +109,9 @@ BOOST_AUTO_TEST_CASE(DoS_checknbits)
 
     // Make sure CheckNBits considers every combination of block-chain-lock-in-points
     // "sane":
-    BOOST_FOREACH(const BlockData::value_type& i, chainData)
+    for (auto const& i: chainData)
     {
-        BOOST_FOREACH(const BlockData::value_type& j, chainData)
+        for (auto const& j: chainData)
         {
             BOOST_CHECK(CheckNBits(i.second, i.first, j.second, j.first));
         }

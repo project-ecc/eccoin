@@ -3,15 +3,15 @@
 # Distributed under the MIT/X11 software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-# Mac OS X makefile for bitcoin
+# Mac OS X makefile for MultiWalletCoin
 # Originally by Laszlo Hanyecz (solar@heliacal.net)
 
 CXX=llvm-g++
-DEPSDIR=/opt/local
+DEPSDIR=/usr/local
 
 INCLUDEPATHS= \
  -I"$(CURDIR)" \
- -I"$(CURDIR)"/obj \
+ -I"$(CURDIR)"/build \
  -I"$(DEPSDIR)/include" \
  -I"$(DEPSDIR)/include/db48"
 
@@ -24,12 +24,8 @@ USE_IPV6:=1
 
 LIBS= -dead_strip
 
-TESTDEFS = -DTEST_DATA_DIR=$(abspath test/data)
-
 ifdef STATIC
-# Build STATIC if you are redistributing the bitcoind binary
-TESTLIBS += \
- $(DEPSDIR)/lib/libboost_unit_test_framework-mt.a
+# Build STATIC if you are redistributing the ECCoind binary
 LIBS += \
  $(DEPSDIR)/lib/db48/libdb_cxx-4.8.a \
  $(DEPSDIR)/lib/libboost_system-mt.a \
@@ -40,8 +36,6 @@ LIBS += \
  $(DEPSDIR)/lib/libcrypto.a \
  -lz
 else
-TESTLIBS += \
- -lboost_unit_test_framework-mt
 LIBS += \
  -ldb_cxx-4.8 \
  -lboost_system-mt \
@@ -51,7 +45,6 @@ LIBS += \
  -lssl \
  -lcrypto \
  -lz
-TESTDEFS += -DBOOST_TEST_DYN_LINK
 endif
 
 DEFS=-DMAC_OSX -DMSG_NOSIGNAL=0 -DBOOST_SPIRIT_THREADSAFE
@@ -66,42 +59,103 @@ CFLAGS = -g -msse2
 endif
 
 # ppc doesn't work because we don't support big-endian
-CFLAGS += -Wall -Wextra -Wformat -Wformat-security -Wno-unused-parameter \
+CFLAGS += -Wall -Wextra -Wformat -Wno-ignored-qualifiers -Wformat-security -Wno-unused-parameter -stdlib=libc++ -std=c++11\
     $(DEBUGFLAGS) $(DEFS) $(INCLUDEPATHS)
 
 OBJS= \
-    obj/alert.o \
-    obj/version.o \
-    obj/checkpoints.o \
-    obj/netbase.o \
-    obj/addrman.o \
-    obj/crypter.o \
-    obj/key.o \
-    obj/db.o \
-    obj/init.o \
-    obj/irc.o \
-    obj/keystore.o \
-    obj/main.o \
-    obj/net.o \
-    obj/protocol.o \
-    obj/bitcoinrpc.o \
-    obj/rpcdump.o \
-    obj/rpcnet.o \
-    obj/rpcmining.o \
-    obj/rpcwallet.o \
-    obj/rpcblockchain.o \
-    obj/rpcrawtransaction.o \
-    obj/script.o \
-    obj/sync.o \
-    obj/util.o \
-    obj/wallet.o \
-    obj/walletdb.o \
-    obj/noui.o \
-    obj/pbkdf2.o \
-    obj/kernel.o \
-    obj/scrypt_mine.o \
-    obj/scrypt-x86.o \
-    obj/scrypt-x86_64.o
+    build/txdb.o \
+    build/key.o \
+    build/addrman.o \
+    build/amount.o \
+    build/arith_uint256.o \
+    build/base58.o \
+    build/bloom.o \
+    build/chain.o \
+    build/chainparams.o \
+    build/chainparamsbase.o \
+    build/checkpoints.o \
+    build/clientversion.o \
+    build/coins.o \
+    build/compressor.o \
+    build/core_read.o \
+    build/core_write.o \
+    build/dbwrapper.o \
+    build/hash.o \
+    build/keystore.o \
+    build/main.o \
+    build/merkleblock.o \
+    build/miner.o \
+    build/net.o \
+    build/netbase.o \
+    build/noui.o \
+    build/pow.o \
+    build/protocol.o \
+    build/pubkey.o \
+    build/random.o \
+    build/scheduler.o \
+    build/sync.o \
+    build/timedata.o \
+    build/torcontrol.o \
+    build/txmempool.o \
+    build/uint256.o \
+    build/util.o \
+    build/utilmoneystr.o \
+    build/utilstrencodings.o \
+    build/utiltime.o \
+    build/validationinterface.o \
+    build/versionbits.o \
+    build/wallet/crypter.o \
+    build/wallet/db.o \
+    build/wallet/wallet.o \
+    build/wallet/wallet_ismine.o \
+    build/wallet/walletdb.o \
+    build/support/cleanse.o \
+    build/support/pagelocker.o \
+    build/script/bitcoinconsensus.o \
+    build/script/interpreter.o \
+    build/script/script.o \
+    build/script/script_error.o \
+    build/script/sigcache.o \
+    build/script/sign.o \
+    build/script/standard.o \
+    build/primitives/block.o \
+    build/primitives/transaction.o \
+    build/policy/fees.o \
+    build/policy/policy.o \
+    build/policy/rbf.o \
+    build/crypto/hmac_sha256.o \
+    build/crypto/hmac_sha512.o \
+    build/crypto/ripemd160.o \
+    build/crypto/sha1.o \
+    build/crypto/sha256.o \
+    build/crypto/sha512.o \
+    build/consensus/merkle.o \
+    build/compat/glibc_compat.o \
+    build/compat/glibc_sanity.o \
+    build/compat/glibcxx_sanity.o \
+    build/compat/strnlen.o \
+    build/init.o \
+    build/bitcoind.o \
+    build/crypto/scrypt.o \
+    build/kernel.o \
+    build/httprpc.o \
+    build/httpserver.o \
+    build/rest.o \
+    build/rpcblockchain.o \
+    build/rpcclient.o \
+    build/rpcmining.o \
+    build/rpcmisc.o \
+    build/rpcnet.o \
+    build/rpcprotocol.o \
+    build/rpcrawtransaction.o \
+    build/rpcserver.o \
+    build/univalue/univalue.o \
+    build/univalue/univalue_read.o \
+    build/univalue/univalue_write.o \
+    build/pbkdf2.o \
+    build/script/stakescript.o
+
+    
 
 ifndef USE_UPNP
 	override USE_UPNP = -
@@ -119,54 +173,60 @@ ifneq (${USE_IPV6}, -)
 	DEFS += -DUSE_IPV6=$(USE_IPV6)
 endif
 
-all: eccoind
+all: leveldb secp256k1 ECCoind
 
-test check: test_eccoin FORCE
-	./test_eccoin
+LIBS += $(CURDIR)/leveldb/libleveldb.a $(CURDIR)/leveldb/libmemenv.a
+DEFS += $(addprefix -I,$(CURDIR)/leveldb/include)
+DEFS += $(addprefix -I,$(CURDIR)/leveldb/helpers)
+OBJS += build/txdb-leveldb.o
+
+leveldb_make:
+	cd leveldb; make; cd ..; 
+leveldb: leveldb_make
+
+DEFS += $(addprefix -I,$(CURDIR)/secp256k1/include)
+LIBS += $(CURDIR)/secp256k1/lib/libsecp256k1.a
+
+secp256k1_make: 
+	cd secp256k1; ./autogen.sh; ./configure --prefix=$(CURDIR)/libsecp256k1 --enable-module-recovery; make; make install; cd ..;
+secp256k1: secp256k1_make
 
 # auto-generated dependencies:
--include obj/*.P
--include obj-test/*.P
+-include build/*.P
 
-obj/build.h: FORCE
-	/bin/sh ../share/genbuild.sh obj/build.h
-version.cpp: obj/build.h
+build/build.h: FORCE
+	/bin/sh ../share/genbuild.sh build/build.h
+version.cpp: build/build.h
 DEFS += -DHAVE_BUILD_INFO
 
-obj/%.o: %.cpp
+build/%.o: %.cpp
 	$(CXX) -c $(CFLAGS) -MMD -MF $(@:%.o=%.d) -o $@ $<
 	@cp $(@:%.o=%.d) $(@:%.o=%.P); \
 	  sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
 	      -e '/^$$/ d' -e 's/$$/ :/' < $(@:%.o=%.d) >> $(@:%.o=%.P); \
 	  rm -f $(@:%.o=%.d)
 
-obj/scrypt-x86.o: scrypt-x86.S
+build/scrypt-x86.o: scrypt-x86.S
 	$(CXX) -c $(xCXXFLAGS) -MMD -o $@ $<
 
-obj/scrypt-x86_64.o: scrypt-x86_64.S
+build/scrypt-x86_64.o: scrypt-x86_64.S
 	$(CXX) -c $(xCXXFLAGS) -MMD -o $@ $<
 
-eccoind: $(OBJS:obj/%=obj/%)
+ECCoind: $(OBJS:build/%=build/%)
 	$(CXX) $(CFLAGS) -o $@ $(LIBPATHS) $^ $(LIBS)
 
-TESTOBJS := $(patsubst test/%.cpp,obj-test/%.o,$(wildcard test/*.cpp))
-
-obj-test/%.o: test/%.cpp
-	$(CXX) -c $(TESTDEFS) $(CFLAGS) -MMD -MF $(@:%.o=%.d) -o $@ $<
-	@cp $(@:%.o=%.d) $(@:%.o=%.P); \
-	  sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
-	      -e '/^$$/ d' -e 's/$$/ :/' < $(@:%.o=%.d) >> $(@:%.o=%.P); \
-	  rm -f $(@:%.o=%.d)
-
-test_eccoin: $(TESTOBJS) $(filter-out obj/init.o,$(OBJS:obj/%=obj/%))
-	$(CXX) $(CFLAGS) -o $@ $(LIBPATHS) $^ $(LIBS) $(TESTLIBS)
-
 clean:
-	-rm -f eccoind test_eccoin
-	-rm -f obj/*.o
-	-rm -f obj-test/*.o
-	-rm -f obj/*.P
-	-rm -f obj-test/*.P
-	-rm -f obj/build.h
+	-rm -f ECCoind
+	-rm -f build/*.o
+	-rm -f build/*.P
+	-rm -f build/build.h
+	-rm -f build/network/*.o
+	-rm -f build/netowkr/*.P
+	-rm -f build/util/*.o
+	-rm -f build/util/*.P
+	-rm -f build/rpc/*.o
+	-rm -f build/rpc/*.P
+	-rm -f build/crypto/*.o
+	-rm -f builf/crypto*.P
 
 FORCE:

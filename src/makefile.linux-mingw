@@ -2,7 +2,14 @@
 # Distributed under the MIT/X11 software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-DEPSDIR:=/usr/i586-mingw32msvc
+TARGET_PLATFORM:=i686
+#TARGET_PLATFORM:=x86_64
+
+DEPSDIR:=/usr/$(TARGET_PLATFORM)-w64-mingw32
+CC:=$(TARGET_PLATFORM)-w64-mingw32-gcc
+CXX:=$(TARGET_PLATFORM)-w64-mingw32-g++
+RANLIB=$(TARGET_PLATFORM)-w64-mingw32-ranlib
+STRIP=$(TARGET_PLATFORM)-w64-mingw32-strip
 
 USE_UPNP:=0
 USE_IPV6:=1
@@ -10,32 +17,30 @@ USE_IPV6:=1
 INCLUDEPATHS= \
  -I"$(CURDIR)" \
  -I"$(CURDIR)"/obj \
- -I"$(DEPSDIR)/boost_1_50_0" \
- -I"$(DEPSDIR)/db-4.8.30.NC/build_unix" \
- -I"$(DEPSDIR)/openssl-1.0.1c/include" \
+ -I"$(DEPSDIR)/boost_1_55_0" \
+ -I"$(DEPSDIR)/db-6.0.20/build_unix" \
+ -I"$(DEPSDIR)/openssl-1.0.1f/include" \
  -I"$(DEPSDIR)"
 
 LIBPATHS= \
- -L"$(DEPSDIR)/boost_1_50_0/stage/lib" \
- -L"$(DEPSDIR)/db-4.8.30.NC/build_unix" \
- -L"$(DEPSDIR)/openssl-1.0.1c"
+ -L"$(DEPSDIR)/boost_1_55_0/stage/lib" \
+ -L"$(DEPSDIR)/db-6.0.20/build_unix" \
+ -L"$(DEPSDIR)/openssl-1.0.1f"
 
 LIBS= \
- -l boost_system-mt-s \
- -l boost_filesystem-mt-s \
- -l boost_program_options-mt-s \
- -l boost_thread_win32-mt-s \
- -l boost_chrono-mt-s \
+ -l boost_system-mt \
+ -l boost_filesystem-mt \
+ -l boost_program_options-mt \
+ -l boost_thread_win32-mt \
+ -l boost_chrono-mt \
  -l db_cxx \
  -l ssl \
  -l crypto
 
 DEFS=-D_MT -DWIN32 -D_WINDOWS -DBOOST_THREAD_USE_LIB -DBOOST_SPIRIT_THREADSAFE
 DEBUGFLAGS=-g
-CFLAGS=-O2 -msse2 -w -Wall -Wextra -Wformat -Wformat-security -Wno-unused-parameter $(DEBUGFLAGS) $(DEFS) $(INCLUDEPATHS)
-LDFLAGS=-Wl,--dynamicbase -Wl,--nxcompat
-
-TESTDEFS = -DTEST_DATA_DIR=$(abspath test/data)
+CFLAGS=-O3 -msse2 -w -Wall -Wextra -Wno-ignored-qualifiers -Wformat -Wformat-security -Wno-unused-parameter -std=c++11 $(DEBUGFLAGS) $(DEFS) $(INCLUDEPATHS)
+LDFLAGS=-Wl,--dynamicbase -Wl,--nxcompat -static-libgcc -static-libstdc++
 
 ifndef USE_UPNP
 	override USE_UPNP = -
@@ -56,40 +61,73 @@ LIBS += -l mingwthrd -l kernel32 -l user32 -l gdi32 -l comdlg32 -l winspool -l w
 HEADERS = $(wildcard *.h)
 
 OBJS= \
-    obj/alert.o \
-    obj/version.o \
-    obj/checkpoints.o \
-    obj/netbase.o \
-    obj/addrman.o \
-    obj/crypter.o \
-    obj/key.o \
-    obj/db.o \
-    obj/init.o \
-    obj/irc.o \
-    obj/keystore.o \
-    obj/main.o \
-    obj/net.o \
-    obj/protocol.o \
-    obj/bitcoinrpc.o \
-    obj/rpcdump.o \
-    obj/rpcnet.o \
-    obj/rpcmining.o \
-    obj/rpcwallet.o \
-    obj/rpcblockchain.o \
-    obj/rpcrawtransaction.o \
-    obj/script.o \
-    obj/sync.o \
-    obj/util.o \
-    obj/wallet.o \
-    obj/walletdb.o \
-    obj/noui.o \
-    obj/kernel.o \
-    obj/pbkdf2.o \
-    obj/scrypt_mine.o \
-    obj/scrypt-x86.o \
-    obj/scrypt-x86_64.o
+    build/version.o \
+    build/checkpoints.o \
+    build/network/netaddr.o \
+    build/network/addrman.o \
+    build/crypter.o \
+    build/key.o \
+    build/db.o \
+    build/init.o \
+    build/keystore.o \
+    build/miner.o \
+    build/main.o \
+    build/net.o \
+    build/network/protocol.o \
+    build/bitcoinrpc.o \
+    build/rpcdump.o \
+    build/rpcnet.o \
+    build/rpcmining.o \
+    build/rpcwallet.o \
+    build/rpcblockchain.o \
+    build/rpcrawtransaction.o \
+    build/script.o \
+    build/sync.o \
+    build/util/util.o \
+    build/wallet.o \
+    build/walletdb.o \
+    build/noui.o \
+    build/kernel.o \
+    build/pbkdf2.o \
+    build/messages.o \
+    build/block.o \
+    build/global.o \
+    build/points.o \
+    build/chain.o \
+    build/blockindex.o \
+    build/hash.o \
+    build/locator.o \
+    build/transaction.o \
+    build/merkle_transaction.o \
+    build/mempool.o \
+    build/scrypt.o \
+    build/network/netutils.o \
+    build/network/node.o \
+    build/network/proxyutils.o \
+    build/network/requests.o \
+    build/network/service.o \
+    build/network/socketutils.o \
+    build/util/utilexceptions.o \
+    build/util/utilmoneystr.o \
+    build/util/utilstrencodings.o \
+    build/util/utiltime.o \
+    build/univalue.o \
+    build/univalue_write.o \
+    build/univalue_read.o \
+    build/random.o \
+    build/server.o \
+    build/fs.o
 
-all: eccoind.exe
+
+all: MultiWalletCoind.exe
+
+LIBS += $(CURDIR)/leveldb/libleveldb.a $(CURDIR)/leveldb/libmemenv.a
+DEFS += -I"$(CURDIR)/leveldb/include"
+DEFS += -I"$(CURDIR)/leveldb/helpers"
+OBJS += obj/txdb-leveldb.o
+leveldb/libleveldb.a:
+	@echo "Building LevelDB ..." && cd leveldb && CC=$(CC) CXX=$(CXX) TARGET_OS=OS_WINDOWS_CROSSCOMPILE CXXFLAGS="-I$(INCLUDEPATHS)" LDFLAGS="-L$(LIBPATHS)" $(MAKE) libleveldb.a libmemenv.a && $(RANLIB) libleveldb.a && $(RANLIB) libmemenv.a && cd ..
+obj/txdb-leveldb.o: leveldb/libleveldb.a
 
 obj/build.h: FORCE
 	/bin/sh ../share/genbuild.sh obj/build.h
@@ -97,30 +135,26 @@ version.cpp: obj/build.h
 DEFS += -DHAVE_BUILD_INFO
 
 obj/%.o: %.cpp $(HEADERS)
-	i586-mingw32msvc-g++ -c $(CFLAGS) -o $@ $<
+	$(CXX) -c $(CFLAGS) -o $@ $<
 
-eccoind.exe: $(OBJS:obj/%=obj/%)
-	i586-mingw32msvc-g++ $(CFLAGS) $(LDFLAGS) -o $@ $(LIBPATHS) $^ $(LIBS)
+obj/zerocoin/%.o: zerocoin/%.cpp $(HEADERS)
+	$(CXX) -c $(CFLAGS) -o $@ $<
 
-TESTOBJS := $(patsubst test/%.cpp,obj-test/%.o,$(wildcard test/*.cpp))
-
-obj-test/%.o: test/%.cpp $(HEADERS)
-	i586-mingw32msvc-g++ -c $(TESTDEFS) $(CFLAGS) -o $@ $<
-
-test_eccoin.exe: $(TESTOBJS) $(filter-out obj/init.o,$(OBJS:obj/%=obj/%))
-	i586-mingw32msvc-g++ $(CFLAGS) $(LDFLAGS) -o $@ $(LIBPATHS) $^ -lboost_unit_test_framework-mt-s $(LIBS)
+MultiWalletCoind.exe: $(OBJS:obj/%=obj/%)
+	$(CXX) $(CFLAGS) $(LDFLAGS) -o $@ $(LIBPATHS) $^ $(LIBS) -lshlwapi
+	$(STRIP) MultiWalletCoind.exe
 
 obj/scrypt-x86.o: scrypt-x86.S
-	i586-mingw32msvc-g++ -c $(CFLAGS) -MMD -o $@ $<
+	$(CXX) -c $(CFLAGS) -MMD -o $@ $<
 
 obj/scrypt-x86_64.o: scrypt-x86_64.S
-	i586-mingw32msvc-g++ -c $(CFLAGS) -MMD -o $@ $<
+	$(CXX) -c $(CFLAGS) -MMD -o $@ $<
 
 clean:
 	-rm -f obj/*.o
-	-rm -f eccoind.exe
-	-rm -f obj-test/*.o
-	-rm -f test_eccoin.exe
+	-rm -f obj/zerocoin/*.o
+	-rm -f MultiWalletCoind.exe
 	-rm -f obj/build.h
+	cd leveldb && TARGET_OS=OS_WINDOWS_CROSSCOMPILE $(MAKE) clean && cd ..
 
 FORCE:
