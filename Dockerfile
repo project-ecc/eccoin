@@ -4,10 +4,10 @@
 # (--no-cache is required or else it won't pull latest updates from github)
 #
 # to run:
-#   docker run eccoind
+#   docker run -p 19118:19118  eccoind
 #
 # to run with a mounted directory for ~/.eccoind:
-#   docker run -v /path/to/a/local/directory:/root/.eccoin eccoind 
+#   docker run -p 19118:19118 -v /path/to/a/local/directory:/root/.eccoin eccoind 
 #
 #############################################################################
  
