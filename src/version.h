@@ -10,7 +10,7 @@
  */
 
 
-static const int PROTOCOL_VERSION = 60035;
+static const int PROTOCOL_VERSION = 60036;
 
 // earlier versions not supported as of Feb 2012, and are disconnected
 static const int MIN_PROTO_VERSION = 60035;
