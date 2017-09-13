@@ -3243,7 +3243,7 @@ int64_t GetProofOfStakeReward(int64_t nCoinAge, int nHeight)
         /// if we are already at max money supply limits (25 billion coins, we return 0 as no new coins are to be minted
         if (fDebug)
         {
-            LogPrintf("GetProofOfStakeReward(): create=%s nCoinAge=%d\n", FormatMoney(nSubsidy).c_str(), nCoinAge);
+            LogPrintf("GetProofOfStakeReward(): create=%i nCoinAge=%d\n", 0, nCoinAge);
         }
         return 0;
     }
