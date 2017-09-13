@@ -38,7 +38,10 @@ static bool GetKernelStakeModifier(uint256 hashBlockFrom, uint256& nStakeModifie
     }
     if(blocksToGo > 0)
     {
-        LogPrintf("blocks to go was %i and it should be 0 but we ran out of indexes \n", blocksToGo);
+        if(fDebug)
+        {
+            LogPrintf("blocks to go was %i and it should be 0 but we ran out of indexes \n", blocksToGo);
+        }
         return false;
     }
 
@@ -161,7 +164,7 @@ bool CheckStakeKernelHash(int nHeight, unsigned int nBits, const CBlock& blockFr
 
     if(nTimeWeight <= 0)
     {
-        LogPrintf("time weight was somehow <= 0 \n");
+        LogPrintf("CheckStakeKernelHash(): ERROR: time weight was somehow <= 0 \n");
         return false;
     }
 
@@ -173,7 +176,10 @@ bool CheckStakeKernelHash(int nHeight, unsigned int nBits, const CBlock& blockFr
 
     if (!GetKernelStakeModifier(blockFrom.GetHash(), nStakeModifier))
     {
-        LogPrintf(">>> CheckStakeKernelHash: GetKernelStakeModifier return false\n");
+        if(fDebug)
+        {
+            LogPrintf(">>> CheckStakeKernelHash: GetKernelStakeModifier return false\n");
+        }
         return false;
     }
     // LogPrintf(">>> CheckStakeKernelHash: passed GetKernelStakeModifier\n");
@@ -205,23 +211,35 @@ bool CheckStakeKernelHash(int nHeight, unsigned int nBits, const CBlock& blockFr
         std::string reductionHex = reduction.GetHex();
         unsigned int n = std::count(reductionHex.begin(), reductionHex.end(), '0');
         unsigned int redux = 64 - n; // 64 is max 0's in a 256 bit hex string
-        LogPrintf("reduction = %u \n", redux);
-        LogPrintf("pre reduction hashProofOfStake = %s \n", arith_hashProofOfStake.GetHex().c_str());
+        if(fDebug)
+        {
+            LogPrintf("reduction = %u \n", redux);
+            LogPrintf("pre reduction hashProofOfStake = %s \n", arith_hashProofOfStake.GetHex().c_str());
+        }
         /// before we apply reduction, we want to shift the hash 20 bits to the right. the PoS limit is lead by 20 0's so we want our reduction to apply to a hashproofofstake that is also lead by 20 0's
         arith_hashProofOfStake = arith_hashProofOfStake >> 20;
-        LogPrintf("mid reduction hashProofOfStake = %s \n", arith_hashProofOfStake.GetHex().c_str());
+        if(fDebug)
+        {
+            LogPrintf("mid reduction hashProofOfStake = %s \n", arith_hashProofOfStake.GetHex().c_str());
+        }
         arith_hashProofOfStake = arith_hashProofOfStake >> redux;
-        LogPrintf("post reduction hashProofOfStake = %s \n", arith_hashProofOfStake.GetHex().c_str());
+        if(fDebug)
+        {
+            LogPrintf("post reduction hashProofOfStake = %s \n", arith_hashProofOfStake.GetHex().c_str());
+        }
         // Now check if proof-of-stake hash meets target protocol
         if(arith_hashProofOfStake > hashTarget)
         {
-//            if(fDebug)
+            if(fDebug)
             {
                 LogPrintf("CheckStakeKernelHash(): ERROR: hashProofOfStake %s > %s hashTarget\n", arith_hashProofOfStake.GetHex().c_str(), hashTarget.GetHex().c_str());
             }
             return false;
         }
-        LogPrintf("CheckStakeKernelHash(): SUCCESS: hashProofOfStake %s < %s hashTarget\n", arith_hashProofOfStake.GetHex().c_str(), hashTarget.GetHex().c_str());
+        if(fDebug)
+        {
+            LogPrintf("CheckStakeKernelHash(): SUCCESS: hashProofOfStake %s < %s hashTarget\n", arith_hashProofOfStake.GetHex().c_str(), hashTarget.GetHex().c_str());
+        }
     }
 
     return true;
