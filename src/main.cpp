@@ -3276,9 +3276,10 @@ int64_t GetProofOfStakeReward(int64_t nCoinAge, int nHeight)
         if(nextMoney > (MAX_MONEY / 2))
         {
             /// CMS + subsidy = nextMoney
-            /// nextMoney - MAX = new subsidy (new subsidy should be difference between max and the amount we went over)
+            /// nextMoney - MAX = difference and we should take this difference away from nSubsidy so nSubsidy stops at max money and doesnt go over
+            /// credits go to cvargos for this fix
             int64_t difference = (nextMoney - (MAX_MONEY / 2));
-            nSubsidy = difference;
+            nSubsidy = nSubsidy - difference;
         }
     }
     if (fDebug)
