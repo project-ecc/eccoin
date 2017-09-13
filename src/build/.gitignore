@@ -1,2 +1,11 @@
 *
 !.gitignore
+!wallet
+!support
+!script
+!primitives
+!policy
+!crypto
+!consensus
+!compat
+!univalue

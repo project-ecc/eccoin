@@ -1,4 +1,0 @@
-build/univalue/univalue_read.o: univalue/univalue_read.cpp \
- univalue/univalue.h
-univalue/univalue_read.cpp :
- univalue/univalue.h :
