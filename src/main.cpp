@@ -3238,6 +3238,15 @@ int64_t GetProofOfStakeReward(int64_t nCoinAge, int nHeight)
 {
     int64_t nRewardCoinYear = 2.5 * MAX_MINT_PROOF_OF_STAKE;
     int64_t CMS = chainActive.Tip()->nMoneySupply;
+    if(CMS == (MAX_MONEY / 2))
+    {
+        /// if we are already at max money supply limits (25 billion coins, we return 0 as no new coins are to be minted
+        if (fDebug)
+        {
+            LogPrintf("GetProofOfStakeReward(): create=%s nCoinAge=%d\n", FormatMoney(nSubsidy).c_str(), nCoinAge);
+        }
+        return 0;
+    }
     if (nHeight > 500000 && nHeight < 1005000)
     {
         int64_t nextMoney = (ValueFromAmountAsInt(CMS) + nRewardCoinYear) ;
@@ -3251,21 +3260,25 @@ int64_t GetProofOfStakeReward(int64_t nCoinAge, int nHeight)
             nRewardCoinYear = 0;
         }
         int64_t nSubsidy = nCoinAge * nRewardCoinYear / 365;
+        if (fDebug)
+        {
+            LogPrintf("GetProofOfStakeReward(): create=%s nCoinAge=%d\n", FormatMoney(nSubsidy).c_str(), nCoinAge);
+        }
         return nSubsidy;
     }
+
     nRewardCoinYear = 25 * CENT; // 25%
     int64_t nSubsidy = nCoinAge * nRewardCoinYear / 365;
     if(nHeight >= 1005000)
     {
         int64_t nextMoney = CMS + nSubsidy;
+        // this conditional should only happen once
         if(nextMoney > (MAX_MONEY / 2))
         {
+            /// CMS + subsidy = nextMoney
+            /// nextMoney - MAX = new subsidy (new subsidy should be difference between max and the amount we went over)
             int64_t difference = (nextMoney - (MAX_MONEY / 2));
-            nSubsidy = nextMoney - difference;
-        }
-        if(nextMoney == (MAX_MONEY / 2))
-        {
-            nSubsidy = 0;
+            nSubsidy = difference;
         }
     }
     if (fDebug)
