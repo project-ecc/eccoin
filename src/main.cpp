@@ -1920,6 +1920,8 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     pindex->nMint = nValueOut - nValueIn + nFees;
     pindex->nMoneySupply = (pindex->pprev? pindex->pprev->nMoneySupply : 0) + nValueOut - nValueIn;
 
+
+    /// put the following checks in this function due to lack of pindex when checkblock is called
     // Verify hash target and signature of coinstake tx
     uint256 hashProofOfStake;
     hashProofOfStake.SetNull();

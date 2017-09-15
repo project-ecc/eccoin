@@ -711,15 +711,17 @@ void ScryptMiner(CWallet *pwallet)
     scrypt_buffer_free(scratchbuf);
 }
 
+static boost::thread_group* minerThreads = NULL;
+
 void ThreadScryptMiner(void* parg)
 {
-    static boost::thread_group* minerThreads = NULL;
 
     if (minerThreads != NULL)
     {
         minerThreads->interrupt_all();
         delete minerThreads;
         minerThreads = NULL;
+        return;
     }
 
     minerThreads = new boost::thread_group();

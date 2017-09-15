@@ -11,7 +11,8 @@ bool AcceptBlockHeader(const CBlockHeader& block, CValidationState& state, const
     uint256 hash = block.GetHash();
     BlockMap::iterator miSelf = mapBlockIndex.find(hash);
     CBlockIndex *pindex = NULL;
-    if (hash != chainparams.GetConsensus().hashGenesisBlock) {
+    if (hash != chainparams.GetConsensus().hashGenesisBlock)
+    {
 
         if (miSelf != mapBlockIndex.end()) {
             // Block header is already known.

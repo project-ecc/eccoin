@@ -217,9 +217,11 @@ bool ConnectTip(CValidationState& state, const CChainParams& chainparams, CBlock
         {
             if(origin == GENERATED)
             {
-                CBlockIndex *pindexDelete = chainActive.Tip();
-                assert(pindexDelete);
-                UpdateTip(pindexDelete->pprev);
+                /// make sure tip is pointing to the last good block
+                CBlockIndex *pindexSet = chainActive.Tip();
+                assert(pindexSet);
+                UpdateTip(pindexSet);
+                pindexBestHeader = pindexSet;
             }
             else if (state.IsInvalid())
             {
