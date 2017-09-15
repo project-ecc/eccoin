@@ -1,2 +1,0 @@
-build/compat/strnlen.o: compat/strnlen.cpp
-compat/strnlen.cpp :

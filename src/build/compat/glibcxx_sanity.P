@@ -1,2 +1,0 @@
-build/compat/glibcxx_sanity.o: compat/glibcxx_sanity.cpp
-compat/glibcxx_sanity.cpp :
