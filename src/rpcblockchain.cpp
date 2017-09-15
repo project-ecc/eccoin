@@ -857,7 +857,7 @@ UniValue invalidateblock(const UniValue& params, bool fHelp)
     }
 
     if (state.IsValid()) {
-        ActivateBestChain(state, Params());
+        ActivateBestChain(state, Params(), LOADED);
     }
 
     if (!state.IsValid()) {
@@ -896,7 +896,7 @@ UniValue reconsiderblock(const UniValue& params, bool fHelp)
     }
 
     if (state.IsValid()) {
-        ActivateBestChain(state, Params());
+        ActivateBestChain(state, Params(), LOADED);
     }
 
     if (!state.IsValid()) {

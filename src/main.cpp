@@ -2940,7 +2940,7 @@ bool InitBlockIndex(const CChainParams& chainparams)
             pindex->SetStakeModifier(nStakeModifier);
             if (!ReceivedBlockTransactions(block, state, pindex, blockPos))
                 return error("InitBlockIndex(): genesis block not accepted");
-            if (!ActivateBestChain(state, chainparams, &block))
+            if (!ActivateBestChain(state, chainparams, LOADED, &block))
                 return error("InitBlockIndex(): genesis block cannot be activated");
             // Force a chainstate write so that when we VerifyDB in a moment, it doesn't check stale data
             return FlushStateToDisk(state, FLUSH_STATE_ALWAYS);
@@ -3010,7 +3010,7 @@ bool LoadExternalBlockFile(const CChainParams& chainparams, FILE* fileIn, CDiskB
                 // process in case the block isn't known yet
                 if (mapBlockIndex.count(hash) == 0 || (mapBlockIndex[hash]->nStatus & BLOCK_HAVE_DATA) == 0) {
                     CValidationState state;
-                    if (ProcessNewBlock(state, chainparams, NULL, &block, true, dbp))
+                    if (ProcessNewBlock(state, chainparams, NULL, &block, true, dbp, LOADED))
                         nLoaded++;
                     if (state.IsError())
                         break;
@@ -3032,7 +3032,7 @@ bool LoadExternalBlockFile(const CChainParams& chainparams, FILE* fileIn, CDiskB
                             LogPrintf("%s: Processing out of order child %s of %s\n", __func__, block.GetHash().ToString(),
                                     head.ToString());
                             CValidationState dummy;
-                            if (ProcessNewBlock(dummy, chainparams, NULL, &block, true, &it->second))
+                            if (ProcessNewBlock(dummy, chainparams, NULL, &block, true, &it->second, LOADED))
                             {
                                 nLoaded++;
                                 queue.push_back(block.GetHash());

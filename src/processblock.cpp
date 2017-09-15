@@ -46,7 +46,7 @@ public:
 };
 
 
-bool ProcessNewBlock(CValidationState& state, const CChainParams& chainparams, const CNode* pfrom, const CBlock* pblock, bool fForceProcessing, CDiskBlockPos* dbp)
+bool ProcessNewBlock(CValidationState& state, const CChainParams& chainparams, const CNode* pfrom, const CBlock* pblock, bool fForceProcessing, CDiskBlockPos* dbp, BlockOrigin origin)
 {
     // Preliminary checks
     bool checked = CheckBlock(*pblock, state);
@@ -71,7 +71,7 @@ bool ProcessNewBlock(CValidationState& state, const CChainParams& chainparams, c
             return error("%s: AcceptBlock FAILED", __func__);
     }
 
-    if (!ActivateBestChain(state, chainparams, pblock))
+    if (!ActivateBestChain(state, chainparams, origin, pblock))
         return error("%s: ActivateBestChain failed", __func__);
 
     return true;
@@ -194,7 +194,7 @@ static int64_t nTimeTotal = 0;
  * Connect a new block to chainActive. pblock is either NULL or a pointer to a CBlock
  * corresponding to pindexNew, to bypass loading it again from disk.
  */
-bool ConnectTip(CValidationState& state, const CChainParams& chainparams, CBlockIndex* pindexNew, const CBlock* pblock)
+bool ConnectTip(CValidationState& state, const CChainParams& chainparams, CBlockIndex* pindexNew, const CBlock* pblock, BlockOrigin origin)
 {
     assert(pindexNew->pprev == chainActive.Tip());
     // Read block from disk.
@@ -213,9 +213,18 @@ bool ConnectTip(CValidationState& state, const CChainParams& chainparams, CBlock
         CCoinsViewCache view(pcoinsTip);
         bool rv = ConnectBlock(*pblock, state, pindexNew, view);
         GetMainSignals().BlockChecked(*pblock, state);
-        if (!rv) {
-            if (state.IsInvalid())
+        if (!rv)
+        {
+            if(origin == GENERATED)
+            {
+                CBlockIndex *pindexDelete = chainActive.Tip();
+                assert(pindexDelete);
+                UpdateTip(pindexDelete->pprev);
+            }
+            else if (state.IsInvalid())
+            {
                 InvalidBlockFound(pindexNew, state);
+            }
             return error("ConnectTip(): ConnectBlock %s failed", pindexNew->GetBlockHash().ToString());
         }
         mapBlockSource.erase(pindexNew->GetBlockHash());
@@ -329,7 +338,7 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
  * Try to make some progress towards making pindexMostWork the active block.
  * pblock is either NULL or a pointer to a CBlock corresponding to pindexMostWork.
  */
- bool ActivateBestChainStep(CValidationState& state, const CChainParams& chainparams, CBlockIndex* pindexMostWork, const CBlock* pblock)
+ bool ActivateBestChainStep(CValidationState& state, const CChainParams& chainparams, CBlockIndex* pindexMostWork, const CBlock* pblock, BlockOrigin origin)
 {
     AssertLockHeld(cs_main);
     bool fInvalidFound = false;
@@ -363,7 +372,7 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
 
         // Connect new blocks.
         BOOST_REVERSE_FOREACH(CBlockIndex *pindexConnect, vpindexToConnect) {
-            if (!ConnectTip(state, chainparams, pindexConnect, pindexConnect == pindexMostWork ? pblock : NULL)) {
+            if (!ConnectTip(state, chainparams, pindexConnect, pindexConnect == pindexMostWork ? pblock : NULL, origin)) {
                 if (state.IsInvalid()) {
                     // The block violates a consensus rule.
                     if (!state.CorruptionPossible())
@@ -407,7 +416,7 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
  * or an activated best chain. pblock is either NULL or a pointer to a block
  * that is already loaded (to avoid loading it again from disk).
  */
-bool ActivateBestChain(CValidationState &state, const CChainParams& chainparams, const CBlock *pblock) {
+bool ActivateBestChain(CValidationState &state, const CChainParams& chainparams, BlockOrigin origin, const CBlock *pblock) {
     CBlockIndex *pindexMostWork = NULL;
     do {
         boost::this_thread::interruption_point();
@@ -426,7 +435,7 @@ bool ActivateBestChain(CValidationState &state, const CChainParams& chainparams,
             if (pindexMostWork == NULL || pindexMostWork == chainActive.Tip())
                 return true;
 
-            if (!ActivateBestChainStep(state, chainparams, pindexMostWork, pblock && pblock->GetHash() == pindexMostWork->GetBlockHash() ? pblock : NULL))
+            if (!ActivateBestChainStep(state, chainparams, pindexMostWork, pblock && pblock->GetHash() == pindexMostWork->GetBlockHash() ? pblock : NULL, origin))
                 return false;
 
             pindexNewTip = chainActive.Tip();

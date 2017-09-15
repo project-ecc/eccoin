@@ -520,7 +520,7 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reservekey)
         // Process this block the same as if we had received it from another node
         CValidationState state;
         const CChainParams& chainparams = Params();
-        if (!ProcessNewBlock(state, chainparams, NULL, pblock, true, NULL))
+        if (!ProcessNewBlock(state, chainparams, NULL, pblock, true, NULL, GENERATED))
             return error("Miner : ProcessBlock, block not accepted");
     }
 
