@@ -270,8 +270,7 @@ bool CheckProofOfStake(int nHeight, const CTransaction& tx, unsigned int nBits, 
 
     CDiskTxPos txindex;
     pblocktree->ReadTxIndex(txPrev.GetHash(), txindex);
-    unsigned int txOffset = txindex.nTxOffset + 80; // header is 80 bytes, and nTxOffset doesnt inclde header
-    if (!CheckStakeKernelHash(nHeight, block, txOffset, txPrev, txin.prevout, tx.nTime, hashProofOfStake))
+    if (!CheckStakeKernelHash(nHeight, block, txindex.nTxOffset, txPrev, txin.prevout, tx.nTime, hashProofOfStake))
         return error("CheckProofOfStake() : INFO: check kernel failed on coinstake %s, hashProof=%s", tx.GetHash().ToString().c_str(), hashProofOfStake.ToString().c_str()); // may occur during initial download or if behind on block chain sync
 
     return true;
