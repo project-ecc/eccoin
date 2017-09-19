@@ -270,8 +270,20 @@ bool CheckProofOfStake(int nHeight, const CTransaction& tx, unsigned int nBits, 
 
     CDiskTxPos txindex;
     pblocktree->ReadTxIndex(txPrev.GetHash(), txindex);
-    if (!CheckStakeKernelHash(nHeight, block, txindex.nTxOffset, txPrev, txin.prevout, tx.nTime, hashProofOfStake))
-        return error("CheckProofOfStake() : INFO: check kernel failed on coinstake %s, hashProof=%s", tx.GetHash().ToString().c_str(), hashProofOfStake.ToString().c_str()); // may occur during initial download or if behind on block chain sync
+    if(nHeight < 1505775)
+    {
+        if (!CheckStakeKernelHash(nHeight, block, txindex.nTxOffset + 80, txPrev, txin.prevout, tx.nTime, hashProofOfStake))
+        {
+            return error("CheckProofOfStake() : INFO: check kernel failed on coinstake %s, hashProof=%s", tx.GetHash().ToString().c_str(), hashProofOfStake.ToString().c_str()); // may occur during initial download or if behind on block chain sync
+        }
+    }
+    else
+    {
+        if (!CheckStakeKernelHash(nHeight, block, txindex.nTxOffset, txPrev, txin.prevout, tx.nTime, hashProofOfStake))
+        {
+            return error("CheckProofOfStake() : INFO: check kernel failed on coinstake %s, hashProof=%s", tx.GetHash().ToString().c_str(), hashProofOfStake.ToString().c_str()); // may occur during initial download or if behind on block chain sync
+        }
+    }
 
     return true;
 }
