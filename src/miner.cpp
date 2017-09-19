@@ -529,8 +529,6 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reservekey)
 
 void ThreadBitcoinMiner(void* parg);
 
-static bool fGenerateBitcoins = false;
-
 void ScryptMiner(CWallet *pwallet)
 {
     void *scratchbuf = scrypt_buffer_alloc();
@@ -685,8 +683,6 @@ void ScryptMiner(CWallet *pwallet)
 
             // Check for stop or if block needs to be rebuilt
             if (fShutdown)
-                return;
-            if (!fGenerateBitcoins)
                 return;
             if (vNodes.empty())
                 break;

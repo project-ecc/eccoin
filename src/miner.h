@@ -40,4 +40,6 @@ struct CBlockTemplate
 
 CBlockTemplate* CreateNewBlock(CWallet* pwallet, bool fProofOfStake=false);
 
+extern boost::thread_group* minerThreads;
+
 #endif // NOVACOIN_MINER_H
