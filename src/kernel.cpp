@@ -146,7 +146,7 @@ bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, const CTransaction&
 //   quantities so as to generate blocks faster, degrading the system back into
 //   a proof-of-work situation.
 //
-bool CheckStakeKernelHash(int nHeight, unsigned int nBits, const CBlock& blockFrom, unsigned int nTxPrevOffset, const CTransaction& txPrev, const COutPoint& prevout, unsigned int nTimeTx, uint256& hashProofOfStake)
+bool CheckStakeKernelHash(int nHeight, const CBlock& blockFrom, unsigned int nTxPrevOffset, const CTransaction& txPrev, const COutPoint& prevout, unsigned int nTimeTx, uint256& hashProofOfStake)
 {
     if (nTimeTx < txPrev.nTime)  // Transaction timestamp violation
         return error("CheckStakeKernelHash() : nTime violation");
@@ -176,7 +176,6 @@ bool CheckStakeKernelHash(int nHeight, unsigned int nBits, const CBlock& blockFr
 
     if (!GetKernelStakeModifier(blockFrom.GetHash(), nStakeModifier))
     {
-        if(fDebug)
         {
             LogPrintf(">>> CheckStakeKernelHash: GetKernelStakeModifier return false\n");
         }
@@ -230,7 +229,6 @@ bool CheckStakeKernelHash(int nHeight, unsigned int nBits, const CBlock& blockFr
         // Now check if proof-of-stake hash meets target protocol
         if(arith_hashProofOfStake > hashTarget)
         {
-            if(fDebug)
             {
                 LogPrintf("CheckStakeKernelHash(): ERROR: hashProofOfStake %s > %s hashTarget\n", arith_hashProofOfStake.GetHex().c_str(), hashTarget.GetHex().c_str());
             }
@@ -273,7 +271,7 @@ bool CheckProofOfStake(int nHeight, const CTransaction& tx, unsigned int nBits, 
     CDiskTxPos txindex;
     pblocktree->ReadTxIndex(txPrev.GetHash(), txindex);
     unsigned int txOffset = txindex.nTxOffset + 80; // header is 80 bytes, and nTxOffset doesnt inclde header
-    if (!CheckStakeKernelHash(nHeight, nBits, block, txOffset, txPrev, txin.prevout, tx.nTime, hashProofOfStake))
+    if (!CheckStakeKernelHash(nHeight, block, txOffset, txPrev, txin.prevout, tx.nTime, hashProofOfStake))
         return error("CheckProofOfStake() : INFO: check kernel failed on coinstake %s, hashProof=%s", tx.GetHash().ToString().c_str(), hashProofOfStake.ToString().c_str()); // may occur during initial download or if behind on block chain sync
 
     return true;

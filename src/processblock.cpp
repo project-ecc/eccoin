@@ -215,17 +215,13 @@ bool ConnectTip(CValidationState& state, const CChainParams& chainparams, CBlock
         GetMainSignals().BlockChecked(*pblock, state);
         if (!rv)
         {
-            if(origin == GENERATED)
-            {
-                /// make sure tip is pointing to the last good block
-                CBlockIndex *pindexSet = chainActive.Tip();
-                assert(pindexSet);
-                UpdateTip(pindexSet);
-                pindexBestHeader = pindexSet;
-            }
-            else if (state.IsInvalid())
+            if (state.IsInvalid())
             {
                 InvalidBlockFound(pindexNew, state);
+                if(origin == GENERATED)
+                {
+                    pindexBestHeader = chainActive.Tip();
+                }
             }
             return error("ConnectTip(): ConnectBlock %s failed", pindexNew->GetBlockHash().ToString());
         }
@@ -359,14 +355,16 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
     std::vector<CBlockIndex*> vpindexToConnect;
     bool fContinue = true;
     int nHeight = pindexFork ? pindexFork->nHeight : -1;
-    while (fContinue && nHeight != pindexMostWork->nHeight) {
+    while (fContinue && nHeight != pindexMostWork->nHeight)
+    {
         // Don't iterate the entire list of potential improvements toward the best tip, as we likely only need
         // a few blocks along the way.
         int nTargetHeight = std::min(nHeight + 32, pindexMostWork->nHeight);
         vpindexToConnect.clear();
         vpindexToConnect.reserve(nTargetHeight - nHeight);
         CBlockIndex *pindexIter = pindexMostWork->GetAncestor(nTargetHeight);
-        while (pindexIter && pindexIter->nHeight != nHeight) {
+        while (pindexIter && pindexIter->nHeight != nHeight)
+        {
             vpindexToConnect.push_back(pindexIter);
             pindexIter = pindexIter->pprev;
         }
@@ -374,8 +372,10 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
 
         // Connect new blocks.
         BOOST_REVERSE_FOREACH(CBlockIndex *pindexConnect, vpindexToConnect) {
-            if (!ConnectTip(state, chainparams, pindexConnect, pindexConnect == pindexMostWork ? pblock : NULL, origin)) {
-                if (state.IsInvalid()) {
+            if (!ConnectTip(state, chainparams, pindexConnect, pindexConnect == pindexMostWork ? pblock : NULL, origin))
+            {
+                if (state.IsInvalid())
+                {
                     // The block violates a consensus rule.
                     if (!state.CorruptionPossible())
                         InvalidChainFound(vpindexToConnect.back());
@@ -383,11 +383,15 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
                     fInvalidFound = true;
                     fContinue = false;
                     break;
-                } else {
+                }
+                else
+                {
                     // A system error occurred (disk space, database error, ...).
                     return false;
                 }
-            } else {
+            }
+            else
+            {
                 PruneBlockIndexCandidates();
                 if (!pindexOldTip || chainActive.Tip()->nChainWork > pindexOldTip->nChainWork) {
                     // We're in a better position than we were. Return temporarily to release the lock.
@@ -746,7 +750,8 @@ void InvalidChainFound(CBlockIndex* pindexNew)
 void InvalidBlockFound(CBlockIndex *pindex, const CValidationState &state)
 {
     int nDoS = 0;
-    if (state.IsInvalid(nDoS)) {
+    if (state.IsInvalid(nDoS))
+    {
         std::map<uint256, NodeId>::iterator it = mapBlockSource.find(pindex->GetBlockHash());
         if (it != mapBlockSource.end() && State(it->second)) {
             assert (state.GetRejectCode() < REJECT_INTERNAL); // Blocks are never rejected with internal reject codes

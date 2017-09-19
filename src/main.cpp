@@ -1929,8 +1929,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     {
         if (!CheckProofOfStake(pindex->nHeight, block.vtx[1], block.nBits, hashProofOfStake))
         {
-            LogPrintf("WARNING: ProcessBlock(): check proof-of-stake failed for block %s\n", block.GetHash().ToString().c_str());
-            return false; // do not error here as we expect this during initial block download
+            return state.DoS(100, error("WARNING: ProcessBlock(): check proof-of-stake failed for block %s\n", block.GetHash().ToString().c_str()), REJECT_INVALID, "bad-proofofstake");
         }
     }
 
@@ -1948,12 +1947,12 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     if(block.IsProofOfStake())
     {
         if (!ComputeNextStakeModifier(pindex->pprev, block.vtx[1], nStakeModifier))
-            return error("ConnectBlock() : ComputeNextStakeModifier() failed");
+            return state.DoS(100, error("ConnectBlock() : ComputeNextStakeModifier() failed") , REJECT_INVALID, "bad-stakemodifier-pos");
     }
     else
     {
         if (!ComputeNextStakeModifier(pindex->pprev, block.vtx[0], nStakeModifier))
-            return error("ConnectBlock() : ComputeNextStakeModifier() failed");
+            return state.DoS(100, error("ConnectBlock() : ComputeNextStakeModifier() failed"), REJECT_INVALID, "bad-stakemodifier-pow");
     }
     pindex->SetStakeModifier(nStakeModifier);
     if (fJustCheck)
