@@ -97,6 +97,7 @@ UniValue blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool tx
     result.push_back(Pair("height", blockindex->nHeight));
     result.push_back(Pair("version", block.nVersion));
     result.push_back(Pair("merkleroot", block.hashMerkleRoot.GetHex()));
+    result.push_back(Pair("mint", ValueFromAmount(blockindex->nMint)));
     UniValue txs(UniValue::VARR);
     for (auto const& tx: block.vtx)
     {
