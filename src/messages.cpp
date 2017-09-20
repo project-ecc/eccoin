@@ -17,6 +17,7 @@
 #include "consensus/validation.h"
 #include "chainparams.h"
 #include "processblock.h"
+#include "processheader.h"
 
 #include <algorithm>
 #include <vector>

@@ -379,17 +379,6 @@ bool IsArgSet(const std::string& strArg)
     return mapArgs.count(strArg);
 }
 
-std::vector<std::string> GetArgs(const std::string& strArg)
-{
-    try{
-        return mapMultiArgs.at(strArg);
-    }
-    catch(...)
-    {
-        LogPrintf("could find arg %s \n", strArg.c_str());
-    }
-}
-
 std::string GetArg(const std::string& strArg, const std::string& strDefault)
 {
     if (mapArgs.count(strArg))

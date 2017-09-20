@@ -150,7 +150,6 @@ inline bool IsSwitchChar(char c)
 }
 
 bool IsArgSet(const std::string& strArg);
-std::vector<std::string> GetArgs(const std::string& strArg);
 
 /**
  * Return string argument or default value

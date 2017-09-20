@@ -17,6 +17,6 @@ bool CheckStakeKernelHash(int nHeight, const CBlock& blockFrom, unsigned int nTx
 
 // Check kernel hash target and coinstake signature
 // Sets hashProofOfStake on success return
-bool CheckProofOfStake(int nHeight, const CTransaction& tx, unsigned int nBits, uint256& hashProofOfStake);
+bool CheckProofOfStake(int nHeight, const CTransaction& tx, uint256& hashProofOfStake);
 
 #endif // PPCOIN_KERNEL_H

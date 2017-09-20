@@ -117,7 +117,10 @@ bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, const CTransaction&
 
     if (!GetKernelStakeModifier(block.GetHash(), nStakeModifier))
     {
-        LogPrintf("ComputeNextStakeModifier(): GetKernelStakeModifier return false\n");
+        if(fDebug)
+        {
+            LogPrintf("ComputeNextStakeModifier(): GetKernelStakeModifier return false\n");
+        }
         return false;
     }
     return true;
@@ -164,7 +167,10 @@ bool CheckStakeKernelHash(int nHeight, const CBlock& blockFrom, unsigned int nTx
 
     if(nTimeWeight <= 0)
     {
-        LogPrintf("CheckStakeKernelHash(): ERROR: time weight was somehow <= 0 \n");
+        if(fDebug)
+        {
+            LogPrintf("CheckStakeKernelHash(): ERROR: time weight was somehow <= 0 \n");
+        }
         return false;
     }
 
@@ -229,6 +235,7 @@ bool CheckStakeKernelHash(int nHeight, const CBlock& blockFrom, unsigned int nTx
         // Now check if proof-of-stake hash meets target protocol
         if(arith_hashProofOfStake > hashTarget)
         {
+            if(fDebug)
             {
                 LogPrintf("CheckStakeKernelHash(): ERROR: hashProofOfStake %s > %s hashTarget\n", arith_hashProofOfStake.GetHex().c_str(), hashTarget.GetHex().c_str());
             }
@@ -244,7 +251,7 @@ bool CheckStakeKernelHash(int nHeight, const CBlock& blockFrom, unsigned int nTx
 }
 
 // Check kernel hash target and coinstake signature
-bool CheckProofOfStake(int nHeight, const CTransaction& tx, unsigned int nBits, uint256& hashProofOfStake)
+bool CheckProofOfStake(int nHeight, const CTransaction& tx, uint256& hashProofOfStake)
 {
     if (!tx.IsCoinStake())
         return error("CheckProofOfStake() : called on non-coinstake %s", tx.GetHash().ToString().c_str());

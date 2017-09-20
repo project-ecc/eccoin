@@ -1931,7 +1931,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     hashProofOfStake.SetNull();
     if (block.IsProofOfStake())
     {
-        if (!CheckProofOfStake(pindex->nHeight, block.vtx[1], block.nBits, hashProofOfStake))
+        if (!CheckProofOfStake(pindex->nHeight, block.vtx[1], hashProofOfStake))
         {
             return state.DoS(100, error("WARNING: ProcessBlock(): check proof-of-stake failed for block %s\n", block.GetHash().ToString().c_str()), REJECT_INVALID, "bad-proofofstake");
         }
@@ -3066,7 +3066,6 @@ bool LoadExternalBlockFile(const CChainParams& chainparams, FILE* fileIn, CDiskB
 
 std::string GetWarnings(const std::string& strFor)
 {
-    int nPriority = 0;
     std::string strStatusBar;
     std::string strRPC;
     std::string strGUI;
@@ -3082,19 +3081,16 @@ std::string GetWarnings(const std::string& strFor)
     // Misc warnings like out of disk space and clock is wrong
     if (strMiscWarning != "")
     {
-        nPriority = 1000;
         strStatusBar = strGUI = strMiscWarning;
     }
 
     if (fLargeWorkForkFound)
     {
-        nPriority = 2000;
         strStatusBar = strRPC = "Warning: The network does not appear to fully agree! Some miners appear to be experiencing issues.";
         strGUI = _("Warning: The network does not appear to fully agree! Some miners appear to be experiencing issues.");
     }
     else if (fLargeWorkInvalidChainFound)
     {
-        nPriority = 2000;
         strStatusBar = strRPC = "Warning: We do not appear to fully agree with our peers! You may need to upgrade, or other nodes may need to upgrade.";
         strGUI = _("Warning: We do not appear to fully agree with our peers! You may need to upgrade, or other nodes may need to upgrade.");
     }

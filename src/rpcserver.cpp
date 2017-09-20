@@ -571,14 +571,6 @@ void RPCRunLater(const std::string& name, boost::function<void(void)> func, int6
     deadlineTimers.insert(std::make_pair(name, boost::shared_ptr<RPCTimerBase>(timerInterface->NewTimer(func, nSeconds*1000))));
 }
 
-/** Interpret string as boolean, for converting */
-static bool strToBool(const std::string& strValue)
-{
-    if (strValue.empty())
-        return true;
-    return (atoi(strValue) != 0);
-}
-
 //
 // IOStream device that speaks SSL but can also speak non-SSL
 //
@@ -661,51 +653,6 @@ std::string rfc1123Time()
     setlocale(LC_TIME, locale.c_str());
     return std::string(buffer);
 }
-
-static std::string HTTPReply(int nStatus, const std::string& strMsg, bool keepalive)
-{
-    if (nStatus == HTTP_UNAUTHORIZED)
-        return strprintf("HTTP/1.0 401 Authorization Required\r\n"
-            "Date: %s\r\n"
-            "Server: eccoin-json-rpc/%s\r\n"
-            "WWW-Authenticate: Basic realm=\"jsonrpc\"\r\n"
-            "Content-Type: text/html\r\n"
-            "Content-Length: 296\r\n"
-            "\r\n"
-            "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\"\r\n"
-            "\"http://www.w3.org/TR/1999/REC-html401-19991224/loose.dtd\">\r\n"
-            "<HTML>\r\n"
-            "<HEAD>\r\n"
-            "<TITLE>Error</TITLE>\r\n"
-            "<META HTTP-EQUIV='Content-Type' CONTENT='text/html; charset=ISO-8859-1'>\r\n"
-            "</HEAD>\r\n"
-            "<BODY><H1>401 Unauthorized.</H1></BODY>\r\n"
-            "</HTML>\r\n", rfc1123Time().c_str(), FormatFullVersion().c_str());
-    const char *cStatus;
-         if (nStatus == HTTP_OK) cStatus = "OK";
-    else if (nStatus == HTTP_BAD_REQUEST) cStatus = "Bad Request";
-    else if (nStatus == HTTP_FORBIDDEN) cStatus = "Forbidden";
-    else if (nStatus == HTTP_NOT_FOUND) cStatus = "Not Found";
-    else if (nStatus == HTTP_INTERNAL_SERVER_ERROR) cStatus = "Internal Server Error";
-    else cStatus = "";
-    return strprintf(
-            "HTTP/1.1 %d %s\r\n"
-            "Date: %s\r\n"
-            "Connection: %s\r\n"
-            "Content-Length: %u\r\n"
-            "Content-Type: application/json\r\n"
-            "Server: eccoin-json-rpc/%s\r\n"
-            "\r\n"
-            "%s",
-        nStatus,
-        cStatus,
-        rfc1123Time().c_str(),
-        keepalive ? "keep-alive" : "close",
-        strMsg.size(),
-        FormatFullVersion().c_str(),
-        strMsg.c_str());
-}
-
 
 int ReadHTTPStatus(std::basic_istream<char>& stream, int &proto)
 {

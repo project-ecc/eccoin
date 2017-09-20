@@ -609,8 +609,10 @@ void CWallet::MarkDirty()
 {
     {
         LOCK(cs_wallet);
-        for (auto const& item: mapWallet)
+        for (std::pair<const uint256, CWalletTx>& item : mapWallet)
+        {
             item.second.MarkDirty();
+        }
     }
 }
 
@@ -3225,7 +3227,6 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
 
     int64_t nCredit = 0;
     CScript scriptPubKeyKernel;
-    int64_t timeRedux = GetTime();
     bool fKernelFound = false;
     for (auto pcoin: setCoins)
     {

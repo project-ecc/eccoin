@@ -303,6 +303,7 @@ inline int64_t getMinFee(int64_t nTime)
         return 1;
     }
     return 0.1;
+
 }
 #ifndef MIN_TX_FEE
 #define MIN_TX_FEE getMinFee
@@ -384,7 +385,6 @@ extern int nPreferredDownload;
 extern int nSyncStarted;
 extern int64_t nTimeBestReceived;
 extern int nPeersWithValidatedDownloads;
-bool AcceptBlockHeader(const CBlockHeader& block, CValidationState& state, const CChainParams& chainparams, CBlockIndex** ppindex=NULL);
 extern boost::scoped_ptr<CRollingBloomFilter> recentRejects;
 
 
