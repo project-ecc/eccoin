@@ -554,6 +554,7 @@ void ReadConfigFile(std::map<std::string, std::string>& mapSettingsRet,
         fprintf(ConfFile, "rpcuser=yourusername\n");
         fprintf(ConfFile, "rpcpassword=yourpassword\n");
         fprintf(ConfFile, "addnode=www.cryptounited.io\n");
+        fprintf(ConfFile, "addnode=eccnode.altj.com\n");
         fprintf(ConfFile, "rpcport=19119\n");
         fprintf(ConfFile, "rpcconnect=127.0.0.1\n");
         fclose(ConfFile);

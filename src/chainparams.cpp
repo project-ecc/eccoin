@@ -89,6 +89,7 @@ public:
         vSeeds.push_back(CDNSSeedData("CryptoUnitedSeed", "www.cryptounited.io"));
         vSeeds.push_back(CDNSSeedData("ECC-Seed1", "138.197.100.45"));
         vSeeds.push_back(CDNSSeedData("ECC-Seed2", "159.203.172.212"));
+        vSeeds.push_back(CDNSSeedData("ECC-Seed3", "eccnode.altj.com"));
 
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,33);
         base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1,8);
