@@ -1336,7 +1336,7 @@ bool CheckTxInputs(const CTransaction& tx, CValidationState& state, const CCoins
                 return state.DoS(100, false, REJECT_INVALID, "bad-txns-cant-get-coin-age", false , strprintf("ConnectInputs() : %s unable to get coin age for coinstake", tx.GetHash().ToString().substr(0,10).c_str()));
 
             int64_t nStakeReward = tx.GetValueOut() - nValueIn;
-            if (nStakeReward > GetProofOfStakeReward(tx.GetCoinAge(nCoinAge, true), nSpendHeight) - tx.GetMinFee() + MIN_TX_FEE(tx.nTime))
+            if (nStakeReward > GetProofOfStakeReward(tx.GetCoinAge(nCoinAge, true), nSpendHeight) - tx.GetMinFee() + DEFAULT_TRANSACTION_MINFEE)
             {
                 if(fDebug)
                 {

@@ -873,10 +873,10 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
     if (gArgs.IsArgSet("-minrelaytxfee"))
     {
         CAmount n = 0;
-        if (ParseMoney(gArgs.GetArg("-minrelaytxfee", MIN_TX_FEE), n) && n > 0)
+        if (ParseMoney(gArgs.GetArg("-minrelaytxfee", DEFAULT_TRANSACTION_MINFEE), n) && n > 0)
             ::minRelayTxFee = CFeeRate(n);
         else
-            return InitError(strprintf(_("Invalid amount for -minrelaytxfee=<amount>: '%s'"), gArgs.GetArg("-minrelaytxfee", MIN_TX_FEE)));
+            return InitError(strprintf(_("Invalid amount for -minrelaytxfee=<amount>: '%s'"), gArgs.GetArg("-minrelaytxfee", DEFAULT_TRANSACTION_MINFEE)));
     }
 
     fRequireStandard = !gArgs.GetBoolArg("-acceptnonstdtxn", !Params().RequireStandard());
@@ -888,16 +888,16 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
     if (gArgs.IsArgSet("-mintxfee"))
     {
         CAmount n = 0;
-        if (ParseMoney(gArgs.GetArg("-mintxfee", MIN_TX_FEE), n) && n > 0)
+        if (ParseMoney(gArgs.GetArg("-mintxfee", DEFAULT_TRANSACTION_MINFEE), n) && n > 0)
             CWallet::minTxFee = CFeeRate(n);
         else
-            return InitError(strprintf(_("Invalid amount for -mintxfee=<amount>: '%s'"), gArgs.GetArg("-mintxfee", MIN_TX_FEE)));
+            return InitError(strprintf(_("Invalid amount for -mintxfee=<amount>: '%s'"), gArgs.GetArg("-mintxfee", DEFAULT_TRANSACTION_MINFEE)));
     }
     if (gArgs.IsArgSet("-fallbackfee"))
     {
         CAmount nFeePerK = 0;
-        if (!ParseMoney(gArgs.GetArg("-fallbackfee", MIN_TX_FEE), nFeePerK))
-            return InitError(strprintf(_("Invalid amount for -fallbackfee=<amount>: '%s'"), gArgs.GetArg("-fallbackfee", MIN_TX_FEE)));
+        if (!ParseMoney(gArgs.GetArg("-fallbackfee", DEFAULT_TRANSACTION_MINFEE), nFeePerK))
+            return InitError(strprintf(_("Invalid amount for -fallbackfee=<amount>: '%s'"), gArgs.GetArg("-fallbackfee", DEFAULT_TRANSACTION_MINFEE)));
         if (nFeePerK > nHighTransactionFeeWarning)
             InitWarning(_("-fallbackfee is set very high! This is the transaction fee you may pay when fee estimates are not available."));
         CWallet::fallbackFee = CFeeRate(nFeePerK);
@@ -905,15 +905,15 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
     if (gArgs.IsArgSet("-paytxfee"))
     {
         CAmount nFeePerK = 0;
-        if (!ParseMoney(gArgs.GetArg("-paytxfee", MIN_TX_FEE), nFeePerK))
-            return InitError(strprintf(_("Invalid amount for -paytxfee=<amount>: '%s'"), gArgs.GetArg("-paytxfee", MIN_TX_FEE)));
+        if (!ParseMoney(gArgs.GetArg("-paytxfee", DEFAULT_TRANSACTION_MINFEE), nFeePerK))
+            return InitError(strprintf(_("Invalid amount for -paytxfee=<amount>: '%s'"), gArgs.GetArg("-paytxfee", DEFAULT_TRANSACTION_MINFEE)));
         if (nFeePerK > nHighTransactionFeeWarning)
             InitWarning(_("-paytxfee is set very high! This is the transaction fee you will pay if you send a transaction."));
         payTxFee = CFeeRate(nFeePerK, 1000);
         if (payTxFee < ::minRelayTxFee)
         {
             return InitError(strprintf(_("Invalid amount for -paytxfee=<amount>: '%s' (must be at least %s)"),
-                                       gArgs.GetArg("-paytxfee", MIN_TX_FEE), ::minRelayTxFee.ToString()));
+                                       gArgs.GetArg("-paytxfee", DEFAULT_TRANSACTION_MINFEE), ::minRelayTxFee.ToString()));
         }
     }
     if (gArgs.IsArgSet("-maxtxfee"))
@@ -1534,7 +1534,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
     // --- end disabled ---
 
     // Generate coins in the background
-    if(GetBoolArg("-staking", false))
+    if(gArgs.GetBoolArg("-staking", false))
     {
         ThreadScryptMiner(pwalletMain);
     }

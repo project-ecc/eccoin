@@ -206,15 +206,6 @@ CBlockTemplate* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
     CTxMemPool::setEntries inBlock;
     CTxMemPool::setEntries waitSet;
 
-    // Fee-per-kilobyte amount considered the same as "free"
-    // Be careful setting this: if you set it to zero then
-    // a transaction spammer can cheaply fill blocks using
-    // 1-satoshi-fee transactions. It should be set above the real
-    // cost to you of processing a transaction.
-    int64_t nMinTxFee = MIN_TX_FEE(txNew.nTime);
-    if (gArgs.IsArgSet("-mintxfee"))
-        ParseMoney(gArgs.GetArg("-mintxfee", "0"), nMinTxFee);
-
     // ppcoin: if coinstake available add coinstake tx
     static int64_t nLastCoinStakeSearchTime = GetAdjustedTime();  // only initialized at startup
     CBlockIndex* pindexPrev = chainActive.Tip();
