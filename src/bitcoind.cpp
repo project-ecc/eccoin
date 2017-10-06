@@ -10,6 +10,7 @@
 #include "noui.h"
 #include "scheduler.h"
 #include "util.h"
+#include "args.h"
 #include "httpserver.h"
 #include "httprpc.h"
 #include "rpcserver.h"
@@ -68,14 +69,14 @@ bool AppInit(int argc, char* argv[])
     // Parameters
     //
     // If Qt is used, parameters/bitcoin.conf are parsed in qt/bitcoin.cpp's main()
-    ParseParameters(argc, argv);
+    gArgs.ParseParameters(argc, argv);
 
     // Process help and version before taking care about datadir
-    if (mapArgs.count("-?") || mapArgs.count("-h") ||  mapArgs.count("-help") || mapArgs.count("-version"))
+    if (gArgs.IsArgSet("-?") || gArgs.IsArgSet("-h") ||  gArgs.IsArgSet("-help") || gArgs.IsArgSet("-version"))
     {
         std::string strUsage = _("E-CurrencyCoin Core Daemon") + " " + _("version") + " " + FormatFullVersion() + "\n";
 
-        if (mapArgs.count("-version"))
+        if (gArgs.IsArgSet("-version"))
         {
             strUsage += LicenseInfo();
         }
@@ -95,12 +96,12 @@ bool AppInit(int argc, char* argv[])
     {
         if (!boost::filesystem::is_directory(GetDataDir(false)))
         {
-            fprintf(stderr, "Error: Specified data directory \"%s\" does not exist.\n", mapArgs["-datadir"].c_str());
+            fprintf(stderr, "Error: Specified data directory \"%s\" does not exist.\n", gArgs.GetArg("-datadir", "").c_str());
             return false;
         }
         try
         {
-            ReadConfigFile(mapArgs, mapMultiArgs);
+            gArgs.ReadConfigFile();
         } catch (const std::exception& e) {
             fprintf(stderr,"Error reading configuration file: %s\n", e.what());
             return false;
@@ -125,7 +126,7 @@ bool AppInit(int argc, char* argv[])
             exit(ret);
         }
 #ifndef WIN32
-        fDaemon = GetBoolArg("-daemon", false);
+        fDaemon = gArgs.GetBoolArg("-daemon", false);
         if (fDaemon)
         {
             fprintf(stdout, "E-CurrencyCoin server starting\n");
@@ -148,7 +149,7 @@ bool AppInit(int argc, char* argv[])
                 fprintf(stderr, "Error: setsid() returned %d errno %d\n", sid, errno);
         }
 #endif
-        SoftSetBoolArg("-server", true);
+        gArgs.SoftSetBoolArg("-server", true);
 
         // Set this early so that parameter interactions go to console
         InitLogging();

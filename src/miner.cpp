@@ -10,6 +10,7 @@
 #include "crypto/scrypt.h"
 #include "txmempool.h"
 #include "util.h"
+#include "args.h"
 #include "init.h"
 #include "consensus/consensus.h"
 #include "txmempool.h"
@@ -187,18 +188,18 @@ CBlockTemplate* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
     pblocktemplate->vTxSigOps.push_back(-1); // updated at end
 
     // Largest block you're willing to create:
-    unsigned int nBlockMaxSize = GetArg("-blockmaxsize", MAX_BLOCK_SIZE_GEN/2);
+    unsigned int nBlockMaxSize = gArgs.GetArg("-blockmaxsize", MAX_BLOCK_SIZE_GEN/2);
     // Limit to betweeen 1K and MAX_BLOCK_SIZE-1K for sanity:
     nBlockMaxSize = std::max((unsigned int)1000, std::min((unsigned int)(MAX_BLOCK_SIZE-1000), nBlockMaxSize));
 
     // How much of the block should be dedicated to high-priority transactions,
     // included regardless of the fees they pay
-    unsigned int nBlockPrioritySize = GetArg("-blockprioritysize", 27000);
+    unsigned int nBlockPrioritySize = gArgs.GetArg("-blockprioritysize", 27000);
     nBlockPrioritySize = std::min(nBlockMaxSize, nBlockPrioritySize);
 
     // Minimum block size you want to create; block will be filled with free transactions
     // until there are no more or the block reaches this size:
-    unsigned int nBlockMinSize = GetArg("-blockminsize", 0);
+    unsigned int nBlockMinSize = gArgs.GetArg("-blockminsize", 0);
     nBlockMinSize = std::min(nBlockMaxSize, nBlockMinSize);
 
     // Collect memory pool transactions into the block
@@ -211,8 +212,8 @@ CBlockTemplate* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
     // 1-satoshi-fee transactions. It should be set above the real
     // cost to you of processing a transaction.
     int64_t nMinTxFee = MIN_TX_FEE(txNew.nTime);
-    if (IsArgSet("-mintxfee"))
-        ParseMoney(GetArg("-mintxfee", "0"), nMinTxFee);
+    if (gArgs.IsArgSet("-mintxfee"))
+        ParseMoney(gArgs.GetArg("-mintxfee", "0"), nMinTxFee);
 
     // ppcoin: if coinstake available add coinstake tx
     static int64_t nLastCoinStakeSearchTime = GetAdjustedTime();  // only initialized at startup

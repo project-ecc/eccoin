@@ -8,6 +8,7 @@
 #endif
 
 #include "util.h"
+#include "args.h"
 
 #include "chainparamsbase.h"
 #include "random.h"
@@ -99,8 +100,6 @@ namespace boost {
 const char * const CONF_FILENAME = "eccoin.conf";
 const char * const PID_FILENAME = "eccoind.pid";
 
-std::map<std::string, std::string> mapArgs;
-std::map<std::string, std::vector<std::string> > mapMultiArgs;
 bool fDebug = false;
 bool fPrintToConsole = false;
 bool fPrintToDebugLog = true;
@@ -237,7 +236,7 @@ bool LogAcceptCategory(const char* category)
         static boost::thread_specific_ptr<std::set<std::string> > ptrCategory;
         if (ptrCategory.get() == NULL)
         {
-            const std::vector<std::string>& categories = mapMultiArgs["-debug"];
+            const std::vector<std::string>& categories = gArgs.GetArgs("-debug");
             ptrCategory.reset(new std::set<std::string>(categories.begin(), categories.end()));
             // thread_specific_ptr automatically deletes the set when the thread ends.
         }
@@ -339,83 +338,6 @@ static void InterpretNegativeSetting(std::string& strKey, std::string& strValue)
     }
 }
 
-void ParseParameters(int argc, const char* const argv[])
-{
-    mapArgs.clear();
-    mapMultiArgs.clear();
-
-    for (int i = 1; i < argc; i++)
-    {
-        std::string str(argv[i]);
-        std::string strValue;
-        size_t is_index = str.find('=');
-        if (is_index != std::string::npos)
-        {
-            strValue = str.substr(is_index+1);
-            str = str.substr(0, is_index);
-        }
-#ifdef WIN32
-        boost::to_lower(str);
-        if (boost::algorithm::starts_with(str, "/"))
-            str = "-" + str.substr(1);
-#endif
-
-        if (str[0] != '-')
-            break;
-
-        // Interpret --foo as -foo.
-        // If both --foo and -foo are set, the last takes effect.
-        if (str.length() > 1 && str[1] == '-')
-            str = str.substr(1);
-        InterpretNegativeSetting(str, strValue);
-
-        mapArgs[str] = strValue;
-        mapMultiArgs[str].push_back(strValue);
-    }
-}
-
-bool IsArgSet(const std::string& strArg)
-{
-    return mapArgs.count(strArg);
-}
-
-std::string GetArg(const std::string& strArg, const std::string& strDefault)
-{
-    if (mapArgs.count(strArg))
-        return mapArgs[strArg];
-    return strDefault;
-}
-
-int64_t GetArg(const std::string& strArg, int64_t nDefault)
-{
-    if (mapArgs.count(strArg))
-        return atoi64(mapArgs[strArg]);
-    return nDefault;
-}
-
-bool GetBoolArg(const std::string& strArg, bool fDefault)
-{
-    if (mapArgs.count(strArg))
-        return InterpretBool(mapArgs[strArg]);
-    return fDefault;
-}
-
-bool SoftSetArg(const std::string& strArg, const std::string& strValue)
-{
-    if (mapArgs.count(strArg))
-        return false;
-    mapArgs[strArg] = strValue;
-    return true;
-}
-
-bool SoftSetBoolArg(const std::string& strArg, bool fValue)
-{
-    if (fValue)
-        return SoftSetArg(strArg, std::string("1"));
-    else
-        return SoftSetArg(strArg, std::string("0"));
-}
-
 static const int screenWidth = 79;
 static const int optIndent = 2;
 static const int msgIndent = 7;
@@ -509,8 +431,8 @@ const boost::filesystem::path &GetDataDir(bool fNetSpecific)
     if (!path.empty())
         return path;
 
-    if (mapArgs.count("-datadir")) {
-        path = fs::system_complete(mapArgs["-datadir"]);
+    if (gArgs.IsArgSet("-datadir")) {
+        path = fs::system_complete(gArgs.GetArg("-datadir", ""));
         if (!fs::is_directory(path)) {
             path = "";
             return path;
@@ -532,56 +454,11 @@ void ClearDatadirCache()
     pathCachedNetSpecific = boost::filesystem::path();
 }
 
-boost::filesystem::path GetConfigFile()
-{
-    boost::filesystem::path pathConfigFile(GetArg("-conf", CONF_FILENAME));
-    if (!pathConfigFile.is_complete())
-        pathConfigFile = GetDataDir(false) / pathConfigFile;
-
-    return pathConfigFile;
-}
-
-void ReadConfigFile(std::map<std::string, std::string>& mapSettingsRet,
-                    std::map<std::string, std::vector<std::string> >& mapMultiSettingsRet)
-{
-    init:
-    boost::filesystem::ifstream streamConfig(GetConfigFile());
-    if (!streamConfig.good())
-    {
-        boost::filesystem::path ConfPath = GetDefaultDataDir() / "eccoin.conf";
-        FILE* ConfFile = fopen(ConfPath.string().c_str(), "w");
-        fprintf(ConfFile, "maxconnections=100\n");
-        fprintf(ConfFile, "rpcuser=yourusername\n");
-        fprintf(ConfFile, "rpcpassword=yourpassword\n");
-        fprintf(ConfFile, "addnode=www.cryptounited.io\n");
-        fprintf(ConfFile, "addnode=eccnode.altj.com\n");
-        fprintf(ConfFile, "rpcport=19119\n");
-        fprintf(ConfFile, "rpcconnect=127.0.0.1\n");
-        fclose(ConfFile);
-        goto init;
-    }
-
-    std::set<std::string> setOptions;
-    setOptions.insert("*");
-
-    for (boost::program_options::detail::config_file_iterator it(streamConfig, setOptions), end; it != end; ++it)
-    {
-        // Don't overwrite existing settings so command line settings override eccoin.conf
-        std::string strKey = std::string("-") + it->string_key;
-        std::string strValue = it->value[0];
-        InterpretNegativeSetting(strKey, strValue);
-        if (mapSettingsRet.count(strKey) == 0)
-            mapSettingsRet[strKey] = strValue;
-        mapMultiSettingsRet[strKey].push_back(strValue);
-    }
-    // If datadir is changed in .conf file:
-    ClearDatadirCache();
-}
 
 #ifndef WIN32
 boost::filesystem::path GetPidFile()
 {
-    boost::filesystem::path pathPidFile(GetArg("-pid", PID_FILENAME));
+    boost::filesystem::path pathPidFile(gArgs.GetArg("-pid", PID_FILENAME));
     if (!pathPidFile.is_complete()) pathPidFile = GetDataDir() / pathPidFile;
     return pathPidFile;
 }

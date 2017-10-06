@@ -8,6 +8,7 @@
 
 #include "tinyformat.h"
 #include "util.h"
+#include "args.h"
 #include "utilstrencodings.h"
 
 #include <assert.h>

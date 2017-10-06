@@ -15,6 +15,7 @@
 #include "crypto/scrypt.h"
 #include "utiltime.h"
 #include "timedata.h"
+#include "args.h""
 #include "script/stakescript.h"
 
 // The stake modifier used to hash for a stake kernel is chosen as the stake
@@ -182,6 +183,7 @@ bool CheckStakeKernelHash(int nHeight, const CBlock& blockFrom, unsigned int nTx
 
     if (!GetKernelStakeModifier(blockFrom.GetHash(), nStakeModifier))
     {
+        if(fDebug)
         {
             LogPrintf(">>> CheckStakeKernelHash: GetKernelStakeModifier return false\n");
         }
@@ -291,6 +293,5 @@ bool CheckProofOfStake(int nHeight, const CTransaction& tx, uint256& hashProofOf
             return error("CheckProofOfStake() : INFO: check kernel failed on coinstake %s, hashProof=%s", tx.GetHash().ToString().c_str(), hashProofOfStake.ToString().c_str()); // may occur during initial download or if behind on block chain sync
         }
     }
-
     return true;
 }

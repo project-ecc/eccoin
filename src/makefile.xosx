@@ -11,8 +11,8 @@ ARCH:=$(system lscpu | head -n 1 | awk '{print $2}')
 
 DEFS=-DBOOST_SPIRIT_THREADSAFE
 
-DEFS += $(addprefix -I,$(CURDIR) $(CURDIR)/build $(BOOST_INCLUDE_PATH) $(BDB_INCLUDE_PATH) $(OPENSSL_INCLUDE_PATH) $(EVENT_INCLUDE_PATH) $(CURDIR)/univalue)
-LIBS = $(addprefix -L,$(BOOST_LIB_PATH) $(BDB_LIB_PATH) $(OPENSSL_LIB_PATH) $(EVENT_LIB_PATH))
+DEFS += $(addprefix -I,/home/parallels/Documents/osxcross/target/macports/pkgs/opt/local/include/openssl /home/parallels/Documents/osxcross/target/macports/pkgs/opt/local/include/db48 $(CURDIR) $(CURDIR)/build $(BOOST_INCLUDE_PATH) $(BDB_INCLUDE_PATH) $(OPENSSL_INCLUDE_PATH) $(EVENT_INCLUDE_PATH) $(CURDIR)/univalue)
+LIBS = $(addprefix -L,/home/parallels/Documents/osxcross/target/macports/pkgs/opt/local/lib/db48 $(BOOST_LIB_PATH) $(BDB_LIB_PATH) $(OPENSSL_LIB_PATH) $(EVENT_LIB_PATH))
 
 LMODE = dynamic
 LMODE2 = dynamic
@@ -111,7 +111,7 @@ xLDFLAGS=$(LDHARDENING) $(LDFLAGS)
 LIBS += $(CURDIR)/leveldb/out-static/libleveldb.a $(CURDIR)/leveldb/out-static/libmemenv.a
 LIBS += $(CURDIR)/secp256k1/.libs/libsecp256k1.a
 
-#add project specific dependencies 
+#add project specific dependencies
 DEFS += $(addprefix -I,$(CURDIR)/leveldb/include)
 DEFS += $(addprefix -I,$(CURDIR)/leveldb/helpers)
 DEFS += $(addprefix -I,$(CURDIR)/secp256k1/include)
@@ -158,8 +158,6 @@ OBJS= \
     build/txmempool.o \
     build/uint256.o \
     build/util.o \
-    build/fs.o \
-    build/args.o \
     build/utilmoneystr.o \
     build/utilstrencodings.o \
     build/utiltime.o \
@@ -218,13 +216,13 @@ OBJS= \
     build/pbkdf2.o \
     build/script/stakescript.o
 
-all: leveldb secp256k1 ECCoind 
+all: leveldb secp256k1 ECCoind
 
 leveldb_make:
-	cd leveldb; make; cd ..; 
+	cd leveldb; make; cd ..;
 leveldb: leveldb_make
 
-secp256k1_make: 
+secp256k1_make:
 	cd secp256k1; ./autogen.sh; ./configure --prefix=$(CURDIR)/libsecp256k1 --enable-module-recovery --with-bignum=no; make; make install; cd ..;
 secp256k1: secp256k1_make
 
@@ -250,7 +248,7 @@ build/scrypt-x86.o: scrypt-x86.S
 
 build/scrypt-x86_64.o: scrypt-x86_64.S
 	$(CXX) -c $(xCXXFLAGS) -MMD -o $@ $<
-	      
+
 	rm -f $(@:%.o=%.d)
 build/%.o: %.cpp
 	$(CXX) -c $(xCXXFLAGS) -MMD -MF $(@:%.o=%.d) -o $@ $<

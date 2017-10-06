@@ -10,6 +10,7 @@
 #include "random.h"
 #include "uint256.h"
 #include "util.h"
+#include "args.h"
 
 #include <boost/thread.hpp>
 #include <boost/unordered_set.hpp>
@@ -70,7 +71,7 @@ public:
 
     void Set(const uint256& entry)
     {
-        size_t nMaxCacheSize = GetArg("-maxsigcachesize", DEFAULT_MAX_SIG_CACHE_SIZE) * ((size_t) 1 << 20);
+        size_t nMaxCacheSize = gArgs.GetArg("-maxsigcachesize", DEFAULT_MAX_SIG_CACHE_SIZE) * ((size_t) 1 << 20);
         if (nMaxCacheSize <= 0) return;
 
         boost::unique_lock<boost::shared_mutex> lock(cs_sigcache);

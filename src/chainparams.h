@@ -68,7 +68,7 @@ public:
     const CCheckpointData& Checkpoints() const { return checkpointData; }
     unsigned int getStakeMaxAge() const { return nStakeMaxAge; }
     unsigned int getStakeMinAge() const { return nStakeMinAge; }
-
+  
 protected:
     CChainParams() {}
 
