@@ -1872,7 +1872,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     /// after 1504000 no Pow blocks are allowed
     if(block.IsProofOfWork() && pindex->nHeight >= 1504000)
     {
-        state.DoS(100, error("CheckBlock(): proof of work failed, invalid PoW height "),
+        return state.DoS(100, error("CheckBlock(): proof of work failed, invalid PoW height "),
                                  REJECT_INVALID, "Pow after cutoff");
     }
 
