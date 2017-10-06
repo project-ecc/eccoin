@@ -87,9 +87,9 @@ static const unsigned int MAX_HEADERS_RESULTS = 2000;
  *  harder). We'll probably want to make this a per-peer adaptive value at some point. */
 static const unsigned int BLOCK_DOWNLOAD_WINDOW = 1024;
 /** Time to wait (in seconds) between writing blocks/block index to disk. */
-static const unsigned int DATABASE_WRITE_INTERVAL = 60 * 60;
+static const unsigned int DATABASE_WRITE_INTERVAL = 60 * 6;
 /** Time to wait (in seconds) between flushing chainstate to disk. */
-static const unsigned int DATABASE_FLUSH_INTERVAL = 24 * 60 * 60;
+static const unsigned int DATABASE_FLUSH_INTERVAL = 24 * 60 * 6;
 /** Maximum length of reject messages. */
 static const unsigned int MAX_REJECT_MESSAGE_LENGTH = 111;
 /** Average delay between local address broadcasts in seconds. */
@@ -151,6 +151,12 @@ extern CFeeRate minRelayTxFee;
 extern bool fAlerts;
 extern bool fEnableReplacement;
 
+
+enum BlockOrigin{
+    LOADED,
+    GENERATED,
+    RECEIVED,
+};
 
 struct CBlockReject {
     unsigned char chRejectCode;
@@ -297,6 +303,7 @@ inline int64_t getMinFee(int64_t nTime)
         return 1;
     }
     return 0.1;
+
 }
 #ifndef MIN_TX_FEE
 #define MIN_TX_FEE getMinFee
@@ -365,7 +372,7 @@ std::string GetWarnings(const std::string& strFor);
 /** Retrieve a transaction (from memory pool, or from disk, if possible) */
 bool GetTransaction(const uint256 &hash, CTransaction &tx, const Consensus::Params& params, uint256 &hashBlock, bool fAllowSlow = false);
 /** Find the best known block, and make it the tip of the block chain */
-bool ActivateBestChain(CValidationState& state, const CChainParams& chainparams, const CBlock* pblock = NULL);
+bool ActivateBestChain(CValidationState& state, const CChainParams& chainparams, BlockOrigin origin, const CBlock* pblock = NULL);
 
 enum FlushStateMode {
     FLUSH_STATE_NONE,
@@ -378,7 +385,6 @@ extern int nPreferredDownload;
 extern int nSyncStarted;
 extern int64_t nTimeBestReceived;
 extern int nPeersWithValidatedDownloads;
-bool AcceptBlockHeader(const CBlockHeader& block, CValidationState& state, const CChainParams& chainparams, CBlockIndex** ppindex=NULL);
 extern boost::scoped_ptr<CRollingBloomFilter> recentRejects;
 
 

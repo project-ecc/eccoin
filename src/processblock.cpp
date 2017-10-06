@@ -47,7 +47,7 @@ public:
 };
 
 
-bool ProcessNewBlock(CValidationState& state, const CChainParams& chainparams, const CNode* pfrom, const CBlock* pblock, bool fForceProcessing, CDiskBlockPos* dbp)
+bool ProcessNewBlock(CValidationState& state, const CChainParams& chainparams, const CNode* pfrom, const CBlock* pblock, bool fForceProcessing, CDiskBlockPos* dbp, BlockOrigin origin)
 {
     // Preliminary checks
     bool checked = CheckBlock(*pblock, state);
@@ -72,7 +72,7 @@ bool ProcessNewBlock(CValidationState& state, const CChainParams& chainparams, c
             return error("%s: AcceptBlock FAILED", __func__);
     }
 
-    if (!ActivateBestChain(state, chainparams, pblock))
+    if (!ActivateBestChain(state, chainparams, origin, pblock))
         return error("%s: ActivateBestChain failed", __func__);
 
     return true;
@@ -195,7 +195,7 @@ static int64_t nTimeTotal = 0;
  * Connect a new block to chainActive. pblock is either NULL or a pointer to a CBlock
  * corresponding to pindexNew, to bypass loading it again from disk.
  */
-bool ConnectTip(CValidationState& state, const CChainParams& chainparams, CBlockIndex* pindexNew, const CBlock* pblock)
+bool ConnectTip(CValidationState& state, const CChainParams& chainparams, CBlockIndex* pindexNew, const CBlock* pblock, BlockOrigin origin)
 {
     assert(pindexNew->pprev == chainActive.Tip());
     // Read block from disk.
@@ -214,9 +214,16 @@ bool ConnectTip(CValidationState& state, const CChainParams& chainparams, CBlock
         CCoinsViewCache view(pcoinsTip);
         bool rv = ConnectBlock(*pblock, state, pindexNew, view);
         GetMainSignals().BlockChecked(*pblock, state);
-        if (!rv) {
+        if (!rv)
+        {
             if (state.IsInvalid())
+            {
                 InvalidBlockFound(pindexNew, state);
+                if(origin == GENERATED)
+                {
+                    pindexBestHeader = chainActive.Tip();
+                }
+            }
             return error("ConnectTip(): ConnectBlock %s failed", pindexNew->GetBlockHash().ToString());
         }
         mapBlockSource.erase(pindexNew->GetBlockHash());
@@ -330,12 +337,20 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
  * Try to make some progress towards making pindexMostWork the active block.
  * pblock is either NULL or a pointer to a CBlock corresponding to pindexMostWork.
  */
- bool ActivateBestChainStep(CValidationState& state, const CChainParams& chainparams, CBlockIndex* pindexMostWork, const CBlock* pblock)
+ bool ActivateBestChainStep(CValidationState& state, const CChainParams& chainparams, CBlockIndex* pindexMostWork, const CBlock* pblock, BlockOrigin origin)
 {
     AssertLockHeld(cs_main);
     bool fInvalidFound = false;
     const CBlockIndex *pindexOldTip = chainActive.Tip();
     const CBlockIndex *pindexFork = chainActive.FindFork(pindexMostWork);
+
+    /// temporary security measure against large chain attacks, reorging this many blocks should not occur naturally. a real solution should be implemented
+    if((pindexOldTip && pindexFork && pindexOldTip->nHeight >= pindexFork->nHeight + COINBASE_MATURITY)
+    {
+        LogPrintf("PREVENTING REORGANIZATION OF A DANGEROUSLY LARGE NUMBER OF BLOCKS, IF YOU SEE THIS MESSAGE REPORT IT TO A DEV \n");
+        return state.DoS(100, error("ActivateBestChainStep(): PREVENTING REORGANIZATION OF A DANGEROUSLY LARGE NUMBER OF BLOCKS, IF YOU SEE THIS MESSAGE REPORT IT TO A DEV "),
+                                 REJECT_INVALID, "DANGEROUS REORG");
+    }
 
     // Disconnect active blocks which are no longer in the best chain.
     bool fBlocksDisconnected = false;
@@ -349,14 +364,16 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
     std::vector<CBlockIndex*> vpindexToConnect;
     bool fContinue = true;
     int nHeight = pindexFork ? pindexFork->nHeight : -1;
-    while (fContinue && nHeight != pindexMostWork->nHeight) {
+    while (fContinue && nHeight != pindexMostWork->nHeight)
+    {
         // Don't iterate the entire list of potential improvements toward the best tip, as we likely only need
         // a few blocks along the way.
         int nTargetHeight = std::min(nHeight + 32, pindexMostWork->nHeight);
         vpindexToConnect.clear();
         vpindexToConnect.reserve(nTargetHeight - nHeight);
         CBlockIndex *pindexIter = pindexMostWork->GetAncestor(nTargetHeight);
-        while (pindexIter && pindexIter->nHeight != nHeight) {
+        while (pindexIter && pindexIter->nHeight != nHeight)
+        {
             vpindexToConnect.push_back(pindexIter);
             pindexIter = pindexIter->pprev;
         }
@@ -364,8 +381,10 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
 
         // Connect new blocks.
         BOOST_REVERSE_FOREACH(CBlockIndex *pindexConnect, vpindexToConnect) {
-            if (!ConnectTip(state, chainparams, pindexConnect, pindexConnect == pindexMostWork ? pblock : NULL)) {
-                if (state.IsInvalid()) {
+            if (!ConnectTip(state, chainparams, pindexConnect, pindexConnect == pindexMostWork ? pblock : NULL, origin))
+            {
+                if (state.IsInvalid())
+                {
                     // The block violates a consensus rule.
                     if (!state.CorruptionPossible())
                         InvalidChainFound(vpindexToConnect.back());
@@ -373,11 +392,15 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
                     fInvalidFound = true;
                     fContinue = false;
                     break;
-                } else {
+                }
+                else
+                {
                     // A system error occurred (disk space, database error, ...).
                     return false;
                 }
-            } else {
+            }
+            else
+            {
                 PruneBlockIndexCandidates();
                 if (!pindexOldTip || chainActive.Tip()->nChainWork > pindexOldTip->nChainWork) {
                     // We're in a better position than we were. Return temporarily to release the lock.
@@ -408,7 +431,7 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
  * or an activated best chain. pblock is either NULL or a pointer to a block
  * that is already loaded (to avoid loading it again from disk).
  */
-bool ActivateBestChain(CValidationState &state, const CChainParams& chainparams, const CBlock *pblock) {
+bool ActivateBestChain(CValidationState &state, const CChainParams& chainparams, BlockOrigin origin, const CBlock *pblock) {
     CBlockIndex *pindexMostWork = NULL;
     do {
         boost::this_thread::interruption_point();
@@ -427,7 +450,7 @@ bool ActivateBestChain(CValidationState &state, const CChainParams& chainparams,
             if (pindexMostWork == NULL || pindexMostWork == chainActive.Tip())
                 return true;
 
-            if (!ActivateBestChainStep(state, chainparams, pindexMostWork, pblock && pblock->GetHash() == pindexMostWork->GetBlockHash() ? pblock : NULL))
+            if (!ActivateBestChainStep(state, chainparams, pindexMostWork, pblock && pblock->GetHash() == pindexMostWork->GetBlockHash() ? pblock : NULL, origin))
                 return false;
 
             pindexNewTip = chainActive.Tip();
@@ -736,7 +759,8 @@ void InvalidChainFound(CBlockIndex* pindexNew)
 void InvalidBlockFound(CBlockIndex *pindex, const CValidationState &state)
 {
     int nDoS = 0;
-    if (state.IsInvalid(nDoS)) {
+    if (state.IsInvalid(nDoS))
+    {
         std::map<uint256, NodeId>::iterator it = mapBlockSource.find(pindex->GetBlockHash());
         if (it != mapBlockSource.end() && State(it->second)) {
             assert (state.GetRejectCode() < REJECT_INTERNAL); // Blocks are never rejected with internal reject codes

@@ -18,6 +18,7 @@
 #include "consensus/validation.h"
 #include "chainparams.h"
 #include "processblock.h"
+#include "processheader.h"
 
 #include <algorithm>
 #include <vector>
@@ -1168,9 +1169,10 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
         // Such an unrequested block may still be processed, subject to the
         // conditions in AcceptBlock().
         bool forceProcessing = pfrom->fWhitelisted && !IsInitialBlockDownload();
-        ProcessNewBlock(state, chainparams, pfrom, &block, forceProcessing, NULL);
+        ProcessNewBlock(state, chainparams, pfrom, &block, forceProcessing, NULL, RECEIVED);
         int nDoS;
-        if (state.IsInvalid(nDoS)) {
+        if (state.IsInvalid(nDoS))
+        {
             assert (state.GetRejectCode() < REJECT_INTERNAL); // Blocks are never rejected with internal reject codes
             pfrom->PushMessage(NetMsgType::REJECT, strCommand, (unsigned char)state.GetRejectCode(),
                                state.GetRejectReason().substr(0, MAX_REJECT_MESSAGE_LENGTH), inv.hash);

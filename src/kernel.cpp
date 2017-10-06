@@ -16,7 +16,6 @@
 #include "utiltime.h"
 #include "timedata.h"
 #include "args.h""
-
 #include "script/stakescript.h"
 
 // The stake modifier used to hash for a stake kernel is chosen as the stake
@@ -40,7 +39,10 @@ static bool GetKernelStakeModifier(uint256 hashBlockFrom, uint256& nStakeModifie
     }
     if(blocksToGo > 0)
     {
-        LogPrintf("blocks to go was %i and it should be 0 but we ran out of indexes \n", blocksToGo);
+        if(fDebug)
+        {
+            LogPrintf("blocks to go was %i and it should be 0 but we ran out of indexes \n", blocksToGo);
+        }
         return false;
     }
 
@@ -116,7 +118,10 @@ bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, const CTransaction&
 
     if (!GetKernelStakeModifier(block.GetHash(), nStakeModifier))
     {
-        LogPrintf("ComputeNextStakeModifier(): GetKernelStakeModifier return false\n");
+        if(fDebug)
+        {
+            LogPrintf("ComputeNextStakeModifier(): GetKernelStakeModifier return false\n");
+        }
         return false;
     }
     return true;
@@ -145,7 +150,7 @@ bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, const CTransaction&
 //   quantities so as to generate blocks faster, degrading the system back into
 //   a proof-of-work situation.
 //
-bool CheckStakeKernelHash(int nHeight, unsigned int nBits, const CBlock& blockFrom, unsigned int nTxPrevOffset, const CTransaction& txPrev, const COutPoint& prevout, unsigned int nTimeTx, uint256& hashProofOfStake)
+bool CheckStakeKernelHash(int nHeight, const CBlock& blockFrom, unsigned int nTxPrevOffset, const CTransaction& txPrev, const COutPoint& prevout, unsigned int nTimeTx, uint256& hashProofOfStake)
 {
     if (nTimeTx < txPrev.nTime)  // Transaction timestamp violation
         return error("CheckStakeKernelHash() : nTime violation");
@@ -163,7 +168,10 @@ bool CheckStakeKernelHash(int nHeight, unsigned int nBits, const CBlock& blockFr
 
     if(nTimeWeight <= 0)
     {
-        LogPrintf("time weight was somehow <= 0 \n");
+        if(fDebug)
+        {
+            LogPrintf("CheckStakeKernelHash(): ERROR: time weight was somehow <= 0 \n");
+        }
         return false;
     }
 
@@ -175,7 +183,10 @@ bool CheckStakeKernelHash(int nHeight, unsigned int nBits, const CBlock& blockFr
 
     if (!GetKernelStakeModifier(blockFrom.GetHash(), nStakeModifier))
     {
-        LogPrintf(">>> CheckStakeKernelHash: GetKernelStakeModifier return false\n");
+        if(fDebug)
+        {
+            LogPrintf(">>> CheckStakeKernelHash: GetKernelStakeModifier return false\n");
+        }
         return false;
     }
     // LogPrintf(">>> CheckStakeKernelHash: passed GetKernelStakeModifier\n");
@@ -207,30 +218,42 @@ bool CheckStakeKernelHash(int nHeight, unsigned int nBits, const CBlock& blockFr
         std::string reductionHex = reduction.GetHex();
         unsigned int n = std::count(reductionHex.begin(), reductionHex.end(), '0');
         unsigned int redux = 64 - n; // 64 is max 0's in a 256 bit hex string
-        LogPrintf("reduction = %u \n", redux);
-        LogPrintf("pre reduction hashProofOfStake = %s \n", arith_hashProofOfStake.GetHex().c_str());
+        if(fDebug)
+        {
+            LogPrintf("reduction = %u \n", redux);
+            LogPrintf("pre reduction hashProofOfStake = %s \n", arith_hashProofOfStake.GetHex().c_str());
+        }
         /// before we apply reduction, we want to shift the hash 20 bits to the right. the PoS limit is lead by 20 0's so we want our reduction to apply to a hashproofofstake that is also lead by 20 0's
         arith_hashProofOfStake = arith_hashProofOfStake >> 20;
-        LogPrintf("mid reduction hashProofOfStake = %s \n", arith_hashProofOfStake.GetHex().c_str());
+        if(fDebug)
+        {
+            LogPrintf("mid reduction hashProofOfStake = %s \n", arith_hashProofOfStake.GetHex().c_str());
+        }
         arith_hashProofOfStake = arith_hashProofOfStake >> redux;
-        LogPrintf("post reduction hashProofOfStake = %s \n", arith_hashProofOfStake.GetHex().c_str());
+        if(fDebug)
+        {
+            LogPrintf("post reduction hashProofOfStake = %s \n", arith_hashProofOfStake.GetHex().c_str());
+        }
         // Now check if proof-of-stake hash meets target protocol
         if(arith_hashProofOfStake > hashTarget)
         {
-//            if(fDebug)
+            if(fDebug)
             {
                 LogPrintf("CheckStakeKernelHash(): ERROR: hashProofOfStake %s > %s hashTarget\n", arith_hashProofOfStake.GetHex().c_str(), hashTarget.GetHex().c_str());
             }
             return false;
         }
-        LogPrintf("CheckStakeKernelHash(): SUCCESS: hashProofOfStake %s < %s hashTarget\n", arith_hashProofOfStake.GetHex().c_str(), hashTarget.GetHex().c_str());
+        if(fDebug)
+        {
+            LogPrintf("CheckStakeKernelHash(): SUCCESS: hashProofOfStake %s < %s hashTarget\n", arith_hashProofOfStake.GetHex().c_str(), hashTarget.GetHex().c_str());
+        }
     }
 
     return true;
 }
 
 // Check kernel hash target and coinstake signature
-bool CheckProofOfStake(int nHeight, const CTransaction& tx, unsigned int nBits, uint256& hashProofOfStake)
+bool CheckProofOfStake(int nHeight, const CTransaction& tx, uint256& hashProofOfStake)
 {
     if (!tx.IsCoinStake())
         return error("CheckProofOfStake() : called on non-coinstake %s", tx.GetHash().ToString().c_str());
@@ -256,9 +279,19 @@ bool CheckProofOfStake(int nHeight, const CTransaction& tx, unsigned int nBits, 
 
     CDiskTxPos txindex;
     pblocktree->ReadTxIndex(txPrev.GetHash(), txindex);
-    unsigned int txOffset = txindex.nTxOffset + 80; // header is 80 bytes, and nTxOffset doesnt inclde header
-    if (!CheckStakeKernelHash(nHeight, nBits, block, txOffset, txPrev, txin.prevout, tx.nTime, hashProofOfStake))
-        return error("CheckProofOfStake() : INFO: check kernel failed on coinstake %s, hashProof=%s", tx.GetHash().ToString().c_str(), hashProofOfStake.ToString().c_str()); // may occur during initial download or if behind on block chain sync
-
+    if(nHeight < 1505775)
+    {
+        if (!CheckStakeKernelHash(nHeight, block, txindex.nTxOffset + 80, txPrev, txin.prevout, tx.nTime, hashProofOfStake))
+        {
+            return error("CheckProofOfStake() : INFO: check kernel failed on coinstake %s, hashProof=%s", tx.GetHash().ToString().c_str(), hashProofOfStake.ToString().c_str()); // may occur during initial download or if behind on block chain sync
+        }
+    }
+    else
+    {
+        if (!CheckStakeKernelHash(nHeight, block, txindex.nTxOffset, txPrev, txin.prevout, tx.nTime, hashProofOfStake))
+        {
+            return error("CheckProofOfStake() : INFO: check kernel failed on coinstake %s, hashProof=%s", tx.GetHash().ToString().c_str(), hashProofOfStake.ToString().c_str()); // may occur during initial download or if behind on block chain sync
+        }
+    }
     return true;
 }

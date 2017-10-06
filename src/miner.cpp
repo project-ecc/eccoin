@@ -521,7 +521,7 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reservekey)
         // Process this block the same as if we had received it from another node
         CValidationState state;
         const CChainParams& chainparams = Params();
-        if (!ProcessNewBlock(state, chainparams, NULL, pblock, true, NULL))
+        if (!ProcessNewBlock(state, chainparams, NULL, pblock, true, NULL, GENERATED))
             return error("Miner : ProcessBlock, block not accepted");
     }
 
@@ -529,8 +529,6 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reservekey)
 }
 
 void ThreadBitcoinMiner(void* parg);
-
-static bool fGenerateBitcoins = false;
 
 void ScryptMiner(CWallet *pwallet)
 {
@@ -687,8 +685,6 @@ void ScryptMiner(CWallet *pwallet)
             // Check for stop or if block needs to be rebuilt
             if (fShutdown)
                 return;
-            if (!fGenerateBitcoins)
-                return;
             if (vNodes.empty())
                 break;
             if (nBlockNonce >= 0xffff0000)
@@ -712,15 +708,17 @@ void ScryptMiner(CWallet *pwallet)
     scrypt_buffer_free(scratchbuf);
 }
 
+boost::thread_group* minerThreads = NULL;
+
 void ThreadScryptMiner(void* parg)
 {
-    static boost::thread_group* minerThreads = NULL;
 
     if (minerThreads != NULL)
     {
         minerThreads->interrupt_all();
         delete minerThreads;
         minerThreads = NULL;
+        return;
     }
 
     minerThreads = new boost::thread_group();

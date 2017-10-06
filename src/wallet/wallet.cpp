@@ -41,6 +41,7 @@ CAmount maxTxFee = DEFAULT_TRANSACTION_MAXFEE;
 unsigned int nTxConfirmTarget = DEFAULT_TX_CONFIRM_TARGET;
 bool bSpendZeroConfChange = DEFAULT_SPEND_ZEROCONF_CHANGE;
 bool fSendFreeTransactions = DEFAULT_SEND_FREE_TRANSACTIONS;
+bool fWalletUnlockStakingOnly = false;
 
 /**
  * Fees smaller than this (in satoshi) are considered zero fee (for transaction creation)
@@ -609,8 +610,10 @@ void CWallet::MarkDirty()
 {
     {
         LOCK(cs_wallet);
-        for (auto const& item: mapWallet)
+        for (std::pair<const uint256, CWalletTx>& item : mapWallet)
+        {
             item.second.MarkDirty();
+        }
     }
 }
 
@@ -1271,7 +1274,7 @@ void CWallet::ReacceptWalletTransactions()
 bool CWalletTx::RelayWalletTransaction()
 {
     assert(pwallet->GetBroadcastTransactions());
-    if (!IsCoinBase())
+    if (!IsCoinBase() || !IsCoinStake())
     {
         if (GetDepthInMainChain() == 0 && !isAbandoned()) {
             LogPrintf("Relaying wtx %s\n", GetHash().ToString());
@@ -1961,6 +1964,11 @@ bool CWallet::FundTransaction(CTransaction& tx, CAmount &nFeeRet, int& nChangePo
 bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CWalletTx& wtxNew, CReserveKey& reservekey, CAmount& nFeeRet,
                                 int& nChangePosRet, std::string& strFailReason, const CCoinControl* coinControl, bool sign)
 {
+
+    if (fWalletUnlockStakingOnly)
+    {
+        LogPrintf("CreateTransaction() :  Error: Wallet unlocked for staking only, unable to create transaction.\n");
+    }
     CAmount nValue = 0;
     unsigned int nSubtractFeeFromAmount = 0;
     for (auto const& recipient: vecSend)
@@ -3220,7 +3228,6 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
 
     int64_t nCredit = 0;
     CScript scriptPubKeyKernel;
-    int64_t timeRedux = GetTime();
     bool fKernelFound = false;
     for (auto pcoin: setCoins)
     {
@@ -3253,8 +3260,7 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
             uint256 hashProofOfStake;
             hashProofOfStake.SetNull();
             COutPoint prevoutStake = COutPoint(pcoin.first->GetHash(), pcoin.second);
-            unsigned int n = (unsigned int)(GetTime() - timeRedux);
-            if (CheckStakeKernelHash(chainActive.Tip()->nHeight+1, nBits, block, txindex.nTxOffset, *pcoin.first, prevoutStake, txNew.nTime - n, hashProofOfStake))
+            if (CheckStakeKernelHash(chainActive.Tip()->nHeight+1, block, txindex.nTxOffset, *pcoin.first, prevoutStake, txNew.nTime, hashProofOfStake))
             {
                // Found a kernel
                 if (fDebug)
@@ -3292,7 +3298,6 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
                 else
                     scriptPubKeyOut = scriptPubKeyKernel;
 
-                txNew.nTime -= n;
                 txNew.vin.push_back(CTxIn(pcoin.first->GetHash(), pcoin.second));
                 nCredit += pcoin.first->vout[pcoin.second].nValue;
                 vwtxPrev.push_back(pcoin.first);

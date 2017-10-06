@@ -84,17 +84,17 @@ public:
         genesis.hashMerkleRoot = BlockMerkleRoot(genesis);
 
         consensus.hashGenesisBlock = genesis.GetHash();
-        LogPrintf("calculated Genesis Block Hash = %s \n", consensus.hashGenesisBlock.ToString().c_str());
         assert(consensus.hashGenesisBlock == uint256S("0xa60ac43c88dbc44b826cf315352a8a7b373d2af8b6e1c4c4a0638859c5e9ecd1"));
         assert(genesis.hashMerkleRoot == uint256S("0x4db82fe8b45f3dae2b7c7b8be5ec4c37e72e25eaf989b9db24ce1d0fd37eed8b"));
 
         vSeeds.push_back(CDNSSeedData("CryptoUnitedSeed", "www.cryptounited.io"));
         vSeeds.push_back(CDNSSeedData("ECC-Seed1", "138.197.100.45"));
         vSeeds.push_back(CDNSSeedData("ECC-Seed2", "159.203.172.212"));
+        vSeeds.push_back(CDNSSeedData("ECC-Seed3", "eccnode.altj.com"));
 
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,33);
         base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1,8);
-        base58Prefixes[SECRET_KEY] =     std::vector<unsigned char>(1,128);
+        base58Prefixes[SECRET_KEY] =     std::vector<unsigned char>(1,161);
         base58Prefixes[EXT_PUBLIC_KEY] = boost::assign::list_of(0x04)(0x88)(0xB2)(0x1E).convert_to_container<std::vector<unsigned char> >();
         base58Prefixes[EXT_SECRET_KEY] = boost::assign::list_of(0x04)(0x88)(0xAD)(0xE4).convert_to_container<std::vector<unsigned char> >();
 

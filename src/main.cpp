@@ -1800,6 +1800,10 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
             return state.DoS(100, error("ConnectBlock(): too many sigops"),
                              REJECT_INVALID, "bad-blk-sigops");
 
+        if (tx.IsCoinBase())
+        {
+            nValueOut += tx.GetValueOut();
+        }
         if (!tx.IsCoinBase())
         {
             if (!view.HaveInputs(tx))
@@ -1866,6 +1870,13 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     LogPrint("bench", "      - Connect %u transactions: %.2fms (%.3fms/tx, %.3fms/txin) [%.2fs]\n", (unsigned)block.vtx.size(), 0.001 * (nTime3 - nTime2), 0.001 * (nTime3 - nTime2) / block.vtx.size(), nInputs <= 1 ? 0 : 0.001 * (nTime3 - nTime2) / (nInputs-1), nTimeConnect * 0.000001);
     CAmount blockReward = 0;
 
+    /// after 1504000 no Pow blocks are allowed
+    if(block.IsProofOfWork() && pindex->nHeight >= 1504000)
+    {
+        return state.DoS(100, error("CheckBlock(): proof of work failed, invalid PoW height "),
+                                 REJECT_INVALID, "Pow after cutoff");
+    }
+
     /// height >= 1504000 for legacy compatibility
     /// someone made some blocks at 1493605 to roughly 1495000 that which didnt conform to the ideal blocks, but at the time the client allowed it
     /// that person didnt break any rules and no funds were stolen from other people.
@@ -1914,15 +1925,16 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     pindex->nMint = nValueOut - nValueIn + nFees;
     pindex->nMoneySupply = (pindex->pprev? pindex->pprev->nMoneySupply : 0) + nValueOut - nValueIn;
 
+
+    /// put the following checks in this function due to lack of pindex when checkblock is called
     // Verify hash target and signature of coinstake tx
     uint256 hashProofOfStake;
     hashProofOfStake.SetNull();
     if (block.IsProofOfStake())
     {
-        if (!CheckProofOfStake(pindex->nHeight, block.vtx[1], block.nBits, hashProofOfStake))
+        if (!CheckProofOfStake(pindex->nHeight, block.vtx[1], hashProofOfStake))
         {
-            LogPrintf("WARNING: ProcessBlock(): check proof-of-stake failed for block %s\n", block.GetHash().ToString().c_str());
-            return false; // do not error here as we expect this during initial block download
+            return state.DoS(100, error("WARNING: ProcessBlock(): check proof-of-stake failed for block %s\n", block.GetHash().ToString().c_str()), REJECT_INVALID, "bad-proofofstake");
         }
     }
 
@@ -1940,12 +1952,12 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     if(block.IsProofOfStake())
     {
         if (!ComputeNextStakeModifier(pindex->pprev, block.vtx[1], nStakeModifier))
-            return error("ConnectBlock() : ComputeNextStakeModifier() failed");
+            return state.DoS(100, error("ConnectBlock() : ComputeNextStakeModifier() failed") , REJECT_INVALID, "bad-stakemodifier-pos");
     }
     else
     {
         if (!ComputeNextStakeModifier(pindex->pprev, block.vtx[0], nStakeModifier))
-            return error("ConnectBlock() : ComputeNextStakeModifier() failed");
+            return state.DoS(100, error("ConnectBlock() : ComputeNextStakeModifier() failed"), REJECT_INVALID, "bad-stakemodifier-pow");
     }
     pindex->SetStakeModifier(nStakeModifier);
     if (fJustCheck)
@@ -2934,7 +2946,7 @@ bool InitBlockIndex(const CChainParams& chainparams)
             pindex->SetStakeModifier(nStakeModifier);
             if (!ReceivedBlockTransactions(block, state, pindex, blockPos))
                 return error("InitBlockIndex(): genesis block not accepted");
-            if (!ActivateBestChain(state, chainparams, &block))
+            if (!ActivateBestChain(state, chainparams, LOADED, &block))
                 return error("InitBlockIndex(): genesis block cannot be activated");
             // Force a chainstate write so that when we VerifyDB in a moment, it doesn't check stale data
             return FlushStateToDisk(state, FLUSH_STATE_ALWAYS);
@@ -3004,7 +3016,7 @@ bool LoadExternalBlockFile(const CChainParams& chainparams, FILE* fileIn, CDiskB
                 // process in case the block isn't known yet
                 if (mapBlockIndex.count(hash) == 0 || (mapBlockIndex[hash]->nStatus & BLOCK_HAVE_DATA) == 0) {
                     CValidationState state;
-                    if (ProcessNewBlock(state, chainparams, NULL, &block, true, dbp))
+                    if (ProcessNewBlock(state, chainparams, NULL, &block, true, dbp, LOADED))
                         nLoaded++;
                     if (state.IsError())
                         break;
@@ -3026,7 +3038,7 @@ bool LoadExternalBlockFile(const CChainParams& chainparams, FILE* fileIn, CDiskB
                             LogPrintf("%s: Processing out of order child %s of %s\n", __func__, block.GetHash().ToString(),
                                     head.ToString());
                             CValidationState dummy;
-                            if (ProcessNewBlock(dummy, chainparams, NULL, &block, true, &it->second))
+                            if (ProcessNewBlock(dummy, chainparams, NULL, &block, true, &it->second, LOADED))
                             {
                                 nLoaded++;
                                 queue.push_back(block.GetHash());
@@ -3055,7 +3067,6 @@ bool LoadExternalBlockFile(const CChainParams& chainparams, FILE* fileIn, CDiskB
 
 std::string GetWarnings(const std::string& strFor)
 {
-    int nPriority = 0;
     std::string strStatusBar;
     std::string strRPC;
     std::string strGUI;
@@ -3071,19 +3082,16 @@ std::string GetWarnings(const std::string& strFor)
     // Misc warnings like out of disk space and clock is wrong
     if (strMiscWarning != "")
     {
-        nPriority = 1000;
         strStatusBar = strGUI = strMiscWarning;
     }
 
     if (fLargeWorkForkFound)
     {
-        nPriority = 2000;
         strStatusBar = strRPC = "Warning: The network does not appear to fully agree! Some miners appear to be experiencing issues.";
         strGUI = _("Warning: The network does not appear to fully agree! Some miners appear to be experiencing issues.");
     }
     else if (fLargeWorkInvalidChainFound)
     {
-        nPriority = 2000;
         strStatusBar = strRPC = "Warning: We do not appear to fully agree with our peers! You may need to upgrade, or other nodes may need to upgrade.";
         strGUI = _("Warning: We do not appear to fully agree with our peers! You may need to upgrade, or other nodes may need to upgrade.");
     }
@@ -3232,6 +3240,15 @@ int64_t GetProofOfStakeReward(int64_t nCoinAge, int nHeight)
 {
     int64_t nRewardCoinYear = 2.5 * MAX_MINT_PROOF_OF_STAKE;
     int64_t CMS = chainActive.Tip()->nMoneySupply;
+    if(CMS == (MAX_MONEY / 2))
+    {
+        /// if we are already at max money supply limits (25 billion coins, we return 0 as no new coins are to be minted
+        if (fDebug)
+        {
+            LogPrintf("GetProofOfStakeReward(): create=%i nCoinAge=%d\n", 0, nCoinAge);
+        }
+        return 0;
+    }
     if (nHeight > 500000 && nHeight < 1005000)
     {
         int64_t nextMoney = (ValueFromAmountAsInt(CMS) + nRewardCoinYear) ;
@@ -3245,21 +3262,26 @@ int64_t GetProofOfStakeReward(int64_t nCoinAge, int nHeight)
             nRewardCoinYear = 0;
         }
         int64_t nSubsidy = nCoinAge * nRewardCoinYear / 365;
+        if (fDebug)
+        {
+            LogPrintf("GetProofOfStakeReward(): create=%s nCoinAge=%d\n", FormatMoney(nSubsidy).c_str(), nCoinAge);
+        }
         return nSubsidy;
     }
+
     nRewardCoinYear = 25 * CENT; // 25%
     int64_t nSubsidy = nCoinAge * nRewardCoinYear / 365;
     if(nHeight >= 1005000)
     {
         int64_t nextMoney = CMS + nSubsidy;
+        // this conditional should only happen once
         if(nextMoney > (MAX_MONEY / 2))
         {
+            /// CMS + subsidy = nextMoney
+            /// nextMoney - MAX = difference and we should take this difference away from nSubsidy so nSubsidy stops at max money and doesnt go over
+            /// credits go to cvargos for this fix
             int64_t difference = (nextMoney - (MAX_MONEY / 2));
-            nSubsidy = nextMoney - difference;
-        }
-        if(nextMoney == (MAX_MONEY / 2))
-        {
-            nSubsidy = 0;
+            nSubsidy = nSubsidy - difference;
         }
     }
     if (fDebug)

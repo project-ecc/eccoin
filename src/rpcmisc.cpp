@@ -7,6 +7,7 @@
 #include "clientversion.h"
 #include "init.h"
 #include "main.h"
+#include "miner.h"
 #include "net.h"
 #include "netbase.h"
 #include "rpcserver.h"
@@ -73,23 +74,30 @@ UniValue getinfo(const UniValue& params, bool fHelp)
     UniValue obj(UniValue::VOBJ);
     obj.push_back(Pair("version", CLIENT_VERSION));
     obj.push_back(Pair("protocolversion", PROTOCOL_VERSION));
-    if (pwalletMain) {
+    if (pwalletMain)
+    {
         obj.push_back(Pair("walletversion", pwalletMain->GetVersion()));
         obj.push_back(Pair("balance",       ValueFromAmount(pwalletMain->GetBalance())));
     }
     obj.push_back(Pair("blocks",        (int)chainActive.Height()));
     obj.push_back(Pair("headers",       (int)pindexBestHeader->nHeight));
+    obj.push_back(Pair("moneysupply",   ValueFromAmount(chainActive.Tip()->nMoneySupply)));
     obj.push_back(Pair("timeoffset",    GetTimeOffset()));
     obj.push_back(Pair("connections",   (int)vNodes.size()));
     obj.push_back(Pair("proxy",         (proxy.IsValid() ? proxy.proxy.ToStringIPPort() : std::string())));
     obj.push_back(Pair("difficulty",    (double)GetDifficulty()));
     obj.push_back(Pair("testnet",       Params().TestnetToBeDeprecatedFieldRPC()));
-    if (pwalletMain) {
+    if (pwalletMain)
+    {
         obj.push_back(Pair("keypoololdest", pwalletMain->GetOldestKeyPoolTime()));
         obj.push_back(Pair("keypoolsize",   (int)pwalletMain->GetKeyPoolSize()));
+        obj.push_back(Pair("encrypted", pwalletMain->IsCrypted()));
+        if(pwalletMain->IsCrypted())
+        {
+            obj.push_back(Pair("unlocked_until", nWalletUnlockTime));
+        }
     }
-    if (pwalletMain && pwalletMain->IsCrypted())
-        obj.push_back(Pair("unlocked_until", nWalletUnlockTime));
+    obj.push_back(Pair("staking", minerThreads != NULL));
     obj.push_back(Pair("paytxfee",      ValueFromAmount(payTxFee.GetFeePerK())));
     obj.push_back(Pair("relayfee",      ValueFromAmount(::minRelayTxFee.GetFeePerK())));
     obj.push_back(Pair("errors",        GetWarnings("statusbar")));

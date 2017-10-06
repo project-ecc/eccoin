@@ -145,6 +145,7 @@ inline bool IsSwitchChar(char c)
 #endif
 }
 
+
 /**
  * Format a string to be used as group of options in help messages
  *

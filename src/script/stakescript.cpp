@@ -212,7 +212,6 @@ bool VerifyScript(const CScript& scriptSig, const CScript& scriptPubKey, const C
     std::vector<std::vector<unsigned char> > stack, stackCopy;
     if (!EvalScript(stack, scriptSig, STANDARD_SCRIPT_VERIFY_FLAGS, TransactionSignatureChecker(&txTo, nIn), &serror))
     {
-        LogPrintf("script error 1\n");
         printf("%i \n", serror);
         return false;
     }
@@ -222,18 +221,15 @@ bool VerifyScript(const CScript& scriptSig, const CScript& scriptPubKey, const C
     }
     if (!EvalScript(stack, scriptPubKey, STANDARD_SCRIPT_VERIFY_FLAGS, TransactionSignatureChecker(&txTo, nIn), &serror))
     {
-        LogPrintf("script error 2\n");
         return false;
     }
     if (stack.empty())
     {
-        LogPrintf("script error 3\n");
         return false;
     }
 
     if (CastToBool(stack.back()) == false)
     {
-        LogPrintf("script error 4\n");
         return false;
     }
 
@@ -242,7 +238,6 @@ bool VerifyScript(const CScript& scriptSig, const CScript& scriptPubKey, const C
     {
         if (!scriptSig.IsPushOnly()) // scriptSig must be literals-only
         {
-            LogPrintf("script error 5\n");
             return false;            // or validation fails
         }
 
@@ -252,15 +247,12 @@ bool VerifyScript(const CScript& scriptSig, const CScript& scriptPubKey, const C
 
         if (!EvalScript(stackCopy, pubKey2, STANDARD_SCRIPT_VERIFY_FLAGS, TransactionSignatureChecker(&txTo, nIn), NULL))
         {
-            LogPrintf("script error 6\n");
             return false;
         }
         if (stackCopy.empty())
         {
-            LogPrintf("script error 7\n");
             return false;
         }
-        LogPrintf("about to cast to bool and return that\n");
         return CastToBool(stackCopy.back());
     }
 

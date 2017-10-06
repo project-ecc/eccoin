@@ -454,6 +454,7 @@ void ClearDatadirCache()
     pathCachedNetSpecific = boost::filesystem::path();
 }
 
+
 #ifndef WIN32
 boost::filesystem::path GetPidFile()
 {

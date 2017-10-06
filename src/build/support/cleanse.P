@@ -1,2 +1,0 @@
-build/support/cleanse.o: support/cleanse.cpp support/cleanse.h
-support/cleanse.cpp support/cleanse.h :
