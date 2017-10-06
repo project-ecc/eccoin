@@ -343,6 +343,14 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
     const CBlockIndex *pindexOldTip = chainActive.Tip();
     const CBlockIndex *pindexFork = chainActive.FindFork(pindexMostWork);
 
+    /// temporary security measure against large chain attacks, reorging this many blocks should not occur naturally. a real solution should be implemented
+    if(pindexOldTip->nHeight >= pindexFork->nHeight + COINBASE_MATURITY)
+    {
+        LogPrintf("PREVENTING REORGANIZATION OF A DANGEROUSLY LARGE NUMBER OF BLOCKS, IF YOU SEE THIS MESSAGE REPORT IT TO A DEV \n");
+        return state.DoS(100, error("ActivateBestChainStep(): PREVENTING REORGANIZATION OF A DANGEROUSLY LARGE NUMBER OF BLOCKS, IF YOU SEE THIS MESSAGE REPORT IT TO A DEV "),
+                                 REJECT_INVALID, "DANGEROUS REORG");
+    }
+
     // Disconnect active blocks which are no longer in the best chain.
     bool fBlocksDisconnected = false;
     while (chainActive.Tip() && chainActive.Tip() != pindexFork) {
