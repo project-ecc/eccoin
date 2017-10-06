@@ -212,13 +212,6 @@ public:
     std::string ToString() const;
 };
 
-enum GetMinFee_mode
-{
-    GMF_BLOCK,
-    GMF_RELAY,
-    GMF_SEND,
-};
-
 
 /** The basic transaction that is broadcasted on the network and contained in
  * blocks.  A transaction can contain multiple inputs and outputs.
@@ -313,7 +306,7 @@ public:
         return a.hash != b.hash;
     }
     std::string ToString() const;
-    int64_t GetMinFee(unsigned int nBlockSize=1, enum GetMinFee_mode mode=GMF_BLOCK, unsigned int nBytes = 0) const;
+    int64_t GetMinFee(unsigned int nBlockSize=1, unsigned int nBytes = 0) const;
     bool GetCoinAge(uint64_t& nCoinAge) const;  // ppcoin: get transaction coin age
     uint64_t GetCoinAge(uint64_t nCoinAge, bool byValue) const;
 };

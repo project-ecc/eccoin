@@ -164,7 +164,7 @@ bool CTransaction::IsFinal(int nBlockHeight, int64_t nBlockTime) const
     return true;
 }
 
-int64_t CTransaction::GetMinFee(unsigned int nBlockSize, enum GetMinFee_mode mode, unsigned int nBytes) const
+int64_t CTransaction::GetMinFee(unsigned int nBlockSize, unsigned int nBytes) const
 {
     int64_t nBaseFee = DEFAULT_TRANSACTION_MINFEE;
 
