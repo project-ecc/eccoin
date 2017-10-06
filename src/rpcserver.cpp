@@ -113,12 +113,37 @@ void RPCTypeCheckObj(const UniValue& o,
     }
 }
 
+const std::string TruncateDecimals(const std::string valstr)
+{
+    std::string fixedNum = "";
+    bool decimalFound = false;
+    int remainingPrecision = 6;
+    for(unsigned int pos = 0; pos < valstr.length(); pos++)
+    {
+        if(decimalFound)
+        {
+            remainingPrecision--;
+        }
+        if(valstr[pos] == '.')
+        {
+            decimalFound = true;
+        }
+        fixedNum = fixedNum + valstr[pos];
+        if(remainingPrecision <= 0)
+        {
+            break;
+        }
+    }
+    const std::string result = fixedNum;
+    return result;
+}
+
 CAmount AmountFromValue(const UniValue& value)
 {
     if (!value.isNum() && !value.isStr())
         throw JSONRPCError(RPC_TYPE_ERROR, "Amount is not a number or string");
     CAmount amount;
-    if (!ParseFixedPoint(value.getValStr(), 6, &amount))
+    if (!ParseFixedPoint(TruncateDecimals(value.getValStr()), 6, &amount))
         throw JSONRPCError(RPC_TYPE_ERROR, "Invalid amount");
     if (!MoneyRange(amount))
         throw JSONRPCError(RPC_TYPE_ERROR, "Amount out of range");
