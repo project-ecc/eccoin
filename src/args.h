@@ -5,10 +5,6 @@
 #ifndef ECCOIN_ARGS_H
 #define ECCOIN_ARGS_H
 
-#if defined(HAVE_CONFIG_H)
-#include "config/bitcoin-config.h"
-#endif
-
 #include "compat.h"
 #include "fs.h"
 #include "sync.h"
