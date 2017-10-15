@@ -15,7 +15,7 @@
 #include "crypto/scrypt.h"
 #include "utiltime.h"
 #include "timedata.h"
-#include "args.h""
+#include "args.h"
 #include "script/stakescript.h"
 
 // The stake modifier used to hash for a stake kernel is chosen as the stake
