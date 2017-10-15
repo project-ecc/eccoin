@@ -203,22 +203,6 @@ void ArgsManager::ForceSetArg(const std::string& strArg, const std::string& strV
     mapMultiArgs[strArg].push_back(strValue);
 }
 
-static std::string FormatException(const std::exception* pex, const char* pszThread)
-{
-#ifdef WIN32
-    char pszModule[MAX_PATH] = "";
-    GetModuleFileNameA(nullptr, pszModule, sizeof(pszModule));
-#else
-    const char* pszModule = "bitcoin";
-#endif
-    if (pex)
-        return strprintf(
-                "EXCEPTION: %s       \n%s       \n%s in %s       \n", typeid(*pex).name(), pex->what(), pszModule, pszThread);
-    else
-        return strprintf(
-                "UNKNOWN EXCEPTION       \n%s in %s       \n", pszModule, pszThread);
-}
-
 static fs::path pathCached;
 static fs::path pathCachedNetSpecific;
 static CCriticalSection csPathCached;

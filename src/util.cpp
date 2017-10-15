@@ -320,24 +320,6 @@ int LogPrintStr(const std::string &str)
     return ret;
 }
 
-/** Interpret string as boolean, for argument parsing */
-static bool InterpretBool(const std::string& strValue)
-{
-    if (strValue.empty())
-        return true;
-    return (atoi(strValue) != 0);
-}
-
-/** Turn -noX into -X=0 */
-static void InterpretNegativeSetting(std::string& strKey, std::string& strValue)
-{
-    if (strKey.length()>3 && strKey[0]=='-' && strKey[1]=='n' && strKey[2]=='o')
-    {
-        strKey = "-" + strKey.substr(3);
-        strValue = InterpretBool(strValue) ? "0" : "1";
-    }
-}
-
 static const int screenWidth = 79;
 static const int optIndent = 2;
 static const int msgIndent = 7;

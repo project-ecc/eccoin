@@ -181,6 +181,7 @@ QMAKE_CXXFLAGS_WARN_ON = -fdiagnostics-show-option -Wall -Wextra -Wformat -Wform
 DEPENDPATH += src
 
 HEADERS += \
+    src/args.h \
     src/addrman.h \
     src/amount.h \
     src/arith_uint256.h \
@@ -293,6 +294,7 @@ HEADERS += \
 # organize compiles of cpp files by section, this seems to be a logical order where the files lower down generally depend
 # on the ones higher up. also helps to observe how far into the compile process we are
 SOURCES += \
+    src/args.cpp \
     src/addrman.cpp \
     src/amount.cpp \
     src/arith_uint256.cpp \

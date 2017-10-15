@@ -15,6 +15,7 @@
 #include "main.h"
 #include "args.h"
 #include "consensus/consensus.h"
+#include "wallet/wallet.h"
 
 std::string COutPoint::ToString() const
 {
@@ -163,9 +164,9 @@ bool CTransaction::IsFinal(int nBlockHeight, int64_t nBlockTime) const
     return true;
 }
 
-int64_t CTransaction::GetMinFee(unsigned int nBlockSize, enum GetMinFee_mode mode, unsigned int nBytes) const
+int64_t CTransaction::GetMinFee(unsigned int nBlockSize, unsigned int nBytes) const
 {
-    int64_t nBaseFee = MIN_TX_FEE(nTime);
+    int64_t nBaseFee = DEFAULT_TRANSACTION_MINFEE;
 
     unsigned int nNewBlockSize = nBlockSize + nBytes;
     int64_t nMinFee = (1 + (int64_t)nBytes / 1000) * nBaseFee;

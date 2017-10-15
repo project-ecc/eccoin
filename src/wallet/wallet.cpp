@@ -26,7 +26,7 @@
 #include "txdb.h"
 #include "txmempool.h"
 #include "util.h"
-#include "args.h""
+#include "args.h"
 #include "utilmoneystr.h"
 
 #include <assert.h>
@@ -3198,7 +3198,7 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
     const CBlockIndex* pIndex0 = GetLastBlockIndex(chainActive.Tip(), false);
     int64_t nCombineThreshold = 0;
     if(pIndex0->pprev)
-        nCombineThreshold = GetProofOfWorkReward(pIndex0->nHeight, MIN_TX_FEE(txNew.nTime), pIndex0->pprev->GetBlockHash()) / 3;
+        nCombineThreshold = GetProofOfWorkReward(pIndex0->nHeight, DEFAULT_TRANSACTION_MINFEE , pIndex0->pprev->GetBlockHash()) / 3;
 
     CBigNum bnTargetPerCoinDay;
     bnTargetPerCoinDay.SetCompact(nBits);
@@ -3400,9 +3400,9 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
             return error("CreateCoinStake : exceeded coinstake size limit");
 
         // Check enough fee is paid
-        if (nMinFee < txNew.GetMinFee() - MIN_TX_FEE(txNew.nTime))
+        if (nMinFee < txNew.GetMinFee() - DEFAULT_TRANSACTION_MINFEE)
         {
-            nMinFee = txNew.GetMinFee() - MIN_TX_FEE(txNew.nTime);
+            nMinFee = txNew.GetMinFee() - DEFAULT_TRANSACTION_MINFEE;
             continue; // try signing again
         }
         else

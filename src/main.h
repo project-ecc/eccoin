@@ -18,6 +18,7 @@
 #include "sync.h"
 #include "versionbits.h"
 #include "uint256.h"
+#include "utiltime.h"
 
 #include <algorithm>
 #include <exception>
@@ -50,7 +51,7 @@ static const bool DEFAULT_WHITELISTRELAY = true;
 /** Default for DEFAULT_WHITELISTFORCERELAY. */
 static const bool DEFAULT_WHITELISTFORCERELAY = true;
 /** Default for -minrelaytxfee, minimum relay fee for transactions */
-static const unsigned int DEFAULT_MIN_RELAY_TX_FEE = 1000;
+static const unsigned int DEFAULT_MIN_RELAY_TX_FEE = 1;
 /** Default for -maxorphantx, maximum number of orphan transactions kept in memory */
 static const unsigned int DEFAULT_MAX_ORPHAN_TRANSACTIONS = 100;
 /** Default for -limitancestorcount, max number of in-mempool ancestors */
@@ -295,19 +296,6 @@ static const unsigned int DEFAULT_CHECKLEVEL = 3;
 static const uint64_t MIN_DISK_SPACE_FOR_BLOCK_FILES = 550 * 1024 * 1024;
 
 static const int64_t MAX_MINT_PROOF_OF_STAKE = 0.1 * COIN;
-
-inline int64_t getMinFee(int64_t nTime)
-{
-    if(nTime >= 1478822400) //Fri, 11 Nov 2016 00:00:00 GMT
-    {
-        return 1;
-    }
-    return 0.1;
-
-}
-#ifndef MIN_TX_FEE
-#define MIN_TX_FEE getMinFee
-#endif
 
 /** Register with a network node to receive its signals */
 void RegisterNodeSignals(CNodeSignals& nodeSignals);
