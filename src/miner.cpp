@@ -720,11 +720,11 @@ void ThreadScryptMiner(void* parg)
         minerThreads->create_thread(boost::bind(&ScryptMiner, pwallet));
     }
     catch (std::exception& e) {
-        PrintException(&e, "ThreadBitcoinMiner()");
+        PrintException(&e, "ThreadECCMinter()");
     } catch (...) {
-        PrintException(NULL, "ThreadBitcoinMiner()");
+        PrintException(NULL, "ThreadECCMinter()");
     }
     nHPSTimerStart = 0;
         dHashesPerSec = 0;
-    LogPrintf("ThreadBitcoinMiner exiting \n");
+    LogPrintf("ThreadECCMinter exiting \n");
 }

@@ -110,7 +110,7 @@ UniValue getgenerate(const UniValue& params, bool fHelp)
         );
 
     LOCK(cs_main);
-    return gArgs.GetBoolArg("-gen", DEFAULT_GENERATE);
+    return minerThreads != NULL;
 }
 
 UniValue generate(const UniValue& params, bool fHelp)
@@ -183,51 +183,29 @@ UniValue generate(const UniValue& params, bool fHelp)
     return blockHashes;
 }
 
-/*
+
 UniValue setgenerate(const UniValue& params, bool fHelp)
 {
-    if (fHelp || params.size() < 1 || params.size() > 2)
+    if (fHelp || params.size() != 0)
         throw std::runtime_error(
-            "setgenerate generate ( genproclimit )\n"
-            "\nSet 'generate' true or false to turn generation on or off.\n"
-            "Generation is limited to 'genproclimit' processors, -1 is unlimited.\n"
+            "setgenerate \n"
+            "\nToggle pos generation on and off with this command.\n"
             "See the getgenerate call for the current setting.\n"
             "\nArguments:\n"
-            "1. generate         (boolean, required) Set to true to turn on generation, off to turn off.\n"
-            "2. genproclimit     (numeric, optional) Set the processor limit for when generation is on. Can be -1 for unlimited.\n"
+            "None, this will just toggle staking on and off"
             "\nExamples:\n"
-            "\nSet the generation on with a limit of one processor\n"
-            + HelpExampleCli("setgenerate", "true 1") +
-            "\nCheck the setting\n"
-            + HelpExampleCli("getgenerate", "") +
-            "\nTurn off generation\n"
-            + HelpExampleCli("setgenerate", "false") +
-            "\nUsing json rpc\n"
-            + HelpExampleRpc("setgenerate", "true, 1")
+            "\nToggle the pos generation\n"
+            + HelpExampleCli("setgenerate", "")
         );
 
     if (Params().MineBlocksOnDemand())
         throw JSONRPCError(RPC_METHOD_NOT_FOUND, "Use the generate method instead of setgenerate on this network");
 
-    bool fGenerate = true;
-    if (params.size() > 0)
-        fGenerate = params[0].get_bool();
-
-    int nGenProcLimit = gArgs.GetArg("-genproclimit", DEFAULT_GENERATE_THREADS);
-    if (params.size() > 1)
-    {
-        nGenProcLimit = params[1].get_int();
-        if (nGenProcLimit == 0)
-            fGenerate = false;
-    }
-
-    gArgs.GetArg("-gen") = (fGenerate ? "1" : "0");
-    gArgs.GetArg("-genproclimit") = itostr(nGenProcLimit);
-    ScryptMiner(fGenerate, nGenProcLimit, Params());
+    ThreadScryptMiner(pwalletMain);
 
     return NullUniValue;
 }
-*/
+
 
 UniValue getmininginfo(const UniValue& params, bool fHelp)
 {
@@ -262,7 +240,6 @@ UniValue getmininginfo(const UniValue& params, bool fHelp)
     obj.push_back(Pair("currentblocktx",   (uint64_t)nLastBlockTx));
     obj.push_back(Pair("difficulty",       (double)GetDifficulty()));
     obj.push_back(Pair("errors",           GetWarnings("statusbar")));
-    obj.push_back(Pair("genproclimit",     (int)gArgs.GetArg("-genproclimit", DEFAULT_GENERATE_THREADS)));
     obj.push_back(Pair("networkhashps",    getnetworkhashps(params, false)));
     obj.push_back(Pair("pooledtx",         (uint64_t)mempool.size()));
     obj.push_back(Pair("testnet",          Params().TestnetToBeDeprecatedFieldRPC()));
