@@ -1,5 +1,5 @@
 fTEMPLATE = app
-TARGET = eccoin-windows-daemon
+TARGET = eccoind
 VERSION = 0.7.2
 INCLUDEPATH += src src/univalue src/qt
 DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE
@@ -278,9 +278,6 @@ HEADERS += \
     src/bignum.h \
     src/httprpc.h \
     src/httpserver.h \
-    src/rpcclient.h \
-    src/rpcprotocol.h \
-    src/rpcserver.h \
     src/univalue/univalue.h \
     src/univalue/univalue_escapes.h \
     src/pbkdf2.h \
@@ -288,7 +285,10 @@ HEADERS += \
     src/messages.h \
     src/processblock.h \
     src/processheader.h \
-    src/blockindex.h
+    src/blockindex.h \
+    src/rpc/rpcclient.h \
+    src/rpc/rpcprotocol.h \
+    src/rpc/rpcserver.h
 
 
 # organize compiles of cpp files by section, this seems to be a logical order where the files lower down generally depend
@@ -372,26 +372,26 @@ SOURCES += \
     src/kernel.cpp \
     src/httprpc.cpp \
     src/httpserver.cpp \
-    src/rest.cpp \
-    src/rpcblockchain.cpp \
-    src/rpcclient.cpp \
-    src/rpcmining.cpp \
-    src/rpcmisc.cpp \
-    src/rpcnet.cpp \
-    src/rpcprotocol.cpp \
-    src/rpcrawtransaction.cpp \
-    src/rpcserver.cpp \
     src/univalue/univalue.cpp \
     src/univalue/univalue_read.cpp \
     src/univalue/univalue_write.cpp \
     src/pbkdf2.cpp \
     src/script/stakescript.cpp \
-    src/rpcdump.cpp \
-    src/rpcwallet.cpp \
     src/messages.cpp \
     src/processblock.cpp \
     src/processheader.cpp \
-    src/blockindex.cpp
+    src/blockindex.cpp \
+    src/rpc/rpcblockchain.cpp \
+    src/rpc/rpcclient.cpp \
+    src/rpc/rpcdump.cpp \
+    src/rpc/rpcmining.cpp \
+    src/rpc/rpcprotocol.cpp \
+    src/rpc/rpcmisc.cpp \
+    src/rpc/rpcnet.cpp \
+    src/rpc/rpcwallet.cpp \
+    src/rpc/rpcserver.cpp \
+    src/rpc/rpcrawtransaction.cpp \
+    src/rest.cpp
 
 
 
