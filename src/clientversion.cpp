@@ -43,7 +43,6 @@ const std::string CLIENT_NAME("ECC");
 #endif
 
 //! git will put "#define GIT_ARCHIVE 1" on the next line inside archives. 
-#define GIT_ARCHIVE 1
 #ifdef GIT_ARCHIVE
 #define GIT_COMMIT_ID "9779e1e1f32"
 #define GIT_COMMIT_DATE "Mon, 11 Apr 2016 13:01:43 +0200"
