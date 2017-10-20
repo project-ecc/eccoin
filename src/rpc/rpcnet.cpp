@@ -4,7 +4,7 @@
 
 #include "rpcserver.h"
 
-#include "chainparams.h"
+#include "networks/netman.h"
 #include "clientversion.h"
 #include "main.h"
 #include "net.h"

@@ -3,17 +3,18 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "chainparamsbase.h"
-
+#include "netman.h"
+#include "legacy.h"
 #include "tinyformat.h"
 #include "util.h"
 #include "args.h"
 
+
 #include <assert.h>
 
-const std::string CBaseChainParams::MAIN = "main";
-const std::string CBaseChainParams::TESTNET = "test";
-const std::string CBaseChainParams::REGTEST = "regtest";
+const std::string CNetMan::LEGACY = "main";
+const std::string CNetMan::TESTNET = "test";
+const std::string CNetMan::REGTEST = "regtest";
 
 void AppendParamsHelpMessages(std::string& strUsage, bool debugHelp)
 {
@@ -25,10 +26,12 @@ void AppendParamsHelpMessages(std::string& strUsage, bool debugHelp)
     }
 }
 
+static CLegacyParams legacyParams;
+
 /**
  * Main network
  */
-class CBaseMainParams : public CBaseChainParams
+class CBaseMainParams : public CNetMan
 {
 public:
     CBaseMainParams()
@@ -41,7 +44,7 @@ static CBaseMainParams mainParams;
 /**
  * Testnet (v3)
  */
-class CBaseTestNetParams : public CBaseChainParams
+class CBaseTestNetParams : public CNetMan
 {
 public:
     CBaseTestNetParams()
@@ -55,7 +58,7 @@ static CBaseTestNetParams testNetParams;
 /*
  * Regression test
  */
-class CBaseRegTestParams : public CBaseChainParams
+class CBaseRegTestParams : public CNetMan
 {
 public:
     CBaseRegTestParams()
@@ -66,21 +69,21 @@ public:
 };
 static CBaseRegTestParams regTestParams;
 
-static CBaseChainParams* pCurrentBaseParams = 0;
+static CNetMan* pCurrentBaseParams = 0;
 
-const CBaseChainParams& BaseParams()
+const CNetMan& BaseParams()
 {
     assert(pCurrentBaseParams);
     return *pCurrentBaseParams;
 }
 
-CBaseChainParams& BaseParams(const std::string& chain)
+CNetMan& BaseParams(const std::string& chain)
 {
-    if (chain == CBaseChainParams::MAIN)
+    if (chain == CNetMan::LEGACY)
         return mainParams;
-    else if (chain == CBaseChainParams::TESTNET)
+    else if (chain == CNetMan::TESTNET)
         return testNetParams;
-    else if (chain == CBaseChainParams::REGTEST)
+    else if (chain == CNetMan::REGTEST)
         return regTestParams;
     else
         throw std::runtime_error(strprintf("%s: Unknown chain %s.", __func__, chain));
@@ -99,13 +102,34 @@ std::string ChainNameFromCommandLine()
     if (fTestNet && fRegTest)
         throw std::runtime_error("Invalid combination of -regtest and -testnet.");
     if (fRegTest)
-        return CBaseChainParams::REGTEST;
+        return CNetMan::REGTEST;
     if (fTestNet)
-        return CBaseChainParams::TESTNET;
-    return CBaseChainParams::MAIN;
+        return CNetMan::TESTNET;
+    return CNetMan::LEGACY;
 }
 
 bool AreBaseParamsConfigured()
 {
     return pCurrentBaseParams != NULL;
+}
+
+static CBaseParams *pCurrentParams = 0;
+
+const CBaseParams &Params() {
+    assert(pCurrentParams);
+    return *pCurrentParams;
+}
+
+CBaseParams& Params(const std::string& chain)
+{
+    if (chain == CNetMan::LEGACY)
+            return legacyParams;
+    else
+        throw std::runtime_error(strprintf("%s: Unknown chain %s.", __func__, chain));
+}
+
+void SelectParams(const std::string& network)
+{
+    SelectBaseParams(network);
+    pCurrentParams = &Params(network);
 }

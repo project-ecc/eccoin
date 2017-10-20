@@ -18,10 +18,11 @@
 #include "timedata.h"
 #include "bignum.h"
 #include "coins.h"
-#include "chainparams.h"
+#include "networks/baseparams.h"
 #include "consensus/validation.h"
 #include "consensus/merkle.h"
 #include "processblock.h"
+#include "networks/netman.h"
 
 #include <boost/thread.hpp>
 #include <openssl/sha.h>
@@ -511,7 +512,7 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reservekey)
 
         // Process this block the same as if we had received it from another node
         CValidationState state;
-        const CChainParams& chainparams = Params();
+        const CBaseParams& chainparams = Params();
         if (!ProcessNewBlock(state, chainparams, NULL, pblock, true, NULL, GENERATED))
             return error("Miner : ProcessBlock, block not accepted");
     }

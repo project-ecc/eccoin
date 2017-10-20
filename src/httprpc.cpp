@@ -1,10 +1,10 @@
 #include "httprpc.h"
 
 #include "base58.h"
-#include "chainparams.h"
+#include "networks/baseparams.h"
 #include "httpserver.h"
-#include "rpcprotocol.h"
-#include "rpcserver.h"
+#include "rpc/rpcprotocol.h"
+#include "rpc/rpcserver.h"
 #include "random.h"
 #include "sync.h"
 #include "util.h"

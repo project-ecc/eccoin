@@ -6,7 +6,8 @@
 #include <algorithm>
 
 #include "chain.h"
-#include "chainparams.h"
+#include "networks/baseparams.h"
+#include "networks/netman.h"
 #include "consensus/consensus.h"
 #include "main.h"
 #include "kernel.h"

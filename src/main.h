@@ -30,7 +30,7 @@
 class CBlockIndex;
 class CBlockTreeDB;
 class CBloomFilter;
-class CChainParams;
+class CBaseParams;
 class CInv;
 class CScriptCheck;
 class CTxMemPool;
@@ -265,7 +265,7 @@ void LimitMempoolSize(CTxMemPool& pool, size_t limit, unsigned long age);
 extern std::set<CBlockIndex*> setDirtyBlockIndex;
 extern ThresholdConditionCache warningcache[VERSIONBITS_NUM_BITS];
 void PruneBlockIndexCandidates();
-bool CheckIndexAgainstCheckpoint(const CBlockIndex* pindexPrev, CValidationState& state, const CChainParams& chainparams, const uint256& hash);
+bool CheckIndexAgainstCheckpoint(const CBlockIndex* pindexPrev, CValidationState& state, const CBaseParams& chainparams, const uint256& hash);
 bool IsSuperMajority(int minVersion, const CBlockIndex* pstart, unsigned nRequired, const Consensus::Params& consensusParams);
 CBlockIndex* AddToBlockIndex(const CBlockHeader& block);
 
@@ -324,9 +324,9 @@ FILE* OpenUndoFile(const CDiskBlockPos &pos, bool fReadOnly = false);
 /** Translation to a filesystem path */
 boost::filesystem::path GetBlockPosFilename(const CDiskBlockPos &pos, const char *prefix);
 /** Import blocks from an external file */
-bool LoadExternalBlockFile(const CChainParams& chainparams, FILE* fileIn, CDiskBlockPos *dbp = NULL);
+bool LoadExternalBlockFile(const CBaseParams& chainparams, FILE* fileIn, CDiskBlockPos *dbp = NULL);
 /** Initialize a new block tree database + block data on disk */
-bool InitBlockIndex(const CChainParams& chainparams);
+bool InitBlockIndex(const CBaseParams& chainparams);
 /** Load the block tree and coins database from disk */
 bool LoadBlockIndex();
 /** Unload database information */
@@ -356,7 +356,7 @@ std::string GetWarnings(const std::string& strFor);
 /** Retrieve a transaction (from memory pool, or from disk, if possible) */
 bool GetTransaction(const uint256 &hash, CTransaction &tx, const Consensus::Params& params, uint256 &hashBlock, bool fAllowSlow = false);
 /** Find the best known block, and make it the tip of the block chain */
-bool ActivateBestChain(CValidationState& state, const CChainParams& chainparams, BlockOrigin origin, const CBlock* pblock = NULL);
+bool ActivateBestChain(CValidationState& state, const CBaseParams& chainparams, BlockOrigin origin, const CBlock* pblock = NULL);
 
 enum FlushStateMode {
     FLUSH_STATE_NONE,
@@ -579,7 +579,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW = t
 /** Context-dependent validity checks */
 bool ContextualCheckBlock(const CBlock& block, CValidationState& state, CBlockIndex *pindexPrev);
 
-bool AcceptBlock(const CBlock& block, CValidationState& state, const CChainParams& chainparams, CBlockIndex** ppindex, bool fRequested, CDiskBlockPos* dbp);
+bool AcceptBlock(const CBlock& block, CValidationState& state, const CBaseParams& chainparams, CBlockIndex** ppindex, bool fRequested, CDiskBlockPos* dbp);
 extern std::set<CBlockIndex*, CBlockIndexWorkComparator> setBlockIndexCandidates;
 
 class CBlockFileInfo
@@ -641,7 +641,7 @@ class CVerifyDB {
 public:
     CVerifyDB();
     ~CVerifyDB();
-    bool VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview, int nCheckLevel, int nCheckDepth);
+    bool VerifyDB(const CBaseParams& chainparams, CCoinsView *coinsview, int nCheckLevel, int nCheckDepth);
 };
 
 /** Find the last common block between the parameter chain and a locator. */

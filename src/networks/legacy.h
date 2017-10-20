@@ -1,9 +1,4 @@
-// Copyright (c) 2010 Satoshi Nakamoto
-// Copyright (c) 2009-2015 The Bitcoin Core developers
-// Distributed under the MIT software license, see the accompanying
-// file COPYING or http://www.opensource.org/licenses/mit-license.php.
-
-#include "chainparams.h"
+#include "baseparams.h"
 #include "consensus/merkle.h"
 
 #include "tinyformat.h"
@@ -14,6 +9,8 @@
 #include <assert.h>
 
 #include <boost/assign/list_of.hpp>
+
+
 
 /**
  * Main network
@@ -26,10 +23,10 @@
  * + Contains no strange transactions
  */
 
-class CMainParams : public CChainParams {
+class CLegacyParams : public CBaseParams {
 public:
-    CMainParams() {
-        strNetworkID = "main";
+    CLegacyParams() {
+        strNetworkID = "legacy";
         consensus.nSubsidyHalvingInterval = 210000;
         consensus.nMajorityEnforceBlockUpgrade = 750;
         consensus.nMajorityRejectBlockOutdated = 950;
@@ -163,25 +160,3 @@ public:
         };
     }
 };
-static CMainParams mainParams;
-
-static CChainParams *pCurrentParams = 0;
-
-const CChainParams &Params() {
-    assert(pCurrentParams);
-    return *pCurrentParams;
-}
-
-CChainParams& Params(const std::string& chain)
-{
-    if (chain == CBaseChainParams::MAIN)
-            return mainParams;
-    else
-        throw std::runtime_error(strprintf("%s: Unknown chain %s.", __func__, chain));
-}
-
-void SelectParams(const std::string& network)
-{
-    SelectBaseParams(network);
-    pCurrentParams = &Params(network);
-}

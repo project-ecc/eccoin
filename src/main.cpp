@@ -8,7 +8,7 @@
 #include "addrman.h"
 #include "arith_uint256.h"
 #include "bignum.h"
-#include "chainparams.h"
+#include "networks/baseparams.h"
 #include "checkpoints.h"
 #include "checkqueue.h"
 #include "consensus/consensus.h"
@@ -18,6 +18,7 @@
 #include "init.h"
 #include "merkleblock.h"
 #include "net.h"
+#include "networks/netman.h"
 #include "policy/policy.h"
 #include "pow.h"
 #include "primitives/block.h"
@@ -639,7 +640,7 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState &state, const C
     // Don't relay version 2 transactions until CSV is active, and we can be
     // sure that such transactions will be mined (unless we're on
     // -testnet/-regtest).
-    const CChainParams& chainparams = Params();
+    const CBaseParams& chainparams = Params();
     if (fRequireStandard && tx.nVersion >= 2 && VersionBitsTipState(chainparams.GetConsensus(), Consensus::DEPLOYMENT_CSV) != THRESHOLD_ACTIVE) {
         return state.DoS(0, false, REJECT_NONSTANDARD, "premature-version2-tx");
     }
@@ -1193,7 +1194,7 @@ CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams)
 
 bool IsInitialBlockDownload()
 {
-    const CChainParams& chainParams = Params();
+    const CBaseParams& chainParams = Params();
     LOCK(cs_main);
     if (fImporting || fReindex)
         return true;
@@ -1702,7 +1703,7 @@ static int64_t nTimeCallbacks = 0;
 
 bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pindex, CCoinsViewCache& view, bool fJustCheck)
 {
-    const CChainParams& chainparams = Params();
+    const CBaseParams& chainparams = Params();
     AssertLockHeld(cs_main);
 
     int64_t nTimeStart = GetTimeMicros();
@@ -2011,7 +2012,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
  */
 bool FlushStateToDisk(CValidationState &state, FlushStateMode mode)
 {
-    const CChainParams& chainparams = Params();
+    const CBaseParams& chainparams = Params();
     LOCK2(cs_main, cs_LastBlockFile);
     static int64_t nLastWrite = 0;
     static int64_t nLastFlush = 0;
@@ -2454,7 +2455,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
     return true;
 }
 
-bool CheckIndexAgainstCheckpoint(const CBlockIndex* pindexPrev, CValidationState& state, const CChainParams& chainparams, const uint256& hash)
+bool CheckIndexAgainstCheckpoint(const CBlockIndex* pindexPrev, CValidationState& state, const CBaseParams& chainparams, const uint256& hash)
 {
     if (*pindexPrev->phashBlock == chainparams.GetConsensus().hashGenesisBlock)
         return true;
@@ -2506,7 +2507,7 @@ bool ContextualCheckBlock(const CBlock& block, CValidationState& state, CBlockIn
 
 
 /** Store block on disk. If dbp is non-NULL, the file is known to already reside on disk */
-bool AcceptBlock(const CBlock& block, CValidationState& state, const CChainParams& chainparams, CBlockIndex** ppindex, bool fRequested, CDiskBlockPos* dbp)
+bool AcceptBlock(const CBlock& block, CValidationState& state, const CBaseParams& chainparams, CBlockIndex** ppindex, bool fRequested, CDiskBlockPos* dbp)
 {
     AssertLockHeld(cs_main);
 
@@ -2675,7 +2676,7 @@ CBlockIndex * InsertBlockIndex(uint256 hash)
 
 bool static LoadBlockIndexDB()
 {
-    const CChainParams& chainparams = Params();
+    const CBaseParams& chainparams = Params();
     if (!pblocktree->LoadBlockIndexGuts())
         return false;
 
@@ -2784,7 +2785,7 @@ CVerifyDB::~CVerifyDB()
     uiInterface.ShowProgress("", 100);
 }
 
-bool CVerifyDB::VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview, int nCheckLevel, int nCheckDepth)
+bool CVerifyDB::VerifyDB(const CBaseParams& chainparams, CCoinsView *coinsview, int nCheckLevel, int nCheckDepth)
 {
     LOCK(cs_main);
     if (chainActive.Tip() == NULL || chainActive.Tip()->pprev == NULL)
@@ -2903,7 +2904,7 @@ bool LoadBlockIndex()
     return true;
 }
 
-bool InitBlockIndex(const CChainParams& chainparams)
+bool InitBlockIndex(const CBaseParams& chainparams)
 {
     LOCK(cs_main);
 
@@ -2958,7 +2959,7 @@ bool InitBlockIndex(const CChainParams& chainparams)
     return true;
 }
 
-bool LoadExternalBlockFile(const CChainParams& chainparams, FILE* fileIn, CDiskBlockPos *dbp)
+bool LoadExternalBlockFile(const CBaseParams& chainparams, FILE* fileIn, CDiskBlockPos *dbp)
 {
     // std::map of disk positions for blocks with unknown parent (only used for reindex)
     static std::multimap<uint256, CDiskBlockPos> mapBlocksUnknownParent;

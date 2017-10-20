@@ -188,8 +188,6 @@ HEADERS += \
     src/base58.h \
     src/bloom.h \
     src/chain.h \
-    src/chainparams.h \
-    src/chainparamsbase.h \
     src/checkpoints.h \
     src/checkqueue.h \
     src/clientversion.h \
@@ -288,7 +286,10 @@ HEADERS += \
     src/blockindex.h \
     src/rpc/rpcclient.h \
     src/rpc/rpcprotocol.h \
-    src/rpc/rpcserver.h
+    src/rpc/rpcserver.h \
+    src/networks/netman.h \
+    src/networks/baseparams.h \
+    src/networks/legacy.h
 
 
 # organize compiles of cpp files by section, this seems to be a logical order where the files lower down generally depend
@@ -301,8 +302,6 @@ SOURCES += \
     src/base58.cpp \
     src/bloom.cpp \
     src/chain.cpp \
-    src/chainparams.cpp \
-    src/chainparamsbase.cpp \
     src/checkpoints.cpp \
     src/clientversion.cpp \
     src/coins.cpp \
@@ -391,7 +390,8 @@ SOURCES += \
     src/rpc/rpcwallet.cpp \
     src/rpc/rpcserver.cpp \
     src/rpc/rpcrawtransaction.cpp \
-    src/rest.cpp
+    src/rest.cpp \
+    src/networks/netman.cpp
 
 
 

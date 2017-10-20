@@ -4,12 +4,12 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "chain.h"
-#include "chainparams.h"
+#include "networks/netman.h"
 #include "primitives/block.h"
 #include "primitives/transaction.h"
 #include "main.h"
 #include "httpserver.h"
-#include "rpcserver.h"
+#include "rpc/rpcserver.h"
 #include "streams.h"
 #include "sync.h"
 #include "txmempool.h"

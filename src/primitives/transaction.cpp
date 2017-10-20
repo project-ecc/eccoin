@@ -10,12 +10,13 @@
 #include "utilstrencodings.h"
 #include "txdb.h"
 #include "timedata.h"
-#include "chainparams.h"
+#include "networks/baseparams.h"
 #include "chain.h"
 #include "main.h"
 #include "args.h"
 #include "consensus/consensus.h"
 #include "wallet/wallet.h"
+#include "networks/netman.h"
 
 std::string COutPoint::ToString() const
 {

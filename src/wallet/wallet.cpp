@@ -1207,7 +1207,7 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate)
 {
     int ret = 0;
     int64_t nNow = GetTime();
-    const CChainParams& chainParams = Params();
+    const CBaseParams& chainParams = Params();
 
     CBlockIndex* pindex = pindexStart;
     {

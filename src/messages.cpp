@@ -16,7 +16,8 @@
 #include "utilstrencodings.h"
 #include "chain.h"
 #include "consensus/validation.h"
-#include "chainparams.h"
+#include "networks/baseparams.h"
+#include "networks/netman.h"
 #include "processblock.h"
 #include "processheader.h"
 
@@ -499,7 +500,7 @@ void static ProcessGetData(CNode* pfrom, const Consensus::Params& consensusParam
 
 bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vRecv, int64_t nTimeReceived)
 {
-    const CChainParams& chainparams = Params();
+    const CBaseParams& chainparams = Params();
     RandAddSeedPerfmon();
     LogPrint("net", "received: %s (%u bytes) peer=%d\n", SanitizeString(strCommand), vRecv.size(), pfrom->id);
     if (gArgs.IsArgSet("-dropmessagestest") && GetRand(atoi(gArgs.GetArg("-dropmessagestest", 0))) == 0)
@@ -1400,7 +1401,7 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
 // requires LOCK(cs_vRecvMsg)
 bool ProcessMessages(CNode* pfrom)
 {
-    const CChainParams& chainparams = Params();
+    const CBaseParams& chainparams = Params();
     //if (fDebug)
     //    LogPrintf("%s(%u messages)\n", __func__, pfrom->vRecvMsg.size());
 

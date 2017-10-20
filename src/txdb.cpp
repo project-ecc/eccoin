@@ -6,7 +6,7 @@
 #include "txdb.h"
 
 #include "chain.h"
-#include "chainparams.h"
+#include "networks/baseparams.h"
 #include "hash.h"
 #include "main.h"
 #include "pow.h"

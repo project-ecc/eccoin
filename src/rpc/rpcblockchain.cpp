@@ -5,7 +5,8 @@
 
 #include "amount.h"
 #include "chain.h"
-#include "chainparams.h"
+#include "networks/baseparams.h"
+#include "networks/netman.h"
 #include "checkpoints.h"
 #include "coins.h"
 #include "consensus/validation.h"

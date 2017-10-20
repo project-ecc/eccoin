@@ -8,7 +8,8 @@
 #include "validationinterface.h"
 #include "init.h"
 #include "txmempool.h"
-#include "chainparams.h"
+#include "networks/baseparams.h"
+#include "networks/netman.h"
 #include "net.h"
 #include "policy/policy.h"
 
@@ -47,7 +48,7 @@ public:
 };
 
 
-bool ProcessNewBlock(CValidationState& state, const CChainParams& chainparams, const CNode* pfrom, const CBlock* pblock, bool fForceProcessing, CDiskBlockPos* dbp, BlockOrigin origin)
+bool ProcessNewBlock(CValidationState& state, const CBaseParams& chainparams, const CNode* pfrom, const CBlock* pblock, bool fForceProcessing, CDiskBlockPos* dbp, BlockOrigin origin)
 {
     // Preliminary checks
     bool checked = CheckBlock(*pblock, state);
@@ -80,7 +81,7 @@ bool ProcessNewBlock(CValidationState& state, const CChainParams& chainparams, c
 
 /** Update chainActive and related internal data structures. */
 void UpdateTip(CBlockIndex *pindexNew) {
-    const CChainParams& chainParams = Params();
+    const CBaseParams& chainParams = Params();
     chainActive.SetTip(pindexNew);
 
     // New best block
@@ -195,7 +196,7 @@ static int64_t nTimeTotal = 0;
  * Connect a new block to chainActive. pblock is either NULL or a pointer to a CBlock
  * corresponding to pindexNew, to bypass loading it again from disk.
  */
-bool ConnectTip(CValidationState& state, const CChainParams& chainparams, CBlockIndex* pindexNew, const CBlock* pblock, BlockOrigin origin)
+bool ConnectTip(CValidationState& state, const CBaseParams& chainparams, CBlockIndex* pindexNew, const CBlock* pblock, BlockOrigin origin)
 {
     assert(pindexNew->pprev == chainActive.Tip());
     // Read block from disk.
@@ -337,7 +338,7 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
  * Try to make some progress towards making pindexMostWork the active block.
  * pblock is either NULL or a pointer to a CBlock corresponding to pindexMostWork.
  */
- bool ActivateBestChainStep(CValidationState& state, const CChainParams& chainparams, CBlockIndex* pindexMostWork, const CBlock* pblock, BlockOrigin origin)
+ bool ActivateBestChainStep(CValidationState& state, const CBaseParams& chainparams, CBlockIndex* pindexMostWork, const CBlock* pblock, BlockOrigin origin)
 {
     AssertLockHeld(cs_main);
     bool fInvalidFound = false;
@@ -431,7 +432,7 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
  * or an activated best chain. pblock is either NULL or a pointer to a block
  * that is already loaded (to avoid loading it again from disk).
  */
-bool ActivateBestChain(CValidationState &state, const CChainParams& chainparams, BlockOrigin origin, const CBlock *pblock) {
+bool ActivateBestChain(CValidationState &state, const CBaseParams& chainparams, BlockOrigin origin, const CBlock *pblock) {
     CBlockIndex *pindexMostWork = NULL;
     do {
         boost::this_thread::interruption_point();
