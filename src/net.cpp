@@ -7,7 +7,7 @@
 #include "args.h"
 
 #include "addrman.h"
-#include "chainparams.h"
+#include "networks/netman.h"
 #include "clientversion.h"
 #include "consensus/consensus.h"
 #include "crypto/common.h"

@@ -3,9 +3,9 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "chainparams.h"
+#include "networks/netman.h"
 #include "clientversion.h"
-#include "rpcserver.h"
+#include "rpc/rpcserver.h"
 #include "init.h"
 #include "noui.h"
 #include "scheduler.h"
@@ -13,7 +13,6 @@
 #include "args.h"
 #include "httpserver.h"
 #include "httprpc.h"
-#include "rpcserver.h"
 
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem.hpp>
