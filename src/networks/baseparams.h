@@ -6,7 +6,6 @@
 #ifndef BITCOIN_CHAINPARAMS_H
 #define BITCOIN_CHAINPARAMS_H
 
-#include "chainparamsbase.h"
 #include "consensus/params.h"
 #include "primitives/block.h"
 #include "protocol.h"
@@ -31,7 +30,7 @@ struct CCheckpointData {
  * a regression test mode which is intended for private networks only. It has
  * minimal difficulty to ensure that blocks can be found instantly.
  */
-class CChainParams
+class CBaseParams
 {
 public:
     enum Base58Type {
@@ -70,7 +69,7 @@ public:
     unsigned int getStakeMinAge() const { return nStakeMinAge; }
   
 protected:
-    CChainParams() {}
+    CBaseParams() {}
 
     Consensus::Params consensus;
     CMessageHeader::MessageStartChars pchMessageStart;
@@ -91,22 +90,5 @@ protected:
     unsigned int nStakeMaxAge;
     unsigned int nStakeMinAge;
 };
-
-/**
- * Return the currently selected parameters. This won't change after app
- * startup, except for unit tests.
- */
-const CChainParams &Params();
-
-/**
- * @returns CChainParams for the given BIP70 chain name.
- */
-CChainParams& Params(const std::string& chain);
-
-/**
- * Sets the params returned by Params() to those for the given BIP70 chain name.
- * @throws std::runtime_error when the chain is not supported.
- */
-void SelectParams(const std::string& chain);
 
 #endif // BITCOIN_CHAINPARAMS_H

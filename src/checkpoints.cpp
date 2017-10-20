@@ -5,7 +5,7 @@
 #include "checkpoints.h"
 
 #include "chain.h"
-#include "chainparams.h"
+#include "networks/baseparams.h"
 #include "main.h"
 #include "uint256.h"
 

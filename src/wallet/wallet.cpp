@@ -1116,6 +1116,11 @@ void CWalletTx::GetAmounts(std::list<COutputEntry>& listReceived,
     for (unsigned int i = 0; i < vout.size(); ++i)
     {
         const CTxOut& txout = vout[i];
+
+        // Skip stake out for coinstake transactions
+        if (txout.scriptPubKey.empty())
+            continue;
+
         isminetype fIsMine = pwallet->IsMine(txout);
         // Only need to handle txouts if AT LEAST one of these is true:
         //   1) they debit from us (sent)
@@ -1202,7 +1207,7 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate)
 {
     int ret = 0;
     int64_t nNow = GetTime();
-    const CChainParams& chainParams = Params();
+    const CBaseParams& chainParams = Params();
 
     CBlockIndex* pindex = pindexStart;
     {

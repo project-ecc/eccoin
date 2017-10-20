@@ -14,7 +14,8 @@
 #include "chain.h"
 #include "timedata.h"
 #include "crypto/scrypt.h"
-#include "chainparams.h"
+#include "networks/baseparams.h"
+#include "networks/netman.h"
 
 uint256 CBlockHeader::GetHash() const
 {

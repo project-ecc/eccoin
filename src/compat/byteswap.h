@@ -5,10 +5,6 @@
 #ifndef BITCOIN_COMPAT_BYTESWAP_H
 #define BITCOIN_COMPAT_BYTESWAP_H
 
-#if defined(HAVE_CONFIG_H)
-#include "config/bitcoin-config.h"
-#endif
-
 #include <stdint.h>
 
 #if defined(HAVE_BYTESWAP_H)

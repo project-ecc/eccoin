@@ -6,7 +6,8 @@
 #include <algorithm>
 
 #include "chain.h"
-#include "chainparams.h"
+#include "networks/baseparams.h"
+#include "networks/netman.h"
 #include "consensus/consensus.h"
 #include "main.h"
 #include "kernel.h"
@@ -15,7 +16,7 @@
 #include "crypto/scrypt.h"
 #include "utiltime.h"
 #include "timedata.h"
-#include "args.h""
+#include "args.h"
 #include "script/stakescript.h"
 
 // The stake modifier used to hash for a stake kernel is chosen as the stake
