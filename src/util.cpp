@@ -6,7 +6,7 @@
 #include "util.h"
 #include "args.h"
 
-#include "chainparamsbase.h"
+#include "networks/netman.h"
 #include "random.h"
 #include "serialize.h"
 #include "sync.h"

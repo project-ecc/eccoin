@@ -39,7 +39,8 @@ class CValidationState;
 
 struct CNodeStateStats;
 struct LockPoints;
-
+/** Default for returning change from tx back an address we already owned instead of a new one (try to select address with most value in it). */
+static const bool DEFAULT_RETURN_CHANGE = true;
 /** Default for accepting alerts from the P2P network. */
 static const bool DEFAULT_ALERTS = false;
 /** Default for DEFAULT_WHITELISTRELAY. */

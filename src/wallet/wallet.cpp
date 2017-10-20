@@ -2111,8 +2111,39 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CWalletT
 
                     // coin control: send change to custom address
                     if (coinControl && !boost::get<CNoDestination>(&coinControl->destChange))
+                    {
                         scriptChange = GetScriptForDestination(coinControl->destChange);
+                    }
+                    else if(gArgs.GetBoolArg("-returnchange", DEFAULT_RETURN_CHANGE))
+                    {
+                        std::map<CTxDestination, CAmount> balances = GetAddressBalances();
+                        if(balances.size() < 1)
+                        {
+                            /// if we are in here, something went wrong with getting the address balance map so we should default to generating a new key
+                            /// this is the same behavior if -returnchange was false
+                            CPubKey vchPubKey;
+                            bool ret;
+                            ret = reservekey.GetReservedKey(vchPubKey);
+                            assert(ret); // should never fail, as we just unlocked
 
+                            scriptChange = GetScriptForDestination(vchPubKey.GetID());
+                        }
+                        else
+                        {
+                            CTxDestination highestAddr;
+                            CAmount highestValue = 0;
+                            highestAddr = balances.begin()->first; //make sure it is always at least an address, this is just a saftey
+                            for(std::map<CTxDestination, CAmount>::iterator it = balances.begin(); it != balances.end(); ++it)
+                            {
+                                if(it->second > highestValue)
+                                {
+                                    highestValue = it->second;
+                                    highestAddr = it->first;
+                                }
+                            }
+                            scriptChange = GetScriptForDestination(highestAddr);
+                        }
+                    }
                     // no coin control: send change to newly generated address
                     else
                     {
