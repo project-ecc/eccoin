@@ -11,11 +11,11 @@
 #include "clientversion.h"
 #include "consensus/consensus.h"
 #include "crypto/common.h"
-#include "hash.h"
-#include "primitives/transaction.h"
+#include "crypto/hash.h"
+#include "tx/tx.h"
 #include "scheduler.h"
 #include "ui_interface.h"
-#include "utilstrencodings.h"
+#include "util/utilstrencodings.h"
 
 #ifdef WIN32
 #include <string.h>

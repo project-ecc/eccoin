@@ -8,7 +8,7 @@
 #include "key.h"
 #include "keystore.h"
 #include "policy/policy.h"
-#include "primitives/transaction.h"
+#include "tx/tx.h"
 #include "script/standard.h"
 #include "uint256.h"
 

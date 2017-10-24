@@ -6,28 +6,28 @@
 #include "wallet/wallet.h"
 
 #include "base58.h"
-#include "checkpoints.h"
-#include "chain.h"
+#include "chain/checkpoints.h"
+#include "chain/chain.h"
 #include "coincontrol.h"
 #include "coins.h"
 #include "consensus/consensus.h"
 #include "consensus/validation.h"
+#include "init.h"
 #include "kernel.h"
 #include "key.h"
 #include "keystore.h"
 #include "main.h"
 #include "net.h"
 #include "policy/policy.h"
-#include "primitives/block.h"
-#include "primitives/transaction.h"
+#include "tx/tx.h"
 #include "script/script.h"
 #include "script/sign.h"
 #include "timedata.h"
 #include "txdb.h"
 #include "txmempool.h"
-#include "util.h"
+#include "util/util.h"
 #include "args.h"
-#include "utilmoneystr.h"
+#include "util/utilmoneystr.h"
 
 #include <assert.h>
 
@@ -654,7 +654,7 @@ bool CWallet::AddToWallet(const CWalletTx& wtxIn, bool fFromLoadWallet, CWalletD
             wtx.nTimeSmart = wtx.nTimeReceived;
             if (!wtxIn.hashUnset())
             {
-                if (mapBlockIndex.count(wtxIn.hashBlock))
+                if (pchainMain->mapBlockIndex.count(wtxIn.hashBlock))
                 {
                     int64_t latestNow = wtx.nTimeReceived;
                     int64_t latestEntry = 0;
@@ -687,7 +687,7 @@ bool CWallet::AddToWallet(const CWalletTx& wtxIn, bool fFromLoadWallet, CWalletD
                         }
                     }
 
-                    int64_t blocktime = mapBlockIndex[wtxIn.hashBlock]->GetBlockTime();
+                    int64_t blocktime = pchainMain->mapBlockIndex[wtxIn.hashBlock]->GetBlockTime();
                     wtx.nTimeSmart = std::max(latestEntry, std::min(blocktime, latestNow));
                 }
                 else
@@ -858,10 +858,10 @@ void CWallet::MarkConflicted(const uint256& hashBlock, const uint256& hashTx)
     LOCK2(cs_main, cs_wallet);
 
     int conflictconfirms = 0;
-    if (mapBlockIndex.count(hashBlock)) {
-        CBlockIndex* pindex = mapBlockIndex[hashBlock];
-        if (chainActive.Contains(pindex)) {
-            conflictconfirms = -(chainActive.Height() - pindex->nHeight + 1);
+    if (pchainMain->mapBlockIndex.count(hashBlock)) {
+        CBlockIndex* pindex = pchainMain->mapBlockIndex[hashBlock];
+        if (pchainMain->chainActive.Contains(pindex)) {
+            conflictconfirms = -(pchainMain->chainActive.Height() - pindex->nHeight + 1);
         }
     }
     // If number of conflict confirms cannot be determined, this means
@@ -1216,11 +1216,11 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate)
         // no need to read and scan block, if block was created before
         // our wallet birthday (as adjusted for block time variability)
         while (pindex && nTimeFirstKey && (pindex->GetBlockTime() < (nTimeFirstKey - 7200)))
-            pindex = chainActive.Next(pindex);
+            pindex = pchainMain->chainActive.Next(pindex);
 
         ShowProgress(_("Rescanning..."), 0); // show rescan progress in GUI as dialog or on splashscreen, if -rescan on startup
         double dProgressStart = Checkpoints::GuessVerificationProgress(chainParams.Checkpoints(), pindex, false);
-        double dProgressTip = Checkpoints::GuessVerificationProgress(chainParams.Checkpoints(), chainActive.Tip(), false);
+        double dProgressTip = Checkpoints::GuessVerificationProgress(chainParams.Checkpoints(), pchainMain->chainActive.Tip(), false);
         while (pindex)
         {
             if (pindex->nHeight % 100 == 0 && dProgressTip - dProgressStart > 0.0)
@@ -1233,7 +1233,7 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate)
                 if (AddToWalletIfInvolvingMe(tx, &block, fUpdate))
                     ret++;
             }
-            pindex = chainActive.Next(pindex);
+            pindex = pchainMain->chainActive.Next(pindex);
             if (GetTime() >= nNow + 60) {
                 nNow = GetTime();
                 LogPrintf("Still rescanning. At block %d. Progress=%f\n", pindex->nHeight, Checkpoints::GuessVerificationProgress(chainParams.Checkpoints(), pindex));
@@ -2018,7 +2018,7 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CWalletT
     // enough, that fee sniping isn't a problem yet, but by implementing a fix
     // now we ensure code won't be written that makes assumptions about
     // nLockTime that preclude a fix later.
-    txNew.nLockTime = chainActive.Height();
+    txNew.nLockTime = pchainMain->chainActive.Height();
 
     // Secondly occasionally randomly pick a nLockTime even further back, so
     // that transactions that are delayed after signing for whatever reason,
@@ -2027,7 +2027,7 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CWalletT
     if (GetRandInt(10) == 0)
         txNew.nLockTime = std::max(0, (int)txNew.nLockTime - GetRandInt(100));
 
-    assert(txNew.nLockTime <= (unsigned int)chainActive.Height());
+    assert(txNew.nLockTime <= (unsigned int)(pchainMain->chainActive.Height()));
     assert(txNew.nLockTime < LOCKTIME_THRESHOLD);
 
     {
@@ -2929,7 +2929,7 @@ void CWallet::GetKeyBirthTimes(std::map<CKeyID, int64_t> &mapKeyBirth) const {
             mapKeyBirth[it->first] = it->second.nCreateTime;
 
     // map in which we'll infer heights of other keys
-    CBlockIndex *pindexMax = chainActive[std::max(0, chainActive.Height() - 144)]; // the tip can be reorganised; use a 144-block safety margin
+    CBlockIndex *pindexMax = pchainMain->chainActive[std::max(0, pchainMain->chainActive.Height() - 144)]; // the tip can be reorganised; use a 144-block safety margin
     std::map<CKeyID, CBlockIndex*> mapKeyFirstBlock;
     std::set<CKeyID> setKeys;
     GetKeys(setKeys);
@@ -2948,8 +2948,8 @@ void CWallet::GetKeyBirthTimes(std::map<CKeyID, int64_t> &mapKeyBirth) const {
     for (std::map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); it++) {
         // iterate over all wallet transactions...
         const CWalletTx &wtx = (*it).second;
-        BlockMap::const_iterator blit = mapBlockIndex.find(wtx.hashBlock);
-        if (blit != mapBlockIndex.end() && chainActive.Contains(blit->second)) {
+        BlockMap::const_iterator blit = pchainMain->mapBlockIndex.find(wtx.hashBlock);
+        if (blit != pchainMain->mapBlockIndex.end() && pchainMain->chainActive.Contains(blit->second)) {
             // ... which are already in a block
             int nHeight = blit->second->nHeight;
             for (auto const& txout: wtx.vout) {
@@ -3050,14 +3050,14 @@ int CMerkleTx::SetMerkleBranch(const CBlock& block)
     }
 
     // Is the tx in a block that's in the main chain
-    BlockMap::iterator mi = mapBlockIndex.find(hashBlock);
-    if (mi == mapBlockIndex.end())
+    BlockMap::iterator mi = pchainMain->mapBlockIndex.find(hashBlock);
+    if (mi == pchainMain->mapBlockIndex.end())
         return 0;
     const CBlockIndex* pindex = (*mi).second;
-    if (!pindex || !chainActive.Contains(pindex))
+    if (!pindex || !pchainMain->chainActive.Contains(pindex))
         return 0;
 
-    return chainActive.Height() - pindex->nHeight + 1;
+    return pchainMain->chainActive.Height() - pindex->nHeight + 1;
 }
 
 int CMerkleTx::GetDepthInMainChain(const CBlockIndex* &pindexRet) const
@@ -3068,15 +3068,15 @@ int CMerkleTx::GetDepthInMainChain(const CBlockIndex* &pindexRet) const
     AssertLockHeld(cs_main);
 
     // Find the block it claims to be in
-    BlockMap::iterator mi = mapBlockIndex.find(hashBlock);
-    if (mi == mapBlockIndex.end())
+    BlockMap::iterator mi = pchainMain->mapBlockIndex.find(hashBlock);
+    if (mi == pchainMain->mapBlockIndex.end())
         return 0;
     CBlockIndex* pindex = (*mi).second;
-    if (!pindex || !chainActive.Contains(pindex))
+    if (!pindex || !pchainMain->chainActive.Contains(pindex))
         return 0;
 
     pindexRet = pindex;
-    return ((nIndex == -1) ? (-1) : 1) * (chainActive.Height() - pindex->nHeight + 1);
+    return ((nIndex == -1) ? (-1) : 1) * (pchainMain->chainActive.Height() - pindex->nHeight + 1);
 }
 
 int CMerkleTx::GetBlocksToMaturity() const
@@ -3231,7 +3231,7 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
     // The following split & combine thresholds are important to security
     // Should not be adjusted if you don't understand the consequences
     static unsigned int nStakeSplitAge = (60 * 60 * 24 * 30);
-    const CBlockIndex* pIndex0 = GetLastBlockIndex(chainActive.Tip(), false);
+    const CBlockIndex* pIndex0 = GetLastBlockIndex(pchainMain->chainActive.Tip(), false);
     int64_t nCombineThreshold = 0;
     if(pIndex0->pprev)
         nCombineThreshold = GetProofOfWorkReward(pIndex0->nHeight, DEFAULT_TRANSACTION_MINFEE , pIndex0->pprev->GetBlockHash()) / 3;
@@ -3270,7 +3270,7 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
         CDiskTxPos txindex;
         {
             LOCK2(cs_main, cs_wallet);
-            if (!pblocktree->ReadTxIndex(pcoin.first->GetHash(), txindex))
+            if (!pchainMain->pblocktree->ReadTxIndex(pcoin.first->GetHash(), txindex))
                 continue;
         }
 
@@ -3296,7 +3296,7 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
             uint256 hashProofOfStake;
             hashProofOfStake.SetNull();
             COutPoint prevoutStake = COutPoint(pcoin.first->GetHash(), pcoin.second);
-            if (CheckStakeKernelHash(chainActive.Tip()->nHeight+1, block, txindex.nTxOffset, *pcoin.first, prevoutStake, txNew.nTime, hashProofOfStake))
+            if (CheckStakeKernelHash(pchainMain->chainActive.Tip()->nHeight+1, block, txindex.nTxOffset, *pcoin.first, prevoutStake, txNew.nTime, hashProofOfStake))
             {
                // Found a kernel
                 if (fDebug)
@@ -3398,7 +3398,7 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
     // Calculate coin age reward
     {
         uint64_t nCoinAge;
-        const CBlockIndex* pIndex0 = GetLastBlockIndex(chainActive.Tip(), false);
+        const CBlockIndex* pIndex0 = GetLastBlockIndex(pchainMain->chainActive.Tip(), false);
 
         if (!txNew.GetCoinAge(nCoinAge))
         {

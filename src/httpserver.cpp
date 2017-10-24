@@ -6,7 +6,7 @@
 
 #include "networks/netman.h"
 #include "compat.h"
-#include "util.h"
+#include "util/util.h"
 #include "args.h"
 #include "netbase.h"
 #include "rpc/rpcprotocol.h" // For HTTP status codes

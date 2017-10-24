@@ -6,7 +6,7 @@
 #include "netman.h"
 #include "legacy.h"
 #include "tinyformat.h"
-#include "util.h"
+#include "util/util.h"
 #include "args.h"
 
 
@@ -55,7 +55,7 @@ public:
 };
 static CBaseTestNetParams testNetParams;
 
-/*
+/*m
  * Regression test
  */
 class CBaseRegTestParams : public CNetMan

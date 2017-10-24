@@ -5,9 +5,9 @@
 
 #include "merkleblock.h"
 
-#include "hash.h"
+#include "crypto/hash.h"
 #include "consensus/consensus.h"
-#include "utilstrencodings.h"
+#include "util/utilstrencodings.h"
 
 CMerkleBlock::CMerkleBlock(const CBlock& block, CBloomFilter& filter)
 {

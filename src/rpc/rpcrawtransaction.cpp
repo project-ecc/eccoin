@@ -4,7 +4,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "base58.h"
-#include "chain.h"
+#include "chain/chain.h"
 #include "coins.h"
 #include "consensus/validation.h"
 #include "core_io.h"
@@ -14,7 +14,7 @@
 #include "merkleblock.h"
 #include "net.h"
 #include "policy/policy.h"
-#include "primitives/transaction.h"
+#include "tx/tx.h"
 #include "rpcserver.h"
 #include "script/script.h"
 #include "script/script_error.h"
@@ -22,7 +22,7 @@
 #include "script/standard.h"
 #include "txmempool.h"
 #include "uint256.h"
-#include "utilstrencodings.h"
+#include "util/utilstrencodings.h"
 #include "wallet/wallet.h"
 
 #include <stdint.h>
@@ -93,11 +93,11 @@ void TxToJSON(const CTransaction& tx, const uint256 hashBlock, UniValue& entry)
 
     if (!hashBlock.IsNull()) {
         entry.push_back(Pair("blockhash", hashBlock.GetHex()));
-        BlockMap::iterator mi = mapBlockIndex.find(hashBlock);
-        if (mi != mapBlockIndex.end() && (*mi).second) {
+        BlockMap::iterator mi = pchainMain->mapBlockIndex.find(hashBlock);
+        if (mi != pchainMain->mapBlockIndex.end() && (*mi).second) {
             CBlockIndex* pindex = (*mi).second;
-            if (chainActive.Contains(pindex)) {
-                entry.push_back(Pair("confirmations", 1 + chainActive.Height() - pindex->nHeight));
+            if (pchainMain->chainActive.Contains(pindex)) {
+                entry.push_back(Pair("confirmations", 1 + pchainMain->chainActive.Height() - pindex->nHeight));
                 entry.push_back(Pair("time", pindex->GetBlockTime()));
                 entry.push_back(Pair("blocktime", pindex->GetBlockTime()));
             }
@@ -155,7 +155,7 @@ UniValue getrawtransaction(const UniValue& params, bool fHelp)
             "         \"reqSigs\" : n,            (numeric) The required sigs\n"
             "         \"type\" : \"pubkeyhash\",  (string) The type, eg 'pubkeyhash'\n"
             "         \"addresses\" : [           (json array of string)\n"
-            "           \"ecc address\"        (string) E-CurrencyCoin address\n"
+            "           \"ecc address\"        (string) ECC address\n"
             "           ,...\n"
             "         ]\n"
             "       }\n"
@@ -242,13 +242,13 @@ UniValue gettxoutproof(const UniValue& params, bool fHelp)
     if (params.size() > 1)
     {
         hashBlock = uint256S(params[1].get_str());
-        if (!mapBlockIndex.count(hashBlock))
+        if (!pchainMain->mapBlockIndex.count(hashBlock))
             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
-        pblockindex = mapBlockIndex[hashBlock];
+        pblockindex = pchainMain->mapBlockIndex[hashBlock];
     } else {
         CCoins coins;
-        if (pcoinsTip->GetCoins(oneTxid, coins) && coins.nHeight > 0 && coins.nHeight <= chainActive.Height())
-            pblockindex = chainActive[coins.nHeight];
+        if (pchainMain->pcoinsTip->GetCoins(oneTxid, coins) && coins.nHeight > 0 && coins.nHeight <= pchainMain->chainActive.Height())
+            pblockindex = pchainMain->chainActive[coins.nHeight];
     }
 
     if (pblockindex == NULL)
@@ -256,9 +256,9 @@ UniValue gettxoutproof(const UniValue& params, bool fHelp)
         CTransaction tx;
         if (!GetTransaction(oneTxid, tx, Params().GetConsensus(), hashBlock, false) || hashBlock.IsNull())
             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Transaction not yet in block");
-        if (!mapBlockIndex.count(hashBlock))
+        if (!pchainMain->mapBlockIndex.count(hashBlock))
             throw JSONRPCError(RPC_INTERNAL_ERROR, "Transaction index corrupt");
-        pblockindex = mapBlockIndex[hashBlock];
+        pblockindex = pchainMain->mapBlockIndex[hashBlock];
     }
 
     CBlock block;
@@ -304,7 +304,7 @@ UniValue verifytxoutproof(const UniValue& params, bool fHelp)
 
     LOCK(cs_main);
 
-    if (!mapBlockIndex.count(merkleBlock.header.GetHash()) || !chainActive.Contains(mapBlockIndex[merkleBlock.header.GetHash()]))
+    if (!pchainMain->mapBlockIndex.count(merkleBlock.header.GetHash()) || !pchainMain->chainActive.Contains(pchainMain->mapBlockIndex[merkleBlock.header.GetHash()]))
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found in chain");
 
     for (auto const& hash: vMatch)
@@ -334,7 +334,7 @@ UniValue createrawtransaction(const UniValue& params, bool fHelp)
             "     ]\n"
             "2. \"outputs\"             (string, required) a json object with outputs\n"
             "    {\n"
-            "      \"address\": x.xxx   (numeric or string, required) The key is the E-CurrencyCoin address, the numeric value (can be string) is the " + CURRENCY_UNIT + " amount\n"
+            "      \"address\": x.xxx   (numeric or string, required) The key is the ECC address, the numeric value (can be string) is the " + CURRENCY_UNIT + " amount\n"
             "      \"data\": \"hex\",     (string, required) The key is \"data\", the value is hex encoded data\n"
             "      ...\n"
             "    }\n"
@@ -397,7 +397,7 @@ UniValue createrawtransaction(const UniValue& params, bool fHelp)
         } else {
             CBitcoinAddress address(name_);
             if (!address.IsValid())
-                throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, std::string("Invalid E-CurrencyCoin address: ")+name_);
+                throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, std::string("Invalid ECC address: ")+name_);
 
             if (setAddress.count(address))
                 throw JSONRPCError(RPC_INVALID_PARAMETER, std::string("Invalid parameter, duplicated address: ")+name_);
@@ -452,7 +452,7 @@ UniValue decoderawtransaction(const UniValue& params, bool fHelp)
             "         \"reqSigs\" : n,            (numeric) The required sigs\n"
             "         \"type\" : \"pubkeyhash\",  (string) The type, eg 'pubkeyhash'\n"
             "         \"addresses\" : [           (json array of string)\n"
-            "           \"12tvKAXCxZjSmdNbao16dKXC8tRWfcF5oc\"   (string) E-CurrencyCoin address\n"
+            "           \"12tvKAXCxZjSmdNbao16dKXC8tRWfcF5oc\"   (string) ECC address\n"
             "           ,...\n"
             "         ]\n"
             "       }\n"
@@ -495,7 +495,7 @@ UniValue decodescript(const UniValue& params, bool fHelp)
             "  \"type\":\"type\", (string) The output type\n"
             "  \"reqSigs\": n,    (numeric) The required signatures\n"
             "  \"addresses\": [   (json array of string)\n"
-            "     \"address\"     (string) E-CurrencyCoin address\n"
+            "     \"address\"     (string) ECC address\n"
             "     ,...\n"
             "  ],\n"
             "  \"p2sh\",\"address\" (string) script address\n"
@@ -620,7 +620,7 @@ UniValue signrawtransaction(const UniValue& params, bool fHelp)
     CCoinsViewCache view(&viewDummy);
     {
         LOCK(mempool.cs);
-        CCoinsViewCache &viewChain = *pcoinsTip;
+        CCoinsViewCache &viewChain = *pchainMain->pcoinsTip;
         CCoinsViewMemPool viewMempool(&viewChain, mempool);
         view.SetBackend(viewMempool); // temporarily switch cache backend to db+mempool view
 
@@ -799,7 +799,7 @@ UniValue sendrawtransaction(const UniValue& params, bool fHelp)
     if (params.size() > 1)
         fOverrideFees = params[1].get_bool();
 
-    CCoinsViewCache &view = *pcoinsTip;
+    CCoinsViewCache &view = *pchainMain->pcoinsTip;
     const CCoins* existingCoins = view.AccessCoins(hashTx);
     bool fHaveMempool = mempool.exists(hashTx);
     bool fHaveChain = existingCoins && existingCoins->nHeight < 1000000000;

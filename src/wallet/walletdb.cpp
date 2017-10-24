@@ -11,9 +11,9 @@
 #include "protocol.h"
 #include "serialize.h"
 #include "sync.h"
-#include "util.h"
+#include "util/util.h"
 #include "args.h"
-#include "utiltime.h"
+#include "util/utiltime.h"
 #include "wallet/wallet.h"
 #include "wallet.h"
 

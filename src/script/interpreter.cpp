@@ -5,16 +5,17 @@
 
 #include "interpreter.h"
 
-#include "primitives/transaction.h"
+#include "tx/tx.h"
 #include "crypto/ripemd160.h"
 #include "crypto/sha1.h"
 #include "crypto/sha256.h"
 #include "pubkey.h"
 #include "script/script.h"
 #include "uint256.h"
-#include "util.h"
+#include "util/util.h"
 #include "streams.h"
 #include "main.h"
+#include "init.h"
 
 
 namespace {
@@ -872,7 +873,7 @@ bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& 
                     scriptCode.FindAndDelete(CScript(vchSig));
 
                     /// TODO: for backwards compatability, this should be implemented in a different way but for now it will do
-                    if(chainActive.Tip()->nHeight > 1600000)
+                    if(pchainMain->chainActive.Tip()->nHeight > 1600000)
                     {
                         if (!CheckSignatureEncoding(vchSig, flags, serror) || !CheckPubKeyEncoding(vchPubKey, flags, serror))
                         {
@@ -944,7 +945,7 @@ bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& 
                         // distinguishable by CHECKMULTISIG NOT if the STRICTENC flag is set.
                         // See the script_(in)valid tests for details.
                         /// TODO: for backwards compatability, this should be implemented in a different way but for now it will do
-                        if(chainActive.Tip()->nHeight > 1600000)
+                        if(pchainMain->chainActive.Tip()->nHeight > 1600000)
                         {
                             if (!CheckSignatureEncoding(vchSig, flags, serror) || !CheckPubKeyEncoding(vchPubKey, flags, serror)) {
                                 // serror is set

@@ -3,18 +3,18 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "chain.h"
+#include "chain/chain.h"
 #include "networks/netman.h"
-#include "primitives/block.h"
-#include "primitives/transaction.h"
+#include "tx/tx.h"
 #include "main.h"
 #include "httpserver.h"
 #include "rpc/rpcserver.h"
 #include "streams.h"
 #include "sync.h"
 #include "txmempool.h"
-#include "utilstrencodings.h"
+#include "util/utilstrencodings.h"
 #include "version.h"
+#include "init.h"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/dynamic_bitset.hpp>
@@ -150,13 +150,13 @@ static bool rest_headers(HTTPRequest* req,
     headers.reserve(count);
     {
         LOCK(cs_main);
-        BlockMap::const_iterator it = mapBlockIndex.find(hash);
-        const CBlockIndex *pindex = (it != mapBlockIndex.end()) ? it->second : NULL;
-        while (pindex != NULL && chainActive.Contains(pindex)) {
+        BlockMap::const_iterator it = pchainMain->mapBlockIndex.find(hash);
+        const CBlockIndex *pindex = (it != pchainMain->mapBlockIndex.end()) ? it->second : NULL;
+        while (pindex != NULL && pchainMain->chainActive.Contains(pindex)) {
             headers.push_back(pindex);
             if (headers.size() == (unsigned long)count)
                 break;
-            pindex = chainActive.Next(pindex);
+            pindex = pchainMain->chainActive.Next(pindex);
         }
     }
 
@@ -215,10 +215,10 @@ static bool rest_block(HTTPRequest* req,
     CBlockIndex* pblockindex = NULL;
     {
         LOCK(cs_main);
-        if (mapBlockIndex.count(hash) == 0)
+        if (pchainMain->mapBlockIndex.count(hash) == 0)
             return RESTERR(req, HTTP_NOT_FOUND, hashStr + " not found");
 
-        pblockindex = mapBlockIndex[hash];
+        pblockindex = pchainMain->mapBlockIndex[hash];
 
         if (!ReadBlockFromDisk(block, pblockindex, Params().GetConsensus()))
             return RESTERR(req, HTTP_NOT_FOUND, hashStr + " not found");
@@ -501,7 +501,7 @@ static bool rest_getutxos(HTTPRequest* req, const std::string& strURIPart)
         CCoinsView viewDummy;
         CCoinsViewCache view(&viewDummy);
 
-        CCoinsViewCache& viewChain = *pcoinsTip;
+        CCoinsViewCache& viewChain = *pchainMain->pcoinsTip;
         CCoinsViewMemPool viewMempool(&viewChain, mempool);
 
         if (fCheckMemPool)
@@ -535,7 +535,7 @@ static bool rest_getutxos(HTTPRequest* req, const std::string& strURIPart)
         // serialize data
         // use exact same output as mentioned in Bip64
         CDataStream ssGetUTXOResponse(SER_NETWORK, PROTOCOL_VERSION);
-        ssGetUTXOResponse << chainActive.Height() << chainActive.Tip()->GetBlockHash() << bitmap << outs;
+        ssGetUTXOResponse << pchainMain->chainActive.Height() << pchainMain->chainActive.Tip()->GetBlockHash() << bitmap << outs;
         std::string ssGetUTXOResponseString = ssGetUTXOResponse.str();
 
         req->WriteHeader("Content-Type", "application/octet-stream");
@@ -545,7 +545,7 @@ static bool rest_getutxos(HTTPRequest* req, const std::string& strURIPart)
 
     case RF_HEX: {
         CDataStream ssGetUTXOResponse(SER_NETWORK, PROTOCOL_VERSION);
-        ssGetUTXOResponse << chainActive.Height() << chainActive.Tip()->GetBlockHash() << bitmap << outs;
+        ssGetUTXOResponse << pchainMain->chainActive.Height() << pchainMain->chainActive.Tip()->GetBlockHash() << bitmap << outs;
         std::string strHex = HexStr(ssGetUTXOResponse.begin(), ssGetUTXOResponse.end()) + "\n";
 
         req->WriteHeader("Content-Type", "text/plain");
@@ -558,8 +558,8 @@ static bool rest_getutxos(HTTPRequest* req, const std::string& strURIPart)
 
         // pack in some essentials
         // use more or less the same output as mentioned in Bip64
-        objGetUTXOResponse.push_back(Pair("chainHeight", chainActive.Height()));
-        objGetUTXOResponse.push_back(Pair("chaintipHash", chainActive.Tip()->GetBlockHash().GetHex()));
+        objGetUTXOResponse.push_back(Pair("chainHeight", pchainMain->chainActive.Height()));
+        objGetUTXOResponse.push_back(Pair("chaintipHash", pchainMain->chainActive.Tip()->GetBlockHash().GetHex()));
         objGetUTXOResponse.push_back(Pair("bitmap", bitmapStringRepresentation));
 
         UniValue utxos(UniValue::VARR);

@@ -1,7 +1,6 @@
 #ifndef PROCESSHEADER_H
 #define PROCESSHEADER_H
 
-#include "primitives/block.h"
 #include "validationinterface.h"
 #include "networks/baseparams.h"
 

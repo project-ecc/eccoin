@@ -9,7 +9,7 @@
 #include "init.h"
 #include "noui.h"
 #include "scheduler.h"
-#include "util.h"
+#include "util/util.h"
 #include "args.h"
 #include "httpserver.h"
 #include "httprpc.h"
@@ -73,7 +73,7 @@ bool AppInit(int argc, char* argv[])
     // Process help and version before taking care about datadir
     if (gArgs.IsArgSet("-?") || gArgs.IsArgSet("-h") ||  gArgs.IsArgSet("-help") || gArgs.IsArgSet("-version"))
     {
-        std::string strUsage = _("E-CurrencyCoin Core Daemon") + " " + _("version") + " " + FormatFullVersion() + "\n";
+        std::string strUsage = _("ECC Daemon") + " " + _("version") + " " + FormatFullVersion() + "\n";
 
         if (gArgs.IsArgSet("-version"))
         {
@@ -82,7 +82,7 @@ bool AppInit(int argc, char* argv[])
         else
         {
             strUsage += "\n" + _("Usage:") + "\n" +
-                  "  eccoind [options]                     " + _("Start E-CurrencyCoin Core Daemon") + "\n";
+                  "  eccoind [options]                     " + _("Start ECC Daemon") + "\n";
 
             strUsage += "\n" + HelpMessage();
         }
@@ -116,7 +116,7 @@ bool AppInit(int argc, char* argv[])
         // Command-line RPC
         bool fCommandLine = false;
         for (int i = 1; i < argc; i++)
-            if (!IsSwitchChar(argv[i][0]) && !boost::algorithm::istarts_with(argv[i], "E-CurrencyCoin:"))
+            if (!IsSwitchChar(argv[i][0]) && !boost::algorithm::istarts_with(argv[i], "ECC:"))
                 fCommandLine = true;
 
         if (fCommandLine)
@@ -128,7 +128,7 @@ bool AppInit(int argc, char* argv[])
         fDaemon = gArgs.GetBoolArg("-daemon", false);
         if (fDaemon)
         {
-            fprintf(stdout, "E-CurrencyCoin server starting\n");
+            fprintf(stdout, "ECC server starting\n");
 
             // Daemonize
             pid_t pid = fork();

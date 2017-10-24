@@ -4,7 +4,7 @@
 
 #include "dbwrapper.h"
 
-#include "util.h"
+#include "util/util.h"
 #include "random.h"
 
 #include <boost/filesystem.hpp>

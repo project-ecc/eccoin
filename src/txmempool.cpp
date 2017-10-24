@@ -12,9 +12,9 @@
 #include "policy/fees.h"
 #include "streams.h"
 #include "timedata.h"
-#include "util.h"
-#include "utilmoneystr.h"
-#include "utiltime.h"
+#include "util/util.h"
+#include "util/utilmoneystr.h"
+#include "util/utiltime.h"
 #include "version.h"
 
 #include <boost/foreach.hpp>

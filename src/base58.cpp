@@ -4,7 +4,7 @@
 
 #include "base58.h"
 
-#include "hash.h"
+#include "crypto/hash.h"
 #include "uint256.h"
 
 #include <assert.h>

@@ -5,7 +5,7 @@
 #include <boost/assign/list_of.hpp>
 #include <algorithm>
 
-#include "chain.h"
+#include "chain/chain.h"
 #include "networks/baseparams.h"
 #include "networks/netman.h"
 #include "consensus/consensus.h"
@@ -14,28 +14,29 @@
 #include "txdb.h"
 #include "net.h"
 #include "crypto/scrypt.h"
-#include "utiltime.h"
+#include "util/utiltime.h"
 #include "timedata.h"
 #include "args.h"
 #include "script/stakescript.h"
+#include "init.h"
 
 // The stake modifier used to hash for a stake kernel is chosen as the stake
 // modifier about a selection interval later than the coin generating the kernel
 static bool GetKernelStakeModifier(uint256 hashBlockFrom, uint256& nStakeModifier)
 {
     nStakeModifier.SetNull();
-    if (!mapBlockIndex.count(hashBlockFrom))
+    if (!pchainMain->mapBlockIndex.count(hashBlockFrom))
         return error("GetKernelStakeModifier() : block not indexed");
-    const CBlockIndex* pindex = mapBlockIndex[hashBlockFrom];
+    const CBlockIndex* pindex = pchainMain->mapBlockIndex[hashBlockFrom];
 
     int blocksToGo = 5;
-    if (chainActive.Tip()->nHeight >= 1504350)
+    if (pchainMain->chainActive.Tip()->nHeight >= 1504350)
     {
         blocksToGo = 180;
     }
-    while(chainActive.Next(pindex) && blocksToGo > 0)
+    while(pchainMain->chainActive.Next(pindex) && blocksToGo > 0)
     {
-        pindex = chainActive.Next(pindex);
+        pindex = pchainMain->chainActive.Next(pindex);
         blocksToGo = blocksToGo - 1;
     }
     if(blocksToGo > 0)
@@ -112,7 +113,7 @@ bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, const CTransaction&
 
     // Read block header
     CBlock block;
-    CBlockIndex* index = mapBlockIndex[blockHashOfTx];
+    CBlockIndex* index = pchainMain->mapBlockIndex[blockHashOfTx];
 
     if (!ReadBlockFromDisk(block, index, Params().GetConsensus()))
         return fDebug? error("ComputeNextStakeModifier() : read block failed") : false; // unable to read block of previous transaction
@@ -212,7 +213,7 @@ bool CheckStakeKernelHash(int nHeight, const CBlock& blockFrom, unsigned int nTx
         arith_uint256 hashTarget;
         bool fNegative;
         bool fOverflow;
-        hashTarget.SetCompact(GetNextTargetRequired(chainActive.Tip(), true), &fNegative, &fOverflow);
+        hashTarget.SetCompact(GetNextTargetRequired(pchainMain->chainActive.Tip(), true), &fNegative, &fOverflow);
         if (fNegative || hashTarget == 0 || fOverflow || hashTarget > UintToArith256(Params().GetConsensus().posLimit))
             return error("CheckStakeKernelHash(): nBits below minimum work for proof of stake");
 
@@ -273,13 +274,13 @@ bool CheckProofOfStake(int nHeight, const CTransaction& tx, uint256& hashProofOf
 
     // Read block header
     CBlock block;
-    CBlockIndex* index = mapBlockIndex[blockHashOfTx];
+    CBlockIndex* index = pchainMain->mapBlockIndex[blockHashOfTx];
 
     if (!ReadBlockFromDisk(block, index, Params().GetConsensus()))
         return fDebug? error("CheckProofOfStake() : read block failed") : false; // unable to read block of previous transaction
 
     CDiskTxPos txindex;
-    pblocktree->ReadTxIndex(txPrev.GetHash(), txindex);
+    pchainMain->pblocktree->ReadTxIndex(txPrev.GetHash(), txindex);
     if(nHeight < 1505775)
     {
         if (!CheckStakeKernelHash(nHeight, block, txindex.nTxOffset + 80, txPrev, txin.prevout, tx.nTime, hashProofOfStake))

@@ -4,13 +4,13 @@
 
 #include "core_io.h"
 
-#include "primitives/block.h"
-#include "primitives/transaction.h"
+#include "chain/block.h"
+#include "tx/tx.h"
 #include "script/script.h"
 #include "serialize.h"
 #include "streams.h"
-#include "util.h"
-#include "utilstrencodings.h"
+#include "util/util.h"
+#include "util/utilstrencodings.h"
 #include "version.h"
 
 #include <boost/algorithm/string/classification.hpp>

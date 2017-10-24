@@ -8,6 +8,7 @@
 
 #include <string>
 #include "wallet/wallet.h"
+#include "chain/chainman.h"
 
 class CScheduler;
 class CWallet;
@@ -17,6 +18,7 @@ namespace boost
 class thread_group;
 } // namespace boost
 
+extern CChainManager* pchainMain;
 extern CWallet* pwalletMain;
 
 void StartShutdown();

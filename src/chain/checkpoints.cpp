@@ -8,6 +8,7 @@
 #include "networks/baseparams.h"
 #include "main.h"
 #include "uint256.h"
+#include "init.h"
 
 #include <stdint.h>
 #include <boost/foreach.hpp>
@@ -72,8 +73,8 @@ namespace Checkpoints {
         BOOST_REVERSE_FOREACH(const MapCheckpoints::value_type& i, checkpoints)
         {
             const uint256& hash = i.second;
-            BlockMap::const_iterator t = mapBlockIndex.find(hash);
-            if (t != mapBlockIndex.end())
+            BlockMap::const_iterator t = pchainMain->mapBlockIndex.find(hash);
+            if (t != pchainMain->mapBlockIndex.end())
                 return t->second;
         }
         return NULL;

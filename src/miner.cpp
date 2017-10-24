@@ -9,12 +9,12 @@
 #include "kernel.h"
 #include "crypto/scrypt.h"
 #include "txmempool.h"
-#include "util.h"
+#include "util/util.h"
 #include "args.h"
 #include "init.h"
 #include "consensus/consensus.h"
 #include "txmempool.h"
-#include "utilmoneystr.h"
+#include "util/utilmoneystr.h"
 #include "timedata.h"
 #include "bignum.h"
 #include "coins.h"
@@ -209,7 +209,7 @@ CBlockTemplate* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
 
     // ppcoin: if coinstake available add coinstake tx
     static int64_t nLastCoinStakeSearchTime = GetAdjustedTime();  // only initialized at startup
-    CBlockIndex* pindexPrev = chainActive.Tip();
+    CBlockIndex* pindexPrev = pchainMain->chainActive.Tip();
 
 
     // This vector will be sorted into a priority queue:
@@ -260,7 +260,7 @@ CBlockTemplate* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
     // Collect memory pool transactions into the block
     {
         LOCK2(cs_main, mempool.cs);
-        CBlockIndex* pindexPrev = chainActive.Tip();
+        CBlockIndex* pindexPrev = pchainMain->chainActive.Tip();
         const int nHeight = pindexPrev->nHeight + 1;
         pblock->nTime = GetAdjustedTime();
         const int64_t nMedianTimePast = pindexPrev->GetMedianTimePast();
@@ -498,7 +498,7 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reservekey)
     // Found a solution
     {
         LOCK(cs_main);
-        if (pblock->hashPrevBlock != chainActive.Tip()->GetBlockHash())
+        if (pblock->hashPrevBlock != pchainMain->chainActive.Tip()->GetBlockHash())
             return error("BMiner : generated block is stale");
 
         // Remove key from key pool
@@ -540,7 +540,7 @@ void ScryptMiner(CWallet *pwallet)
     {
         if (fShutdown)
             return;
-        while (vNodes.empty() || vNodes.size() < 6 || IsInitialBlockDownload())
+        while (vNodes.empty() || vNodes.size() < 6 || pchainMain->IsInitialBlockDownload())
         {
             MilliSleep(1000);
             if (fShutdown)
@@ -558,7 +558,7 @@ void ScryptMiner(CWallet *pwallet)
         // Create new block
         //
         unsigned int nTransactionsUpdatedLast = mempool.GetTransactionsUpdated();
-        CBlockIndex* pindexPrev = chainActive.Tip();
+        CBlockIndex* pindexPrev = pchainMain->chainActive.Tip();
 
         std::auto_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(pwallet, true));
         if (!pblocktemplate.get())
@@ -683,7 +683,7 @@ void ScryptMiner(CWallet *pwallet)
                 break;
             if (mempool.GetTransactionsUpdated() != nTransactionsUpdatedLast && GetTime() - nStart > 60)
                 break;
-            if (pindexPrev != chainActive.Tip())
+            if (pindexPrev != pchainMain->chainActive.Tip())
                 break;
 
             // Update nTime every few seconds

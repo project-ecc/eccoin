@@ -3,20 +3,21 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "primitives/transaction.h"
+#include "tx/tx.h"
 
-#include "hash.h"
+#include "crypto/hash.h"
 #include "tinyformat.h"
-#include "utilstrencodings.h"
+#include "util/utilstrencodings.h"
 #include "txdb.h"
 #include "timedata.h"
 #include "networks/baseparams.h"
-#include "chain.h"
+#include "chain/chain.h"
 #include "main.h"
 #include "args.h"
 #include "consensus/consensus.h"
 #include "wallet/wallet.h"
 #include "networks/netman.h"
+#include "init.h"
 
 std::string COutPoint::ToString() const
 {
@@ -154,7 +155,7 @@ bool CTransaction::IsFinal(int nBlockHeight, int64_t nBlockTime) const
     if (nLockTime == 0)
         return true;
     if (nBlockHeight == 0)
-        nBlockHeight = chainActive.Height();
+        nBlockHeight = pchainMain->chainActive.Height();
     if (nBlockTime == 0)
         nBlockTime = GetAdjustedTime();
     if ((int64_t)nLockTime < ((int64_t)nLockTime < LOCKTIME_THRESHOLD ? (int64_t)nBlockHeight : nBlockTime))
@@ -213,7 +214,7 @@ uint64_t CTransaction::GetCoinAge(uint64_t nCoinAge, bool byValue) const
     for(const CTxIn& txin: vin)
     {
         CDiskTxPos txindex;
-        if (!pblocktree->ReadTxIndex(txin.prevout.hash, txindex))
+        if (!pchainMain->pblocktree->ReadTxIndex(txin.prevout.hash, txindex))
             continue;  // previous transaction not in main chain
 
         // Read block header
@@ -260,7 +261,7 @@ bool CTransaction::GetCoinAge(uint64_t& nCoinAge) const
     for(const CTxIn& txin: vin)
     {
         CDiskTxPos txindex;
-        if (!pblocktree->ReadTxIndex(txin.prevout.hash, txindex))
+        if (!pchainMain->pblocktree->ReadTxIndex(txin.prevout.hash, txindex))
             continue;  // previous transaction not in main chain
 
         // Read block header

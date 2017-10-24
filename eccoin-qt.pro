@@ -187,8 +187,6 @@ HEADERS += \
     src/arith_uint256.h \
     src/base58.h \
     src/bloom.h \
-    src/chain.h \
-    src/checkpoints.h \
     src/checkqueue.h \
     src/clientversion.h \
     src/coincontrol.h \
@@ -198,7 +196,6 @@ HEADERS += \
     src/core_io.h \
     src/core_memusage.h \
     src/dbwrapper.h \
-    src/hash.h \
     src/key.h \
     src/keystore.h \
     src/limitedmap.h \
@@ -228,10 +225,6 @@ HEADERS += \
     src/ui_interface.h \
     src/uint256.h \
     src/undo.h \
-    src/util.h \
-    src/utilmoneystr.h \
-    src/utilstrencodings.h \
-    src/utiltime.h \
     src/validationinterface.h \
     src/version.h \
     src/versionbits.h \
@@ -251,8 +244,6 @@ HEADERS += \
     src/script/sigcache.h \
     src/script/sign.h \
     src/script/standard.h \
-    src/primitives/block.h \
-    src/primitives/transaction.h \
     src/policy/fees.h \
     src/policy/policy.h \
     src/policy/rbf.h \
@@ -283,13 +274,28 @@ HEADERS += \
     src/messages.h \
     src/processblock.h \
     src/processheader.h \
-    src/blockindex.h \
     src/rpc/rpcclient.h \
     src/rpc/rpcprotocol.h \
     src/rpc/rpcserver.h \
     src/networks/netman.h \
     src/networks/baseparams.h \
-    src/networks/legacy.h
+    src/networks/legacy.h \
+    src/networks/network.h \
+    src/chain/chain.h \
+    src/chain/block.h \
+    src/chain/blockindex.h \
+    src/util/util.h \
+    src/util/utilmoneystr.h \
+    src/util/utilstrencodings.h \
+    src/util/utiltime.h \
+    src/tx/txout.h \
+    src/tx/txin.h \
+    src/tx/outpoint.h \
+    src/tx/tx.h \
+    src/crypto/hash.h \
+    src/chain/checkpoints.h \
+    src/chain/chainman.h \
+    src/signals.h
 
 
 # organize compiles of cpp files by section, this seems to be a logical order where the files lower down generally depend
@@ -301,15 +307,12 @@ SOURCES += \
     src/arith_uint256.cpp \
     src/base58.cpp \
     src/bloom.cpp \
-    src/chain.cpp \
-    src/checkpoints.cpp \
     src/clientversion.cpp \
     src/coins.cpp \
     src/compressor.cpp \
     src/core_read.cpp \
     src/core_write.cpp \
     src/dbwrapper.cpp \
-    src/hash.cpp \
     src/key.cpp \
     src/keystore.cpp \
     src/main.cpp \
@@ -329,10 +332,6 @@ SOURCES += \
     src/txdb.cpp \
     src/txmempool.cpp \
     src/uint256.cpp \
-    src/util.cpp \
-    src/utilmoneystr.cpp \
-    src/utilstrencodings.cpp \
-    src/utiltime.cpp \
     src/validationinterface.cpp \
     src/versionbits.cpp \
     src/wallet/crypter.cpp \
@@ -349,8 +348,6 @@ SOURCES += \
     src/script/sigcache.cpp \
     src/script/sign.cpp \
     src/script/standard.cpp \
-    src/primitives/block.cpp \
-    src/primitives/transaction.cpp \
     src/policy/fees.cpp \
     src/policy/policy.cpp \
     src/policy/rbf.cpp \
@@ -379,7 +376,6 @@ SOURCES += \
     src/messages.cpp \
     src/processblock.cpp \
     src/processheader.cpp \
-    src/blockindex.cpp \
     src/rpc/rpcblockchain.cpp \
     src/rpc/rpcclient.cpp \
     src/rpc/rpcdump.cpp \
@@ -391,7 +387,22 @@ SOURCES += \
     src/rpc/rpcserver.cpp \
     src/rpc/rpcrawtransaction.cpp \
     src/rest.cpp \
-    src/networks/netman.cpp
+    src/networks/netman.cpp \
+    src/chain/chain.cpp \
+    src/chain/block.cpp \
+    src/chain/blockindex.cpp \
+    src/util/util.cpp \
+    src/util/utilmoneystr.cpp \
+    src/util/utilstrencodings.cpp \
+    src/util/utiltime.cpp \
+    src/tx/txout.cpp \
+    src/tx/txin.cpp \
+    src/tx/outpoint.cpp \
+    src/tx/tx.cpp \
+    src/crypto/hash.cpp \
+    src/chain/checkpoints.cpp \
+    src/chain/chainman.cpp \
+    src/signals.cpp
 
 
 

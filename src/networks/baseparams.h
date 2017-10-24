@@ -7,7 +7,7 @@
 #define BITCOIN_CHAINPARAMS_H
 
 #include "consensus/params.h"
-#include "primitives/block.h"
+#include "chain/block.h"
 #include "protocol.h"
 
 #include <vector>
