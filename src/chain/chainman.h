@@ -3,7 +3,7 @@
 
 #include <unordered_map>
 
-#include "networks/baseparams.h"
+#include "networks/networktemplate.h"
 #include "chain.h"
 #include "txdb.h"
 
@@ -48,7 +48,7 @@ public:
     bool IsInitialBlockDownload();
 
     /** Initialize a new block tree database + block data on disk */
-    bool InitBlockIndex(const CBaseParams& chainparams);
+    bool InitBlockIndex(const CNetworkTemplate& chainparams);
 
     /** Create a new block index entry for a given block hash loaded from disk*/
     CBlockIndex* InsertBlockIndex(uint256 hash);
@@ -57,7 +57,7 @@ public:
     bool LoadBlockIndex();
 
     /** Import blocks from an external file */
-    bool LoadExternalBlockFile(const CBaseParams& chainparams, FILE* fileIn, CDiskBlockPos *dbp = NULL);
+    bool LoadExternalBlockFile(const CNetworkTemplate& chainparams, FILE* fileIn, CDiskBlockPos *dbp = NULL);
 
     /** Unload database information */
     void UnloadBlockIndex();

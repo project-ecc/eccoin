@@ -17,6 +17,8 @@
 #include "util/utilstrencodings.h"
 #include "version.h"
 
+#include "init.h"
+
 #include <univalue.h>
 
 UniValue getconnectioncount(const UniValue& params, bool fHelp)
@@ -310,7 +312,7 @@ UniValue getaddednodeinfo(const UniValue& params, bool fHelp)
     std::list<std::pair<std::string, std::vector<CService> > > laddedAddreses(0);
     for (auto const& strAddNode: laddedNodes) {
         std::vector<CService> vservNode(0);
-        if(Lookup(strAddNode.c_str(), vservNode, Params().GetDefaultPort(), fNameLookup, 0))
+        if(Lookup(strAddNode.c_str(), vservNode, pnetMan->getActivePaymentNetwork()->GetDefaultPort(), fNameLookup, 0))
             laddedAddreses.push_back(std::make_pair(strAddNode, vservNode));
         else
         {

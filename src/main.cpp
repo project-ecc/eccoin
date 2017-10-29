@@ -8,7 +8,7 @@
 #include "addrman.h"
 #include "arith_uint256.h"
 #include "bignum.h"
-#include "networks/baseparams.h"
+#include "networks/networktemplate.h"
 #include "checkqueue.h"
 #include "consensus/consensus.h"
 #include "consensus/merkle.h"
@@ -598,7 +598,7 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState &state, const C
     // Don't relay version 2 transactions until CSV is active, and we can be
     // sure that such transactions will be mined (unless we're on
     // -testnet/-regtest).
-    const CBaseParams& chainparams = Params();
+    const CNetworkTemplate& chainparams = pnetMan->getActivePaymentNetwork();
     if (fRequireStandard && tx.nVersion >= 2 && VersionBitsTipState(chainparams.GetConsensus(), Consensus::DEPLOYMENT_CSV) != THRESHOLD_ACTIVE) {
         return state.DoS(0, false, REJECT_NONSTANDARD, "premature-version2-tx");
     }
@@ -1643,7 +1643,7 @@ static int64_t nTimeCallbacks = 0;
 
 bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pindex, CCoinsViewCache& view, bool fJustCheck)
 {
-    const CBaseParams& chainparams = Params();
+    const CNetworkTemplate& chainparams = pnetMan->getActivePaymentNetwork();
     AssertLockHeld(cs_main);
 
     int64_t nTimeStart = GetTimeMicros();
@@ -1952,7 +1952,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
  */
 bool FlushStateToDisk(CValidationState &state, FlushStateMode mode)
 {
-    const CBaseParams& chainparams = Params();
+    const CNetworkTemplate& chainparams = pnetMan->getActivePaymentNetwork();
     LOCK2(cs_main, cs_LastBlockFile);
     static int64_t nLastWrite = 0;
     static int64_t nLastFlush = 0;
@@ -2263,7 +2263,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
     if (block.fChecked)
         return true;
 
-    if (block.IsProofOfWork() && fCheckPOW && !CheckProofOfWork(block.GetHash(), block.nBits, Params().GetConsensus()))
+    if (block.IsProofOfWork() && fCheckPOW && !CheckProofOfWork(block.GetHash(), block.nBits, pnetMan->getActivePaymentNetwork()->GetConsensus()))
         return state.DoS(50, error("CheckBlockHeader(): proof of work failed"),
                          REJECT_INVALID, "high-hash");
 
@@ -2350,7 +2350,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
     return true;
 }
 
-bool CheckIndexAgainstCheckpoint(const CBlockIndex* pindexPrev, CValidationState& state, const CBaseParams& chainparams, const uint256& hash)
+bool CheckIndexAgainstCheckpoint(const CBlockIndex* pindexPrev, CValidationState& state, const CNetworkTemplate& chainparams, const uint256& hash)
 {
     if (*pindexPrev->phashBlock == chainparams.GetConsensus().hashGenesisBlock)
         return true;
@@ -2367,7 +2367,7 @@ bool CheckIndexAgainstCheckpoint(const CBlockIndex* pindexPrev, CValidationState
 bool ContextualCheckBlock(const CBlock& block, CValidationState& state, CBlockIndex * const pindexPrev)
 {
     const int nHeight = pindexPrev == NULL ? 0 : pindexPrev->nHeight + 1;
-    const Consensus::Params& consensusParams = Params().GetConsensus();
+    const Consensus::Params& consensusParams = pnetMan->getActivePaymentNetwork()->GetConsensus();
 
     // Start enforcing BIP113 (Median Time Past) using versionbits logic.
     int nLockTimeFlags = 0;
@@ -2402,7 +2402,7 @@ bool ContextualCheckBlock(const CBlock& block, CValidationState& state, CBlockIn
 
 
 /** Store block on disk. If dbp is non-NULL, the file is known to already reside on disk */
-bool AcceptBlock(const CBlock& block, CValidationState& state, const CBaseParams& chainparams, CBlockIndex** ppindex, bool fRequested, CDiskBlockPos* dbp)
+bool AcceptBlock(const CBlock& block, CValidationState& state, const CNetworkTemplate& chainparams, CBlockIndex** ppindex, bool fRequested, CDiskBlockPos* dbp)
 {
     AssertLockHeld(cs_main);
 
@@ -2547,7 +2547,7 @@ CVerifyDB::~CVerifyDB()
     uiInterface.ShowProgress("", 100);
 }
 
-bool CVerifyDB::VerifyDB(const CBaseParams& chainparams, CCoinsView *coinsview, int nCheckLevel, int nCheckDepth)
+bool CVerifyDB::VerifyDB(const CNetworkTemplate& chainparams, CCoinsView *coinsview, int nCheckLevel, int nCheckDepth)
 {
     LOCK(cs_main);
     if (pchainMain->chainActive.Tip() == NULL || pchainMain->chainActive.Tip()->pprev == NULL)
@@ -2709,12 +2709,12 @@ const CBlockIndex* GetLastBlockIndex(const CBlockIndex* pindex, bool fProofOfSta
 
 unsigned int GetNextTargetRequired(const CBlockIndex* pindexLast, bool fProofOfStake)
 {
-        CBigNum bnTargetLimit = CBigNum(Params().GetConsensus().powLimit);
+        CBigNum bnTargetLimit = CBigNum(pnetMan->getActivePaymentNetwork()->GetConsensus().powLimit);
 
         if(fProofOfStake)
         {
             // Proof-of-Stake blocks has own target limit since nVersion=3 supermajority on mainNet and always on testNet
-            bnTargetLimit = CBigNum(Params().GetConsensus().posLimit);
+            bnTargetLimit = CBigNum(pnetMan->getActivePaymentNetwork()->GetConsensus().posLimit);
         }
 
         if (pindexLast == NULL)
@@ -2732,9 +2732,9 @@ unsigned int GetNextTargetRequired(const CBlockIndex* pindexLast, bool fProofOfS
         {
             nActualSpacing = 1;
         }
-        else if(nActualSpacing > Params().GetConsensus().nTargetTimespan)
+        else if(nActualSpacing > pnetMan->getActivePaymentNetwork()->GetConsensus().nTargetTimespan)
         {
-            nActualSpacing = Params().GetConsensus().nTargetTimespan;
+            nActualSpacing = pnetMan->getActivePaymentNetwork()->GetConsensus().nTargetTimespan;
         }
 
         // ppcoin: target change every block
@@ -2744,14 +2744,14 @@ unsigned int GetNextTargetRequired(const CBlockIndex* pindexLast, bool fProofOfS
         int64_t spacing;
         if (fProofOfStake)
         {
-            spacing = Params().GetConsensus().nTargetSpacing;
+            spacing = pnetMan->getActivePaymentNetwork()->GetConsensus().nTargetSpacing;
         }
         else
         {
-            spacing =  std::min( (3 * (int64_t) Params().GetConsensus().nTargetSpacing), ((int64_t) Params().GetConsensus().nTargetSpacing * (1 + pindexLast->nHeight - pindexPrev->nHeight)) );
+            spacing =  std::min( (3 * (int64_t) pnetMan->getActivePaymentNetwork()->GetConsensus().nTargetSpacing), ((int64_t) pnetMan->getActivePaymentNetwork()->GetConsensus().nTargetSpacing * (1 + pindexLast->nHeight - pindexPrev->nHeight)) );
         }
         int64_t nTargetSpacing = spacing;
-        int64_t nInterval = Params().GetConsensus().nTargetTimespan / nTargetSpacing;
+        int64_t nInterval = pnetMan->getActivePaymentNetwork()->GetConsensus().nTargetTimespan / nTargetSpacing;
         bnNew *= ((nInterval - 1) * nTargetSpacing + nActualSpacing + nActualSpacing);
         bnNew /= ((nInterval + 1) * nTargetSpacing);
 

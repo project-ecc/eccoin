@@ -5,6 +5,7 @@
 #include "httpserver.h"
 
 #include "networks/netman.h"
+#include "init.h"
 #include "compat.h"
 #include "util/util.h"
 #include "args.h"
@@ -319,7 +320,7 @@ static void ThreadHTTP(struct event_base* base, struct evhttp* http)
 /** Bind HTTP server to specified addresses */
 static bool HTTPBindAddresses(struct evhttp* http)
 {
-    int defaultPort = gArgs.GetArg("-rpcport", BaseParams().RPCPort());
+    int defaultPort = gArgs.GetArg("-rpcport", pnetMan->getActivePaymentNetwork()->GetRPCPort());
     std::vector<std::pair<std::string, uint16_t> > endpoints;
 
     // Determine what addresses to bind to

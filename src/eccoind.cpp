@@ -107,7 +107,8 @@ bool AppInit(int argc, char* argv[])
         }
         // Check for -testnet or -regtest parameter (Params() calls are only valid after this clause)
         try {
-            SelectParams(ChainNameFromCommandLine());
+            /// TODO; FIX THIS MISSING FUNCTION THAT IS TEMPORARILY COMMENTED OUT
+            //SelectParams(ChainNameFromCommandLine());
         } catch (const std::exception& e) {
             fprintf(stderr, "Error: %s\n", e.what());
             return false;
@@ -153,6 +154,7 @@ bool AppInit(int argc, char* argv[])
         // Set this early so that parameter interactions go to console
         InitLogging();
         InitParameterInteraction();
+        GenerateNetworkTemplates();
         fRet = AppInit2(threadGroup, scheduler);
     }
     catch (const std::exception& e) {

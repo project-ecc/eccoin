@@ -1207,7 +1207,7 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate)
 {
     int ret = 0;
     int64_t nNow = GetTime();
-    const CBaseParams& chainParams = Params();
+    const CNetworkTemplate& chainParams = pnetMan->getActivePaymentNetwork();
 
     CBlockIndex* pindex = pindexStart;
     {
@@ -1227,7 +1227,7 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate)
                 ShowProgress(_("Rescanning..."), std::max(1, std::min(99, (int)((Checkpoints::GuessVerificationProgress(chainParams.Checkpoints(), pindex, false) - dProgressStart) / (dProgressTip - dProgressStart) * 100))));
 
             CBlock block;
-            ReadBlockFromDisk(block, pindex, Params().GetConsensus());
+            ReadBlockFromDisk(block, pindex, pnetMan->getActivePaymentNetwork()->GetConsensus());
             for (auto& tx: block.vtx)
             {
                 if (AddToWalletIfInvolvingMe(tx, &block, fUpdate))
@@ -3279,14 +3279,14 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
         {
             LOCK2(cs_main, cs_wallet);
             CDiskBlockPos blockPos(txindex.nFile, txindex.nPos);
-            if (!ReadBlockFromDisk(block, blockPos, Params().GetConsensus()))
+            if (!ReadBlockFromDisk(block, blockPos, pnetMan->getActivePaymentNetwork()->GetConsensus()))
                 continue;
         }
 
         static int nMaxStakeSearchInterval = 60;
 
         // LogPrintf(">> block.GetBlockTime() = %"PRI64d", nStakeMinAge = %d, txNew.nTime = %d\n", block.GetBlockTime(), nStakeMinAge,txNew.nTime);
-        if (block.GetBlockTime() + Params().getStakeMinAge() > txNew.nTime - nMaxStakeSearchInterval)
+        if (block.GetBlockTime() + pnetMan->getActivePaymentNetwork()->getStakeMinAge() > txNew.nTime - nMaxStakeSearchInterval)
             continue; // only count coins meeting min age requirement
 
         {
@@ -3388,7 +3388,9 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
             if (pcoin.first->vout[pcoin.second].nValue > nCombineThreshold)
                 continue;
             // Do not add input that is still too young
-            if (pcoin.first->nTime + Params().getStakeMaxAge() > txNew.nTime)
+                /// using stake max age here isnt a bug, its a feature i swear
+                /// TODO fix that - 2017/10/29
+            if (pcoin.first->nTime + pnetMan->getActivePaymentNetwork()->getStakeMaxAge() > txNew.nTime)
                 continue;
             txNew.vin.push_back(CTxIn(pcoin.first->GetHash(), pcoin.second));
             nCredit += pcoin.first->vout[pcoin.second].nValue;

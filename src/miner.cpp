@@ -18,7 +18,7 @@
 #include "timedata.h"
 #include "bignum.h"
 #include "coins.h"
-#include "networks/baseparams.h"
+#include "networks/networktemplate.h"
 #include "consensus/validation.h"
 #include "consensus/merkle.h"
 #include "processblock.h"
@@ -512,7 +512,7 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reservekey)
 
         // Process this block the same as if we had received it from another node
         CValidationState state;
-        const CBaseParams& chainparams = Params();
+        const CNetworkTemplate& chainparams = pnetMan->getActivePaymentNetwork();
         if (!ProcessNewBlock(state, chainparams, NULL, pblock, true, NULL, GENERATED))
             return error("Miner : ProcessBlock, block not accepted");
     }

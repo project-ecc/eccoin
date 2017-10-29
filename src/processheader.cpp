@@ -5,7 +5,7 @@
 #include "init.h"
 
 
-bool AcceptBlockHeader(const CBlockHeader& block, CValidationState& state, const CBaseParams& chainparams, CBlockIndex** ppindex)
+bool AcceptBlockHeader(const CBlockHeader& block, CValidationState& state, const CNetworkTemplate& chainparams, CBlockIndex** ppindex)
 {
     AssertLockHeld(cs_main);
     // Check for duplicate

@@ -278,8 +278,6 @@ HEADERS += \
     src/rpc/rpcprotocol.h \
     src/rpc/rpcserver.h \
     src/networks/netman.h \
-    src/networks/baseparams.h \
-    src/networks/legacy.h \
     src/networks/network.h \
     src/chain/chain.h \
     src/chain/block.h \
@@ -295,7 +293,8 @@ HEADERS += \
     src/crypto/hash.h \
     src/chain/checkpoints.h \
     src/chain/chainman.h \
-    src/signals.h
+    src/signals.h \
+    src/networks/networktemplate.h
 
 
 # organize compiles of cpp files by section, this seems to be a logical order where the files lower down generally depend
@@ -363,7 +362,6 @@ SOURCES += \
     src/compat/glibcxx_sanity.cpp \
     src/compat/strnlen.cpp \
     src/init.cpp \
-    src/bitcoind.cpp \
     src/crypto/scrypt.cpp \
     src/kernel.cpp \
     src/httprpc.cpp \
@@ -402,7 +400,8 @@ SOURCES += \
     src/crypto/hash.cpp \
     src/chain/checkpoints.cpp \
     src/chain/chainman.cpp \
-    src/signals.cpp
+    src/signals.cpp \
+    src/eccoind.cpp
 
 
 

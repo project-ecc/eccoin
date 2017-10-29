@@ -8,6 +8,7 @@
 #include "processheader.h"
 #include <boost/thread.hpp>
 #include "txmempool.h"
+#include "init.h"
 
 CBlockIndex* CChainManager::AddToBlockIndex(const CBlockHeader& block)
 {
@@ -60,7 +61,7 @@ CBlockIndex* CChainManager::FindForkInGlobalIndex(const CChain& chain, const CBl
 
 bool CChainManager::IsInitialBlockDownload()
 {
-    const CBaseParams& chainParams = Params();
+    const CNetworkTemplate& chainParams = pnetMan->getActivePaymentNetwork();
     LOCK(cs_main);
     if (fImporting || fReindex)
         return true;
@@ -96,7 +97,7 @@ CBlockIndex* CChainManager::InsertBlockIndex(uint256 hash)
     return pindexNew;
 }
 
-bool CChainManager::InitBlockIndex(const CBaseParams& chainparams)
+bool CChainManager::InitBlockIndex(const CNetworkTemplate& chainparams)
 {
     LOCK(cs_main);
 
@@ -161,7 +162,7 @@ bool CChainManager::LoadBlockIndex()
 
 bool CChainManager::LoadBlockIndexDB()
 {
-    const CBaseParams& chainparams = Params();
+    const CNetworkTemplate& chainparams = pnetMan->getActivePaymentNetwork();
     if (!pblocktree->LoadBlockIndexGuts())
         return false;
 
@@ -261,7 +262,7 @@ bool CChainManager::LoadBlockIndexDB()
 }
 
 
-bool CChainManager::LoadExternalBlockFile(const CBaseParams& chainparams, FILE* fileIn, CDiskBlockPos *dbp)
+bool CChainManager::LoadExternalBlockFile(const CNetworkTemplate& chainparams, FILE* fileIn, CDiskBlockPos *dbp)
 {
     // std::map of disk positions for blocks with unknown parent (only used for reindex)
     static std::multimap<uint256, CDiskBlockPos> mapBlocksUnknownParent;

@@ -1,7 +1,7 @@
 #include "httprpc.h"
 
 #include "base58.h"
-#include "networks/baseparams.h"
+#include "networks/networktemplate.h"
 #include "httpserver.h"
 #include "rpc/rpcprotocol.h"
 #include "rpc/rpcserver.h"

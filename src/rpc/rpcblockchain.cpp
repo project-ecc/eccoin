@@ -5,7 +5,7 @@
 
 #include "amount.h"
 #include "chain/chain.h"
-#include "networks/baseparams.h"
+#include "networks/networktemplate.h"
 #include "networks/netman.h"
 #include "chain/checkpoints.h"
 #include "coins.h"
@@ -421,7 +421,7 @@ UniValue getblock(const UniValue& params, bool fHelp)
     CBlock block;
     CBlockIndex* pblockindex = pchainMain->mapBlockIndex[hash];
 
-    if(!ReadBlockFromDisk(block, pblockindex, Params().GetConsensus()))
+    if(!ReadBlockFromDisk(block, pblockindex, pnetMan->getActivePaymentNetwork()->GetConsensus()))
         throw JSONRPCError(RPC_INTERNAL_ERROR, "Can't read block from disk");
 
     if (!fVerbose)
@@ -578,7 +578,7 @@ UniValue verifychain(const UniValue& params, bool fHelp)
     if (params.size() > 1)
         nCheckDepth = params[1].get_int();
 
-    return CVerifyDB().VerifyDB(Params(), pchainMain->pcoinsTip, nCheckLevel, nCheckDepth);
+    return CVerifyDB().VerifyDB(pnetMan->getActivePaymentNetwork(), pchainMain->pcoinsTip, nCheckLevel, nCheckDepth);
 }
 
 /** Implementation of IsSuperMajority with better feedback */
@@ -671,16 +671,16 @@ UniValue getblockchaininfo(const UniValue& params, bool fHelp)
     LOCK(cs_main);
 
     UniValue obj(UniValue::VOBJ);
-    obj.push_back(Pair("chain",                 Params().NetworkIDString()));
+    obj.push_back(Pair("chain",                 pnetMan->getActivePaymentNetwork()->NetworkIDString()));
     obj.push_back(Pair("blocks",                (int)pchainMain->chainActive.Height()));
     obj.push_back(Pair("headers",               pchainMain->pindexBestHeader ? pchainMain->pindexBestHeader->nHeight : -1));
     obj.push_back(Pair("bestblockhash",         pchainMain->chainActive.Tip()->GetBlockHash().GetHex()));
     obj.push_back(Pair("difficulty",            (double)GetDifficulty()));
     obj.push_back(Pair("mediantime",            (int64_t)pchainMain->chainActive.Tip()->GetMedianTimePast()));
-    obj.push_back(Pair("verificationprogress",  Checkpoints::GuessVerificationProgress(Params().Checkpoints(), pchainMain->chainActive.Tip())));
+    obj.push_back(Pair("verificationprogress",  Checkpoints::GuessVerificationProgress(pnetMan->getActivePaymentNetwork()->Checkpoints(), pchainMain->chainActive.Tip())));
     obj.push_back(Pair("chainwork",             pchainMain->chainActive.Tip()->nChainWork.GetHex()));
 
-    const Consensus::Params& consensusParams = Params().GetConsensus();
+    const Consensus::Params& consensusParams = pnetMan->getActivePaymentNetwork()->GetConsensus();
     CBlockIndex* tip = pchainMain->chainActive.Tip();
     UniValue softforks(UniValue::VARR);
     UniValue bip9_softforks(UniValue::VARR);
@@ -857,11 +857,11 @@ UniValue invalidateblock(const UniValue& params, bool fHelp)
             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
 
         CBlockIndex* pblockindex = pchainMain->mapBlockIndex[hash];
-        InvalidateBlock(state, Params().GetConsensus(), pblockindex);
+        InvalidateBlock(state, pnetMan->getActivePaymentNetwork()->GetConsensus(), pblockindex);
     }
 
     if (state.IsValid()) {
-        ActivateBestChain(state, Params(), LOADED);
+        ActivateBestChain(state, pnetMan->getActivePaymentNetwork(), LOADED);
     }
 
     if (!state.IsValid()) {
@@ -900,7 +900,7 @@ UniValue reconsiderblock(const UniValue& params, bool fHelp)
     }
 
     if (state.IsValid()) {
-        ActivateBestChain(state, Params(), LOADED);
+        ActivateBestChain(state, pnetMan->getActivePaymentNetwork(), LOADED);
     }
 
     if (!state.IsValid()) {

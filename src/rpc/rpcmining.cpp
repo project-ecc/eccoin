@@ -46,7 +46,7 @@ UniValue GetNetworkHashPS(int lookup, int height) {
 
     // If lookup is -1, then use blocks since last difficulty change.
     if (lookup <= 0)
-        lookup = pb->nHeight % Params().GetConsensus().DifficultyAdjustmentInterval() + 1;
+        lookup = pb->nHeight % pnetMan->getActivePaymentNetwork()->GetConsensus().DifficultyAdjustmentInterval() + 1;
 
     // If lookup is larger than chain, then set it to chain length.
     if (lookup > pb->nHeight)
@@ -129,7 +129,7 @@ UniValue generate(const UniValue& params, bool fHelp)
             + HelpExampleCli("generate", "11")
         );
 
-    if (!Params().MineBlocksOnDemand())
+    if (!pnetMan->getActivePaymentNetwork()->MineBlocksOnDemand())
         throw JSONRPCError(RPC_METHOD_NOT_FOUND, "This method can only be used on regtest");
 
     int nHeightStart = 0;
@@ -166,13 +166,13 @@ UniValue generate(const UniValue& params, bool fHelp)
             LOCK(cs_main);
             IncrementExtraNonce(pblock, pchainMain->chainActive.Tip(), nExtraNonce);
         }
-        while (pblock->IsProofOfWork() && !CheckProofOfWork(pblock->GetHash(), pblock->nBits, Params().GetConsensus())) {
+        while (pblock->IsProofOfWork() && !CheckProofOfWork(pblock->GetHash(), pblock->nBits, pnetMan->getActivePaymentNetwork()->GetConsensus())) {
             // Yes, there is a chance every nonce could fail to satisfy the -regtest
             // target -- 1 in 2^(2^32). That ain't gonna happen.
             ++pblock->nNonce;
         }
         CValidationState state;
-        if (!ProcessNewBlock(state, Params(), NULL, pblock, true, NULL, GENERATED))
+        if (!ProcessNewBlock(state, pnetMan->getActivePaymentNetwork(), NULL, pblock, true, NULL, GENERATED))
             throw JSONRPCError(RPC_INTERNAL_ERROR, "ProcessNewBlock, block not accepted");
         ++nHeight;
         blockHashes.push_back(pblock->GetHash().GetHex());
@@ -198,7 +198,7 @@ UniValue setgenerate(const UniValue& params, bool fHelp)
             + HelpExampleCli("setgenerate", "")
         );
 
-    if (Params().MineBlocksOnDemand())
+    if (pnetMan->getActivePaymentNetwork()->MineBlocksOnDemand())
         throw JSONRPCError(RPC_METHOD_NOT_FOUND, "Use the generate method instead of setgenerate on this network");
 
     ThreadScryptMiner(pwalletMain);
@@ -242,8 +242,8 @@ UniValue getmininginfo(const UniValue& params, bool fHelp)
     obj.push_back(Pair("errors",           GetWarnings("statusbar")));
     obj.push_back(Pair("networkhashps",    getnetworkhashps(params, false)));
     obj.push_back(Pair("pooledtx",         (uint64_t)mempool.size()));
-    obj.push_back(Pair("testnet",          Params().TestnetToBeDeprecatedFieldRPC()));
-    obj.push_back(Pair("chain",            Params().NetworkIDString()));
+    obj.push_back(Pair("testnet",          pnetMan->getActivePaymentNetwork()->TestnetToBeDeprecatedFieldRPC()));
+    obj.push_back(Pair("chain",            pnetMan->getActivePaymentNetwork()->NetworkIDString()));
     obj.push_back(Pair("generate",         getgenerate(params, false)));
     return obj;
 }
@@ -411,7 +411,7 @@ UniValue getblocktemplate(const UniValue& params, bool fHelp)
             {
                 AssertLockHeld(cs_main);
                 assert(pindexPrev && pindexPrev == pchainMain->chainActive.Tip());
-                if (fCheckpointsEnabled && !CheckIndexAgainstCheckpoint(pindexPrev, state, Params(), block.GetHash()))
+                if (fCheckpointsEnabled && !CheckIndexAgainstCheckpoint(pindexPrev, state, pnetMan->getActivePaymentNetwork(), block.GetHash()))
                     return error("%s: CheckIndexAgainstCheckpoint(): %s", __func__, state.GetRejectReason().c_str());
                 CCoinsViewCache viewNew(pchainMain->pcoinsTip);
                 CBlockIndex indexDummy(block);
@@ -653,7 +653,7 @@ UniValue submitblock(const UniValue& params, bool fHelp)
     CValidationState state;
     submitblock_StateCatcher sc(block.GetHash());
     RegisterValidationInterface(&sc);
-    bool fAccepted = ProcessNewBlock(state, Params(), NULL, &block, true, NULL, GENERATED);
+    bool fAccepted = ProcessNewBlock(state, pnetMan->getActivePaymentNetwork(), NULL, &block, true, NULL, GENERATED);
     UnregisterValidationInterface(&sc);
     if (fBlockPresent)
     {

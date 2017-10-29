@@ -10,7 +10,7 @@
 #include "util/utilstrencodings.h"
 #include "txdb.h"
 #include "timedata.h"
-#include "networks/baseparams.h"
+#include "networks/networktemplate.h"
 #include "chain/chain.h"
 #include "main.h"
 #include "args.h"
@@ -220,14 +220,14 @@ uint64_t CTransaction::GetCoinAge(uint64_t nCoinAge, bool byValue) const
         // Read block header
         CBlock block;
         CDiskBlockPos blockPos(txindex.nFile, txindex.nPos);
-        if (!ReadBlockFromDisk(block, blockPos, Params().GetConsensus()))
+        if (!ReadBlockFromDisk(block, blockPos, pnetMan->getActivePaymentNetwork()->GetConsensus()))
             return false; // unable to read block of previous transaction
-        if (block.GetBlockTime() + Params().getStakeMinAge() > nTime)
+        if (block.GetBlockTime() + pnetMan->getActivePaymentNetwork()->getStakeMinAge() > nTime)
             continue; // only count coins meeting min age requirement
 
         CTransaction txPrev;
         uint256 blockHashOfTx;
-        if (!GetTransaction(txin.prevout.hash, txPrev, Params().GetConsensus(), blockHashOfTx))
+        if (!GetTransaction(txin.prevout.hash, txPrev, pnetMan->getActivePaymentNetwork()->GetConsensus(), blockHashOfTx))
         {
             return false;
         }
@@ -267,14 +267,14 @@ bool CTransaction::GetCoinAge(uint64_t& nCoinAge) const
         // Read block header
         CBlock block;
         CDiskBlockPos blockPos(txindex.nFile, txindex.nPos);
-        if (!ReadBlockFromDisk(block, blockPos, Params().GetConsensus()))
+        if (!ReadBlockFromDisk(block, blockPos, pnetMan->getActivePaymentNetwork()->GetConsensus()))
             return false; // unable to read block of previous transaction
-        if (block.GetBlockTime() + Params().getStakeMinAge() > nTime)
+        if (block.GetBlockTime() + pnetMan->getActivePaymentNetwork()->getStakeMinAge() > nTime)
             continue; // only count coins meeting min age requirement
 
         CTransaction txPrev;
         uint256 blockHashOfTx;
-        if (!GetTransaction(txin.prevout.hash, txPrev, Params().GetConsensus(), blockHashOfTx))
+        if (!GetTransaction(txin.prevout.hash, txPrev, pnetMan->getActivePaymentNetwork()->GetConsensus(), blockHashOfTx))
         {
             return false;
         }

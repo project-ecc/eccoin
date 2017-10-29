@@ -6,7 +6,7 @@
 #include <algorithm>
 
 #include "chain/chain.h"
-#include "networks/baseparams.h"
+#include "networks/networktemplate.h"
 #include "networks/netman.h"
 #include "consensus/consensus.h"
 #include "main.h"
@@ -108,14 +108,14 @@ bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, const CTransaction&
     // First try finding the previous transaction in database
     CTransaction txPrev;
     uint256 blockHashOfTx;
-    if (!GetTransaction(txin.prevout.hash, txPrev, Params().GetConsensus(), blockHashOfTx))
+    if (!GetTransaction(txin.prevout.hash, txPrev, pnetMan->getActivePaymentNetwork()->GetConsensus(), blockHashOfTx))
         return error("ComputeNextStakeModifier() : INFO: read txPrev failed");  // previous transaction not in main chain, may occur during initial download
 
     // Read block header
     CBlock block;
     CBlockIndex* index = pchainMain->mapBlockIndex[blockHashOfTx];
 
-    if (!ReadBlockFromDisk(block, index, Params().GetConsensus()))
+    if (!ReadBlockFromDisk(block, index, pnetMan->getActivePaymentNetwork()->GetConsensus()))
         return fDebug? error("ComputeNextStakeModifier() : read block failed") : false; // unable to read block of previous transaction
 
     if (!GetKernelStakeModifier(block.GetHash(), nStakeModifier))
@@ -158,7 +158,7 @@ bool CheckStakeKernelHash(int nHeight, const CBlock& blockFrom, unsigned int nTx
         return error("CheckStakeKernelHash() : nTime violation");
 
     unsigned int nTimeBlockFrom = blockFrom.GetBlockTime();
-    if (nTimeBlockFrom + Params().getStakeMinAge() > nTimeTx) // Min age requirement
+    if (nTimeBlockFrom + pnetMan->getActivePaymentNetwork()->getStakeMinAge() > nTimeTx) // Min age requirement
         return error("CheckStakeKernelHash() : min age violation");
 
     int64_t nValueIn = txPrev.vout[prevout.n].nValue;
@@ -166,7 +166,7 @@ bool CheckStakeKernelHash(int nHeight, const CBlock& blockFrom, unsigned int nTx
     // v0.3 protocol kernel hash weight starts from 0 at the min age
     // this change increases active coins participating the hash and helps
     // to secure the network when proof-of-stake difficulty is low
-    int64_t nTimeWeight = ((int64_t)nTimeTx - txPrev.nTime) - Params().getStakeMinAge();
+    int64_t nTimeWeight = ((int64_t)nTimeTx - txPrev.nTime) - pnetMan->getActivePaymentNetwork()->getStakeMinAge();
 
     if(nTimeWeight <= 0)
     {
@@ -214,7 +214,7 @@ bool CheckStakeKernelHash(int nHeight, const CBlock& blockFrom, unsigned int nTx
         bool fNegative;
         bool fOverflow;
         hashTarget.SetCompact(GetNextTargetRequired(pchainMain->chainActive.Tip(), true), &fNegative, &fOverflow);
-        if (fNegative || hashTarget == 0 || fOverflow || hashTarget > UintToArith256(Params().GetConsensus().posLimit))
+        if (fNegative || hashTarget == 0 || fOverflow || hashTarget > UintToArith256(pnetMan->getActivePaymentNetwork()->GetConsensus().posLimit))
             return error("CheckStakeKernelHash(): nBits below minimum work for proof of stake");
 
         std::string reductionHex = reduction.GetHex();
@@ -266,7 +266,7 @@ bool CheckProofOfStake(int nHeight, const CTransaction& tx, uint256& hashProofOf
     // First try finding the previous transaction in database
     CTransaction txPrev;
     uint256 blockHashOfTx;
-    if (!GetTransaction(txin.prevout.hash, txPrev, Params().GetConsensus(), blockHashOfTx))
+    if (!GetTransaction(txin.prevout.hash, txPrev, pnetMan->getActivePaymentNetwork()->GetConsensus(), blockHashOfTx))
         return error("CheckProofOfStake() : INFO: read txPrev failed");  // previous transaction not in main chain, may occur during initial download
     // Verify signature
     if (!VerifySignature(txPrev, tx, 0, true))
@@ -276,7 +276,7 @@ bool CheckProofOfStake(int nHeight, const CTransaction& tx, uint256& hashProofOf
     CBlock block;
     CBlockIndex* index = pchainMain->mapBlockIndex[blockHashOfTx];
 
-    if (!ReadBlockFromDisk(block, index, Params().GetConsensus()))
+    if (!ReadBlockFromDisk(block, index, pnetMan->getActivePaymentNetwork()->GetConsensus()))
         return fDebug? error("CheckProofOfStake() : read block failed") : false; // unable to read block of previous transaction
 
     CDiskTxPos txindex;

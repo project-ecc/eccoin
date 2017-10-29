@@ -6,7 +6,7 @@
 #include "txdb.h"
 
 #include "chain/chain.h"
-#include "networks/baseparams.h"
+#include "networks/networktemplate.h"
 #include "crypto/hash.h"
 #include "main.h"
 #include "init.h"

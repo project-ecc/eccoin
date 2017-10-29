@@ -8,57 +8,54 @@
 #include <string>
 #include <vector>
 
-#include "baseparams.h"
+#include "network.h"
 
 /**
- * CBaseChainParams defines the base parameters (shared between bitcoin-cli and bitcoind)
+ * CNetwork defines the base parameters (shared between bitcoin-cli and bitcoind)
  * of a given instance of the Bitcoin system.
  */
-class CNetMan
+class CNetworkManager
 {
 public:
-    /** BIP70 chain name strings */
+    CNetworkManager()
+    {
+        setNull();
+        initialize();
+    }
 
-    //ecc payment networks
-    static const std::string LEGACY; // legacy network that started the chain in 2014. will be replaced by payment network in 2018
-    static const std::string PAYMENT; // payment network
+    void setNull()
+    {
+        legacyTemplate = NULL;
+        paymentTemplate = NULL;
 
-    //service networks
-    static const std::string ANS;  // Address-Name Service (DNS for addresses to usernames)
-    static const std::string CMAP; // Chain Messaging Access Protocol (on chain IMAP) (where the chain is the server and daemons are the clients)
-    static const std::string SFSP; // Secure File Storage Protocol (SFTP equivalent)
-    static const std::string WEB;  // (HTTP and HTTPS)
+        pnetLegacy = NULL;
+        pnetPayment = NULL;
+    }
 
-    /// if testnet or regtest are active, none of the service networks should be allowed to be
-    static const std::string TESTNET;
-    static const std::string REGTEST;
+    void initialize()
+    {
+        legacyTemplate = new CNetworkTemplate();
+        ConstructLegacyNetworkTemplate();
+        ConstructNetworks();
+    }
 
-    const std::string& DataDir() const { return strDataDir; }
-    int RPCPort() const { return nRPCPort; }
+    void ConstructLegacyNetworkTemplate();
+    void ConstructNetworks();
 
-protected:
-    CNetMan() {}
+    CNetwork* getActivePaymentNetwork()
+    {
+        return pnetLegacy;
+    }
 
-    int nRPCPort;
-    std::string strDataDir;
+private:
+
+    CNetwork* pnetLegacy;
+    CNetwork* pnetPayment;
+
+    CNetworkTemplate* legacyTemplate;
+    CNetworkTemplate* paymentTemplate;
+
 };
-
-/**
- * Append the help messages for the chainparams options to the
- * parameter string.
- */
-void AppendParamsHelpMessages(std::string& strUsage, bool debugHelp=true);
-
-/**
- * Return the currently selected parameters. This won't change after app
- * startup, except for unit tests.
- */
-const CNetMan& BaseParams();
-
-CNetMan& BaseParams(const std::string& chain);
-
-/** Sets the params returned by Params() to those for the given network. */
-void SelectBaseParams(const std::string& chain);
 
 /**
  * Looks for -regtest, -testnet and returns the appropriate BIP70 chain name.
@@ -66,27 +63,5 @@ void SelectBaseParams(const std::string& chain);
  */
 std::string ChainNameFromCommandLine();
 
-/**
- * Return true if SelectBaseParamsFromCommandLine() has been called to select
- * a network.
- */
-bool AreBaseParamsConfigured();
-
-/**
- * Return the currently selected parameters. This won't change after app
- * startup, except for unit tests.
- */
-const CBaseParams &Params();
-
-/**
- * @returns CChainParams for the given BIP70 chain name.
- */
-CBaseParams& Params(const std::string& chain);
-
-/**
- * Sets the params returned by Params() to those for the given BIP70 chain name.
- * @throws std::runtime_error when the chain is not supported.
- */
-void SelectParams(const std::string& chain);
 
 #endif // BITCOIN_CHAINPARAMSBASE_H

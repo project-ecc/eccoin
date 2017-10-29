@@ -30,7 +30,7 @@
 class CBlockIndex;
 class CBlockTreeDB;
 class CBloomFilter;
-class CBaseParams;
+class CNetworkTemplate;
 class CInv;
 class CScriptCheck;
 class CTxMemPool;
@@ -259,7 +259,7 @@ void LimitMempoolSize(CTxMemPool& pool, size_t limit, unsigned long age);
 extern std::set<CBlockIndex*> setDirtyBlockIndex;
 extern ThresholdConditionCache warningcache[VERSIONBITS_NUM_BITS];
 void PruneBlockIndexCandidates();
-bool CheckIndexAgainstCheckpoint(const CBlockIndex* pindexPrev, CValidationState& state, const CBaseParams& chainparams, const uint256& hash);
+bool CheckIndexAgainstCheckpoint(const CBlockIndex* pindexPrev, CValidationState& state, const CNetworkTemplate& chainparams, const uint256& hash);
 bool IsSuperMajority(int minVersion, const CBlockIndex* pstart, unsigned nRequired, const Consensus::Params& consensusParams);
 
 /** Minimum disk space required - used in CheckDiskSpace() */
@@ -325,7 +325,7 @@ std::string GetWarnings(const std::string& strFor);
 /** Retrieve a transaction (from memory pool, or from disk, if possible) */
 bool GetTransaction(const uint256 &hash, CTransaction &tx, const Consensus::Params& params, uint256 &hashBlock, bool fAllowSlow = false);
 /** Find the best known block, and make it the tip of the block chain */
-bool ActivateBestChain(CValidationState& state, const CBaseParams& chainparams, BlockOrigin origin, const CBlock* pblock = NULL);
+bool ActivateBestChain(CValidationState& state, const CNetworkTemplate& chainparams, BlockOrigin origin, const CBlock* pblock = NULL);
 
 enum FlushStateMode {
     FLUSH_STATE_NONE,
@@ -523,7 +523,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW = t
 /** Context-dependent validity checks */
 bool ContextualCheckBlock(const CBlock& block, CValidationState& state, CBlockIndex *pindexPrev);
 
-bool AcceptBlock(const CBlock& block, CValidationState& state, const CBaseParams& chainparams, CBlockIndex** ppindex, bool fRequested, CDiskBlockPos* dbp);
+bool AcceptBlock(const CBlock& block, CValidationState& state, const CNetworkTemplate& chainparams, CBlockIndex** ppindex, bool fRequested, CDiskBlockPos* dbp);
 extern std::set<CBlockIndex*, CBlockIndexWorkComparator> setBlockIndexCandidates;
 
 class CBlockFileInfo
@@ -585,7 +585,7 @@ class CVerifyDB {
 public:
     CVerifyDB();
     ~CVerifyDB();
-    bool VerifyDB(const CBaseParams& chainparams, CCoinsView *coinsview, int nCheckLevel, int nCheckDepth);
+    bool VerifyDB(const CNetworkTemplate& chainparams, CCoinsView *coinsview, int nCheckLevel, int nCheckDepth);
 };
 
 /** Mark a block as invalid. */
