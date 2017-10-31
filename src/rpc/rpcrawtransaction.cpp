@@ -93,11 +93,11 @@ void TxToJSON(const CTransaction& tx, const uint256 hashBlock, UniValue& entry)
 
     if (!hashBlock.IsNull()) {
         entry.push_back(Pair("blockhash", hashBlock.GetHex()));
-        BlockMap::iterator mi = pchainMain->mapBlockIndex.find(hashBlock);
-        if (mi != pchainMain->mapBlockIndex.end() && (*mi).second) {
+        BlockMap::iterator mi = pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.find(hashBlock);
+        if (mi != pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.end() && (*mi).second) {
             CBlockIndex* pindex = (*mi).second;
-            if (pchainMain->chainActive.Contains(pindex)) {
-                entry.push_back(Pair("confirmations", 1 + pchainMain->chainActive.Height() - pindex->nHeight));
+            if (pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Contains(pindex)) {
+                entry.push_back(Pair("confirmations", 1 + pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height() - pindex->nHeight));
                 entry.push_back(Pair("time", pindex->GetBlockTime()));
                 entry.push_back(Pair("blocktime", pindex->GetBlockTime()));
             }
@@ -242,13 +242,13 @@ UniValue gettxoutproof(const UniValue& params, bool fHelp)
     if (params.size() > 1)
     {
         hashBlock = uint256S(params[1].get_str());
-        if (!pchainMain->mapBlockIndex.count(hashBlock))
+        if (!pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.count(hashBlock))
             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
-        pblockindex = pchainMain->mapBlockIndex[hashBlock];
+        pblockindex = pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex[hashBlock];
     } else {
         CCoins coins;
-        if (pchainMain->pcoinsTip->GetCoins(oneTxid, coins) && coins.nHeight > 0 && coins.nHeight <= pchainMain->chainActive.Height())
-            pblockindex = pchainMain->chainActive[coins.nHeight];
+        if (pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip->GetCoins(oneTxid, coins) && coins.nHeight > 0 && coins.nHeight <= pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height())
+            pblockindex = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive[coins.nHeight];
     }
 
     if (pblockindex == NULL)
@@ -256,9 +256,9 @@ UniValue gettxoutproof(const UniValue& params, bool fHelp)
         CTransaction tx;
         if (!GetTransaction(oneTxid, tx, pnetMan->getActivePaymentNetwork()->GetConsensus(), hashBlock, false) || hashBlock.IsNull())
             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Transaction not yet in block");
-        if (!pchainMain->mapBlockIndex.count(hashBlock))
+        if (!pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.count(hashBlock))
             throw JSONRPCError(RPC_INTERNAL_ERROR, "Transaction index corrupt");
-        pblockindex = pchainMain->mapBlockIndex[hashBlock];
+        pblockindex = pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex[hashBlock];
     }
 
     CBlock block;
@@ -304,7 +304,7 @@ UniValue verifytxoutproof(const UniValue& params, bool fHelp)
 
     LOCK(cs_main);
 
-    if (!pchainMain->mapBlockIndex.count(merkleBlock.header.GetHash()) || !pchainMain->chainActive.Contains(pchainMain->mapBlockIndex[merkleBlock.header.GetHash()]))
+    if (!pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.count(merkleBlock.header.GetHash()) || !pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Contains(pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex[merkleBlock.header.GetHash()]))
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found in chain");
 
     for (auto const& hash: vMatch)
@@ -620,7 +620,7 @@ UniValue signrawtransaction(const UniValue& params, bool fHelp)
     CCoinsViewCache view(&viewDummy);
     {
         LOCK(mempool.cs);
-        CCoinsViewCache &viewChain = *pchainMain->pcoinsTip;
+        CCoinsViewCache &viewChain = *pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip;
         CCoinsViewMemPool viewMempool(&viewChain, mempool);
         view.SetBackend(viewMempool); // temporarily switch cache backend to db+mempool view
 
@@ -799,7 +799,7 @@ UniValue sendrawtransaction(const UniValue& params, bool fHelp)
     if (params.size() > 1)
         fOverrideFees = params[1].get_bool();
 
-    CCoinsViewCache &view = *pchainMain->pcoinsTip;
+    CCoinsViewCache &view = *pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip;
     const CCoins* existingCoins = view.AccessCoins(hashTx);
     bool fHaveMempool = mempool.exists(hashTx);
     bool fHaveChain = existingCoins && existingCoins->nHeight < 1000000000;

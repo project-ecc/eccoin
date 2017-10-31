@@ -79,9 +79,9 @@ UniValue getinfo(const UniValue& params, bool fHelp)
         obj.push_back(Pair("walletversion", pwalletMain->GetVersion()));
         obj.push_back(Pair("balance",       ValueFromAmount(pwalletMain->GetBalance())));
     }
-    obj.push_back(Pair("blocks",        (int)pchainMain->chainActive.Height()));
-    obj.push_back(Pair("headers",       (int)pchainMain->pindexBestHeader->nHeight));
-    obj.push_back(Pair("moneysupply",   ValueFromAmount(pchainMain->chainActive.Tip()->nMoneySupply)));
+    obj.push_back(Pair("blocks",        (int)pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height()));
+    obj.push_back(Pair("headers",       (int)pnetMan->getActivePaymentNetwork()->getChainManager()->pindexBestHeader->nHeight));
+    obj.push_back(Pair("moneysupply",   ValueFromAmount(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->nMoneySupply)));
     obj.push_back(Pair("timeoffset",    GetTimeOffset()));
     obj.push_back(Pair("connections",   (int)vNodes.size()));
     obj.push_back(Pair("proxy",         (proxy.IsValid() ? proxy.proxy.ToStringIPPort() : std::string())));

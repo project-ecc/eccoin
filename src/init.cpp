@@ -58,7 +58,6 @@
 
 bool fShutdown = false;
 CWallet* pwalletMain = NULL;
-CChainManager* pchainMain = NULL;
 CNetworkManager* pnetMan = NULL;
 
 bool fFeeEstimatesInitialized = false;
@@ -203,17 +202,17 @@ void Shutdown()
 
     {
         LOCK(cs_main);
-        if (pchainMain->pcoinsTip != NULL) {
+        if (pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip != NULL) {
             FlushStateToDisk();
         }
-        delete pchainMain->pcoinsTip;
-        pchainMain->pcoinsTip = NULL;
+        delete pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip;
+        pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip = NULL;
         delete pcoinscatcher;
         pcoinscatcher = NULL;
         delete pcoinsdbview;
         pcoinsdbview = NULL;
-        delete pchainMain->pblocktree;
-        pchainMain->pblocktree = NULL;
+        delete pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree;
+        pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree = NULL;
     }
 
     if (pwalletMain)
@@ -573,14 +572,14 @@ void ThreadImport(std::vector<boost::filesystem::path> vImportFiles)
             if (!file)
                 break; // This error is logged in OpenBlockFile
             LogPrintf("Reindexing block file blk%05u.dat...\n", (unsigned int)nFile);
-            pchainMain->LoadExternalBlockFile(chainparams, file, &pos);
+            pnetMan->getActivePaymentNetwork()->getChainManager()->LoadExternalBlockFile(chainparams, file, &pos);
             nFile++;
         }
-        pchainMain->pblocktree->WriteReindexing(false);
+        pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree->WriteReindexing(false);
         fReindex = false;
         LogPrintf("Reindexing finished\n");
         // To avoid ending up in a situation without genesis block, re-try initializing (no-op if reindexing worked):
-        pchainMain->InitBlockIndex(chainparams);
+        pnetMan->getActivePaymentNetwork()->getChainManager()->InitBlockIndex(chainparams);
     }
 
     // hardcoded $DATADIR/bootstrap.dat
@@ -591,7 +590,7 @@ void ThreadImport(std::vector<boost::filesystem::path> vImportFiles)
             CImportingNow imp;
             boost::filesystem::path pathBootstrapOld = GetDataDir() / "bootstrap.dat.old";
             LogPrintf("Importing bootstrap.dat...\n");
-            pchainMain->LoadExternalBlockFile(chainparams, file);
+            pnetMan->getActivePaymentNetwork()->getChainManager()->LoadExternalBlockFile(chainparams, file);
             RenameOver(pathBootstrap, pathBootstrapOld);
         } else {
             LogPrintf("Warning: Could not open bootstrap file %s\n", pathBootstrap.string());
@@ -604,7 +603,7 @@ void ThreadImport(std::vector<boost::filesystem::path> vImportFiles)
         if (file) {
             CImportingNow imp;
             LogPrintf("Importing blocks file %s...\n", path.string());
-            pchainMain->LoadExternalBlockFile(chainparams, file);
+            pnetMan->getActivePaymentNetwork()->getChainManager()->LoadExternalBlockFile(chainparams, file);
         } else {
             LogPrintf("Warning: Could not open blocks file %s\n", path.string());
         }
@@ -1187,8 +1186,6 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
 
     // ********************************************************* Step 7: load block chain
 
-    pchainMain = new CChainManager();
-
     fReindex = gArgs.GetBoolArg("-reindex", false);
 
     // Upgrading to 0.8; hard-link the old blknnnn.dat files into /blocks/
@@ -1245,33 +1242,33 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
         do {
             try
             {
-                pchainMain->UnloadBlockIndex();
-                delete pchainMain->pcoinsTip;
+                pnetMan->getActivePaymentNetwork()->getChainManager()->UnloadBlockIndex();
+                delete pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip;
                 delete pcoinsdbview;
                 delete pcoinscatcher;
-                delete pchainMain->pblocktree;
+                delete pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree;
 
-                pchainMain->pblocktree = new CBlockTreeDB(nBlockTreeDBCache, false, fReindex);
+                pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree = new CBlockTreeDB(nBlockTreeDBCache, false, fReindex);
                 pcoinsdbview = new CCoinsViewDB(nCoinDBCache, false, fReindex);
                 pcoinscatcher = new CCoinsViewErrorCatcher(pcoinsdbview);
-                pchainMain->pcoinsTip = new CCoinsViewCache(pcoinscatcher);
+                pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip = new CCoinsViewCache(pcoinscatcher);
 
                 if (fReindex) {
-                    pchainMain->pblocktree->WriteReindexing(true);
+                    pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree->WriteReindexing(true);
                 }
 
-                if (!pchainMain->LoadBlockIndex()) {
+                if (!pnetMan->getActivePaymentNetwork()->getChainManager()->LoadBlockIndex()) {
                     strLoadError = _("Error loading block database");
                     break;
                 }
 
                 // If the loaded chain has a wrong genesis, bail out immediately
                 // (we're likely using a testnet datadir, or the other way around).
-                if (!pchainMain->mapBlockIndex.empty() && pchainMain->mapBlockIndex.count(chainparams.GetConsensus().hashGenesisBlock) == 0)
+                if (!pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.empty() && pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.count(chainparams.GetConsensus().hashGenesisBlock) == 0)
                     return InitError(_("Incorrect or no genesis block found. Wrong datadir for network?"));
 
                 // Initialize the block index (no-op if non-empty database was already loaded)
-                if (!pchainMain->InitBlockIndex(chainparams)) {
+                if (!pnetMan->getActivePaymentNetwork()->getChainManager()->InitBlockIndex(chainparams)) {
                     strLoadError = _("Error initializing block database");
                     break;
                 }
@@ -1280,7 +1277,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
 
                 {
                     LOCK(cs_main);
-                    CBlockIndex* tip = pchainMain->chainActive.Tip();
+                    CBlockIndex* tip = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
                     if (tip && tip->nTime > GetAdjustedTime() + 2 * 60 * 60) {
                         strLoadError = _("The block database contains a block which appears to be from the future. "
                                 "This may be due to your computer's date and time being set incorrectly. "
@@ -1438,7 +1435,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                     strErrors << _("Cannot write default address") << "\n";
             }
 
-            pwalletMain->SetBestChain(pchainMain->chainActive.GetLocator());
+            pwalletMain->SetBestChain(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.GetLocator());
         }
 
         LogPrintf("%s", strErrors.str());
@@ -1446,26 +1443,26 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
 
         RegisterValidationInterface(pwalletMain);
 
-        CBlockIndex *pindexRescan = pchainMain->chainActive.Tip();
+        CBlockIndex *pindexRescan = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
         if (gArgs.GetBoolArg("-rescan", false))
-            pindexRescan = pchainMain->chainActive.Genesis();
+            pindexRescan = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Genesis();
         else
         {
             CWalletDB walletdb(strWalletFile);
             CBlockLocator locator;
             if (walletdb.ReadBestBlock(locator))
-                pindexRescan = pchainMain->FindForkInGlobalIndex(pchainMain->chainActive, locator);
+                pindexRescan = pnetMan->getActivePaymentNetwork()->getChainManager()->FindForkInGlobalIndex(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive, locator);
             else
-                pindexRescan = pchainMain->chainActive.Genesis();
+                pindexRescan = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Genesis();
         }
-        if (pchainMain->chainActive.Tip() && pchainMain->chainActive.Tip() != pindexRescan)
+        if (pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip() && pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip() != pindexRescan)
         {
             uiInterface.InitMessage(_("Rescanning..."));
-            LogPrintf("Rescanning last %i blocks (from block %i)...\n", pchainMain->chainActive.Height() - pindexRescan->nHeight, pindexRescan->nHeight);
+            LogPrintf("Rescanning last %i blocks (from block %i)...\n", pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height() - pindexRescan->nHeight, pindexRescan->nHeight);
             nStart = GetTimeMillis();
             pwalletMain->ScanForWalletTransactions(pindexRescan, true);
             LogPrintf(" rescan      %15dms\n", GetTimeMillis() - nStart);
-            pwalletMain->SetBestChain(pchainMain->chainActive.GetLocator());
+            pwalletMain->SetBestChain(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.GetLocator());
             nWalletDBUpdated++;
 
             // Restore wallet transaction metadata after -zapwallettxes=1
@@ -1514,9 +1511,9 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
             vImportFiles.push_back(strFile);
     }
     threadGroup.create_thread(boost::bind(&ThreadImport, vImportFiles));
-    if (pchainMain->chainActive.Tip() == NULL) {
+    if (pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip() == NULL) {
         LogPrintf("Waiting for genesis block to be imported...\n");
-        while (!fRequestShutdown && pchainMain->chainActive.Tip() == NULL)
+        while (!fRequestShutdown && pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip() == NULL)
             MilliSleep(10);
     }
 
@@ -1531,8 +1528,8 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
     RandAddSeedPerfmon();
 
     //// debug print
-    LogPrintf("mapBlockIndex.size() = %u\n",   pchainMain->mapBlockIndex.size());
-    LogPrintf("nBestHeight = %d\n",                   pchainMain->chainActive.Height());
+    LogPrintf("mapBlockIndex.size() = %u\n",   pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.size());
+    LogPrintf("nBestHeight = %d\n",                   pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height());
 
     LogPrintf("setKeyPool.size() = %u\n",      pwalletMain ? pwalletMain->setKeyPool.size() : 0);
     LogPrintf("mapWallet.size() = %u\n",       pwalletMain ? pwalletMain->mapWallet.size() : 0);

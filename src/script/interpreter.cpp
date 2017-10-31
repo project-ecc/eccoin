@@ -873,7 +873,7 @@ bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& 
                     scriptCode.FindAndDelete(CScript(vchSig));
 
                     /// TODO: for backwards compatability, this should be implemented in a different way but for now it will do
-                    if(pchainMain->chainActive.Tip()->nHeight > 1600000)
+                    if(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->nHeight > 1600000)
                     {
                         if (!CheckSignatureEncoding(vchSig, flags, serror) || !CheckPubKeyEncoding(vchPubKey, flags, serror))
                         {
@@ -945,7 +945,7 @@ bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& 
                         // distinguishable by CHECKMULTISIG NOT if the STRICTENC flag is set.
                         // See the script_(in)valid tests for details.
                         /// TODO: for backwards compatability, this should be implemented in a different way but for now it will do
-                        if(pchainMain->chainActive.Tip()->nHeight > 1600000)
+                        if(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->nHeight > 1600000)
                         {
                             if (!CheckSignatureEncoding(vchSig, flags, serror) || !CheckPubKeyEncoding(vchPubKey, flags, serror)) {
                                 // serror is set

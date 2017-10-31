@@ -65,7 +65,7 @@ void WalletTxToJSON(const CWalletTx& wtx, UniValue& entry)
     {
         entry.push_back(Pair("blockhash", wtx.hashBlock.GetHex()));
         entry.push_back(Pair("blockindex", wtx.nIndex));
-        entry.push_back(Pair("blocktime", pchainMain->mapBlockIndex[wtx.hashBlock]->GetBlockTime()));
+        entry.push_back(Pair("blocktime", pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex[wtx.hashBlock]->GetBlockTime()));
     } else {
         entry.push_back(Pair("trusted", wtx.IsTrusted()));
     }
@@ -1667,8 +1667,8 @@ UniValue listsinceblock(const UniValue& params, bool fHelp)
         uint256 blockId;
 
         blockId.SetHex(params[0].get_str());
-        BlockMap::iterator it = pchainMain->mapBlockIndex.find(blockId);
-        if (it != pchainMain->mapBlockIndex.end())
+        BlockMap::iterator it = pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.find(blockId);
+        if (it != pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.end())
             pindex = it->second;
     }
 
@@ -1684,7 +1684,7 @@ UniValue listsinceblock(const UniValue& params, bool fHelp)
         if(params[2].get_bool())
             filter = filter | ISMINE_WATCH_ONLY;
 
-    int depth = pindex ? (1 + pchainMain->chainActive.Height() - pindex->nHeight) : -1;
+    int depth = pindex ? (1 + pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height() - pindex->nHeight) : -1;
 
     UniValue transactions(UniValue::VARR);
 
@@ -1696,7 +1696,7 @@ UniValue listsinceblock(const UniValue& params, bool fHelp)
             ListTransactions(tx, "*", 0, true, transactions, filter);
     }
 
-    CBlockIndex *pblockLast = pchainMain->chainActive[pchainMain->chainActive.Height() + 1 - target_confirms];
+    CBlockIndex *pblockLast = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive[pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height() + 1 - target_confirms];
     uint256 lastblock = pblockLast ? pblockLast->GetBlockHash() : uint256();
 
     UniValue ret(UniValue::VOBJ);

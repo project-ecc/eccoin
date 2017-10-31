@@ -16,6 +16,7 @@
 
 #include "networks/networktemplate.h"
 #include "networks/netman.h"
+#include "init.h"
 #include "key.h"
 #include "pubkey.h"
 #include "script/script.h"
@@ -142,7 +143,7 @@ public:
     void SetKey(const K &key) {
         unsigned char vch[Size];
         key.Encode(vch);
-        SetData(Params().Base58Prefix(Type), vch, vch+Size);
+        SetData(pnetMan->getActivePaymentNetwork()->Base58Prefix(Type), vch, vch+Size);
     }
 
     K GetKey() {
@@ -159,7 +160,7 @@ public:
     }
 
     CBitcoinExtKeyBase(const std::string& strBase58c) {
-        SetString(strBase58c.c_str(), Params().Base58Prefix(Type).size());
+        SetString(strBase58c.c_str(), pnetMan->getActivePaymentNetwork()->Base58Prefix(Type).size());
     }
 
     CBitcoinExtKeyBase() {}

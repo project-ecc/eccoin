@@ -19,7 +19,6 @@ namespace boost
 class thread_group;
 } // namespace boost
 
-extern CChainManager* pchainMain;
 extern CWallet* pwalletMain;
 extern CNetworkManager* pnetMan;
 

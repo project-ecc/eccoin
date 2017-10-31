@@ -155,7 +155,7 @@ bool CTransaction::IsFinal(int nBlockHeight, int64_t nBlockTime) const
     if (nLockTime == 0)
         return true;
     if (nBlockHeight == 0)
-        nBlockHeight = pchainMain->chainActive.Height();
+        nBlockHeight = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height();
     if (nBlockTime == 0)
         nBlockTime = GetAdjustedTime();
     if ((int64_t)nLockTime < ((int64_t)nLockTime < LOCKTIME_THRESHOLD ? (int64_t)nBlockHeight : nBlockTime))
@@ -214,7 +214,7 @@ uint64_t CTransaction::GetCoinAge(uint64_t nCoinAge, bool byValue) const
     for(const CTxIn& txin: vin)
     {
         CDiskTxPos txindex;
-        if (!pchainMain->pblocktree->ReadTxIndex(txin.prevout.hash, txindex))
+        if (!pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree->ReadTxIndex(txin.prevout.hash, txindex))
             continue;  // previous transaction not in main chain
 
         // Read block header
@@ -261,7 +261,7 @@ bool CTransaction::GetCoinAge(uint64_t& nCoinAge) const
     for(const CTxIn& txin: vin)
     {
         CDiskTxPos txindex;
-        if (!pchainMain->pblocktree->ReadTxIndex(txin.prevout.hash, txindex))
+        if (!pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree->ReadTxIndex(txin.prevout.hash, txindex))
             continue;  // previous transaction not in main chain
 
         // Read block header

@@ -10,8 +10,6 @@ CONFIG += widgets
 CONFIG += c++11
 QT += core gui network widgets
 
-QMAKE_CXXFLAGS = -fpermissive
-
 greaterThan(QT_MAJOR_VERSION, 4) {
     QT += widgets
     DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0

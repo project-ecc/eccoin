@@ -39,7 +39,7 @@ public:
     {
     }
     const std::string& DataDir() const { return strDataDir; }
-    const CChainManager* getChainManager() const { return &chainman; }
+    CChainManager* getChainManager() { return &chainman; }
 
     /// TODO: put a check somewhere to make sure all data members have been set properly
 private:

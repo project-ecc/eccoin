@@ -132,7 +132,7 @@ bool CCoinsViewDB::GetStats(CCoinsStats &stats) const {
     }
     {
         LOCK(cs_main);
-        stats.nHeight = pchainMain->mapBlockIndex.find(stats.hashBlock)->second->nHeight;
+        stats.nHeight = pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.find(stats.hashBlock)->second->nHeight;
     }
     stats.hashSerialized = ss.GetHash();
     stats.nTotalAmount = nTotalAmount;
@@ -188,8 +188,8 @@ bool CBlockTreeDB::LoadBlockIndexGuts()
             CDiskBlockIndex diskindex;
             if (pcursor->GetValue(diskindex)) {
                 // Construct block index object
-                CBlockIndex* pindexNew = pchainMain->InsertBlockIndex(diskindex.GetBlockHash());
-                pindexNew->pprev          = pchainMain->InsertBlockIndex(diskindex.hashPrev);
+                CBlockIndex* pindexNew = pnetMan->getActivePaymentNetwork()->getChainManager()->InsertBlockIndex(diskindex.GetBlockHash());
+                pindexNew->pprev          = pnetMan->getActivePaymentNetwork()->getChainManager()->InsertBlockIndex(diskindex.hashPrev);
                 pindexNew->nHeight        = diskindex.nHeight;
                 pindexNew->nFile          = diskindex.nFile;
                 pindexNew->nDataPos       = diskindex.nDataPos;
