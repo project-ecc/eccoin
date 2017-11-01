@@ -2219,8 +2219,7 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CWalletT
                 for (auto const& coin: setCoins)
                 {
                     bool signSuccess;
-                    const CScript& cscriptPubKey = coin.first->vout[coin.second].scriptPubKey;
-                    CScript& scriptPubKey(cscriptPubKey);
+                    const CScript& scriptPubKey = coin.first->vout[coin.second].scriptPubKey;
                     CScript& scriptSigRes = txNew.vin[nIn].scriptSig;
                     if (sign)
                         signSuccess = ProduceSignature(TransactionSignatureCreator(this, &txNewConst, nIn, SIGHASH_ALL), scriptPubKey, scriptSigRes);

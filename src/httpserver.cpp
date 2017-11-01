@@ -2,11 +2,12 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include "compat.h"
+
 #include "httpserver.h"
 
 #include "networks/netman.h"
 #include "init.h"
-#include "compat.h"
 #include "util/util.h"
 #include "args.h"
 #include "netbase.h"
