@@ -5,7 +5,7 @@
 #include <stdlib.h>
 
 #include "net.h"
-#include "primitives/block.h"
+#include "chain/block.h"
 
 void *scrypt_buffer_alloc();
 void scrypt_buffer_free(void *scratchpad);

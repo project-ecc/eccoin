@@ -11,7 +11,7 @@
 
 #include "amount.h"
 #include "coins.h"
-#include "primitives/transaction.h"
+#include "tx/tx.h"
 #include "sync.h"
 
 #undef foreach

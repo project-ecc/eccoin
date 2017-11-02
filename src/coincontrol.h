@@ -5,7 +5,7 @@
 #ifndef BITCOIN_COINCONTROL_H
 #define BITCOIN_COINCONTROL_H
 
-#include "primitives/transaction.h"
+#include "tx/tx.h"
 
 /** Coin Control Features. */
 class CCoinControl

@@ -5,14 +5,14 @@
 #include "core_io.h"
 
 #include "base58.h"
-#include "primitives/transaction.h"
+#include "tx/tx.h"
 #include "script/script.h"
 #include "script/standard.h"
 #include "serialize.h"
 #include "streams.h"
-#include "util.h"
-#include "utilmoneystr.h"
-#include "utilstrencodings.h"
+#include "util/util.h"
+#include "util/utilmoneystr.h"
+#include "util/utilstrencodings.h"
 
 #include <boost/assign/list_of.hpp>
 

@@ -7,14 +7,14 @@
 #define BITCOIN_MAIN_H
 
 #include "amount.h"
-#include "chain.h"
+#include "chain/chain.h"
 #include "coins.h"
 #include "net.h"
 #include "script/script_error.h"
 #include "sync.h"
 #include "versionbits.h"
 #include "uint256.h"
-#include "utiltime.h"
+#include "util/utiltime.h"
 
 #include <algorithm>
 #include <exception>
@@ -30,7 +30,7 @@
 class CBlockIndex;
 class CBlockTreeDB;
 class CBloomFilter;
-class CBaseParams;
+class CNetworkTemplate;
 class CInv;
 class CScriptCheck;
 class CTxMemPool;
@@ -121,16 +121,9 @@ static const unsigned int MAX_BLOCKS_TO_ANNOUNCE = 8;
 
 static const int LAST_POW_BLOCK = 86400;
 
-struct BlockHasher
-{
-    size_t operator()(const uint256& hash) const { return hash.GetCheapHash(); }
-};
-
 extern CScript COINBASE_FLAGS;
 extern CCriticalSection cs_main;
 extern CTxMemPool mempool;
-typedef boost::unordered_map<uint256, CBlockIndex*, BlockHasher> BlockMap;
-extern BlockMap mapBlockIndex;
 extern uint64_t nLastBlockTx;
 extern uint64_t nLastBlockSize;
 extern const std::string strMessageMagic;
@@ -266,12 +259,8 @@ void LimitMempoolSize(CTxMemPool& pool, size_t limit, unsigned long age);
 extern std::set<CBlockIndex*> setDirtyBlockIndex;
 extern ThresholdConditionCache warningcache[VERSIONBITS_NUM_BITS];
 void PruneBlockIndexCandidates();
-bool CheckIndexAgainstCheckpoint(const CBlockIndex* pindexPrev, CValidationState& state, const CBaseParams& chainparams, const uint256& hash);
+bool CheckIndexAgainstCheckpoint(const CBlockIndex* pindexPrev, CValidationState& state, const CNetworkTemplate& chainparams, const uint256& hash);
 bool IsSuperMajority(int minVersion, const CBlockIndex* pstart, unsigned nRequired, const Consensus::Params& consensusParams);
-CBlockIndex* AddToBlockIndex(const CBlockHeader& block);
-
-/** Best header we've seen so far (used for getheaders queries' starting points). */
-extern CBlockIndex *pindexBestHeader;
 
 /** Minimum disk space required - used in CheckDiskSpace() */
 static const uint64_t nMinDiskSpace = 52428800;
@@ -293,11 +282,6 @@ static const unsigned int DEFAULT_CHECKLEVEL = 3;
 static const uint64_t MIN_DISK_SPACE_FOR_BLOCK_FILES = 550 * 1024 * 1024;
 
 static const int64_t MAX_MINT_PROOF_OF_STAKE = 0.1 * COIN;
-
-/** Register with a network node to receive its signals */
-void RegisterNodeSignals(CNodeSignals& nodeSignals);
-/** Unregister a network node */
-void UnregisterNodeSignals(CNodeSignals& nodeSignals);
 
 const CBlockIndex* GetLastBlockIndex(const CBlockIndex* pindex, bool fProofOfStake);
 unsigned int GetNextTargetRequired(const CBlockIndex* pindexLast, bool fProofOfStake);
@@ -324,28 +308,12 @@ FILE* OpenBlockFile(const CDiskBlockPos &pos, bool fReadOnly = false);
 FILE* OpenUndoFile(const CDiskBlockPos &pos, bool fReadOnly = false);
 /** Translation to a filesystem path */
 boost::filesystem::path GetBlockPosFilename(const CDiskBlockPos &pos, const char *prefix);
-/** Import blocks from an external file */
-bool LoadExternalBlockFile(const CBaseParams& chainparams, FILE* fileIn, CDiskBlockPos *dbp = NULL);
-/** Initialize a new block tree database + block data on disk */
-bool InitBlockIndex(const CBaseParams& chainparams);
-/** Load the block tree and coins database from disk */
-bool LoadBlockIndex();
-/** Unload database information */
-void UnloadBlockIndex();
-/** Process protocol messages received from a given node */
-bool ProcessMessages(CNode* pfrom);
-/**
- * Send queued protocol messages to be sent to a give node.
- *
- * @param[in]   pto             The node which we are sending messages to.
- */
-bool SendMessages(CNode* pto);
+
 /** Run an instance of the script checking thread */
 void ThreadScriptCheck();
 /** Try to detect Partition (network isolation) attacks against us */
 void PartitionCheck(bool (*initialDownloadCheck)(), CCriticalSection& cs, const CBlockIndex *const &bestHeader, int64_t nTargetSpacing);
-/** Check whether we are doing an initial block download (synchronizing from disk or network) */
-bool IsInitialBlockDownload();
+
 /** Format a string that describes several potential problems detected by the core.
  * strFor can have three values:
  * - "rpc": get critical warnings, which should put the client in safe mode if non-empty
@@ -357,7 +325,7 @@ std::string GetWarnings(const std::string& strFor);
 /** Retrieve a transaction (from memory pool, or from disk, if possible) */
 bool GetTransaction(const uint256 &hash, CTransaction &tx, const Consensus::Params& params, uint256 &hashBlock, bool fAllowSlow = false);
 /** Find the best known block, and make it the tip of the block chain */
-bool ActivateBestChain(CValidationState& state, const CBaseParams& chainparams, BlockOrigin origin, const CBlock* pblock = NULL);
+bool ActivateBestChain(CValidationState& state, const CNetworkTemplate& chainparams, BlockOrigin origin, const CBlock* pblock = NULL);
 
 enum FlushStateMode {
     FLUSH_STATE_NONE,
@@ -372,39 +340,14 @@ extern int64_t nTimeBestReceived;
 extern int nPeersWithValidatedDownloads;
 extern boost::scoped_ptr<CRollingBloomFilter> recentRejects;
 
-
-/**
- * Prune block and undo files (blk???.dat and undo???.dat) so that the disk space used is less than a user-defined target.
- * The user sets the target (in MB) on the command line or in config file.  This will be run on startup and whenever new
- * space is allocated in a block or undo file, staying below the target. Changing back to unpruned requires a reindex
- * (which in this case means the blockchain must be re-downloaded.)
- *
- * Pruning functions are called from FlushStateToDisk when the global fCheckForPruning flag has been set.
- * Block and undo files are deleted in lock-step (when blk00003.dat is deleted, so is rev00003.dat.)
- * Pruning cannot take place until the longest chain is at least a certain length (100000 on mainnet, 1000 on testnet, 1000 on regtest).
- * Pruning will never delete a block within a defined distance (currently 288) from the active chain's tip.
- * The block index is updated by unsetting HAVE_DATA and HAVE_UNDO for any blocks that were stored in the deleted files.
- * A db flag records the fact that at least some block files have been pruned.
- *
- * @param[out]   setFilesToPrune   The set of file indices that can be unlinked will be returned
- */
-void FindFilesToPrune(std::set<int>& setFilesToPrune, uint64_t nPruneAfterHeight);
-
-/**
- *  Actually unlink the specified files
- */
-void UnlinkPrunedFiles(std::set<int>& setFilesToPrune);
-
-/** Create a new block index entry for a given block hash */
-CBlockIndex * InsertBlockIndex(uint256 hash);
 /** Get statistics from node state */
 bool GetNodeStateStats(NodeId nodeid, CNodeStateStats &stats);
+
 /** Increase a node's misbehavior score. */
 void Misbehaving(NodeId nodeid, int howmuch);
+
 /** Flush all state, indexes and buffers to disk. */
 void FlushStateToDisk();
-/** Prune block files and flush state to disk. */
-void PruneAndFlush();
 
 CNodeState *State(NodeId pnode);
 bool AbortNode(CValidationState& state, const std::string& strMessage, const std::string& userMessage="");
@@ -580,7 +523,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW = t
 /** Context-dependent validity checks */
 bool ContextualCheckBlock(const CBlock& block, CValidationState& state, CBlockIndex *pindexPrev);
 
-bool AcceptBlock(const CBlock& block, CValidationState& state, const CBaseParams& chainparams, CBlockIndex** ppindex, bool fRequested, CDiskBlockPos* dbp);
+bool AcceptBlock(const CBlock& block, CValidationState& state, const CNetworkTemplate& chainparams, CBlockIndex** ppindex, bool fRequested, CDiskBlockPos* dbp);
 extern std::set<CBlockIndex*, CBlockIndexWorkComparator> setBlockIndexCandidates;
 
 class CBlockFileInfo
@@ -642,26 +585,14 @@ class CVerifyDB {
 public:
     CVerifyDB();
     ~CVerifyDB();
-    bool VerifyDB(const CBaseParams& chainparams, CCoinsView *coinsview, int nCheckLevel, int nCheckDepth);
+    bool VerifyDB(const CNetworkTemplate& chainparams, CCoinsView *coinsview, int nCheckLevel, int nCheckDepth);
 };
-
-/** Find the last common block between the parameter chain and a locator. */
-CBlockIndex* FindForkInGlobalIndex(const CChain& chain, const CBlockLocator& locator);
 
 /** Mark a block as invalid. */
 bool InvalidateBlock(CValidationState& state, const Consensus::Params& consensusParams, CBlockIndex *pindex);
 
 /** Remove invalidity status from a block and its descendants. */
 bool ReconsiderBlock(CValidationState& state, CBlockIndex *pindex);
-
-/** The currently-connected chain of blocks (protected by cs_main). */
-extern CChain chainActive;
-
-/** Global variable that points to the active CCoinsView (protected by cs_main) */
-extern CCoinsViewCache *pcoinsTip;
-
-/** Global variable that points to the active block tree (protected by cs_main) */
-extern CBlockTreeDB *pblocktree;
 
 /**
  * Return the spend height, which is one more than the inputs.GetBestBlock().
@@ -686,5 +617,20 @@ static const unsigned int REJECT_HIGHFEE = 0x100;
 static const unsigned int REJECT_ALREADY_KNOWN = 0x101;
 /** Transaction conflicts with a transaction already known */
 static const unsigned int REJECT_CONFLICT = 0x102;
+
+extern std::map<NodeId, CNodeState> mapNodeState;
+extern int nLastBlockFile;
+extern std::vector<CBlockFileInfo> vinfoBlockFile;
+bool ReceivedBlockTransactions(const CBlock &block, CValidationState& state, CBlockIndex *pindexNew, const CDiskBlockPos& pos);
+bool FindBlockPos(CValidationState &state, CDiskBlockPos &pos, unsigned int nAddSize, unsigned int nHeight, uint64_t nTime, bool fKnown = false);
+bool AbortNode(const std::string& strMessage, const std::string& userMessage="");
+extern uint32_t nBlockSequenceId;
+extern std::set<int> setDirtyFileInfo;
+/// versionbitscache was originally static in main.cpp might need to revert the change to non static
+extern VersionBitsCache versionbitscache;
+
+extern int GetHeight();
+extern void InitializeNode(NodeId nodeid, const CNode *pnode);
+extern void FinalizeNode(NodeId nodeid);
 
 #endif // BITCOIN_MAIN_H

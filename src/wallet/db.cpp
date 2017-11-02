@@ -6,11 +6,11 @@
 #include "db.h"
 
 #include "addrman.h"
-#include "hash.h"
+#include "crypto/hash.h"
 #include "protocol.h"
-#include "util.h"
+#include "util/util.h"
 #include "args.h"
-#include "utilstrencodings.h"
+#include "util/utilstrencodings.h"
 
 #include <stdint.h>
 

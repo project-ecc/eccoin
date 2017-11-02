@@ -8,6 +8,8 @@
 
 #include <string>
 #include "wallet/wallet.h"
+#include "chain/chainman.h"
+#include "networks/netman.h"
 
 class CScheduler;
 class CWallet;
@@ -18,6 +20,7 @@ class thread_group;
 } // namespace boost
 
 extern CWallet* pwalletMain;
+extern CNetworkManager* pnetMan;
 
 void StartShutdown();
 bool ShutdownRequested();
@@ -28,6 +31,7 @@ void Shutdown();
 void InitLogging();
 //!Parameter interaction: change current parameters depending on various rules
 void InitParameterInteraction();
+void GenerateNetworkTemplates();
 bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler);
 
 /** Help for options shared between UI and daemon (for -help) */

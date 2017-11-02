@@ -6,10 +6,9 @@
 #include "pow.h"
 
 #include "arith_uint256.h"
-#include "chain.h"
-#include "primitives/block.h"
+#include "chain/chain.h"
 #include "uint256.h"
-#include "util.h"
+#include "util/util.h"
 #include "main.h"
 
 bool CheckProofOfWork(uint256 hash, unsigned int nBits, const Consensus::Params& params)

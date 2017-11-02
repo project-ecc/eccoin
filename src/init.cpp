@@ -7,10 +7,10 @@
 
 #include "addrman.h"
 #include "amount.h"
-#include "chain.h"
-#include "networks/baseparams.h"
+#include "chain/chain.h"
+#include "networks/networktemplate.h"
 #include "networks/netman.h"
-#include "checkpoints.h"
+#include "chain/checkpoints.h"
 #include "compat/sanity.h"
 #include "consensus/validation.h"
 #include "httpserver.h"
@@ -28,12 +28,12 @@
 #include "txmempool.h"
 #include "torcontrol.h"
 #include "ui_interface.h"
-#include "util.h"
+#include "util/util.h"
 #include "args.h"
-#include "utilmoneystr.h"
-#include "utilstrencodings.h"
+#include "util/utilmoneystr.h"
+#include "util/utilstrencodings.h"
 #include "validationinterface.h"
-
+#include "signals.h"
 #include "wallet/db.h"
 #include "wallet/wallet.h"
 #include "wallet/walletdb.h"
@@ -58,6 +58,8 @@
 
 bool fShutdown = false;
 CWallet* pwalletMain = NULL;
+CNetworkManager* pnetMan = NULL;
+
 bool fFeeEstimatesInitialized = false;
 static const bool DEFAULT_PROXYRANDOMIZE = true;
 static const bool DEFAULT_REST_ENABLE = false;
@@ -200,17 +202,17 @@ void Shutdown()
 
     {
         LOCK(cs_main);
-        if (pcoinsTip != NULL) {
+        if (pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip != NULL) {
             FlushStateToDisk();
         }
-        delete pcoinsTip;
-        pcoinsTip = NULL;
+        delete pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip;
+        pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip = NULL;
         delete pcoinscatcher;
         pcoinscatcher = NULL;
         delete pcoinsdbview;
         pcoinsdbview = NULL;
-        delete pblocktree;
-        pblocktree = NULL;
+        delete pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree;
+        pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree = NULL;
     }
 
     if (pwalletMain)
@@ -342,7 +344,7 @@ std::string HelpMessage()
     strUsage += HelpMessageOpt("-peerbloomfilters", strprintf(_("Support filtering of blocks and transaction with bloom filters (default: %u)"), 1));
     if (showDebug)
         strUsage += HelpMessageOpt("-enforcenodebloom", strprintf("Enforce minimum protocol version to limit use of bloom filters (default: %u)", 0));
-    strUsage += HelpMessageOpt("-port=<port>", strprintf(_("Listen for connections on <port> (default: %u or testnet: %u)"), Params(CNetMan::LEGACY).GetDefaultPort(), Params(CNetMan::TESTNET).GetDefaultPort()));
+    strUsage += HelpMessageOpt("-port=<port>", strprintf(_("Listen for connections on <port> (default: %u)"), pnetMan->getActivePaymentNetwork()->GetDefaultPort()));
     strUsage += HelpMessageOpt("-proxy=<ip:port>", _("Connect through SOCKS5 proxy"));
     strUsage += HelpMessageOpt("-proxyrandomize", strprintf(_("Randomize credentials for every proxy connection. This enables Tor stream isolation (default: %u)"), DEFAULT_PROXYRANDOMIZE));
     strUsage += HelpMessageOpt("-seednode=<ip>", _("Connect to a node to retrieve peer addresses, and disconnect"));
@@ -391,8 +393,8 @@ std::string HelpMessage()
     strUsage += HelpMessageOpt("-uacomment=<cmt>", _("Append comment to the user agent string"));
     if (showDebug)
     {
-        strUsage += HelpMessageOpt("-checkblockindex", strprintf("Do a full consistency check for mapBlockIndex, setBlockIndexCandidates, chainActive and mapBlocksUnlinked occasionally. Also sets -checkmempool (default: %u)", Params(CNetMan::LEGACY).DefaultConsistencyChecks()));
-        strUsage += HelpMessageOpt("-checkmempool=<n>", strprintf("Run checks every <n> transactions (default: %u)", Params(CNetMan::LEGACY).DefaultConsistencyChecks()));
+        strUsage += HelpMessageOpt("-checkblockindex", strprintf("Do a full consistency check for mapBlockIndex, setBlockIndexCandidates, chainActive and mapBlocksUnlinked occasionally. Also sets -checkmempool (default: %u)", pnetMan->getActivePaymentNetwork()->DefaultConsistencyChecks()));
+        strUsage += HelpMessageOpt("-checkmempool=<n>", strprintf("Run checks every <n> transactions (default: %u)", pnetMan->getActivePaymentNetwork()->DefaultConsistencyChecks()));
         strUsage += HelpMessageOpt("-checkpoints", strprintf("Disable expensive verification for known chain history (default: %u)", DEFAULT_CHECKPOINTS_ENABLED));
 
         strUsage += HelpMessageOpt("-dblogsize=<n>", strprintf("Flush wallet database activity from memory to disk log every <n> megabytes (default: %u)", DEFAULT_WALLET_DBLOGSIZE));
@@ -437,11 +439,13 @@ std::string HelpMessage()
     }
     strUsage += HelpMessageOpt("-shrinkdebugfile", _("Shrink debug.log file on client startup (default: 1 when no -debug)"));
 
-    AppendParamsHelpMessages(strUsage, showDebug);
-
     strUsage += HelpMessageGroup(_("Node relay options:"));
+
+    /// TODO: fix this as it is temporarily disabled
+    /*
     if (showDebug)
         strUsage += HelpMessageOpt("-acceptnonstdtxn", strprintf("Relay and mine \"non-standard\" transactions (%sdefault: %u)", "testnet/regtest only; ", !Params(CNetMan::TESTNET).RequireStandard()));
+        */
     strUsage += HelpMessageOpt("-bytespersigop", strprintf(_("Minimum bytes per sigop in transactions we relay and mine (default: %u)"), DEFAULT_BYTES_PER_SIGOP));
     strUsage += HelpMessageOpt("-datacarrier", strprintf(_("Relay and mine data carrier transactions (default: %u)"), DEFAULT_ACCEPT_DATACARRIER));
     strUsage += HelpMessageOpt("-datacarriersize", strprintf(_("Maximum size of data in data carrier transactions we relay and mine (default: %u)"), MAX_OP_RETURN_RELAY));
@@ -462,7 +466,7 @@ std::string HelpMessage()
     strUsage += HelpMessageOpt("-rpcuser=<user>", _("Username for JSON-RPC connections"));
     strUsage += HelpMessageOpt("-rpcpassword=<pw>", _("Password for JSON-RPC connections"));
     strUsage += HelpMessageOpt("-rpcauth=<userpw>", _("Username and hashed password for JSON-RPC connections. The field <userpw> comes in the format: <USERNAME>:<SALT>$<HASH>. A canonical python script is included in share/rpcuser. This option can be specified multiple times"));
-    strUsage += HelpMessageOpt("-rpcport=<port>", strprintf(_("Listen for JSON-RPC connections on <port> (default: %u or testnet: %u)"), BaseParams(CNetMan::LEGACY).RPCPort(), BaseParams(CNetMan::TESTNET).RPCPort()));
+    strUsage += HelpMessageOpt("-rpcport=<port>", strprintf(_("Listen for JSON-RPC connections on <port> (default: %u)"), pnetMan->getActivePaymentNetwork()->GetRPCPort()));
     strUsage += HelpMessageOpt("-rpcallowip=<ip>", _("Allow JSON-RPC connections from specified source. Valid for <ip> are a single IP (e.g. 1.2.3.4), a network/netmask (e.g. 1.2.3.4/255.255.255.0) or a network/CIDR (e.g. 1.2.3.4/24). This option can be specified multiple times"));
     strUsage += HelpMessageOpt("-rpcthreads=<n>", strprintf(_("Set the number of threads to service RPC calls (default: %d)"), DEFAULT_HTTP_THREADS));
     if (showDebug) {
@@ -554,7 +558,7 @@ void CleanupBlockRevFiles()
 
 void ThreadImport(std::vector<boost::filesystem::path> vImportFiles)
 {
-    const CBaseParams& chainparams = Params();
+    const CNetworkTemplate& chainparams = pnetMan->getActivePaymentNetwork();
     RenameThread("bitcoin-loadblk");
     // -reindex
     if (fReindex) {
@@ -568,14 +572,14 @@ void ThreadImport(std::vector<boost::filesystem::path> vImportFiles)
             if (!file)
                 break; // This error is logged in OpenBlockFile
             LogPrintf("Reindexing block file blk%05u.dat...\n", (unsigned int)nFile);
-            LoadExternalBlockFile(chainparams, file, &pos);
+            pnetMan->getActivePaymentNetwork()->getChainManager()->LoadExternalBlockFile(chainparams, file, &pos);
             nFile++;
         }
-        pblocktree->WriteReindexing(false);
+        pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree->WriteReindexing(false);
         fReindex = false;
         LogPrintf("Reindexing finished\n");
         // To avoid ending up in a situation without genesis block, re-try initializing (no-op if reindexing worked):
-        InitBlockIndex(chainparams);
+        pnetMan->getActivePaymentNetwork()->getChainManager()->InitBlockIndex(chainparams);
     }
 
     // hardcoded $DATADIR/bootstrap.dat
@@ -586,7 +590,7 @@ void ThreadImport(std::vector<boost::filesystem::path> vImportFiles)
             CImportingNow imp;
             boost::filesystem::path pathBootstrapOld = GetDataDir() / "bootstrap.dat.old";
             LogPrintf("Importing bootstrap.dat...\n");
-            LoadExternalBlockFile(chainparams, file);
+            pnetMan->getActivePaymentNetwork()->getChainManager()->LoadExternalBlockFile(chainparams, file);
             RenameOver(pathBootstrap, pathBootstrapOld);
         } else {
             LogPrintf("Warning: Could not open bootstrap file %s\n", pathBootstrap.string());
@@ -599,7 +603,7 @@ void ThreadImport(std::vector<boost::filesystem::path> vImportFiles)
         if (file) {
             CImportingNow imp;
             LogPrintf("Importing blocks file %s...\n", path.string());
-            LoadExternalBlockFile(chainparams, file);
+            pnetMan->getActivePaymentNetwork()->getChainManager()->LoadExternalBlockFile(chainparams, file);
         } else {
             LogPrintf("Warning: Could not open blocks file %s\n", path.string());
         }
@@ -722,7 +726,12 @@ void InitLogging()
     fLogIPs = gArgs.GetBoolArg("-logips", DEFAULT_LOGIPS);
 
     LogPrintf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
-    LogPrintf("E-CurrencyCoin version %s (%s)\n", FormatFullVersion(), CLIENT_DATE);
+    LogPrintf("ECC version %s (%s)\n", FormatFullVersion(), CLIENT_DATE);
+}
+
+void GenerateNetworkTemplates()
+{
+    pnetMan = new CNetworkManager();
 }
 
 /** Initialize bitcoin.
@@ -786,7 +795,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
 #endif
 
     // ********************************************************* Step 2: parameter interactions
-    const CBaseParams& chainparams = Params();
+    const CNetworkTemplate& chainparams = pnetMan->getActivePaymentNetwork();
 
     // also see: InitParameterInteraction()
 
@@ -877,8 +886,8 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
             return InitError(strprintf(_("Invalid amount for -minrelaytxfee=<amount>: '%i'"), gArgs.GetArg("-minrelaytxfee", DEFAULT_TRANSACTION_MINFEE)));
     }
 
-    fRequireStandard = !gArgs.GetBoolArg("-acceptnonstdtxn", !Params().RequireStandard());
-    if (Params().RequireStandard() && !fRequireStandard)
+    fRequireStandard = !gArgs.GetBoolArg("-acceptnonstdtxn", !pnetMan->getActivePaymentNetwork()->RequireStandard());
+    if (pnetMan->getActivePaymentNetwork()->RequireStandard() && !fRequireStandard)
         return InitError(strprintf("acceptnonstdtxn is not currently supported for %s chain", chainparams.NetworkIDString()));
     nBytesPerSigOp = gArgs.GetArg("-bytespersigop", nBytesPerSigOp);
 
@@ -986,9 +995,9 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
     try {
         static boost::interprocess::file_lock lock(pathLockFile.string().c_str());
         if (!lock.try_lock())
-            return InitError(strprintf(_("Cannot obtain a lock on data directory %s. E-CurrencyCoin Core is probably already running."), strDataDir));
+            return InitError(strprintf(_("Cannot obtain a lock on data directory %s. ECC is probably already running."), strDataDir));
     } catch(const boost::interprocess::interprocess_exception& e) {
-        return InitError(strprintf(_("Cannot obtain a lock on data directory %s. E-CurrencyCoin Core is probably already running.") + " %s.", strDataDir, e.what()));
+        return InitError(strprintf(_("Cannot obtain a lock on data directory %s. ECC is probably already running.") + " %s.", strDataDir, e.what()));
     }
 
 #ifndef WIN32
@@ -1231,34 +1240,35 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
 
         nStart = GetTimeMillis();
         do {
-            try {
-                UnloadBlockIndex();
-                delete pcoinsTip;
+            try
+            {
+                pnetMan->getActivePaymentNetwork()->getChainManager()->UnloadBlockIndex();
+                delete pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip;
                 delete pcoinsdbview;
                 delete pcoinscatcher;
-                delete pblocktree;
+                delete pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree;
 
-                pblocktree = new CBlockTreeDB(nBlockTreeDBCache, false, fReindex);
+                pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree = new CBlockTreeDB(nBlockTreeDBCache, false, fReindex);
                 pcoinsdbview = new CCoinsViewDB(nCoinDBCache, false, fReindex);
                 pcoinscatcher = new CCoinsViewErrorCatcher(pcoinsdbview);
-                pcoinsTip = new CCoinsViewCache(pcoinscatcher);
+                pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip = new CCoinsViewCache(pcoinscatcher);
 
                 if (fReindex) {
-                    pblocktree->WriteReindexing(true);
+                    pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree->WriteReindexing(true);
                 }
 
-                if (!LoadBlockIndex()) {
+                if (!pnetMan->getActivePaymentNetwork()->getChainManager()->LoadBlockIndex()) {
                     strLoadError = _("Error loading block database");
                     break;
                 }
 
                 // If the loaded chain has a wrong genesis, bail out immediately
                 // (we're likely using a testnet datadir, or the other way around).
-                if (!mapBlockIndex.empty() && mapBlockIndex.count(chainparams.GetConsensus().hashGenesisBlock) == 0)
+                if (!pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.empty() && pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.count(chainparams.GetConsensus().hashGenesisBlock) == 0)
                     return InitError(_("Incorrect or no genesis block found. Wrong datadir for network?"));
 
                 // Initialize the block index (no-op if non-empty database was already loaded)
-                if (!InitBlockIndex(chainparams)) {
+                if (!pnetMan->getActivePaymentNetwork()->getChainManager()->InitBlockIndex(chainparams)) {
                     strLoadError = _("Error initializing block database");
                     break;
                 }
@@ -1267,7 +1277,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
 
                 {
                     LOCK(cs_main);
-                    CBlockIndex* tip = chainActive.Tip();
+                    CBlockIndex* tip = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
                     if (tip && tip->nTime > GetAdjustedTime() + 2 * 60 * 60) {
                         strLoadError = _("The block database contains a block which appears to be from the future. "
                                 "This may be due to your computer's date and time being set incorrectly. "
@@ -1281,7 +1291,9 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                     strLoadError = _("Corrupted block database detected");
                     break;
                 }
-            } catch (const std::exception& e) {
+            }
+            catch (const std::exception& e)
+            {
                 if (fDebug) LogPrintf("%s\n", e.what());
                 strLoadError = _("Error opening block database");
                 break;
@@ -1341,7 +1353,9 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
     if (fDisableWallet) {
         pwalletMain = NULL;
         LogPrintf("Wallet disabled!\n");
-    } else {
+    }
+    else
+    {
 
         // needed to restore wallet transaction meta data after -zapwallettxes
         std::vector<CWalletTx> vWtx;
@@ -1382,10 +1396,10 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                              " or address book entries might be missing or incorrect."));
             }
             else if (nLoadWalletRet == DB_TOO_NEW)
-                strErrors << _("Error loading wallet.dat: Wallet requires newer version of E-CurrencyCoin Core") << "\n";
+                strErrors << _("Error loading wallet.dat: Wallet requires newer version of ECC") << "\n";
             else if (nLoadWalletRet == DB_NEED_REWRITE)
             {
-                strErrors << _("Wallet needed to be rewritten: restart E-CurrencyCoin Core to complete") << "\n";
+                strErrors << _("Wallet needed to be rewritten: restart ECC to complete") << "\n";
                 LogPrintf("%s", strErrors.str());
                 return InitError(strErrors.str());
             }
@@ -1421,7 +1435,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                     strErrors << _("Cannot write default address") << "\n";
             }
 
-            pwalletMain->SetBestChain(chainActive.GetLocator());
+            pwalletMain->SetBestChain(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.GetLocator());
         }
 
         LogPrintf("%s", strErrors.str());
@@ -1429,26 +1443,26 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
 
         RegisterValidationInterface(pwalletMain);
 
-        CBlockIndex *pindexRescan = chainActive.Tip();
+        CBlockIndex *pindexRescan = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
         if (gArgs.GetBoolArg("-rescan", false))
-            pindexRescan = chainActive.Genesis();
+            pindexRescan = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Genesis();
         else
         {
             CWalletDB walletdb(strWalletFile);
             CBlockLocator locator;
             if (walletdb.ReadBestBlock(locator))
-                pindexRescan = FindForkInGlobalIndex(chainActive, locator);
+                pindexRescan = pnetMan->getActivePaymentNetwork()->getChainManager()->FindForkInGlobalIndex(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive, locator);
             else
-                pindexRescan = chainActive.Genesis();
+                pindexRescan = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Genesis();
         }
-        if (chainActive.Tip() && chainActive.Tip() != pindexRescan)
+        if (pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip() && pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip() != pindexRescan)
         {
             uiInterface.InitMessage(_("Rescanning..."));
-            LogPrintf("Rescanning last %i blocks (from block %i)...\n", chainActive.Height() - pindexRescan->nHeight, pindexRescan->nHeight);
+            LogPrintf("Rescanning last %i blocks (from block %i)...\n", pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height() - pindexRescan->nHeight, pindexRescan->nHeight);
             nStart = GetTimeMillis();
             pwalletMain->ScanForWalletTransactions(pindexRescan, true);
             LogPrintf(" rescan      %15dms\n", GetTimeMillis() - nStart);
-            pwalletMain->SetBestChain(chainActive.GetLocator());
+            pwalletMain->SetBestChain(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.GetLocator());
             nWalletDBUpdated++;
 
             // Restore wallet transaction metadata after -zapwallettxes=1
@@ -1497,9 +1511,9 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
             vImportFiles.push_back(strFile);
     }
     threadGroup.create_thread(boost::bind(&ThreadImport, vImportFiles));
-    if (chainActive.Tip() == NULL) {
+    if (pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip() == NULL) {
         LogPrintf("Waiting for genesis block to be imported...\n");
-        while (!fRequestShutdown && chainActive.Tip() == NULL)
+        while (!fRequestShutdown && pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip() == NULL)
             MilliSleep(10);
     }
 
@@ -1514,8 +1528,8 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
     RandAddSeedPerfmon();
 
     //// debug print
-    LogPrintf("mapBlockIndex.size() = %u\n",   mapBlockIndex.size());
-    LogPrintf("nBestHeight = %d\n",                   chainActive.Height());
+    LogPrintf("mapBlockIndex.size() = %u\n",   pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.size());
+    LogPrintf("nBestHeight = %d\n",                   pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height());
 
     LogPrintf("setKeyPool.size() = %u\n",      pwalletMain ? pwalletMain->setKeyPool.size() : 0);
     LogPrintf("mapWallet.size() = %u\n",       pwalletMain ? pwalletMain->mapWallet.size() : 0);

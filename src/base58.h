@@ -14,8 +14,9 @@
 #ifndef BITCOIN_BASE58_H
 #define BITCOIN_BASE58_H
 
-#include "networks/baseparams.h"
+#include "networks/networktemplate.h"
 #include "networks/netman.h"
+#include "init.h"
 #include "key.h"
 #include "pubkey.h"
 #include "script/script.h"
@@ -108,7 +109,7 @@ public:
     bool Set(const CScriptID &id);
     bool Set(const CTxDestination &dest);
     bool IsValid() const;
-    bool IsValid(const CBaseParams &params) const;
+    bool IsValid(const CNetworkTemplate &params) const;
 
     CBitcoinAddress() {}
     CBitcoinAddress(const CTxDestination &dest) { Set(dest); }
@@ -136,13 +137,13 @@ public:
     CBitcoinSecret() {}
 };
 
-template<typename K, int Size, CBaseParams::Base58Type Type> class CBitcoinExtKeyBase : public CBase58Data
+template<typename K, int Size, CNetworkTemplate::Base58Type Type> class CBitcoinExtKeyBase : public CBase58Data
 {
 public:
     void SetKey(const K &key) {
         unsigned char vch[Size];
         key.Encode(vch);
-        SetData(Params().Base58Prefix(Type), vch, vch+Size);
+        SetData(pnetMan->getActivePaymentNetwork()->Base58Prefix(Type), vch, vch+Size);
     }
 
     K GetKey() {
@@ -159,13 +160,13 @@ public:
     }
 
     CBitcoinExtKeyBase(const std::string& strBase58c) {
-        SetString(strBase58c.c_str(), Params().Base58Prefix(Type).size());
+        SetString(strBase58c.c_str(), pnetMan->getActivePaymentNetwork()->Base58Prefix(Type).size());
     }
 
     CBitcoinExtKeyBase() {}
 };
 
-typedef CBitcoinExtKeyBase<CExtKey, 74, CBaseParams::EXT_SECRET_KEY> CBitcoinExtKey;
-typedef CBitcoinExtKeyBase<CExtPubKey, 74, CBaseParams::EXT_PUBLIC_KEY> CBitcoinExtPubKey;
+typedef CBitcoinExtKeyBase<CExtKey, 74, CNetworkTemplate::EXT_SECRET_KEY> CBitcoinExtKey;
+typedef CBitcoinExtKeyBase<CExtPubKey, 74, CNetworkTemplate::EXT_PUBLIC_KEY> CBitcoinExtPubKey;
 
 #endif // BITCOIN_BASE58_H

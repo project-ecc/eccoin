@@ -3,15 +3,16 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "util.h"
+#include "util/util.h"
 #include "args.h"
 
 #include "networks/netman.h"
+#include "init.h"
 #include "random.h"
 #include "serialize.h"
 #include "sync.h"
-#include "utilstrencodings.h"
-#include "utiltime.h"
+#include "util/utilstrencodings.h"
+#include "util/utiltime.h"
 
 #include <stdarg.h>
 
@@ -419,7 +420,7 @@ const boost::filesystem::path &GetDataDir(bool fNetSpecific)
         path = GetDefaultDataDir();
     }
     if (fNetSpecific)
-        path /= BaseParams().DataDir();
+        path /= pnetMan->getActivePaymentNetwork()->DataDir();
 
     fs::create_directories(path);
 
@@ -581,7 +582,7 @@ void ShrinkDebugFile()
     // Scroll debug.log if it's getting too big
     boost::filesystem::path pathLog = GetDataDir() / "debug.log";
     FILE* file = fopen(pathLog.string().c_str(), "r");
-    if (file && boost::filesystem::file_size(pathLog) > 10 * 1000000)
+    if (file && boost::filesystem::file_size(pathLog) > 20000)
     {
         // Restart the file with some of the end
         std::vector <char> vch(200000,0);

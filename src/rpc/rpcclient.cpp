@@ -6,7 +6,7 @@
 #include "rpcclient.h"
 
 #include "rpcprotocol.h"
-#include "util.h"
+#include "util/util.h"
 
 #include <set>
 #include <stdint.h>

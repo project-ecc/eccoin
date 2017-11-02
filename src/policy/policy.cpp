@@ -9,8 +9,8 @@
 
 #include "main.h"
 #include "tinyformat.h"
-#include "util.h"
-#include "utilstrencodings.h"
+#include "util/util.h"
+#include "util/utilstrencodings.h"
 
     /**
      * Check transaction inputs to mitigate two

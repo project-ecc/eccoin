@@ -4,7 +4,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "amount.h"
-#include "chain.h"
+#include "chain/chain.h"
 #include "networks/netman.h"
 #include "consensus/consensus.h"
 #include "consensus/validation.h"
@@ -16,9 +16,9 @@
 #include "pow.h"
 #include "rpcserver.h"
 #include "txmempool.h"
-#include "util.h"
+#include "util/util.h"
 #include "args.h"
-#include "utilstrencodings.h"
+#include "util/utilstrencodings.h"
 #include "validationinterface.h"
 #include "processblock.h"
 #include "processheader.h"
@@ -36,17 +36,17 @@
  * If 'height' is nonnegative, compute the estimate at the time when a given block was found.
  */
 UniValue GetNetworkHashPS(int lookup, int height) {
-    CBlockIndex *pb = chainActive.Tip();
+    CBlockIndex *pb = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
 
-    if (height >= 0 && height < chainActive.Height())
-        pb = chainActive[height];
+    if (height >= 0 && height < pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height())
+        pb = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive[height];
 
     if (pb == NULL || !pb->nHeight)
         return 0;
 
     // If lookup is -1, then use blocks since last difficulty change.
     if (lookup <= 0)
-        lookup = pb->nHeight % Params().GetConsensus().DifficultyAdjustmentInterval() + 1;
+        lookup = pb->nHeight % pnetMan->getActivePaymentNetwork()->GetConsensus().DifficultyAdjustmentInterval() + 1;
 
     // If lookup is larger than chain, then set it to chain length.
     if (lookup > pb->nHeight)
@@ -129,7 +129,7 @@ UniValue generate(const UniValue& params, bool fHelp)
             + HelpExampleCli("generate", "11")
         );
 
-    if (!Params().MineBlocksOnDemand())
+    if (!pnetMan->getActivePaymentNetwork()->MineBlocksOnDemand())
         throw JSONRPCError(RPC_METHOD_NOT_FOUND, "This method can only be used on regtest");
 
     int nHeightStart = 0;
@@ -150,7 +150,7 @@ UniValue generate(const UniValue& params, bool fHelp)
 
     {   // Don't keep cs_main locked
         LOCK(cs_main);
-        nHeightStart = chainActive.Height();
+        nHeightStart = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height();
         nHeight = nHeightStart;
         nHeightEnd = nHeightStart+nGenerate;
     }
@@ -164,15 +164,15 @@ UniValue generate(const UniValue& params, bool fHelp)
         CBlock *pblock = &pblocktemplate->block;
         {
             LOCK(cs_main);
-            IncrementExtraNonce(pblock, chainActive.Tip(), nExtraNonce);
+            IncrementExtraNonce(pblock, pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip(), nExtraNonce);
         }
-        while (pblock->IsProofOfWork() && !CheckProofOfWork(pblock->GetHash(), pblock->nBits, Params().GetConsensus())) {
+        while (pblock->IsProofOfWork() && !CheckProofOfWork(pblock->GetHash(), pblock->nBits, pnetMan->getActivePaymentNetwork()->GetConsensus())) {
             // Yes, there is a chance every nonce could fail to satisfy the -regtest
             // target -- 1 in 2^(2^32). That ain't gonna happen.
             ++pblock->nNonce;
         }
         CValidationState state;
-        if (!ProcessNewBlock(state, Params(), NULL, pblock, true, NULL, GENERATED))
+        if (!ProcessNewBlock(state, pnetMan->getActivePaymentNetwork(), NULL, pblock, true, NULL, GENERATED))
             throw JSONRPCError(RPC_INTERNAL_ERROR, "ProcessNewBlock, block not accepted");
         ++nHeight;
         blockHashes.push_back(pblock->GetHash().GetHex());
@@ -198,7 +198,7 @@ UniValue setgenerate(const UniValue& params, bool fHelp)
             + HelpExampleCli("setgenerate", "")
         );
 
-    if (Params().MineBlocksOnDemand())
+    if (pnetMan->getActivePaymentNetwork()->MineBlocksOnDemand())
         throw JSONRPCError(RPC_METHOD_NOT_FOUND, "Use the generate method instead of setgenerate on this network");
 
     ThreadScryptMiner(pwalletMain);
@@ -235,15 +235,15 @@ UniValue getmininginfo(const UniValue& params, bool fHelp)
     LOCK(cs_main);
 
     UniValue obj(UniValue::VOBJ);
-    obj.push_back(Pair("blocks",           (int)chainActive.Height()));
+    obj.push_back(Pair("blocks",           (int)pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height()));
     obj.push_back(Pair("currentblocksize", (uint64_t)nLastBlockSize));
     obj.push_back(Pair("currentblocktx",   (uint64_t)nLastBlockTx));
     obj.push_back(Pair("difficulty",       (double)GetDifficulty()));
     obj.push_back(Pair("errors",           GetWarnings("statusbar")));
     obj.push_back(Pair("networkhashps",    getnetworkhashps(params, false)));
     obj.push_back(Pair("pooledtx",         (uint64_t)mempool.size()));
-    obj.push_back(Pair("testnet",          Params().TestnetToBeDeprecatedFieldRPC()));
-    obj.push_back(Pair("chain",            Params().NetworkIDString()));
+    obj.push_back(Pair("testnet",          pnetMan->getActivePaymentNetwork()->TestnetToBeDeprecatedFieldRPC()));
+    obj.push_back(Pair("chain",            pnetMan->getActivePaymentNetwork()->NetworkIDString()));
     obj.push_back(Pair("generate",         getgenerate(params, false)));
     return obj;
 }
@@ -391,8 +391,8 @@ UniValue getblocktemplate(const UniValue& params, bool fHelp)
                 throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "Block decode failed");
 
             uint256 hash = block.GetHash();
-            BlockMap::iterator mi = mapBlockIndex.find(hash);
-            if (mi != mapBlockIndex.end()) {
+            BlockMap::iterator mi = pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.find(hash);
+            if (mi != pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.end()) {
                 CBlockIndex *pindex = mi->second;
                 if (pindex->IsValid(BLOCK_VALID_SCRIPTS))
                     return "duplicate";
@@ -401,7 +401,7 @@ UniValue getblocktemplate(const UniValue& params, bool fHelp)
                 return "duplicate-inconclusive";
             }
 
-            CBlockIndex* const pindexPrev = chainActive.Tip();
+            CBlockIndex* const pindexPrev = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
             // TestBlockValidity only supports blocks built on the current Tip
             if (block.hashPrevBlock != pindexPrev->GetBlockHash())
                 return "inconclusive-not-best-prevblk";
@@ -410,10 +410,10 @@ UniValue getblocktemplate(const UniValue& params, bool fHelp)
             while(true)
             {
                 AssertLockHeld(cs_main);
-                assert(pindexPrev && pindexPrev == chainActive.Tip());
-                if (fCheckpointsEnabled && !CheckIndexAgainstCheckpoint(pindexPrev, state, Params(), block.GetHash()))
+                assert(pindexPrev && pindexPrev == pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip());
+                if (fCheckpointsEnabled && !CheckIndexAgainstCheckpoint(pindexPrev, state, pnetMan->getActivePaymentNetwork(), block.GetHash()))
                     return error("%s: CheckIndexAgainstCheckpoint(): %s", __func__, state.GetRejectReason().c_str());
-                CCoinsViewCache viewNew(pcoinsTip);
+                CCoinsViewCache viewNew(pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip);
                 CBlockIndex indexDummy(block);
                 indexDummy.pprev = pindexPrev;
                 indexDummy.nHeight = pindexPrev->nHeight + 1;
@@ -437,10 +437,10 @@ UniValue getblocktemplate(const UniValue& params, bool fHelp)
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid mode");
 
     if (vNodes.empty())
-        throw JSONRPCError(RPC_CLIENT_NOT_CONNECTED, "E-CurrencyCoin is not connected!");
+        throw JSONRPCError(RPC_CLIENT_NOT_CONNECTED, "ECC is not connected!");
 
-    if (IsInitialBlockDownload())
-        throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "E-CurrencyCoin is downloading blocks...");
+    if (pnetMan->getActivePaymentNetwork()->getChainManager()->IsInitialBlockDownload())
+        throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "ECC is downloading blocks...");
 
     static unsigned int nTransactionsUpdatedLast;
 
@@ -462,7 +462,7 @@ UniValue getblocktemplate(const UniValue& params, bool fHelp)
         else
         {
             // NOTE: Spec does not specify behaviour for non-string longpollid, but this makes testing easier
-            hashWatchedChain = chainActive.Tip()->GetBlockHash();
+            hashWatchedChain = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->GetBlockHash();
             nTransactionsUpdatedLastLP = nTransactionsUpdatedLast;
         }
 
@@ -472,7 +472,7 @@ UniValue getblocktemplate(const UniValue& params, bool fHelp)
             checktxtime = boost::get_system_time() + boost::posix_time::minutes(1);
 
             boost::unique_lock<boost::mutex> lock(csBestBlock);
-            while (chainActive.Tip()->GetBlockHash() == hashWatchedChain && IsRPCRunning())
+            while (pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->GetBlockHash() == hashWatchedChain && IsRPCRunning())
             {
                 if (!cvBlockChange.timed_wait(lock, checktxtime))
                 {
@@ -494,7 +494,7 @@ UniValue getblocktemplate(const UniValue& params, bool fHelp)
     static CBlockIndex* pindexPrev;
     static int64_t nStart;
     static CBlockTemplate* pblocktemplate;
-    if (pindexPrev != chainActive.Tip() ||
+    if (pindexPrev != pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip() ||
         (mempool.GetTransactionsUpdated() != nTransactionsUpdatedLast && GetTime() - nStart > 5))
     {
         // Clear pindexPrev so future calls make a new block, despite any failures from here on
@@ -502,7 +502,7 @@ UniValue getblocktemplate(const UniValue& params, bool fHelp)
 
         // Store the pindexBest used before CreateNewBlock, to avoid races
         nTransactionsUpdatedLast = mempool.GetTransactionsUpdated();
-        CBlockIndex* pindexPrevNew = chainActive.Tip();
+        CBlockIndex* pindexPrevNew = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
         nStart = GetTime();
 
         // Create new block
@@ -577,7 +577,7 @@ UniValue getblocktemplate(const UniValue& params, bool fHelp)
     result.push_back(Pair("transactions", transactions));
     result.push_back(Pair("coinbaseaux", aux));
     result.push_back(Pair("coinbasevalue", (int64_t)pblock->vtx[0].vout[0].nValue));
-    result.push_back(Pair("longpollid", chainActive.Tip()->GetBlockHash().GetHex() + i64tostr(nTransactionsUpdatedLast)));
+    result.push_back(Pair("longpollid", pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->GetBlockHash().GetHex() + i64tostr(nTransactionsUpdatedLast)));
     result.push_back(Pair("target", hashTarget.GetHex()));
     result.push_back(Pair("mintime", (int64_t)pindexPrev->GetMedianTimePast()+1));
     result.push_back(Pair("mutable", aMutable));
@@ -638,8 +638,8 @@ UniValue submitblock(const UniValue& params, bool fHelp)
     bool fBlockPresent = false;
     {
         LOCK(cs_main);
-        BlockMap::iterator mi = mapBlockIndex.find(hash);
-        if (mi != mapBlockIndex.end()) {
+        BlockMap::iterator mi = pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.find(hash);
+        if (mi != pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.end()) {
             CBlockIndex *pindex = mi->second;
             if (pindex->IsValid(BLOCK_VALID_SCRIPTS))
                 return "duplicate";
@@ -653,7 +653,7 @@ UniValue submitblock(const UniValue& params, bool fHelp)
     CValidationState state;
     submitblock_StateCatcher sc(block.GetHash());
     RegisterValidationInterface(&sc);
-    bool fAccepted = ProcessNewBlock(state, Params(), NULL, &block, true, NULL, GENERATED);
+    bool fAccepted = ProcessNewBlock(state, pnetMan->getActivePaymentNetwork(), NULL, &block, true, NULL, GENERATED);
     UnregisterValidationInterface(&sc);
     if (fBlockPresent)
     {

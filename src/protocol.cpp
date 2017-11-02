@@ -5,8 +5,8 @@
 
 #include "protocol.h"
 
-#include "util.h"
-#include "utilstrencodings.h"
+#include "util/util.h"
+#include "util/utilstrencodings.h"
 
 #ifndef WIN32
 # include <arpa/inet.h>

@@ -3,15 +3,15 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "random.h"
-
-#include "support/cleanse.h"
 #ifdef WIN32
 #include "compat.h" // for Windows API
 #endif
+#include "random.h"
+
+#include "support/cleanse.h"
 #include "serialize.h"        // for begin_ptr(vec)
-#include "util.h"             // for LogPrint()
-#include "utilstrencodings.h" // for GetTime()
+#include "util/util.h"             // for LogPrint()
+#include "util/utilstrencodings.h" // for GetTime()
 
 #include <limits>
 

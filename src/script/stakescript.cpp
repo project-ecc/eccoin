@@ -1,13 +1,13 @@
 #include "stakescript.h"
 #include <vector>
-#include "primitives/transaction.h"
+#include "tx/tx.h"
 #include "interpreter.h"
 #include <openssl/crypto.h>
 #include "sigcache.h"
 #include <boost/tuple/tuple.hpp>
 #include <boost/tuple/tuple_comparison.hpp>
 #include "sync.h"
-#include "util.h"
+#include "util/util.h"
 #include "args.h"
 #include "random.h"
 #include "key.h"
