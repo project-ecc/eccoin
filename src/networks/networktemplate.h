@@ -7,7 +7,7 @@
 #define BITCOIN_CHAINPARAMS_H
 
 #include "consensus/params.h"
-#include "primitives/block.h"
+#include "chain/block.h"
 #include "protocol.h"
 
 #include <vector>
@@ -30,7 +30,7 @@ struct CCheckpointData {
  * a regression test mode which is intended for private networks only. It has
  * minimal difficulty to ensure that blocks can be found instantly.
  */
-class CBaseParams
+class CNetworkTemplate
 {
 public:
     enum Base58Type {
@@ -45,8 +45,8 @@ public:
 
     const Consensus::Params& GetConsensus() const { return consensus; }
     const CMessageHeader::MessageStartChars& MessageStart() const { return pchMessageStart; }
-    const std::vector<unsigned char>& AlertKey() const { return vAlertPubKey; }
     int GetDefaultPort() const { return nDefaultPort; }
+    int GetRPCPort() const { return nRPCPort; }
 
     const CBlock& GenesisBlock() const { return genesis; }
     /** Make miner wait to have peers to avoid wasting work */
@@ -67,15 +67,49 @@ public:
     const CCheckpointData& Checkpoints() const { return checkpointData; }
     unsigned int getStakeMaxAge() const { return nStakeMaxAge; }
     unsigned int getStakeMinAge() const { return nStakeMinAge; }
+
+    int getpch0() const { return pchMessageStart[0]; }
+    int getpch1() const { return pchMessageStart[1]; }
+    int getpch2() const { return pchMessageStart[2]; }
+    int getpch3() const { return pchMessageStart[3]; }
   
-protected:
-    CBaseParams() {}
+    CNetworkTemplate()
+    {
+
+    }
+
+    CNetworkTemplate(CNetworkTemplate* param_netTemplate)
+    {
+        this->consensus = param_netTemplate->GetConsensus();
+
+        this->pchMessageStart[0] = param_netTemplate->getpch0();
+        this->pchMessageStart[1] = param_netTemplate->getpch1();
+        this->pchMessageStart[2] = param_netTemplate->getpch2();
+        this->pchMessageStart[3] = param_netTemplate->getpch3();
+
+        this->nDefaultPort = param_netTemplate->GetDefaultPort();
+        this->nRPCPort = param_netTemplate->GetRPCPort();
+        this->nMaxTipAge = param_netTemplate->MaxTipAge();
+        this->vSeeds = param_netTemplate->DNSSeeds();
+        this->strNetworkID = param_netTemplate->NetworkIDString();
+        this->genesis = param_netTemplate->GenesisBlock();
+        this->fMiningRequiresPeers = param_netTemplate->MiningRequiresPeers();
+        this->fDefaultConsistencyChecks = param_netTemplate->DefaultConsistencyChecks();
+        this->fRequireStandard = param_netTemplate->RequireStandard();
+        this->fMineBlocksOnDemand = param_netTemplate->MineBlocksOnDemand();
+        this->fTestnetToBeDeprecatedFieldRPC = param_netTemplate->TestnetToBeDeprecatedFieldRPC();
+        this->checkpointData = param_netTemplate->Checkpoints();
+        this->nStakeMaxAge = param_netTemplate->getStakeMaxAge();
+        this->nStakeMinAge = param_netTemplate->getStakeMinAge();
+
+    }
+
+    /// TODO: make all of the data members below this point protected and make setters for them all
 
     Consensus::Params consensus;
     CMessageHeader::MessageStartChars pchMessageStart;
-    //! Raw pub key bytes for the broadcast alert signing key.
-    std::vector<unsigned char> vAlertPubKey;
     int nDefaultPort;
+    int nRPCPort;
     long nMaxTipAge;
     std::vector<CDNSSeedData> vSeeds;
     std::vector<unsigned char> base58Prefixes[MAX_BASE58_TYPES];
@@ -89,6 +123,9 @@ protected:
     CCheckpointData checkpointData;
     unsigned int nStakeMaxAge;
     unsigned int nStakeMinAge;
+
+protected:
+
 };
 
 #endif // BITCOIN_CHAINPARAMS_H

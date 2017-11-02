@@ -7,7 +7,7 @@
 #include "interpreter.h"
 
 #include "tinyformat.h"
-#include "utilstrencodings.h"
+#include "util/utilstrencodings.h"
 
 const char* GetOpName(opcodetype opcode)
 {

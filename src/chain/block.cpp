@@ -3,19 +3,18 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "primitives/block.h"
-
-#include "hash.h"
+#include "crypto/hash.h"
 #include "tinyformat.h"
-#include "utilstrencodings.h"
+#include "util/utilstrencodings.h"
 #include "crypto/common.h"
 #include "main.h"
-#include "util.h"
-#include "chain.h"
+#include "util/util.h"
+#include "chain/chain.h"
 #include "timedata.h"
 #include "crypto/scrypt.h"
-#include "networks/baseparams.h"
+#include "networks/networktemplate.h"
 #include "networks/netman.h"
+#include "init.h"
 
 uint256 CBlockHeader::GetHash() const
 {
@@ -124,7 +123,7 @@ bool CBlock::SignScryptBlock(const CKeyStore& keystore)
 
 bool CBlock::CheckBlockSignature() const
 {
-        if (GetHash() == Params().GetConsensus().hashGenesisBlock)
+        if (GetHash() == pnetMan->getActivePaymentNetwork()->GetConsensus().hashGenesisBlock)
             return vchBlockSig.empty();
 
         std::vector<std::vector<unsigned char> > vSolutions;

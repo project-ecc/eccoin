@@ -7,7 +7,7 @@
 #define BITCOIN_CHAIN_H
 
 #include "arith_uint256.h"
-#include "primitives/block.h"
+#include "block.h"
 #include "pow.h"
 #include "tinyformat.h"
 #include "uint256.h"
@@ -29,6 +29,12 @@ public:
     /** Returns the index entry for the tip of this chain, or NULL if none. */
     CBlockIndex *Tip() const {
         return vChain.size() > 0 ? vChain[vChain.size() - 1] : NULL;
+    }
+
+    CBlockIndex* AtHeight(int nHeight) const {
+        if (nHeight < 0 || nHeight >= (int)vChain.size())
+            return NULL;
+        return vChain[nHeight];
     }
 
     /** Returns the index entry at a particular height in this chain, or NULL if no such height exists. */

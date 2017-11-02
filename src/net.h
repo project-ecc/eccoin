@@ -6,8 +6,9 @@
 #ifndef BITCOIN_NET_H
 #define BITCOIN_NET_H
 
-#include "bloom.h"
 #include "compat.h"
+
+#include "bloom.h"
 #include "limitedmap.h"
 #include "netbase.h"
 #include "protocol.h"

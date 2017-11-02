@@ -6,7 +6,7 @@
 
 #include "memusage.h"
 #include "random.h"
-#include "util.h"
+#include "util/util.h"
 #include <assert.h>
 
 /**

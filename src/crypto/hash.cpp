@@ -2,7 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "hash.h"
+#include "crypto/hash.h"
 #include "crypto/common.h"
 #include "crypto/hmac_sha512.h"
 #include "pubkey.h"
@@ -79,6 +79,6 @@ void BIP32Hash(const unsigned char chainCode[32], unsigned int nChild, unsigned 
     num[1] = (nChild >> 16) & 0xFF;
     num[2] = (nChild >>  8) & 0xFF;
     num[3] = (nChild >>  0) & 0xFF;
-    CHMAC_SHA512(chainCode[0], 32).Write(&header, 1).Write(data, 32).Write(num, 4).Finalize(output);
+    CHMAC_SHA512(reinterpret_cast<const unsigned char*>(chainCode[0]), 32).Write(&header, 1).Write(data, 32).Write(num, 4).Finalize(output);
 
 }

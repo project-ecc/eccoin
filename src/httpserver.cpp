@@ -2,11 +2,13 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include "compat.h"
+
 #include "httpserver.h"
 
 #include "networks/netman.h"
-#include "compat.h"
-#include "util.h"
+#include "init.h"
+#include "util/util.h"
 #include "args.h"
 #include "netbase.h"
 #include "rpc/rpcprotocol.h" // For HTTP status codes
@@ -319,7 +321,7 @@ static void ThreadHTTP(struct event_base* base, struct evhttp* http)
 /** Bind HTTP server to specified addresses */
 static bool HTTPBindAddresses(struct evhttp* http)
 {
-    int defaultPort = gArgs.GetArg("-rpcport", BaseParams().RPCPort());
+    int defaultPort = gArgs.GetArg("-rpcport", pnetMan->getActivePaymentNetwork()->GetRPCPort());
     std::vector<std::pair<std::string, uint16_t> > endpoints;
 
     // Determine what addresses to bind to

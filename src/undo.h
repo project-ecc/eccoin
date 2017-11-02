@@ -7,7 +7,7 @@
 #define BITCOIN_UNDO_H
 
 #include "compressor.h" 
-#include "primitives/transaction.h"
+#include "tx/tx.h"
 #include "serialize.h"
 
 /** Undo information for a CTxIn

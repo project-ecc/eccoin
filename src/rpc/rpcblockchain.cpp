@@ -4,22 +4,23 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "amount.h"
-#include "chain.h"
-#include "networks/baseparams.h"
+#include "chain/chain.h"
+#include "networks/networktemplate.h"
 #include "networks/netman.h"
-#include "checkpoints.h"
+#include "chain/checkpoints.h"
 #include "coins.h"
 #include "consensus/validation.h"
 #include "main.h"
 #include "policy/policy.h"
-#include "primitives/transaction.h"
+#include "tx/tx.h"
 #include "rpcserver.h"
 #include "streams.h"
 #include "sync.h"
 #include "txmempool.h"
-#include "util.h"
+#include "util/util.h"
 #include "args.h"
-#include "utilstrencodings.h"
+#include "util/utilstrencodings.h"
+#include "init.h"
 
 #include <stdint.h>
 
@@ -34,10 +35,10 @@ double GetDifficulty(const CBlockIndex* blockindex)
     // minimum difficulty = 1.0.
     if (blockindex == NULL)
     {
-        if (chainActive.Tip() == NULL)
+        if (pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip() == NULL)
             return 1.0;
         else
-            blockindex = chainActive.Tip();
+            blockindex = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
     }
 
     int nShift = (blockindex->nBits >> 24) & 0xff;
@@ -65,8 +66,8 @@ UniValue blockheaderToJSON(const CBlockIndex* blockindex)
     result.push_back(Pair("hash", blockindex->GetBlockHash().GetHex()));
     int confirmations = -1;
     // Only report confirmations if the block is on the main chain
-    if (chainActive.Contains(blockindex))
-        confirmations = chainActive.Height() - blockindex->nHeight + 1;
+    if (pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Contains(blockindex))
+        confirmations = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height() - blockindex->nHeight + 1;
     result.push_back(Pair("confirmations", confirmations));
     result.push_back(Pair("height", blockindex->nHeight));
     result.push_back(Pair("version", blockindex->nVersion));
@@ -80,7 +81,7 @@ UniValue blockheaderToJSON(const CBlockIndex* blockindex)
 
     if (blockindex->pprev)
         result.push_back(Pair("previousblockhash", blockindex->pprev->GetBlockHash().GetHex()));
-    CBlockIndex *pnext = chainActive.Next(blockindex);
+    CBlockIndex *pnext = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Next(blockindex);
     if (pnext)
         result.push_back(Pair("nextblockhash", pnext->GetBlockHash().GetHex()));
     return result;
@@ -92,8 +93,8 @@ UniValue blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool tx
     result.push_back(Pair("hash", block.GetHash().GetHex()));
     int confirmations = -1;
     // Only report confirmations if the block is on the main chain
-    if (chainActive.Contains(blockindex))
-        confirmations = chainActive.Height() - blockindex->nHeight + 1;
+    if (pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Contains(blockindex))
+        confirmations = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height() - blockindex->nHeight + 1;
     result.push_back(Pair("confirmations", confirmations));
     result.push_back(Pair("size", (int)::GetSerializeSize(block, SER_NETWORK, PROTOCOL_VERSION)));
     result.push_back(Pair("height", blockindex->nHeight));
@@ -122,7 +123,7 @@ UniValue blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool tx
 
     if (blockindex->pprev)
         result.push_back(Pair("previousblockhash", blockindex->pprev->GetBlockHash().GetHex()));
-    CBlockIndex *pnext = chainActive.Next(blockindex);
+    CBlockIndex *pnext = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Next(blockindex);
     if (pnext)
         result.push_back(Pair("nextblockhash", pnext->GetBlockHash().GetHex()));
     result.push_back(Pair("flags", strprintf("%s", blockindex->IsProofOfStake()? "proof-of-stake" : "proof-of-work")));
@@ -150,7 +151,7 @@ UniValue getblockcount(const UniValue& params, bool fHelp)
         );
 
     LOCK(cs_main);
-    return chainActive.Height();
+    return pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height();
 }
 
 UniValue getbestblockhash(const UniValue& params, bool fHelp)
@@ -167,7 +168,7 @@ UniValue getbestblockhash(const UniValue& params, bool fHelp)
         );
 
     LOCK(cs_main);
-    return chainActive.Tip()->GetBlockHash().GetHex();
+    return pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->GetBlockHash().GetHex();
 }
 
 UniValue getdifficulty(const UniValue& params, bool fHelp)
@@ -203,7 +204,7 @@ UniValue mempoolToJSON(bool fVerbose = false)
             info.push_back(Pair("time", e.GetTime()));
             info.push_back(Pair("height", (int)e.GetHeight()));
             info.push_back(Pair("startingpriority", e.GetPriority(e.GetHeight())));
-            info.push_back(Pair("currentpriority", e.GetPriority(chainActive.Height())));
+            info.push_back(Pair("currentpriority", e.GetPriority(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height())));
             info.push_back(Pair("descendantcount", e.GetCountWithDescendants()));
             info.push_back(Pair("descendantsize", e.GetSizeWithDescendants()));
             info.push_back(Pair("descendantfees", e.GetModFeesWithDescendants()));
@@ -302,10 +303,10 @@ UniValue getblockhash(const UniValue& params, bool fHelp)
     LOCK(cs_main);
 
     int nHeight = params[0].get_int();
-    if (nHeight < 0 || nHeight > chainActive.Height())
+    if (nHeight < 0 || nHeight > pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height())
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Block height out of range");
 
-    CBlockIndex* pblockindex = chainActive[nHeight];
+    CBlockIndex* pblockindex = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive[nHeight];
     return pblockindex->GetBlockHash().GetHex();
 }
 
@@ -351,10 +352,10 @@ UniValue getblockheader(const UniValue& params, bool fHelp)
     if (params.size() > 1)
         fVerbose = params[1].get_bool();
 
-    if (mapBlockIndex.count(hash) == 0)
+    if (pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.count(hash) == 0)
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
 
-    CBlockIndex* pblockindex = mapBlockIndex[hash];
+    CBlockIndex* pblockindex = pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex[hash];
 
     if (!fVerbose)
     {
@@ -414,13 +415,13 @@ UniValue getblock(const UniValue& params, bool fHelp)
     if (params.size() > 1)
         fVerbose = params[1].get_bool();
 
-    if (mapBlockIndex.count(hash) == 0)
+    if (pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.count(hash) == 0)
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
 
     CBlock block;
-    CBlockIndex* pblockindex = mapBlockIndex[hash];
+    CBlockIndex* pblockindex = pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex[hash];
 
-    if(!ReadBlockFromDisk(block, pblockindex, Params().GetConsensus()))
+    if(!ReadBlockFromDisk(block, pblockindex, pnetMan->getActivePaymentNetwork()->GetConsensus()))
         throw JSONRPCError(RPC_INTERNAL_ERROR, "Can't read block from disk");
 
     if (!fVerbose)
@@ -460,7 +461,7 @@ UniValue gettxoutsetinfo(const UniValue& params, bool fHelp)
 
     CCoinsStats stats;
     FlushStateToDisk();
-    if (pcoinsTip->GetStats(stats)) {
+    if (pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip->GetStats(stats)) {
         ret.push_back(Pair("height", (int64_t)stats.nHeight));
         ret.push_back(Pair("bestblock", stats.hashBlock.GetHex()));
         ret.push_back(Pair("transactions", (int64_t)stats.nTransactions));
@@ -524,18 +525,18 @@ UniValue gettxout(const UniValue& params, bool fHelp)
     CCoins coins;
     if (fMempool) {
         LOCK(mempool.cs);
-        CCoinsViewMemPool view(pcoinsTip, mempool);
+        CCoinsViewMemPool view(pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip, mempool);
         if (!view.GetCoins(hash, coins))
             return NullUniValue;
         mempool.pruneSpent(hash, coins); // TODO: this should be done by the CCoinsViewMemPool
     } else {
-        if (!pcoinsTip->GetCoins(hash, coins))
+        if (!pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip->GetCoins(hash, coins))
             return NullUniValue;
     }
     if (n<0 || (unsigned int)n>=coins.vout.size() || coins.vout[n].IsNull())
         return NullUniValue;
 
-    BlockMap::iterator it = mapBlockIndex.find(pcoinsTip->GetBestBlock());
+    BlockMap::iterator it = pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.find(pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip->GetBestBlock());
     CBlockIndex *pindex = it->second;
     ret.push_back(Pair("bestblock", pindex->GetBlockHash().GetHex()));
     if ((unsigned int)coins.nHeight == MEMPOOL_HEIGHT)
@@ -577,7 +578,7 @@ UniValue verifychain(const UniValue& params, bool fHelp)
     if (params.size() > 1)
         nCheckDepth = params[1].get_int();
 
-    return CVerifyDB().VerifyDB(Params(), pcoinsTip, nCheckLevel, nCheckDepth);
+    return CVerifyDB().VerifyDB(pnetMan->getActivePaymentNetwork(), pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip, nCheckLevel, nCheckDepth);
 }
 
 /** Implementation of IsSuperMajority with better feedback */
@@ -670,17 +671,17 @@ UniValue getblockchaininfo(const UniValue& params, bool fHelp)
     LOCK(cs_main);
 
     UniValue obj(UniValue::VOBJ);
-    obj.push_back(Pair("chain",                 Params().NetworkIDString()));
-    obj.push_back(Pair("blocks",                (int)chainActive.Height()));
-    obj.push_back(Pair("headers",               pindexBestHeader ? pindexBestHeader->nHeight : -1));
-    obj.push_back(Pair("bestblockhash",         chainActive.Tip()->GetBlockHash().GetHex()));
+    obj.push_back(Pair("chain",                 pnetMan->getActivePaymentNetwork()->NetworkIDString()));
+    obj.push_back(Pair("blocks",                (int)pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height()));
+    obj.push_back(Pair("headers",               pnetMan->getActivePaymentNetwork()->getChainManager()->pindexBestHeader ? pnetMan->getActivePaymentNetwork()->getChainManager()->pindexBestHeader->nHeight : -1));
+    obj.push_back(Pair("bestblockhash",         pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->GetBlockHash().GetHex()));
     obj.push_back(Pair("difficulty",            (double)GetDifficulty()));
-    obj.push_back(Pair("mediantime",            (int64_t)chainActive.Tip()->GetMedianTimePast()));
-    obj.push_back(Pair("verificationprogress",  Checkpoints::GuessVerificationProgress(Params().Checkpoints(), chainActive.Tip())));
-    obj.push_back(Pair("chainwork",             chainActive.Tip()->nChainWork.GetHex()));
+    obj.push_back(Pair("mediantime",            (int64_t)pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->GetMedianTimePast()));
+    obj.push_back(Pair("verificationprogress",  Checkpoints::GuessVerificationProgress(pnetMan->getActivePaymentNetwork()->Checkpoints(), pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip())));
+    obj.push_back(Pair("chainwork",             pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->nChainWork.GetHex()));
 
-    const Consensus::Params& consensusParams = Params().GetConsensus();
-    CBlockIndex* tip = chainActive.Tip();
+    const Consensus::Params& consensusParams = pnetMan->getActivePaymentNetwork()->GetConsensus();
+    CBlockIndex* tip = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
     UniValue softforks(UniValue::VARR);
     UniValue bip9_softforks(UniValue::VARR);
     softforks.push_back(SoftForkDesc("bip34", 2, tip, consensusParams));
@@ -746,9 +747,9 @@ UniValue getchaintips(const UniValue& params, bool fHelp)
        known blocks, and successively remove blocks that appear as pprev
        of another block.  */
     std::set<const CBlockIndex*, CompareBlocksByHeight> setTips;
-    for (auto const& item: mapBlockIndex)
+    for (auto const& item: pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex)
         setTips.insert(item.second);
-    for (auto const& item: mapBlockIndex)
+    for (auto const& item: pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex)
     {
         const CBlockIndex* pprev = item.second->pprev;
         if (pprev)
@@ -756,7 +757,7 @@ UniValue getchaintips(const UniValue& params, bool fHelp)
     }
 
     // Always report the currently active tip.
-    setTips.insert(chainActive.Tip());
+    setTips.insert(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip());
 
     /* Construct the output array.  */
     UniValue res(UniValue::VARR);
@@ -766,11 +767,11 @@ UniValue getchaintips(const UniValue& params, bool fHelp)
         obj.push_back(Pair("height", block->nHeight));
         obj.push_back(Pair("hash", block->phashBlock->GetHex()));
 
-        const int branchLen = block->nHeight - chainActive.FindFork(block)->nHeight;
+        const int branchLen = block->nHeight - pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.FindFork(block)->nHeight;
         obj.push_back(Pair("branchlen", branchLen));
 
         std::string status;
-        if (chainActive.Contains(block)) {
+        if (pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Contains(block)) {
             // This block is part of the currently active chain.
             status = "active";
         } else if (block->nStatus & BLOCK_FAILED_MASK) {
@@ -852,15 +853,15 @@ UniValue invalidateblock(const UniValue& params, bool fHelp)
 
     {
         LOCK(cs_main);
-        if (mapBlockIndex.count(hash) == 0)
+        if (pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.count(hash) == 0)
             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
 
-        CBlockIndex* pblockindex = mapBlockIndex[hash];
-        InvalidateBlock(state, Params().GetConsensus(), pblockindex);
+        CBlockIndex* pblockindex = pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex[hash];
+        InvalidateBlock(state, pnetMan->getActivePaymentNetwork()->GetConsensus(), pblockindex);
     }
 
     if (state.IsValid()) {
-        ActivateBestChain(state, Params(), LOADED);
+        ActivateBestChain(state, pnetMan->getActivePaymentNetwork(), LOADED);
     }
 
     if (!state.IsValid()) {
@@ -891,15 +892,15 @@ UniValue reconsiderblock(const UniValue& params, bool fHelp)
 
     {
         LOCK(cs_main);
-        if (mapBlockIndex.count(hash) == 0)
+        if (pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.count(hash) == 0)
             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
 
-        CBlockIndex* pblockindex = mapBlockIndex[hash];
+        CBlockIndex* pblockindex = pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex[hash];
         ReconsiderBlock(state, pblockindex);
     }
 
     if (state.IsValid()) {
-        ActivateBestChain(state, Params(), LOADED);
+        ActivateBestChain(state, pnetMan->getActivePaymentNetwork(), LOADED);
     }
 
     if (!state.IsValid()) {

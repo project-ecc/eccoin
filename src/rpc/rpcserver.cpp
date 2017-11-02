@@ -12,9 +12,9 @@
 #include "random.h"
 #include "sync.h"
 #include "ui_interface.h"
-#include "util.h"
+#include "util/util.h"
 #include "args.h"
-#include "utilstrencodings.h"
+#include "util/utilstrencodings.h"
 
 #include <univalue.h>
 
@@ -275,11 +275,11 @@ UniValue stop(const UniValue& params, bool fHelp)
     if (fHelp || params.size() > 1)
         throw std::runtime_error(
             "stop\n"
-            "\nStop E-CurrencyCoin server.");
+            "\nStop ECC server.");
     // Event loop will exit after current HTTP requests have been handled, so
     // this reply will get back to the client.
     StartShutdown();
-    return "E-CurrencyCoin server stopping";
+    return "ECC server stopping";
 }
 
 /**

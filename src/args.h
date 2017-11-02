@@ -9,7 +9,7 @@
 #include "fs.h"
 #include "sync.h"
 #include "tinyformat.h"
-#include "utiltime.h"
+#include "util/utiltime.h"
 
 #include <atomic>
 #include <exception>
@@ -20,7 +20,7 @@
 
 #include <boost/signals2/signal.hpp>
 
-class ArgsManager
+class CArgsManager
 {
 protected:
     CCriticalSection cs_args;
@@ -90,7 +90,7 @@ public:
     void ForceSetArg(const std::string& strArg, const std::string& strValue);
 };
 
-extern ArgsManager gArgs;
+extern CArgsManager gArgs;
 
 
 #endif //ECCOIN_ARGS_H

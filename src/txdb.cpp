@@ -5,10 +5,11 @@
 
 #include "txdb.h"
 
-#include "chain.h"
-#include "networks/baseparams.h"
-#include "hash.h"
+#include "chain/chain.h"
+#include "networks/networktemplate.h"
+#include "crypto/hash.h"
 #include "main.h"
+#include "init.h"
 #include "pow.h"
 #include "uint256.h"
 
@@ -131,7 +132,7 @@ bool CCoinsViewDB::GetStats(CCoinsStats &stats) const {
     }
     {
         LOCK(cs_main);
-        stats.nHeight = mapBlockIndex.find(stats.hashBlock)->second->nHeight;
+        stats.nHeight = pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.find(stats.hashBlock)->second->nHeight;
     }
     stats.hashSerialized = ss.GetHash();
     stats.nTotalAmount = nTotalAmount;
@@ -187,8 +188,8 @@ bool CBlockTreeDB::LoadBlockIndexGuts()
             CDiskBlockIndex diskindex;
             if (pcursor->GetValue(diskindex)) {
                 // Construct block index object
-                CBlockIndex* pindexNew = InsertBlockIndex(diskindex.GetBlockHash());
-                pindexNew->pprev          = InsertBlockIndex(diskindex.hashPrev);
+                CBlockIndex* pindexNew = pnetMan->getActivePaymentNetwork()->getChainManager()->InsertBlockIndex(diskindex.GetBlockHash());
+                pindexNew->pprev          = pnetMan->getActivePaymentNetwork()->getChainManager()->InsertBlockIndex(diskindex.hashPrev);
                 pindexNew->nHeight        = diskindex.nHeight;
                 pindexNew->nFile          = diskindex.nFile;
                 pindexNew->nDataPos       = diskindex.nDataPos;

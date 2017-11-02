@@ -6,7 +6,7 @@
 #ifndef BITCOIN_PRIMITIVES_BLOCK_H
 #define BITCOIN_PRIMITIVES_BLOCK_H
 
-#include "primitives/transaction.h"
+#include "tx/tx.h"
 #include "serialize.h"
 #include "uint256.h"
 #include "keystore.h"

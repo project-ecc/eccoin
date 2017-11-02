@@ -3,15 +3,15 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "base58.h"
-#include "chain.h"
+#include "chain/chain.h"
 #include "rpcserver.h"
 #include "init.h"
 #include "main.h"
 #include "script/script.h"
 #include "script/standard.h"
 #include "sync.h"
-#include "util.h"
-#include "utiltime.h"
+#include "util/util.h"
+#include "util/utiltime.h"
 #include "wallet/wallet.h"
 
 #include <fstream>
@@ -136,7 +136,7 @@ UniValue importprivkey(const UniValue& params, bool fHelp)
         pwalletMain->nTimeFirstKey = 1; // 0 would be considered 'no value'
 
         if (fRescan) {
-            pwalletMain->ScanForWalletTransactions(chainActive.Genesis(), true);
+            pwalletMain->ScanForWalletTransactions(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Genesis(), true);
         }
     }
 
@@ -226,7 +226,7 @@ UniValue importaddress(const UniValue& params, bool fHelp)
 
     if (fRescan)
     {
-        pwalletMain->ScanForWalletTransactions(chainActive.Genesis(), true);
+        pwalletMain->ScanForWalletTransactions(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Genesis(), true);
         pwalletMain->ReacceptWalletTransactions();
     }
 
@@ -280,7 +280,7 @@ UniValue importpubkey(const UniValue& params, bool fHelp)
 
     if (fRescan)
     {
-        pwalletMain->ScanForWalletTransactions(chainActive.Genesis(), true);
+        pwalletMain->ScanForWalletTransactions(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Genesis(), true);
         pwalletMain->ReacceptWalletTransactions();
     }
 
@@ -317,7 +317,7 @@ UniValue importwallet(const UniValue& params, bool fHelp)
     if (!file.is_open())
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Cannot open wallet dump file");
 
-    int64_t nTimeBegin = chainActive.Tip()->GetBlockTime();
+    int64_t nTimeBegin = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->GetBlockTime();
 
     bool fGood = true;
 
@@ -375,14 +375,14 @@ UniValue importwallet(const UniValue& params, bool fHelp)
     file.close();
     pwalletMain->ShowProgress("", 100); // hide progress dialog in GUI
 
-    CBlockIndex *pindex = chainActive.Tip();
+    CBlockIndex *pindex = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
     while (pindex && pindex->pprev && pindex->GetBlockTime() > nTimeBegin - 7200)
         pindex = pindex->pprev;
 
     if (!pwalletMain->nTimeFirstKey || nTimeBegin < pwalletMain->nTimeFirstKey)
         pwalletMain->nTimeFirstKey = nTimeBegin;
 
-    LogPrintf("Rescanning last %i blocks\n", chainActive.Height() - pindex->nHeight + 1);
+    LogPrintf("Rescanning last %i blocks\n", pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height() - pindex->nHeight + 1);
     pwalletMain->ScanForWalletTransactions(pindex);
     pwalletMain->MarkDirty();
 
@@ -403,7 +403,7 @@ UniValue dumpprivkey(const UniValue& params, bool fHelp)
             "\nReveals the private key corresponding to 'eccaddress'.\n"
             "Then the importprivkey can be used with this output\n"
             "\nArguments:\n"
-            "1. \"eccaddress\"   (string, required) The E-CurrencyCoin address for the private key\n"
+            "1. \"eccaddress\"   (string, required) The ECC address for the private key\n"
             "\nResult:\n"
             "\"key\"                (string) The private key\n"
             "\nExamples:\n"
@@ -419,7 +419,7 @@ UniValue dumpprivkey(const UniValue& params, bool fHelp)
     std::string strAddress = params[0].get_str();
     CBitcoinAddress address;
     if (!address.SetString(strAddress))
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid E-CurrencyCoin address");
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid ECC address");
     CKeyID keyID;
     if (!address.GetKeyID(keyID))
         throw JSONRPCError(RPC_TYPE_ERROR, "Address does not refer to a key");
@@ -469,10 +469,10 @@ UniValue dumpwallet(const UniValue& params, bool fHelp)
     std::sort(vKeyBirth.begin(), vKeyBirth.end());
 
     // produce output
-    file << strprintf("# Wallet dump created by E-CurrencyCoin %s (%s)\n", CLIENT_BUILD, CLIENT_DATE);
+    file << strprintf("# Wallet dump created by ECC %s (%s)\n", CLIENT_BUILD, CLIENT_DATE);
     file << strprintf("# * Created on %s\n", EncodeDumpTime(GetTime()));
-    file << strprintf("# * Best block at time of backup was %i (%s),\n", chainActive.Height(), chainActive.Tip()->GetBlockHash().ToString());
-    file << strprintf("#   mined on %s\n", EncodeDumpTime(chainActive.Tip()->GetBlockTime()));
+    file << strprintf("# * Best block at time of backup was %i (%s),\n", pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height(), pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->GetBlockHash().ToString());
+    file << strprintf("#   mined on %s\n", EncodeDumpTime(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->GetBlockTime()));
     file << "\n";
     for (std::vector<std::pair<int64_t, CKeyID> >::const_iterator it = vKeyBirth.begin(); it != vKeyBirth.end(); it++) {
         const CKeyID &keyid = it->second;
