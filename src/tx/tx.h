@@ -39,6 +39,7 @@ public:
     std::vector<CTxIn> vin;
     std::vector<CTxOut> vout;
     uint32_t nLockTime;
+    uint256 serviceReferenceHash;
 
     /** Construct a CTransaction that qualifies as IsNull() */
     CTransaction();
@@ -60,6 +61,10 @@ public:
         READWRITE(*const_cast<uint32_t*>(&nLockTime));
         if (ser_action.ForRead())
             UpdateHash();
+        if (this->nVersion == 2)
+        {
+            READWRITE(*const_cast<uint256*>(&this->serviceReferenceHash));
+        }
     }
 
     bool IsNull() const {
