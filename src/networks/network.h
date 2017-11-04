@@ -37,6 +37,7 @@ class CNetwork : public CNetworkTemplate
 public:
     CNetwork(const CNetworkTemplate& param_netTemplate) : CNetworkTemplate(param_netTemplate)
     {
+        this->chainman = CChainManager();
     }
     const std::string& DataDir() const { return strDataDir; }
     CChainManager* getChainManager() { return &chainman; }
