@@ -26,7 +26,7 @@ public:
     CChain chainActive;
 
     /** Best header we've seen so far (used for getheaders queries' starting points). */
-    CBlockIndex *pindexBestHeader = NULL;
+    CBlockIndex *pindexBestHeader;
 
     /** Global variable that points to the active CCoinsView (protected by cs_main) */
     CCoinsViewCache *pcoinsTip;
@@ -38,6 +38,15 @@ private:
     bool LoadBlockIndexDB();
 
 public:
+
+    CChainManager(){
+        mapBlockIndex.clear();
+        chainActive = CChain();
+        pindexBestHeader = NULL;
+        pcoinsTip = NULL;
+        pblocktree = NULL;
+    }
+
     /** Add a new block index entry for a given block recieved from the network */
     CBlockIndex* AddToBlockIndex(const CBlockHeader& block);
 
