@@ -292,7 +292,8 @@ HEADERS += \
     src/chain/checkpoints.h \
     src/chain/chainman.h \
     src/signals.h \
-    src/networks/networktemplate.h
+    src/networks/networktemplate.h \
+    src/tx/servicetx.h
 
 
 # organize compiles of cpp files by section, this seems to be a logical order where the files lower down generally depend
@@ -399,7 +400,8 @@ SOURCES += \
     src/chain/checkpoints.cpp \
     src/chain/chainman.cpp \
     src/signals.cpp \
-    src/eccoind.cpp
+    src/eccoind.cpp \
+    src/tx/servicetx.cpp
 
 
 
