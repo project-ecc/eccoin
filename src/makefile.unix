@@ -124,19 +124,19 @@ OBJS= \
     build/amount.o \
     build/arith_uint256.o \
     build/base58.o \
-    build/blockindex.o \
+    build/chain/blockindex.o \
     build/bloom.o \
-    build/chain.o \
-    build/chainparams.o \
-    build/chainparamsbase.o \
-    build/checkpoints.o \
+    build/chain/chain.o \
+    build/chain/chainman.o \
+    build/networks/netman.o \
+    build/chain/checkpoints.o \
     build/clientversion.o \
     build/coins.o \
     build/compressor.o \
     build/core_read.o \
     build/core_write.o \
     build/dbwrapper.o \
-    build/hash.o \
+    build/crypto/hash.o \
     build/keystore.o \
     build/main.o \
     build/merkleblock.o \
@@ -157,12 +157,12 @@ OBJS= \
     build/torcontrol.o \
     build/txmempool.o \
     build/uint256.o \
-    build/util.o \
+    build/util/util.o \
     build/fs.o \
     build/args.o \
-    build/utilmoneystr.o \
-    build/utilstrencodings.o \
-    build/utiltime.o \
+    build/util/utilmoneystr.o \
+    build/util/utilstrencodings.o \
+    build/util/utiltime.o \
     build/validationinterface.o \
     build/versionbits.o \
     build/wallet/crypter.o \
@@ -179,8 +179,8 @@ OBJS= \
     build/script/sigcache.o \
     build/script/sign.o \
     build/script/standard.o \
-    build/primitives/block.o \
-    build/primitives/transaction.o \
+    build/chain/block.o \
+    build/tx/tx.o \
     build/policy/fees.o \
     build/policy/policy.o \
     build/policy/rbf.o \
@@ -196,27 +196,28 @@ OBJS= \
     build/compat/glibcxx_sanity.o \
     build/compat/strnlen.o \
     build/init.o \
-    build/bitcoind.o \
+    build/eccoind.o \
     build/crypto/scrypt.o \
     build/kernel.o \
     build/httprpc.o \
     build/httpserver.o \
     build/rest.o \
-    build/rpcblockchain.o \
-    build/rpcclient.o \
-    build/rpcdump.o \
-    build/rpcmining.o \
-    build/rpcmisc.o \
-    build/rpcnet.o \
-    build/rpcprotocol.o \
-    build/rpcrawtransaction.o \
-    build/rpcserver.o \
-    build/rpcwallet.o \
+    build/rpc/rpcblockchain.o \
+    build/rpc/rpcclient.o \
+    build/rpc/rpcdump.o \
+    build/rpc/rpcmining.o \
+    build/rpc/rpcmisc.o \
+    build/rpc/rpcnet.o \
+    build/rpc/rpcprotocol.o \
+    build/rpc/rpcrawtransaction.o \
+    build/rpc/rpcserver.o \
+    build/rpc/rpcwallet.o \
     build/univalue/univalue.o \
     build/univalue/univalue_read.o \
     build/univalue/univalue_write.o \
     build/pbkdf2.o \
-    build/script/stakescript.o
+    build/script/stakescript.o \
+    build/signals.o
 
 all: leveldb secp256k1 ECCoind 
 

@@ -40,6 +40,7 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #ifndef WIN32
 #include <signal.h>
@@ -878,8 +879,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
     if (gArgs.IsArgSet("-minrelaytxfee"))
     {
         CAmount n = 0;
-        char minrelay[33];
-        itoa(gArgs.GetArg("-minrelaytxfee", DEFAULT_TRANSACTION_MINFEE), minrelay, 10);
+        std::string minrelay = gArgs.GetArg("-minrelaytxfee", std::to_string(DEFAULT_TRANSACTION_MINFEE));
         if (ParseMoney(minrelay, n) && n > 0)
             ::minRelayTxFee = CFeeRate(n);
         else
@@ -895,8 +895,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
     if (gArgs.IsArgSet("-mintxfee"))
     {
         CAmount n = 0;
-        char minfee[33];
-        itoa(gArgs.GetArg("-mintxfee", DEFAULT_TRANSACTION_MINFEE), minfee, 10);
+        std::string minfee = gArgs.GetArg("-mintxfee", std::to_string(DEFAULT_TRANSACTION_MINFEE));
         if (ParseMoney(minfee, n) && n > 0)
             CWallet::minTxFee = CFeeRate(n);
         else
@@ -905,8 +904,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
     if (gArgs.IsArgSet("-fallbackfee"))
     {
         CAmount nFeePerK = 0;
-        char fallback[33];
-        itoa(gArgs.GetArg("-fallbackfee", DEFAULT_TRANSACTION_MINFEE), fallback, 10);
+        std::string fallback = gArgs.GetArg("-fallbackfee", std::to_string(DEFAULT_TRANSACTION_MINFEE));
         if (!ParseMoney(fallback, nFeePerK))
             return InitError(strprintf(_("Invalid amount for -fallbackfee=<amount>: '%s'"), gArgs.GetArg("-fallbackfee", DEFAULT_TRANSACTION_MINFEE)));
         if (nFeePerK > nHighTransactionFeeWarning)
@@ -916,8 +914,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
     if (gArgs.IsArgSet("-paytxfee"))
     {
         CAmount nFeePerK = 0;
-        char payfee[33];
-        itoa(gArgs.GetArg("-paytxfee", DEFAULT_TRANSACTION_MINFEE), payfee, 10);
+        std::string payfee = gArgs.GetArg("-paytxfee", std::to_string(DEFAULT_TRANSACTION_MINFEE));
         if (!ParseMoney(payfee, nFeePerK))
             return InitError(strprintf(_("Invalid amount for -paytxfee=<amount>: '%i'"), gArgs.GetArg("-paytxfee", DEFAULT_TRANSACTION_MINFEE)));
         if (nFeePerK > nHighTransactionFeeWarning)
@@ -932,8 +929,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
     if (gArgs.IsArgSet("-maxtxfee"))
     {
         CAmount nMaxFee = 0;
-        char maxfee[33];
-        itoa(gArgs.GetArg("-maxtxfee", DEFAULT_TRANSACTION_MINFEE), maxfee, 10);
+        std::string maxfee = gArgs.GetArg("-maxtxfee", std::to_string(DEFAULT_TRANSACTION_MINFEE));
         if (!ParseMoney(maxfee, nMaxFee))
             return InitError(strprintf(_("Invalid amount for -maxtxfee=<amount>: '%i'"), gArgs.GetArg("-maxtxfee", DEFAULT_TRANSACTION_MAXFEE)));
         if (nMaxFee > nHighTransactionMaxFeeWarning)
