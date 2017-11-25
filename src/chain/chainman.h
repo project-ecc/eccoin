@@ -47,6 +47,14 @@ public:
         pblocktree = NULL;
     }
 
+    ~CChainManager()
+    {
+        mapBlockIndex.clear();
+        delete pindexBestHeader;
+        delete pcoinsTip;
+        delete pblocktree;
+    }
+
     /** Add a new block index entry for a given block recieved from the network */
     CBlockIndex* AddToBlockIndex(const CBlockHeader& block);
 
