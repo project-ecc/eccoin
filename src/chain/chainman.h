@@ -49,6 +49,10 @@ public:
 
     ~CChainManager()
     {
+        // block headers
+        BlockMap::iterator it1 = mapBlockIndex.begin();
+        for (; it1 != mapBlockIndex.end(); it1++)
+            delete (*it1).second;
         mapBlockIndex.clear();
         delete pindexBestHeader;
         delete pcoinsTip;
