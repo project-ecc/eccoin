@@ -2685,13 +2685,8 @@ class CMainCleanup
 {
 public:
     CMainCleanup() {}
-    ~CMainCleanup() {
-        // block headers
-        BlockMap::iterator it1 = pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.begin();
-        for (; it1 != pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.end(); it1++)
-            delete (*it1).second;
-        pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.clear();
-
+    ~CMainCleanup()
+    {
         // orphan transactions
         mapOrphanTransactions.clear();
         mapOrphanTransactionsByPrev.clear();
