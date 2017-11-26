@@ -190,6 +190,7 @@ OBJS= \
     build/crypto/sha1.o \
     build/crypto/sha256.o \
     build/crypto/sha512.o \
+    build/crypto/chacha20.o \
     build/consensus/merkle.o \
     build/compat/glibc_compat.o \
     build/compat/glibc_sanity.o \
