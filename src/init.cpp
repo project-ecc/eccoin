@@ -562,7 +562,8 @@ void ThreadImport(std::vector<boost::filesystem::path> vImportFiles)
     const CNetworkTemplate& chainparams = pnetMan->getActivePaymentNetwork();
     RenameThread("bitcoin-loadblk");
     // -reindex
-    if (fReindex) {
+    if (fReindex)
+    {
         CImportingNow imp;
         int nFile = 0;
         while (true) {
@@ -1245,8 +1246,6 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                 delete pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree;
 
                 pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree = new CBlockTreeDB(nBlockTreeDBCache, false, fReindex);
-                pcoinsdbview.reset(new CCoinsViewDB(nCoinDBCache, false, fReset));
-                pcoinscatcher.reset(new CCoinsViewErrorCatcher(pcoinsdbview.get()));
                 pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.reset(new CCoinsViewCache(pcoinscatcher.get()));
 
                 if (fReindex) {
@@ -1260,11 +1259,11 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
 
                 // If the loaded chain has a wrong genesis, bail out immediately
                 // (we're likely using a testnet datadir, or the other way around).
-                if (!pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.empty() && pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.count(chainparams.GetConsensus().hashGenesisBlock) == 0)
+                if (!pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.empty() &&
+                        pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.count(chainparams.GetConsensus().hashGenesisBlock) == 0)
                     return InitError(_("Incorrect or no genesis block found. Wrong datadir for network?"));
 
-
-
+                //TODO: Remove InitBlockIndex
                 /**
                 // Initialize the block index (no-op if non-empty database was already loaded)
                 if (!pnetMan->getActivePaymentNetwork()->getChainManager()->InitBlockIndex(chainparams)) {
@@ -1299,9 +1298,6 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
 
                 // The on-disk coinsdb is now in a good state, create the cache
                 pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.reset(new CCoinsViewCache(pcoinscatcher.get()));
-
-                bool is_coinsview_empty = fReset || pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip->GetBestBlock().IsNull();
-                if (!is_coinsview_empty)
                 {
                     // LoadChainTip sets chainActive based on pcoinsTip's best block
                     if (!pnetMan->getActivePaymentNetwork()->getChainManager()->LoadChainTip(chainparams))
@@ -1311,23 +1307,22 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                     }
                     assert(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip() != nullptr);
                 }
-
-                if (!fReset)
+                if (!fReset )
                 {
                     // Note that RewindBlockIndex MUST run even if we're about to -reindex-chainstate.
                     // It both disconnects blocks based on chainActive, and drops block data in
                     // mapBlockIndex based on lack of available witness data.
                     uiInterface.InitMessage(_("Rewinding blocks..."));
+                    LogPrintf("Rewinding blocks...");
                     if (!pnetMan->getActivePaymentNetwork()->getChainManager()->RewindBlockIndex(chainparams))
                     {
                         strLoadError = _("Unable to rewind the database to a pre-fork state. You will need to redownload the blockchain");
                         break;
                     }
                 }
-
-                if (!is_coinsview_empty)
                 {
                     uiInterface.InitMessage(_("Verifying blocks..."));
+                    LogPrintf("Verifying blocks...");
                     {
                         LOCK(cs_main);
                         CBlockIndex* tip = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
@@ -1348,7 +1343,6 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                     }
                 }
             }
-
             catch (const std::exception& e)
             {
                 if (fDebug) LogPrintf("%s\n", e.what());
@@ -1556,6 +1550,8 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
         uiInterface.NotifyBlockTip.connect(BlockNotifyCallback);
 
     uiInterface.InitMessage(_("Activating best chain..."));
+
+    /// TODO: REMOVE THIS BLOCK OF COMMENTED CODE
     // scan for better chains in the block chain database, that are not yet connected in the active best chain
     //CValidationState state;
     //if (!ActivateBestChain(state, chainparams, LOADED))
@@ -1568,7 +1564,9 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
             vImportFiles.push_back(strFile);
     }
     threadGroup.create_thread(boost::bind(&ThreadImport, vImportFiles));
-    if (pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip() == NULL) {
+    /// THIS FOR LOOP IS STUCK FOREVER BECAUSE CHAIN TIP IS NEVER ACTIVATED
+    if (pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip() == NULL)
+    {
         LogPrintf("Waiting for genesis block to be imported...\n");
         while (!fRequestShutdown && pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip() == NULL)
             MilliSleep(10);
