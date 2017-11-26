@@ -29,7 +29,7 @@ public:
     CBlockIndex *pindexBestHeader;
 
     /** Global variable that points to the active CCoinsView (protected by cs_main) */
-    CCoinsViewCache *pcoinsTip;
+    std::unique_ptr<CCoinsViewCache> pcoinsTip;
 
     /** Global variable that points to the active block tree (protected by cs_main) */
     CBlockTreeDB *pblocktree;
@@ -43,7 +43,7 @@ public:
         mapBlockIndex.clear();
         chainActive = CChain();
         pindexBestHeader = NULL;
-        pcoinsTip = NULL;
+        pcoinsTip.reset();
         pblocktree = NULL;
     }
 
@@ -55,9 +55,19 @@ public:
             delete (*it1).second;
         mapBlockIndex.clear();
         delete pindexBestHeader;
-        delete pcoinsTip;
+        pcoinsTip.reset();
         delete pblocktree;
     }
+
+    void operator=(const CChainManager& oldMan)
+    {
+        mapBlockIndex = oldMan.mapBlockIndex;
+        chainActive = oldMan.chainActive;
+        pindexBestHeader = oldMan.pindexBestHeader;
+        pcoinsTip.reset(oldMan.pcoinsTip.get());
+        pblocktree = oldMan.pblocktree;
+    }
+
 
     /** Add a new block index entry for a given block recieved from the network */
     CBlockIndex* AddToBlockIndex(const CBlockHeader& block);
@@ -70,6 +80,10 @@ public:
 
     /** Initialize a new block tree database + block data on disk */
     bool InitBlockIndex(const CNetworkTemplate& chainparams);
+
+    bool LoadGenesisBlock(const CNetworkTemplate& chainparams);
+    bool LoadChainTip(const CNetworkTemplate& chainparams);
+    bool RewindBlockIndex(const CNetworkTemplate& params);
 
     /** Create a new block index entry for a given block hash loaded from disk*/
     CBlockIndex* InsertBlockIndex(uint256 hash);

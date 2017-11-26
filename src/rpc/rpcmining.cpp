@@ -413,7 +413,7 @@ UniValue getblocktemplate(const UniValue& params, bool fHelp)
                 assert(pindexPrev && pindexPrev == pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip());
                 if (fCheckpointsEnabled && !CheckIndexAgainstCheckpoint(pindexPrev, state, pnetMan->getActivePaymentNetwork(), block.GetHash()))
                     return error("%s: CheckIndexAgainstCheckpoint(): %s", __func__, state.GetRejectReason().c_str());
-                CCoinsViewCache viewNew(pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip);
+                CCoinsViewCache viewNew(pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.get());
                 CBlockIndex indexDummy(block);
                 indexDummy.pprev = pindexPrev;
                 indexDummy.nHeight = pindexPrev->nHeight + 1;

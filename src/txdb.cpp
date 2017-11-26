@@ -5,6 +5,7 @@
 
 #include "txdb.h"
 
+#include "coins.h"
 #include "chain/chain.h"
 #include "networks/networktemplate.h"
 #include "crypto/hash.h"
@@ -17,6 +18,7 @@
 
 #include <boost/thread.hpp>
 
+static const char DB_COIN = 'C';
 static const char DB_COINS = 'c';
 static const char DB_BLOCK_FILES = 'f';
 static const char DB_TXINDEX = 't';
@@ -26,6 +28,28 @@ static const char DB_BEST_BLOCK = 'B';
 static const char DB_FLAG = 'F';
 static const char DB_REINDEX_FLAG = 'R';
 static const char DB_LAST_BLOCK = 'l';
+
+namespace {
+
+struct CoinEntry {
+    COutPoint *outpoint;
+    char key;
+    CoinEntry(const COutPoint *ptr)
+        : outpoint(const_cast<COutPoint *>(ptr)), key(DB_COIN) {}
+
+    template <typename Stream> void Serialize(Stream &s) const {
+        s << key;
+        s << outpoint->hash;
+        s << VARINT(outpoint->n);
+    }
+
+    template <typename Stream> void Unserialize(Stream &s) {
+        s >> key;
+        s >> outpoint->hash;
+        s >> VARINT(outpoint->n);
+    }
+};
+}
 
 
 CCoinsViewDB::CCoinsViewDB(size_t nCacheSize, bool fMemory, bool fWipe) : db(GetDataDir() / "chainstate", nCacheSize, fMemory, fWipe, true) 
@@ -48,7 +72,7 @@ uint256 CCoinsViewDB::GetBestBlock() const {
 }
 
 bool CCoinsViewDB::BatchWrite(CCoinsMap &mapCoins, const uint256 &hashBlock) {
-    CDBBatch batch(&db.GetObfuscateKey());
+    CDBBatch batch(db);
     size_t count = 0;
     size_t changed = 0;
     for (CCoinsMap::iterator it = mapCoins.begin(); it != mapCoins.end();) {
@@ -140,7 +164,7 @@ bool CCoinsViewDB::GetStats(CCoinsStats &stats) const {
 }
 
 bool CBlockTreeDB::WriteBatchSync(const std::vector<std::pair<int, const CBlockFileInfo*> >& fileInfo, int nLastFile, const std::vector<const CBlockIndex*>& blockinfo) {
-    CDBBatch batch(&GetObfuscateKey());
+    CDBBatch batch(*this);
     for (std::vector<std::pair<int, const CBlockFileInfo*> >::const_iterator it=fileInfo.begin(); it != fileInfo.end(); it++) {
         batch.Write(std::make_pair(DB_BLOCK_FILES, it->first), *it->second);
     }
@@ -156,7 +180,7 @@ bool CBlockTreeDB::ReadTxIndex(const uint256 &txid, CDiskTxPos &pos) {
 }
 
 bool CBlockTreeDB::WriteTxIndex(const std::vector<std::pair<uint256, CDiskTxPos> >&vect) {
-    CDBBatch batch(&GetObfuscateKey());
+    CDBBatch batch(*this);
     for (std::vector<std::pair<uint256,CDiskTxPos> >::const_iterator it=vect.begin(); it!=vect.end(); it++)
         batch.Write(std::make_pair(DB_TXINDEX, it->first), it->second);
     return WriteBatch(batch);
@@ -208,17 +232,6 @@ bool CBlockTreeDB::LoadBlockIndexGuts()
                 pindexNew->prevoutStake     = diskindex.prevoutStake;
                 pindexNew->nStakeTime       = diskindex.nStakeTime;
                 pindexNew->hashProofOfStake = diskindex.hashProofOfStake;
-
-                /// TODO: fix the root cause of this problem. it is fine for now since PoW has been off for the last million+ blocks
-                /// but the root issue should be adjusted
-                /*
-                if(pindexNew->IsProofOfWork())
-                {
-                    if (!CheckProofOfWork(pindexNew->GetBlockHash(), pindexNew->nBits, Params().GetConsensus()))
-                        return error("LoadBlockIndex(): CheckProofOfWork failed: %s", pindexNew->ToString());
-                }
-                */
-
                 pcursor->Next();
             } else {
                 return error("LoadBlockIndex() : failed to read value");
@@ -230,3 +243,55 @@ bool CBlockTreeDB::LoadBlockIndexGuts()
 
     return true;
 }
+
+/** Upgrade the database from older formats.
+ *
+ * Currently implemented: from the per-tx utxo model (0.8..0.14.x) to per-txout.
+ */
+bool CCoinsViewDB::Upgrade()
+{
+    std::unique_ptr<CDBIterator> pcursor(db.NewIterator());
+     pcursor->Seek(std::make_pair(DB_COINS, uint256()));
+     if (!pcursor->Valid()) {
+         return true;
+     }
+
+     LogPrintf("Upgrading database...\n");
+     size_t batch_size = 1 << 24;
+     CDBBatch batch(db);
+     while (pcursor->Valid()) {
+         boost::this_thread::interruption_point();
+         std::pair<uint8_t, uint256> key;
+         if (!pcursor->GetKey(key) || key.first != DB_COINS) {
+             break;
+         }
+
+         CCoins old_coins;
+         if (!pcursor->GetValue(old_coins)) {
+             return error("%s: cannot parse CCoins record", __func__);
+         }
+
+         COutPoint outpoint(key.second, 0);
+         for (size_t i = 0; i < old_coins.vout.size(); ++i) {
+             if (!old_coins.vout[i].IsNull() &&
+                 !old_coins.vout[i].scriptPubKey.IsUnspendable()) {
+                 Coin newcoin(std::move(old_coins.vout[i]), old_coins.nHeight,
+                              old_coins.fCoinBase);
+                 outpoint.n = i;
+                 CoinEntry entry(&outpoint);
+                 batch.Write(entry, newcoin);
+             }
+         }
+
+         batch.Erase(key);
+         if (batch.SizeEstimate() > batch_size) {
+             db.WriteBatch(batch);
+             batch.Clear();
+         }
+
+         pcursor->Next();
+     }
+
+     db.WriteBatch(batch);
+     return true;
+ }

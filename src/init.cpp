@@ -128,14 +128,15 @@ bool ShutdownRequested()
     return fRequestShutdown;
 }
 
-class CCoinsViewErrorCatcher : public CCoinsViewBacked
+class CCoinsViewErrorCatcher final : public CCoinsViewBacked
 {
 public:
     CCoinsViewErrorCatcher(CCoinsView* view) : CCoinsViewBacked(view) {}
-    bool GetCoins(const uint256 &txid, CCoins &coins) const {
+    bool GetCoins(const uint256 &txid, CCoins &coins) const override{
         try {
             return CCoinsViewBacked::GetCoins(txid, coins);
-        } catch(const std::runtime_error& e) {
+        } catch(const std::runtime_error& e)
+        {
             uiInterface.ThreadSafeMessageBox(_("Error reading from database, shutting down."), "", CClientUIInterface::MSG_ERROR);
             LogPrintf("Error reading from database: %s\n", e.what());
             // Starting the shutdown sequence and returning false to the caller would be
@@ -148,8 +149,8 @@ public:
     // Writes do not need similar protection, as failure to write is handled by the caller.
 };
 
-static CCoinsViewDB *pcoinsdbview = NULL;
-static CCoinsViewErrorCatcher *pcoinscatcher = NULL;
+std::unique_ptr<CCoinsViewDB> pcoinsdbview;
+std::unique_ptr<CCoinsViewErrorCatcher> pcoinscatcher;
 static boost::scoped_ptr<ECCVerifyHandle> globalVerifyHandle;
 
 void Interrupt(boost::thread_group& threadGroup)
@@ -206,11 +207,10 @@ void Shutdown()
         if (pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip != NULL) {
             FlushStateToDisk();
         }
-        delete pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip;
-        pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip = NULL;
-        delete pcoinscatcher;
+        pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.reset();
+        pcoinscatcher.reset();
         pcoinscatcher = NULL;
-        delete pcoinsdbview;
+        pcoinsdbview.reset();
         pcoinsdbview = NULL;
         delete pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree;
         pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree = NULL;
@@ -1239,15 +1239,15 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
             try
             {
                 pnetMan->getActivePaymentNetwork()->getChainManager()->UnloadBlockIndex();
-                delete pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip;
-                delete pcoinsdbview;
-                delete pcoinscatcher;
+                pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.reset();
+                pcoinsdbview.reset();
+                pcoinscatcher.reset();
                 delete pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree;
 
                 pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree = new CBlockTreeDB(nBlockTreeDBCache, false, fReindex);
-                pcoinsdbview = new CCoinsViewDB(nCoinDBCache, false, fReindex);
-                pcoinscatcher = new CCoinsViewErrorCatcher(pcoinsdbview);
-                pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip = new CCoinsViewCache(pcoinscatcher);
+                pcoinsdbview.reset(new CCoinsViewDB(nCoinDBCache, false, fReset));
+                pcoinscatcher.reset(new CCoinsViewErrorCatcher(pcoinsdbview.get()));
+                pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.reset(new CCoinsViewCache(pcoinscatcher.get()));
 
                 if (fReindex) {
                     pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree->WriteReindexing(true);
@@ -1263,31 +1263,92 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                 if (!pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.empty() && pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.count(chainparams.GetConsensus().hashGenesisBlock) == 0)
                     return InitError(_("Incorrect or no genesis block found. Wrong datadir for network?"));
 
+
+
+                /**
                 // Initialize the block index (no-op if non-empty database was already loaded)
                 if (!pnetMan->getActivePaymentNetwork()->getChainManager()->InitBlockIndex(chainparams)) {
                     strLoadError = _("Error initializing block database");
                     break;
+                //}
+                */
+
+                // At this point blocktree args are consistent with what's on disk.
+                // If we're not mid-reindex (based on disk + args), add a genesis block on disk
+                // (otherwise we use the one already on disk).
+                // This is called again in ThreadImport after the reindex completes.
+                if (!fReindex && !pnetMan->getActivePaymentNetwork()->getChainManager()->LoadGenesisBlock(chainparams))
+                {
+                    strLoadError = _("Error initializing block database");
+                    break;
                 }
 
-                uiInterface.InitMessage(_("Verifying blocks..."));
+                // At this point we're either in reindex or we've loaded a useful
+                // block tree into mapBlockIndex!
 
+                pcoinsdbview.reset(new CCoinsViewDB(nCoinDBCache, false, fReset));
+                pcoinscatcher.reset(new CCoinsViewErrorCatcher(pcoinsdbview.get()));
+
+                // If necessary, upgrade from older database format.
+                // This is a no-op if we cleared the coinsviewdb with -reindex or -reindex-chainstate
+                if (!pcoinsdbview->Upgrade())
                 {
-                    LOCK(cs_main);
-                    CBlockIndex* tip = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
-                    if (tip && tip->nTime > GetAdjustedTime() + 2 * 60 * 60) {
-                        strLoadError = _("The block database contains a block which appears to be from the future. "
-                                "This may be due to your computer's date and time being set incorrectly. "
-                                "Only rebuild the block database if you are sure that your computer's date and time are correct");
+                    strLoadError = _("Error upgrading chainstate database");
+                    break;
+                }
+
+                // The on-disk coinsdb is now in a good state, create the cache
+                pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.reset(new CCoinsViewCache(pcoinscatcher.get()));
+
+                bool is_coinsview_empty = fReset || pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip->GetBestBlock().IsNull();
+                if (!is_coinsview_empty)
+                {
+                    // LoadChainTip sets chainActive based on pcoinsTip's best block
+                    if (!pnetMan->getActivePaymentNetwork()->getChainManager()->LoadChainTip(chainparams))
+                    {
+                        strLoadError = _("Error initializing block database");
+                        break;
+                    }
+                    assert(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip() != nullptr);
+                }
+
+                if (!fReset)
+                {
+                    // Note that RewindBlockIndex MUST run even if we're about to -reindex-chainstate.
+                    // It both disconnects blocks based on chainActive, and drops block data in
+                    // mapBlockIndex based on lack of available witness data.
+                    uiInterface.InitMessage(_("Rewinding blocks..."));
+                    if (!pnetMan->getActivePaymentNetwork()->getChainManager()->RewindBlockIndex(chainparams))
+                    {
+                        strLoadError = _("Unable to rewind the database to a pre-fork state. You will need to redownload the blockchain");
                         break;
                     }
                 }
 
-                if (!CVerifyDB().VerifyDB(chainparams, pcoinsdbview, gArgs.GetArg("-checklevel", DEFAULT_CHECKLEVEL),
-                              gArgs.GetArg("-checkblocks", DEFAULT_CHECKBLOCKS))) {
-                    strLoadError = _("Corrupted block database detected");
-                    break;
+                if (!is_coinsview_empty)
+                {
+                    uiInterface.InitMessage(_("Verifying blocks..."));
+                    {
+                        LOCK(cs_main);
+                        CBlockIndex* tip = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
+                        if (tip && tip->nTime > GetAdjustedTime() + 2 * 60 * 60)
+                        {
+                            strLoadError = _("The block database contains a block which appears to be from the future. "
+                                    "This may be due to your computer's date and time being set incorrectly. "
+                                    "Only rebuild the block database if you are sure that your computer's date and time are correct");
+                            break;
+                        }
+                    }
+
+                    if (!CVerifyDB().VerifyDB(chainparams, pcoinsdbview.get(), gArgs.GetArg("-checklevel", DEFAULT_CHECKLEVEL),
+                                  gArgs.GetArg("-checkblocks", DEFAULT_CHECKBLOCKS)))
+                    {
+                        strLoadError = _("Corrupted block database detected");
+                        break;
+                    }
                 }
             }
+
             catch (const std::exception& e)
             {
                 if (fDebug) LogPrintf("%s\n", e.what());
@@ -1496,9 +1557,9 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
 
     uiInterface.InitMessage(_("Activating best chain..."));
     // scan for better chains in the block chain database, that are not yet connected in the active best chain
-    CValidationState state;
-    if (!ActivateBestChain(state, chainparams, LOADED))
-        strErrors << "Failed to connect best block";
+    //CValidationState state;
+    //if (!ActivateBestChain(state, chainparams, LOADED))
+    //    strErrors << "Failed to connect best block";
 
     std::vector<boost::filesystem::path> vImportFiles;
     if (gArgs.IsArgSet("-loadblock"))
