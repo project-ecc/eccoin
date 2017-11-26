@@ -147,7 +147,7 @@ bool DisconnectTip(CValidationState& state, const Consensus::Params& consensusPa
     // Apply the block atomically to the chain state.
     int64_t nStart = GetTimeMicros();
     {
-        CCoinsViewCache view(pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip);
+        CCoinsViewCache view(pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.get());
         if (!DisconnectBlock(block, state, pindexDelete, view))
             return error("DisconnectTip(): DisconnectBlock %s failed", pindexDelete->GetBlockHash().ToString());
         assert(view.Flush());
@@ -212,7 +212,7 @@ bool ConnectTip(CValidationState& state, const CNetworkTemplate& chainparams, CB
     int64_t nTime3;
     LogPrint("bench", "  - Load block from disk: %.2fms [%.2fs]\n", (nTime2 - nTime1) * 0.001, nTimeReadFromDisk * 0.000001);
     {
-        CCoinsViewCache view(pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip);
+        CCoinsViewCache view(pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.get());
         bool rv = ConnectBlock(*pblock, state, pindexNew, view);
         GetMainSignals().BlockChecked(*pblock, state);
         if (!rv)
@@ -413,10 +413,10 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
     }
 
     if (fBlocksDisconnected) {
-        mempool.removeForReorg(pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip, pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->nHeight + 1, STANDARD_LOCKTIME_VERIFY_FLAGS);
+        mempool.removeForReorg(pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.get(), pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->nHeight + 1, STANDARD_LOCKTIME_VERIFY_FLAGS);
         LimitMempoolSize(mempool, gArgs.GetArg("-maxmempool", DEFAULT_MAX_MEMPOOL_SIZE) * 1000000, gArgs.GetArg("-mempoolexpiry", DEFAULT_MEMPOOL_EXPIRY) * 60 * 60);
     }
-    mempool.check(pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip);
+    mempool.check(pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.get());
 
     // Callbacks/notifications for a new best chain.
     if (fInvalidFound)

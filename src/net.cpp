@@ -356,6 +356,7 @@ CNode* FindNode(const CService& addr)
 
 CNode* ConnectNode(CAddress addrConnect, const char *pszDest)
 {
+    bool fCountFailure = false;
     if (pszDest == NULL) {
         if (IsLocal(addrConnect))
             return NULL;
@@ -386,7 +387,7 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest)
             return NULL;
         }
 
-        addrman.Attempt(addrConnect);
+        addrman.Attempt(addrConnect, fCountFailure);
 
         // Add node
         CNode* pnode = new CNode(hSocket, addrConnect, pszDest ? pszDest : "", false);
@@ -403,7 +404,7 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest)
     } else if (!proxyConnectionFailed) {
         // If connecting to the node failed, and failure is not caused by a problem connecting to
         // the proxy, mark this as an attempt.
-        addrman.Attempt(addrConnect);
+        addrman.Attempt(addrConnect, fCountFailure);
     }
 
     return NULL;

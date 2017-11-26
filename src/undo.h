@@ -34,22 +34,22 @@ public:
     }
 
     template<typename Stream>
-    void Serialize(Stream &s, int nType, int nVersion) const {
-        ::Serialize(s, VARINT(nHeight*2+(fCoinBase ? 1 : 0)), nType, nVersion);
+    void Serialize(Stream &s) const {
+        ::Serialize(s, VARINT(nHeight*2+(fCoinBase ? 1 : 0)));
         if (nHeight > 0)
-            ::Serialize(s, VARINT(this->nVersion), nType, nVersion);
-        ::Serialize(s, CTxOutCompressor(REF(txout)), nType, nVersion);
+            ::Serialize(s, VARINT(this->nVersion));
+        ::Serialize(s, CTxOutCompressor(REF(txout)));
     }
 
     template<typename Stream>
-    void Unserialize(Stream &s, int nType, int nVersion) {
+    void Unserialize(Stream &s) {
         unsigned int nCode = 0;
-        ::Unserialize(s, VARINT(nCode), nType, nVersion);
+        ::Unserialize(s, VARINT(nCode));
         nHeight = nCode / 2;
         fCoinBase = nCode & 1;
         if (nHeight > 0)
-            ::Unserialize(s, VARINT(this->nVersion), nType, nVersion);
-        ::Unserialize(s, REF(CTxOutCompressor(REF(txout))), nType, nVersion);
+            ::Unserialize(s, VARINT(this->nVersion));
+        ::Unserialize(s, REF(CTxOutCompressor(REF(txout))));
     }
 };
 
@@ -63,7 +63,7 @@ public:
     ADD_SERIALIZE_METHODS
 
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
+    inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(vprevout);
     }
 };
@@ -77,9 +77,18 @@ public:
     ADD_SERIALIZE_METHODS
 
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
+    inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(vtxundo);
     }
+};
+
+enum DisconnectResult {
+    // All good.
+    DISCONNECT_OK,
+    // Rolled back, but UTXO set was inconsistent with block.
+    DISCONNECT_UNCLEAN,
+    // Something else went wrong.
+    DISCONNECT_FAILED,
 };
 
 #endif // BITCOIN_UNDO_H

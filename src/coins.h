@@ -17,6 +17,58 @@
 
 #include <boost/unordered_map.hpp>
 
+/**
+ * A UTXO entry.
+ *
+ * Serialized format:
+ * - VARINT((coinbase ? 1 : 0) | (height << 1))
+ * - the non-spent CTxOut (via CTxOutCompressor)
+ */
+class Coin {
+    //! Unspent transaction output.
+    CTxOut out;
+
+    //! Whether containing transaction was a coinbase and height at which the
+    //! transaction was included into a block.
+    uint32_t nHeightAndIsCoinBase;
+
+public:
+    //! Empty constructor
+    Coin() : nHeightAndIsCoinBase(0) {}
+
+    //! Constructor from a CTxOut and height/coinbase information.
+    Coin(CTxOut outIn, uint32_t nHeightIn, bool IsCoinbase)
+        : out(std::move(outIn)),
+          nHeightAndIsCoinBase((nHeightIn << 1) | IsCoinbase) {}
+
+    uint32_t GetHeight() const { return nHeightAndIsCoinBase >> 1; }
+    bool IsCoinBase() const { return nHeightAndIsCoinBase & 0x01; }
+    bool IsSpent() const { return out.IsNull(); }
+
+    CTxOut &GetTxOut() { return out; }
+    const CTxOut &GetTxOut() const { return out; }
+
+    void Clear() {
+        out.SetNull();
+        nHeightAndIsCoinBase = 0;
+    }
+
+    template <typename Stream> void Serialize(Stream &s) const {
+        assert(!IsSpent());
+        ::Serialize(s, VARINT(nHeightAndIsCoinBase));
+        ::Serialize(s, CTxOutCompressor(REF(out)));
+    }
+
+    template <typename Stream> void Unserialize(Stream &s) {
+        ::Unserialize(s, VARINT(nHeightAndIsCoinBase));
+        ::Unserialize(s, REF(CTxOutCompressor(out)));
+    }
+
+    size_t DynamicMemoryUsage() const {
+        return memusage::DynamicUsage(out.scriptPubKey);
+    }
+};
+
 /** 
  * Pruned version of CTransaction: only retains metadata and unspent transaction outputs
  *
@@ -175,7 +227,7 @@ public:
     }
 
     template<typename Stream>
-    void Serialize(Stream &s, int nType, int nVersion) const {
+    void Serialize(Stream &s) const {
         unsigned int nMaskSize = 0, nMaskCode = 0;
         CalcMaskSize(nMaskSize, nMaskCode);
         bool fFirst = vout.size() > 0 && !vout[0].IsNull();
@@ -183,33 +235,33 @@ public:
         assert(fFirst || fSecond || nMaskCode);
         unsigned int nCode = 8*(nMaskCode - (fFirst || fSecond ? 0 : 1)) + (fCoinBase ? 1 : 0) + (fFirst ? 2 : 0) + (fSecond ? 4 : 0);
         // version
-        ::Serialize(s, VARINT(this->nVersion), nType, nVersion);
+        ::Serialize(s, VARINT(this->nVersion));
         // header code
-        ::Serialize(s, VARINT(nCode), nType, nVersion);
+        ::Serialize(s, VARINT(nCode));
         // spentness bitmask
         for (unsigned int b = 0; b<nMaskSize; b++) {
             unsigned char chAvail = 0;
             for (unsigned int i = 0; i < 8 && 2+b*8+i < vout.size(); i++)
                 if (!vout[2+b*8+i].IsNull())
                     chAvail |= (1 << i);
-            ::Serialize(s, chAvail, nType, nVersion);
+            ::Serialize(s, chAvail);
         }
         // txouts themself
         for (unsigned int i = 0; i < vout.size(); i++) {
             if (!vout[i].IsNull())
-                ::Serialize(s, CTxOutCompressor(REF(vout[i])), nType, nVersion);
+                ::Serialize(s, CTxOutCompressor(REF(vout[i])));
         }
         // coinbase height
-        ::Serialize(s, VARINT(nHeight), nType, nVersion);
+        ::Serialize(s, VARINT(nHeight));
     }
 
     template<typename Stream>
-    void Unserialize(Stream &s, int nType, int nVersion) {
+    void Unserialize(Stream &s) {
         unsigned int nCode = 0;
         // version
-        ::Unserialize(s, VARINT(this->nVersion), nType, nVersion);
+        ::Unserialize(s, VARINT(this->nVersion));
         // header code
-        ::Unserialize(s, VARINT(nCode), nType, nVersion);
+        ::Unserialize(s, VARINT(nCode));
         fCoinBase = nCode & 1;
         std::vector<bool> vAvail(2, false);
         vAvail[0] = (nCode & 2) != 0;
@@ -218,7 +270,7 @@ public:
         // spentness bitmask
         while (nMaskCode > 0) {
             unsigned char chAvail = 0;
-            ::Unserialize(s, chAvail, nType, nVersion);
+            ::Unserialize(s, chAvail);
             for (unsigned int p = 0; p < 8; p++) {
                 bool f = (chAvail & (1 << p)) != 0;
                 vAvail.push_back(f);
@@ -230,10 +282,10 @@ public:
         vout.assign(vAvail.size(), CTxOut());
         for (unsigned int i = 0; i < vAvail.size(); i++) {
             if (vAvail[i])
-                ::Unserialize(s, REF(CTxOutCompressor(vout[i])), nType, nVersion);
+                ::Unserialize(s, REF(CTxOutCompressor(vout[i])));
         }
         // coinbase height
-        ::Unserialize(s, VARINT(nHeight), nType, nVersion);
+        ::Unserialize(s, VARINT(nHeight));
         Cleanup();
     }
 
@@ -324,6 +376,12 @@ public:
     //! Retrieve the block hash whose state this CCoinsView currently represents
     virtual uint256 GetBestBlock() const;
 
+    //! Retrieve the range of blocks that may have been only partially written.
+    //! If the database is in a consistent state, the result is the empty vector.
+    //! Otherwise, a two-element vector is returned consisting of the new and
+    //! the old block hash, in that order.
+    virtual std::vector<uint256> GetHeadBlocks() const;
+
     //! Do a bulk modification (multiple CCoins changes + BestBlock change).
     //! The passed mapCoins can be modified.
     virtual bool BatchWrite(CCoinsMap &mapCoins, const uint256 &hashBlock);
@@ -347,6 +405,7 @@ public:
     bool GetCoins(const uint256 &txid, CCoins &coins) const;
     bool HaveCoins(const uint256 &txid) const;
     uint256 GetBestBlock() const;
+    std::vector<uint256> GetHeadBlocks() const override;
     void SetBackend(CCoinsView &viewIn);
     bool BatchWrite(CCoinsMap &mapCoins, const uint256 &hashBlock);
     bool GetStats(CCoinsStats &stats) const;

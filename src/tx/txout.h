@@ -23,7 +23,7 @@ public:
     ADD_SERIALIZE_METHODS
 
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
+    inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(nValue);
         READWRITE(*(CScriptBase*)(&scriptPubKey));
     }
@@ -65,7 +65,9 @@ public:
         if (scriptPubKey.IsUnspendable())
             return 0;
 
-        size_t nSize = GetSerializeSize(SER_DISK,0)+148u;
+        size_t nSize = GetSerializeSize(*this, SER_DISK, 0);
+        // the 148 mentioned above
+        nSize += (32 + 4 + 1 + 107 + 4);
         return 3*minRelayTxFee.GetFee(nSize);
     }
 

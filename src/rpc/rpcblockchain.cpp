@@ -525,7 +525,7 @@ UniValue gettxout(const UniValue& params, bool fHelp)
     CCoins coins;
     if (fMempool) {
         LOCK(mempool.cs);
-        CCoinsViewMemPool view(pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip, mempool);
+        CCoinsViewMemPool view(pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.get(), mempool);
         if (!view.GetCoins(hash, coins))
             return NullUniValue;
         mempool.pruneSpent(hash, coins); // TODO: this should be done by the CCoinsViewMemPool
@@ -578,7 +578,7 @@ UniValue verifychain(const UniValue& params, bool fHelp)
     if (params.size() > 1)
         nCheckDepth = params[1].get_int();
 
-    return CVerifyDB().VerifyDB(pnetMan->getActivePaymentNetwork(), pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip, nCheckLevel, nCheckDepth);
+    return CVerifyDB().VerifyDB(pnetMan->getActivePaymentNetwork(), pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.get(), nCheckLevel, nCheckDepth);
 }
 
 /** Implementation of IsSuperMajority with better feedback */

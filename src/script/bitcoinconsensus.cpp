@@ -43,7 +43,7 @@ public:
     template<typename T>
     TxInputStream& operator>>(T& obj)
     {
-        ::Unserialize(*this, obj, m_type, m_version);
+        ::Unserialize(*this, obj);
         return *this;
     }
 
@@ -79,7 +79,7 @@ int bitcoinconsensus_verify_script(const unsigned char *scriptPubKey, unsigned i
         stream >> tx;
         if (nIn >= tx.vin.size())
             return set_error(err, bitcoinconsensus_ERR_TX_INDEX);
-        if (tx.GetSerializeSize(SER_NETWORK, PROTOCOL_VERSION) != txToLen)
+        if (GetSerializeSize(tx, SER_NETWORK, PROTOCOL_VERSION) != txToLen)
             return set_error(err, bitcoinconsensus_ERR_TX_SIZE_MISMATCH);
 
          // Regardless of the verification result, the tx did not error.
