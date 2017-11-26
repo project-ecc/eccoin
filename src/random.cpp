@@ -40,6 +40,28 @@ static void RandFailure() {
     abort();
 }
 
+#ifndef WIN32
+/**
+ *Fallback: get 32 bytes of system entropy from /dev/urandom. The most
+ *compatible way to get cryptographic randomness on UNIX-ish platforms.
+ */
+void GetDevURandom(unsigned char *ent32) {
+    int f = open("/dev/urandom", O_RDONLY);
+    if (f == -1) {
+        RandFailure();
+    }
+    int have = 0;
+    do {
+        ssize_t n = read(f, ent32 + have, NUM_OS_RANDOM_BYTES - have);
+        if (n <= 0 || n + have > NUM_OS_RANDOM_BYTES) {
+            RandFailure();
+        }
+        have += n;
+    } while (have < NUM_OS_RANDOM_BYTES);
+    close(f);
+}
+#endif
+
 static inline int64_t GetPerformanceCounter()
 {
     int64_t nCounter = 0;
