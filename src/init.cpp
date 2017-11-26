@@ -1256,7 +1256,6 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                     strLoadError = _("Error loading block database");
                     break;
                 }
-
                 // If the loaded chain has a wrong genesis, bail out immediately
                 // (we're likely using a testnet datadir, or the other way around).
                 if (!pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.empty() &&
@@ -1281,13 +1280,11 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                     strLoadError = _("Error initializing block database");
                     break;
                 }
-
                 // At this point we're either in reindex or we've loaded a useful
                 // block tree into mapBlockIndex!
 
                 pcoinsdbview.reset(new CCoinsViewDB(nCoinDBCache, false, fReset));
                 pcoinscatcher.reset(new CCoinsViewErrorCatcher(pcoinsdbview.get()));
-
                 // If necessary, upgrade from older database format.
                 // This is a no-op if we cleared the coinsviewdb with -reindex or -reindex-chainstate
                 if (!pcoinsdbview->Upgrade())
@@ -1295,7 +1292,6 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                     strLoadError = _("Error upgrading chainstate database");
                     break;
                 }
-
                 // The on-disk coinsdb is now in a good state, create the cache
                 pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.reset(new CCoinsViewCache(pcoinscatcher.get()));
                 {
@@ -1307,16 +1303,17 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                     }
                     assert(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip() != nullptr);
                 }
-                if (!fReset )
+                if (!fReset && pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip() != nullptr)
                 {
                     // Note that RewindBlockIndex MUST run even if we're about to -reindex-chainstate.
                     // It both disconnects blocks based on chainActive, and drops block data in
                     // mapBlockIndex based on lack of available witness data.
                     uiInterface.InitMessage(_("Rewinding blocks..."));
-                    LogPrintf("Rewinding blocks...");
+                    LogPrintf("Rewinding blocks... \n");
                     if (!pnetMan->getActivePaymentNetwork()->getChainManager()->RewindBlockIndex(chainparams))
                     {
                         strLoadError = _("Unable to rewind the database to a pre-fork state. You will need to redownload the blockchain");
+                        LogPrintf("<<< breaking.... \n");
                         break;
                     }
                 }
@@ -1630,3 +1627,4 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
 
     return !fRequestShutdown;
 }
+
