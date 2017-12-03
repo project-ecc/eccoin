@@ -78,6 +78,8 @@ UniValue getinfo(const UniValue& params, bool fHelp)
     {
         obj.push_back(Pair("walletversion", pwalletMain->GetVersion()));
         obj.push_back(Pair("balance",       ValueFromAmount(pwalletMain->GetBalance())));
+        obj.push_back(Pair("newmint",       ValueFromAmount(pwalletMain->GetNewMint())));
+        obj.push_back(Pair("stake",         ValueFromAmount(pwalletMain->GetStake())));
     }
     obj.push_back(Pair("blocks",        (int)pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height()));
     obj.push_back(Pair("headers",       (int)pnetMan->getActivePaymentNetwork()->getChainManager()->pindexBestHeader->nHeight));
