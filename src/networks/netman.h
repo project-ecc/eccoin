@@ -36,24 +36,52 @@ public:
     {
         legacyTemplate = new CNetworkTemplate();
         ConstructLegacyNetworkTemplate();
+        netManTestnetTemplate = new CNetworkTemplate();
+        ConstructTetnet0Template();
+        //only run construct networks after all templates have been made
         ConstructNetworks();
     }
 
     void ConstructLegacyNetworkTemplate();
+
+    void ConstructTetnet0Template();
+
     void ConstructNetworks();
 
     CNetwork* getActivePaymentNetwork()
     {
-        return pnetLegacy;
+        return activePaymentNetwork;
+    }
+
+    void SelectParams(const std::string& network)
+    {
+        if (network == "LEGACY")
+        {
+            return activePaymentNetwork = pnetLegacy;
+        }
+        else if (network == "TESTNET0-TEMPORARY")
+        {
+            return activePaymentNetwork = pnetTestnet0;
+        }
+        else
+        {
+            throw std::runtime_error(strprintf("%s: Unknown network %s.", __func__, network));
+        }
+        return;
     }
 
 private:
+    CNetwork* activePaymentNetwork;
 
     CNetwork* pnetLegacy;
     CNetwork* pnetPayment;
 
+    CNetwork* pnetTestnet0;
+
     CNetworkTemplate* legacyTemplate;
     CNetworkTemplate* paymentTemplate;
+    CNetworkTemplate* netManTestnetTemplate;
+
 
 };
 
