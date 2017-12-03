@@ -33,6 +33,10 @@ void CNetworkManager::ConstructNetworks()
     {
         pnetPayment = new CNetwork(paymentTemplate);
     }
+    if(netManTestnetTemplate != NULL)
+    {
+        pnetTestnet0 = new CNetwork(netManTestnetTemplate);
+    }
 }
 
 void CNetworkManager::ConstructLegacyNetworkTemplate()
@@ -254,13 +258,11 @@ void CNetworkManager::ConstructTetnet0Template()
 std::string ChainNameFromCommandLine()
 {
     bool fRegTest = gArgs.GetBoolArg("-regtest", false);
-    bool fTestNet = gArgs.GetBoolArg("-testnet", false);
+    bool fTestNet = gArgs.GetBoolArg("-testnet0", false);
 
     if (fTestNet && fRegTest)
         throw std::runtime_error("Invalid combination of -regtest and -testnet.");
-    if (fRegTest)
-        return "REGTEST";
     if (fTestNet)
-        return "TESTNET";
+        return "TESTNET0-TEMPORARY";
     return "LEGACY";
 }
