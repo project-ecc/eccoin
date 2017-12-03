@@ -171,6 +171,85 @@ void CNetworkManager::ConstructLegacyNetworkTemplate()
     };
 }
 
+void CNetworkManager::ConstructTetnet0Template()
+{
+    netManTestnetTemplate->strNetworkID = "TESTNET0-TEMPORARY";
+    netManTestnetTemplate->consensus.nSubsidyHalvingInterval = 210000;
+    netManTestnetTemplate->consensus.nMajorityEnforceBlockUpgrade = 750;
+    netManTestnetTemplate->consensus.nMajorityRejectBlockOutdated = 950;
+    netManTestnetTemplate->consensus.nMajorityWindow = 1000;
+    netManTestnetTemplate->consensus.powLimit  = uint256S("00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+    netManTestnetTemplate->consensus.posLimit  = uint256S("00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+    netManTestnetTemplate->consensus.nTargetTimespan = 30 * 45;
+    netManTestnetTemplate->consensus.nTargetSpacing = 45;
+    netManTestnetTemplate->consensus.fPowAllowMinDifficultyBlocks = false;
+    netManTestnetTemplate->consensus.fPowNoRetargeting = false;
+    netManTestnetTemplate->consensus.nRuleChangeActivationThreshold = 1916; // 95% of 2016
+    netManTestnetTemplate->consensus.nMinerConfirmationWindow = 2016; // nPowTargetTimespan / nTargetSpacing
+    netManTestnetTemplate->consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].bit = 28;
+    netManTestnetTemplate->consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nStartTime = 1199145601; // January 1, 2008
+    netManTestnetTemplate->consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nTimeout = 1230767999; // December 31, 2008
+
+    // Deployment of BIP68, BIP112, and BIP113.
+    netManTestnetTemplate->consensus.vDeployments[Consensus::DEPLOYMENT_CSV].bit = 0;
+    netManTestnetTemplate->consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nStartTime = 1462060800; // May 1st, 2016
+    netManTestnetTemplate->consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nTimeout = 1493596800; // May 1st, 2017
+
+    /**
+     * The message start string is designed to be unlikely to occur in normal data.
+     * The characters are rarely used upper ASCII, not valid as UTF-8, and produce
+     * a large 32-bit integer with any alignment.
+     */
+    netManTestnetTemplate->pchMessageStart[0] = 0xee;
+    netManTestnetTemplate->pchMessageStart[1] = 0xff;
+    netManTestnetTemplate->pchMessageStart[2] = 0xaa;
+    netManTestnetTemplate->pchMessageStart[3] = 0xbb;
+    netManTestnetTemplate->nDefaultPort = 30000;
+    netManTestnetTemplate->nRPCPort = 30001;
+    netManTestnetTemplate->nMaxTipAge = 24 * 60 * 60;
+    netManTestnetTemplate->nStakeMaxAge = 60*60*24*84; //84 days
+    netManTestnetTemplate->nStakeMinAge = 60*2; // 2 minutes
+
+    const char* pszTimestamp = "AP | Dec 3, 2017, Testing of new network manager begins";
+    CTransaction txNew;
+    txNew.nTime = 1512338805;
+    txNew.vin.resize(1);
+    txNew.vout.resize(1);
+    txNew.vin[0].scriptSig =  CScript() << 486604799 << CBigNum(9999) << std::vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
+    txNew.vout[0].SetEmpty();
+    txNew.vout[0].SetEmpty();
+
+    netManTestnetTemplate->genesis.vtx.push_back(txNew);
+    netManTestnetTemplate->genesis.hashPrevBlock.SetNull();
+    netManTestnetTemplate->genesis.nVersion = 1;
+    netManTestnetTemplate->genesis.nTime    = 1512338805;
+    netManTestnetTemplate->genesis.nBits    = 0x1e0fffff;
+    netManTestnetTemplate->genesis.nNonce   = 12799721;
+    netManTestnetTemplate->genesis.hashMerkleRoot = BlockMerkleRoot(netManTestnetTemplate->genesis);
+
+    netManTestnetTemplate->consensus.hashGenesisBlock = netManTestnetTemplate->genesis.GetHash();
+    assert(netManTestnetTemplate->consensus.hashGenesisBlock == uint256S("0xa60ac43c88dbc44b826cf315352a8a7b373d2af8b6e1c4c4a0638859c5e9ecd1"));
+    assert(netManTestnetTemplate->genesis.hashMerkleRoot == uint256S("0x4db82fe8b45f3dae2b7c7b8be5ec4c37e72e25eaf989b9db24ce1d0fd37eed8b"));
+
+    netManTestnetTemplate->vSeeds.push_back(CDNSSeedData("CryptoUnitedSeed", "www.cryptounited.io"));
+
+    netManTestnetTemplate->base58Prefixes[CNetworkTemplate::PUBKEY_ADDRESS] = std::vector<unsigned char>(1,51);
+    netManTestnetTemplate->base58Prefixes[CNetworkTemplate::SCRIPT_ADDRESS] = std::vector<unsigned char>(1,15);
+    netManTestnetTemplate->base58Prefixes[CNetworkTemplate::SECRET_KEY] =     std::vector<unsigned char>(1,159);
+    netManTestnetTemplate->base58Prefixes[CNetworkTemplate::EXT_PUBLIC_KEY] = boost::assign::list_of(0x04)(0x88)(0xB2)(0x1E).convert_to_container<std::vector<unsigned char> >();
+    netManTestnetTemplate->base58Prefixes[CNetworkTemplate::EXT_SECRET_KEY] = boost::assign::list_of(0x04)(0x88)(0xAD)(0xE4).convert_to_container<std::vector<unsigned char> >();
+
+    netManTestnetTemplate->fMiningRequiresPeers = true;
+    netManTestnetTemplate->fDefaultConsistencyChecks = false;
+    netManTestnetTemplate->fRequireStandard = true;
+    netManTestnetTemplate->fMineBlocksOnDemand = false;
+    netManTestnetTemplate->fTestnetToBeDeprecatedFieldRPC = false;
+
+    netManTestnetTemplate->checkpointData =
+        boost::assign::map_list_of
+        (     0, uint256S("0xa60ac43c88dbc44b826cf315352a8a7b373d2af8b6e1c4c4a0638859c5e9ecd1"))
+    ;
+}
 
 std::string ChainNameFromCommandLine()
 {
