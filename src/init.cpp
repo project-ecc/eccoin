@@ -302,6 +302,7 @@ std::string HelpMessage()
     strUsage += HelpMessageOpt("-checkblocks=<n>", strprintf(_("How many blocks to check at startup (default: %u, 0 = all)"), DEFAULT_CHECKBLOCKS));
     strUsage += HelpMessageOpt("-checklevel=<n>", strprintf(_("How thorough the block verification of -checkblocks is (0-4, default: %u)"), DEFAULT_CHECKLEVEL));
     strUsage += HelpMessageOpt("-conf=<file>", strprintf(_("Specify configuration file (default: %s)"), CONF_FILENAME));
+    strUsage += HelpMessageOpt("-returnchange", strprintf(_("Specify if change is returned to same address (default: %u)"), DEFAULT_RETURN_CHANGE));
     {
 #ifndef WIN32
         strUsage += HelpMessageOpt("-daemon", _("Run in the background as a daemon and accept commands"));
