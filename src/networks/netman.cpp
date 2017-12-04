@@ -234,8 +234,8 @@ void CNetworkManager::ConstructTetnet0Template()
     netManTestnetTemplate->genesis.hashMerkleRoot = BlockMerkleRoot(netManTestnetTemplate->genesis);
 
     netManTestnetTemplate->consensus.hashGenesisBlock = netManTestnetTemplate->genesis.GetHash();
-    assert(netManTestnetTemplate->consensus.hashGenesisBlock == uint256S("0xa60ac43c88dbc44b826cf315352a8a7b373d2af8b6e1c4c4a0638859c5e9ecd1"));
-    assert(netManTestnetTemplate->genesis.hashMerkleRoot == uint256S("0x4db82fe8b45f3dae2b7c7b8be5ec4c37e72e25eaf989b9db24ce1d0fd37eed8b"));
+    assert(netManTestnetTemplate->consensus.hashGenesisBlock == uint256S("0x94e16dc2de0cec9f52c9e8f1b729b4e1d9d47720eac56388c33e9dec30e52124"));
+    assert(netManTestnetTemplate->genesis.hashMerkleRoot == uint256S("0xc0e7a1a7812892b4026a3d1a52689180204d742bc968f9d42dddeb338f63cdf0"));
 
     netManTestnetTemplate->vSeeds.push_back(CDNSSeedData("CryptoUnitedSeed", "www.cryptounited.io"));
 
@@ -253,7 +253,7 @@ void CNetworkManager::ConstructTetnet0Template()
 
     netManTestnetTemplate->checkpointData = (CCheckpointData){
         boost::assign::map_list_of
-        (     0, uint256S("0xa60ac43c88dbc44b826cf315352a8a7b373d2af8b6e1c4c4a0638859c5e9ecd1"))
+        (     0, uint256S("0x94e16dc2de0cec9f52c9e8f1b729b4e1d9d47720eac56388c33e9dec30e52124"))
     };
 }
 
