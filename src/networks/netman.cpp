@@ -249,10 +249,10 @@ void CNetworkManager::ConstructTetnet0Template()
     netManTestnetTemplate->fMineBlocksOnDemand = false;
     netManTestnetTemplate->fTestnetToBeDeprecatedFieldRPC = false;
 
-    netManTestnetTemplate->checkpointData =
+    netManTestnetTemplate->checkpointData = (CCheckpointData){
         boost::assign::map_list_of
         (     0, uint256S("0xa60ac43c88dbc44b826cf315352a8a7b373d2af8b6e1c4c4a0638859c5e9ecd1"))
-    ;
+    };
 }
 
 std::string ChainNameFromCommandLine()
