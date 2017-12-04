@@ -42,6 +42,7 @@ void CNetworkManager::ConstructNetworks()
 void CNetworkManager::ConstructLegacyNetworkTemplate()
 {
     legacyTemplate->strNetworkID = "LEGACY";
+    legacyTemplate->strNetworkDataDir = "";
     legacyTemplate->consensus.nSubsidyHalvingInterval = 210000;
     legacyTemplate->consensus.nMajorityEnforceBlockUpgrade = 750;
     legacyTemplate->consensus.nMajorityRejectBlockOutdated = 950;
@@ -178,6 +179,7 @@ void CNetworkManager::ConstructLegacyNetworkTemplate()
 void CNetworkManager::ConstructTetnet0Template()
 {
     netManTestnetTemplate->strNetworkID = "TESTNET0-TEMPORARY";
+    netManTestnetTemplate->strNetworkDataDir = "testnet0-temporary";
     netManTestnetTemplate->consensus.nSubsidyHalvingInterval = 210000;
     netManTestnetTemplate->consensus.nMajorityEnforceBlockUpgrade = 750;
     netManTestnetTemplate->consensus.nMajorityRejectBlockOutdated = 950;
