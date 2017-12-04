@@ -410,17 +410,23 @@ const boost::filesystem::path &GetDataDir(bool fNetSpecific)
     if (!path.empty())
         return path;
 
-    if (gArgs.IsArgSet("-datadir")) {
+    if (gArgs.IsArgSet("-datadir"))
+    {
         path = fs::system_complete(gArgs.GetArg("-datadir", ""));
-        if (!fs::is_directory(path)) {
+        if (!fs::is_directory(path))
+        {
             path = "";
             return path;
         }
-    } else {
+    }
+    else
+    {
         path = GetDefaultDataDir();
     }
     if (fNetSpecific)
+    {
         path /= pnetMan->getActivePaymentNetwork()->DataDir();
+    }
 
     fs::create_directories(path);
 

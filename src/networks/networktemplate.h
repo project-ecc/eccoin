@@ -114,6 +114,7 @@ public:
     std::vector<CDNSSeedData> vSeeds;
     std::vector<unsigned char> base58Prefixes[MAX_BASE58_TYPES];
     std::string strNetworkID;
+    std::string strNetworkDataDir;
     CBlock genesis;
     bool fMiningRequiresPeers;
     bool fDefaultConsistencyChecks;
