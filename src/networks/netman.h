@@ -57,11 +57,11 @@ public:
     {
         if (network == "LEGACY")
         {
-            return activePaymentNetwork = pnetLegacy;
+            activePaymentNetwork = pnetLegacy;
         }
         else if (network == "TESTNET0-TEMPORARY")
         {
-            return activePaymentNetwork = pnetTestnet0;
+            activePaymentNetwork = pnetTestnet0;
         }
         else
         {
