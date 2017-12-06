@@ -27,9 +27,13 @@ public:
     {
         legacyTemplate = NULL;
         paymentTemplate = NULL;
-
+        netManTestnetTemplate = NULL;
+        
         pnetLegacy = NULL;
         pnetPayment = NULL;
+        pnetTestnet0 = NULL;
+        
+        activePaymentNetwork = NULL;
     }
 
     void initialize()
@@ -53,7 +57,7 @@ public:
         return activePaymentNetwork;
     }
 
-    void SelectParams(const std::string& network)
+    void SetParams(const std::string& network)
     {
         if (network == "LEGACY")
         {
@@ -69,7 +73,6 @@ public:
         }
         return;
     }
-
 private:
     CNetwork* activePaymentNetwork;
 
@@ -92,4 +95,7 @@ private:
 std::string ChainNameFromCommandLine();
 
 
+void CheckParams(const std::string& network);
+
 #endif // BITCOIN_CHAINPARAMSBASE_H
+

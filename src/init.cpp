@@ -204,16 +204,23 @@ void Shutdown()
 
     {
         LOCK(cs_main);
-        if (pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip != NULL) {
-            FlushStateToDisk();
+        if(pnetMan)
+        {
+            if (pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip != NULL)
+            {
+                FlushStateToDisk();
+            }
+            pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.reset();
         }
-        pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.reset();
         pcoinscatcher.reset();
         pcoinscatcher = NULL;
         pcoinsdbview.reset();
         pcoinsdbview = NULL;
-        delete pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree;
-        pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree = NULL;
+        if(pnetMan)
+        {
+            delete pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree;
+            pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree = NULL;
+        }
     }
 
     if (pwalletMain)
@@ -735,6 +742,8 @@ void InitLogging()
 void GenerateNetworkTemplates()
 {
     pnetMan = new CNetworkManager();
+    pnetMan->SetParams(ChainNameFromCommandLine());
+
 }
 
 /** Initialize bitcoin.
@@ -1628,4 +1637,5 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
 
     return !fRequestShutdown;
 }
+
 

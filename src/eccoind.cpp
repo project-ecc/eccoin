@@ -107,18 +107,18 @@ bool AppInit(int argc, char* argv[])
         }
         // Check for -testnet or -regtest parameter (Params() calls are only valid after this clause)
         try {
-            pnetMan->SelectParams(ChainNameFromCommandLine());
+            std::string network = ChainNameFromCommandLine();
+            printf("network = %s", network.c_str());
+            CheckParams(network);
         } catch (const std::exception& e) {
             fprintf(stderr, "Error: %s\n", e.what());
             return false;
         }
-
         // Command-line RPC
         bool fCommandLine = false;
         for (int i = 1; i < argc; i++)
             if (!IsSwitchChar(argv[i][0]) && !boost::algorithm::istarts_with(argv[i], "ECC:"))
                 fCommandLine = true;
-
         if (fCommandLine)
         {
             int ret = CommandLineRPC(argc, argv);
@@ -149,16 +149,19 @@ bool AppInit(int argc, char* argv[])
         }
 #endif
         gArgs.SoftSetBoolArg("-server", true);
-
         // Set this early so that parameter interactions go to console
         InitLogging();
         InitParameterInteraction();
         GenerateNetworkTemplates();
         fRet = AppInit2(threadGroup, scheduler);
+        printf("fret from appinit2 is %d \n", fRet);
     }
-    catch (const std::exception& e) {
+    catch (const std::exception& e)
+    {
         PrintExceptionContinue(&e, "AppInit()");
-    } catch (...) {
+    } 
+    catch (...)
+    {
         PrintExceptionContinue(NULL, "AppInit()");
     }
 

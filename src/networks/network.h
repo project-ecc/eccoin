@@ -35,17 +35,15 @@
 class CNetwork : public CNetworkTemplate
 {
 public:
-    CNetwork(const CNetworkTemplate& param_netTemplate) : CNetworkTemplate(param_netTemplate)
+    CNetwork(CNetworkTemplate* param_netTemplate) : CNetworkTemplate(param_netTemplate)
     {
         this->chainman = CChainManager();
-        this->strDataDir = param_netTemplate.strNetworkDataDir;
     }
-    const std::string& DataDir() const { return strDataDir; }
+    const std::string& DataDir() const { return strNetworkDataDir; }
     CChainManager* getChainManager() { return &chainman; }
 
     /// TODO: put a check somewhere to make sure all data members have been set properly
 private:
-    std::string strDataDir;
     CChainManager chainman;
 };
 
