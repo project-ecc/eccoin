@@ -101,14 +101,14 @@ bool AppInit(int argc, char* argv[])
         try
         {
             gArgs.ReadConfigFile();
-        } catch (const std::exception& e) {
+        }
+        catch (const std::exception& e)
+        {
             fprintf(stderr,"Error reading configuration file: %s\n", e.what());
             return false;
         }
         // Check for -testnet or -regtest parameter (Params() calls are only valid after this clause)
         try {
-            std::string network = ChainNameFromCommandLine();
-            printf("network = %s", network.c_str());
             CheckParams(network);
         } catch (const std::exception& e) {
             fprintf(stderr, "Error: %s\n", e.what());
@@ -117,8 +117,12 @@ bool AppInit(int argc, char* argv[])
         // Command-line RPC
         bool fCommandLine = false;
         for (int i = 1; i < argc; i++)
+        {
             if (!IsSwitchChar(argv[i][0]) && !boost::algorithm::istarts_with(argv[i], "ECC:"))
+            {
                 fCommandLine = true;
+            }
+        }
         if (fCommandLine)
         {
             int ret = CommandLineRPC(argc, argv);
