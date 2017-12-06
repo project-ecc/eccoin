@@ -62,6 +62,7 @@ public:
     bool TestnetToBeDeprecatedFieldRPC() const { return fTestnetToBeDeprecatedFieldRPC; }
     /** Return the BIP70 network string (main, test or regtest) */
     std::string NetworkIDString() const { return strNetworkID; }
+    std::string NetworkDataDir() const { return strNetworkDataDir; }
     const std::vector<CDNSSeedData>& DNSSeeds() const { return vSeeds; }
     const std::vector<unsigned char>& Base58Prefix(Base58Type type) const { return base58Prefixes[type]; }
     const CCheckpointData& Checkpoints() const { return checkpointData; }
@@ -92,6 +93,7 @@ public:
         this->nMaxTipAge = param_netTemplate->MaxTipAge();
         this->vSeeds = param_netTemplate->DNSSeeds();
         this->strNetworkID = param_netTemplate->NetworkIDString();
+        this->strNetworkDataDir = param_netTemplate->NetworkDataDir();
         this->genesis = param_netTemplate->GenesisBlock();
         this->fMiningRequiresPeers = param_netTemplate->MiningRequiresPeers();
         this->fDefaultConsistencyChecks = param_netTemplate->DefaultConsistencyChecks();
