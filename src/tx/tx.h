@@ -59,12 +59,12 @@ public:
         READWRITE(*const_cast<std::vector<CTxIn>*>(&vin));
         READWRITE(*const_cast<std::vector<CTxOut>*>(&vout));
         READWRITE(*const_cast<uint32_t*>(&nLockTime));
-        if (ser_action.ForRead())
-            UpdateHash();
         if (this->nVersion == 2)
         {
             READWRITE(*const_cast<uint256*>(&this->serviceReferenceHash));
         }
+        if (ser_action.ForRead())
+            UpdateHash();
     }
 
     bool IsNull() const {
