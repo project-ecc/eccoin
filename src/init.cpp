@@ -20,6 +20,7 @@
 #include "miner.h"
 #include "net.h"
 #include "policy/policy.h"
+#include "processblock.h"
 #include "rpc/rpcserver.h"
 #include "script/standard.h"
 #include "script/sigcache.h"
@@ -34,6 +35,7 @@
 #include "util/utilstrencodings.h"
 #include "validationinterface.h"
 #include "signals.h"
+#include "verifydb.h"
 #include "wallet/db.h"
 #include "wallet/wallet.h"
 #include "wallet/walletdb.h"
@@ -522,48 +524,6 @@ struct CImportingNow
         fImporting = false;
     }
 };
-
-
-// If we're using -prune with -reindex, then delete block files that will be ignored by the
-// reindex.  Since reindexing works by starting at block file 0 and looping until a blockfile
-// is missing, do the same here to delete any later block files after a gap.  Also delete all
-// rev files since they'll be rewritten by the reindex anyway.  This ensures that vinfoBlockFile
-// is in sync with what's actually on disk by the time we start downloading, so that pruning
-// works correctly.
-void CleanupBlockRevFiles()
-{
-    std::map<std::string, boost::filesystem::path> mapBlockFiles;
-
-    // Glob all blk?????.dat and rev?????.dat files from the blocks directory.
-    // Remove the rev files immediately and insert the blk file paths into an
-    // ordered map keyed by block file index.
-    LogPrintf("Removing unusable blk?????.dat and rev?????.dat files for -reindex with -prune\n");
-    boost::filesystem::path blocksdir = GetDataDir() / "blocks";
-    for (boost::filesystem::directory_iterator it(blocksdir); it != boost::filesystem::directory_iterator(); it++) {
-        if (is_regular_file(*it) &&
-            it->path().filename().string().length() == 12 &&
-            it->path().filename().string().substr(8,4) == ".dat")
-        {
-            if (it->path().filename().string().substr(0,3) == "blk")
-                mapBlockFiles[it->path().filename().string().substr(3,5)] = it->path();
-            else if (it->path().filename().string().substr(0,3) == "rev")
-                remove(it->path());
-        }
-    }
-
-    // Remove all block files that aren't part of a contiguous set starting at
-    // zero by walking the ordered map (keys are block file indices) by
-    // keeping a separate counter.  Once we hit a gap (or if 0 doesn't exist)
-    // start removing block files.
-    int nContigCounter = 0;
-    for (auto const& item: mapBlockFiles) {
-        if (atoi(item.first) == nContigCounter) {
-            nContigCounter++;
-            continue;
-        }
-        remove(item.second);
-    }
-}
 
 void ThreadImport(std::vector<boost::filesystem::path> vImportFiles)
 {
@@ -1244,7 +1204,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
         std::string strLoadError;
 
         uiInterface.InitMessage(_("Loading block index..."));
-
+        LogPrintf("Loading block index...");
         nStart = GetTimeMillis();
         do {
             try
@@ -1262,24 +1222,18 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                     pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree->WriteReindexing(true);
                 }
 
-                if (!pnetMan->getActivePaymentNetwork()->getChainManager()->LoadBlockIndex()) {
+                if (!pnetMan->getActivePaymentNetwork()->getChainManager()->LoadBlockIndex())
+                {
                     strLoadError = _("Error loading block database");
                     break;
                 }
+                LogPrintf("load block index function %15dms\n", GetTimeMillis() - nStart);
+
                 // If the loaded chain has a wrong genesis, bail out immediately
                 // (we're likely using a testnet datadir, or the other way around).
                 if (!pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.empty() &&
                         pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.count(chainparams.GetConsensus().hashGenesisBlock) == 0)
                     return InitError(_("Incorrect or no genesis block found. Wrong datadir for network?"));
-
-                //TODO: Remove InitBlockIndex
-                /**
-                // Initialize the block index (no-op if non-empty database was already loaded)
-                if (!pnetMan->getActivePaymentNetwork()->getChainManager()->InitBlockIndex(chainparams)) {
-                    strLoadError = _("Error initializing block database");
-                    break;
-                //}
-                */
 
                 // At this point blocktree args are consistent with what's on disk.
                 // If we're not mid-reindex (based on disk + args), add a genesis block on disk
@@ -1290,6 +1244,9 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                     strLoadError = _("Error initializing block database");
                     break;
                 }
+                LogPrintf("load genesis function %15dms\n", GetTimeMillis() - nStart);
+
+
                 // At this point we're either in reindex or we've loaded a useful
                 // block tree into mapBlockIndex!
 
@@ -1311,6 +1268,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                         strLoadError = _("Error initializing block database");
                         break;
                     }
+                    LogPrintf("load chain tip %15dms\n", GetTimeMillis() - nStart);
                     assert(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip() != nullptr);
                 }
                 if (!fReset && pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip() != nullptr)
@@ -1326,6 +1284,10 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                         LogPrintf("<<< breaking.... \n");
                         break;
                     }
+                    LogPrintf("rewind block index %15dms\n", GetTimeMillis() - nStart);
+                    //uiInterface.InitMessage(_("Cleaning BlockIndex..."));
+                    //LogPrintf("Cleaning BlockIndex... \n");
+                    //removeImpossibleChainTips();
                 }
                 {
                     uiInterface.InitMessage(_("Verifying blocks..."));
@@ -1348,6 +1310,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                         strLoadError = _("Corrupted block database detected");
                         break;
                     }
+                    LogPrintf("verify db function %15dms\n", GetTimeMillis() - nStart);
                 }
             }
             catch (const std::exception& e)

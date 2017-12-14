@@ -1,3 +1,7 @@
+// Copyright (c) 2017 Greg Griffith and the ECC developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #include "servicetx.h"
 #include "crypto/hash.h"
 #include "streams.h"
@@ -77,7 +81,7 @@ std::string CServiceTransaction::ToString() const
     return "";
 }
 
-void CServiceTransaction::setSecurityHash() const
+void CServiceTransaction::setSecurityHash()
 {
     CDataStream ss(SER_GETHASH, 0);
     ss << this->paymentReferenceHash;
