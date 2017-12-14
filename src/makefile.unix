@@ -218,7 +218,11 @@ OBJS= \
     build/univalue/univalue_write.o \
     build/pbkdf2.o \
     build/script/stakescript.o \
-    build/signals.o
+    build/signals.o \
+    build/processtx.o \
+    build/verifydb.o
+
+
 
 all: leveldb secp256k1 ECCoind 
 
