@@ -294,7 +294,9 @@ HEADERS += \
     src/signals.h \
     src/networks/networktemplate.h \
     src/tx/servicetx.h \
-    src/crypto/chacha20.h
+    src/crypto/chacha20.h \
+    src/processtx.h \
+    src/verifydb.h
 
 
 # organize compiles of cpp files by section, this seems to be a logical order where the files lower down generally depend
@@ -402,7 +404,9 @@ SOURCES += \
     src/signals.cpp \
     src/eccoind.cpp \
     src/tx/servicetx.cpp \
-    src/crypto/chacha20.cpp
+    src/crypto/chacha20.cpp \
+    src/processtx.cpp \
+    src/verifydb.cpp
 
 
 

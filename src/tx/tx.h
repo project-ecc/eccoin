@@ -8,6 +8,7 @@
 
 #include "txin.h"
 #include "txout.h"
+#include "consensus/params.h"
 
 /** The basic transaction that is broadcasted on the network and contained in
  * blocks.  A transaction can contain multiple inputs and outputs.
@@ -111,5 +112,8 @@ public:
     bool GetCoinAge(uint64_t& nCoinAge) const;  // ppcoin: get transaction coin age
     uint64_t GetCoinAge(uint64_t nCoinAge, bool byValue) const;
 };
+
+/** Retrieve a transaction (from memory pool, or from disk, if possible) */
+bool GetTransaction(const uint256 &hash, CTransaction &tx, const Consensus::Params& params, uint256 &hashBlock, bool fAllowSlow = false);
 
 #endif // BITCOIN_PRIMITIVES_TRANSACTION_H

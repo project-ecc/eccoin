@@ -1,3 +1,7 @@
+// Copyright (c) 2017 Greg Griffith and the ECC developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #ifndef SERVICETX_H
 #define SERVICETX_H
 
@@ -82,7 +86,7 @@ public:
         return a.hash != b.hash;
     }
     std::string ToString() const;
-    void setSecurityHash() const;
+    void setSecurityHash();
 };
 
 

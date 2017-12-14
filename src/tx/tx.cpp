@@ -18,6 +18,7 @@
 #include "wallet/wallet.h"
 #include "networks/netman.h"
 #include "init.h"
+#include "txmempool.h"
 
 std::string COutPoint::ToString() const
 {
@@ -298,4 +299,64 @@ bool CTransaction::GetCoinAge(uint64_t& nCoinAge) const
         LogPrintf("coin age bnCoinDay=%s\n", bnCoinDay.ToString().c_str());
     nCoinAge = bnCoinDay.getuint64();
     return true;
+}
+
+
+/** Return transaction in tx, and if it was found inside a block, its hash is placed in hashBlock */
+bool GetTransaction(const uint256 &hash, CTransaction &txOut, const Consensus::Params& consensusParams, uint256 &hashBlock, bool fAllowSlow)
+{
+    CBlockIndex *pindexSlow = NULL;
+
+    LOCK(cs_main);
+
+    if (mempool.lookup(hash, txOut))
+    {
+        return true;
+    }
+
+    CDiskTxPos postx;
+    if (pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree->ReadTxIndex(hash, postx)) {
+        CAutoFile file(OpenBlockFile(postx, true), SER_DISK, CLIENT_VERSION);
+        if (file.IsNull())
+            return error("%s: OpenBlockFile failed", __func__);
+        CBlockHeader header;
+        try {
+            file >> header;
+            fseek(file.Get(), postx.nTxOffset, SEEK_CUR);
+            file >> txOut;
+        } catch (const std::exception& e) {
+            return error("%s: Deserialize or I/O error - %s", __func__, e.what());
+        }
+        hashBlock = header.GetHash();
+        if (txOut.GetHash() != hash)
+            return error("%s: txid mismatch", __func__);
+        return true;
+    }
+
+    if (fAllowSlow) { // use coin database to locate block that contains transaction, and scan it
+        int nHeight = -1;
+        {
+            CCoinsViewCache &view = *pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip;
+            const CCoins* coins = view.AccessCoins(hash);
+            if (coins)
+                nHeight = coins->nHeight;
+        }
+        if (nHeight > 0)
+            pindexSlow = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive[nHeight];
+    }
+
+    if (pindexSlow) {
+        CBlock block;
+        if (ReadBlockFromDisk(block, pindexSlow, consensusParams)) {
+            for (auto const& tx: block.vtx) {
+                if (tx.GetHash() == hash) {
+                    txOut = tx;
+                    hashBlock = pindexSlow->GetBlockHash();
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
 }

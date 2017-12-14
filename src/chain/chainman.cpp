@@ -1,3 +1,7 @@
+// Copyright (c) 2017 Greg Griffith and the ECC developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #include "chainman.h"
 #include "main.h"
 #include "checkpoints.h"
@@ -221,7 +225,6 @@ bool CChainManager::LoadBlockIndex()
 
 bool CChainManager::LoadBlockIndexDB()
 {
-    const CNetworkTemplate& chainparams = pnetMan->getActivePaymentNetwork();
     if (!pblocktree->LoadBlockIndexGuts())
         return false;
 

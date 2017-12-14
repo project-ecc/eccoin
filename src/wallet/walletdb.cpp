@@ -7,7 +7,7 @@
 
 #include "base58.h"
 #include "consensus/validation.h"
-#include "main.h" // For CheckTransaction
+#include "processtx.h" // For CheckTransaction
 #include "protocol.h"
 #include "serialize.h"
 #include "sync.h"

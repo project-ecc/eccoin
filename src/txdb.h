@@ -63,6 +63,7 @@ public:
     bool WriteFlag(const std::string &name, bool fValue);
     bool ReadFlag(const std::string &name, bool &fValue);
     bool LoadBlockIndexGuts();
+    bool EraseBlockIndex(uint256 hashToDelete);
 };
 
 #endif // BITCOIN_TXDB_H
