@@ -158,7 +158,6 @@ bool AppInit(int argc, char* argv[])
         InitParameterInteraction();
         GenerateNetworkTemplates();
         fRet = AppInit2(threadGroup, scheduler);
-        printf("fret from appinit2 is %d \n", fRet);
     }
     catch (const std::exception& e)
     {
