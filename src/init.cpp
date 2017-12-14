@@ -1209,6 +1209,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
         do {
             try
             {
+                int64_t lastUpdate = nStart;
                 pnetMan->getActivePaymentNetwork()->getChainManager()->UnloadBlockIndex();
                 pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.reset();
                 pcoinsdbview.reset();
@@ -1227,7 +1228,8 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                     strLoadError = _("Error loading block database");
                     break;
                 }
-                LogPrintf("load block index function %15dms\n", GetTimeMillis() - nStart);
+                lastUpdate = GetTimeMillis() - nStart;
+                LogPrintf("load block index function took %15dms\n", lastUpdate);
 
                 // If the loaded chain has a wrong genesis, bail out immediately
                 // (we're likely using a testnet datadir, or the other way around).
@@ -1244,21 +1246,13 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                     strLoadError = _("Error initializing block database");
                     break;
                 }
-                LogPrintf("load genesis function %15dms\n", GetTimeMillis() - nStart);
-
 
                 // At this point we're either in reindex or we've loaded a useful
                 // block tree into mapBlockIndex!
 
                 pcoinsdbview.reset(new CCoinsViewDB(nCoinDBCache, false, fReset));
                 pcoinscatcher.reset(new CCoinsViewErrorCatcher(pcoinsdbview.get()));
-                // If necessary, upgrade from older database format.
-                // This is a no-op if we cleared the coinsviewdb with -reindex or -reindex-chainstate
-                if (!pcoinsdbview->Upgrade())
-                {
-                    strLoadError = _("Error upgrading chainstate database");
-                    break;
-                }
+
                 // The on-disk coinsdb is now in a good state, create the cache
                 pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.reset(new CCoinsViewCache(pcoinscatcher.get()));
                 {
@@ -1268,7 +1262,8 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                         strLoadError = _("Error initializing block database");
                         break;
                     }
-                    LogPrintf("load chain tip %15dms\n", GetTimeMillis() - nStart);
+                    LogPrintf("load chain tip %15dms\n", GetTimeMillis() - lastUpdate);
+                    lastUpdate = GetTimeMillis();
                     assert(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip() != nullptr);
                 }
                 if (!fReset && pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip() != nullptr)
@@ -1284,7 +1279,8 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                         LogPrintf("<<< breaking.... \n");
                         break;
                     }
-                    LogPrintf("rewind block index %15dms\n", GetTimeMillis() - nStart);
+                    LogPrintf("rewind block index %15dms\n", GetTimeMillis() - lastUpdate);
+                    lastUpdate = GetTimeMillis();
                     //uiInterface.InitMessage(_("Cleaning BlockIndex..."));
                     //LogPrintf("Cleaning BlockIndex... \n");
                     //removeImpossibleChainTips();
@@ -1310,7 +1306,8 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                         strLoadError = _("Corrupted block database detected");
                         break;
                     }
-                    LogPrintf("verify db function %15dms\n", GetTimeMillis() - nStart);
+                    LogPrintf("verify db function %15dms\n", GetTimeMillis() - lastUpdate);
+                    lastUpdate = GetTimeMillis();
                 }
             }
             catch (const std::exception& e)
@@ -1360,7 +1357,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
         LogPrintf("Shutdown requested. Exiting.\n");
         return false;
     }
-    LogPrintf(" block index %15dms\n", GetTimeMillis() - nStart);
+    LogPrintf("total time for block index %15dms\n", GetTimeMillis() - nStart);
 
     boost::filesystem::path est_path = GetDataDir() / FEE_ESTIMATES_FILENAME;
     CAutoFile est_filein(fopen(est_path.string().c_str(), "rb"), SER_DISK, CLIENT_VERSION);
