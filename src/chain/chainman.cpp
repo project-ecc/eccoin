@@ -225,8 +225,12 @@ bool CChainManager::LoadBlockIndex()
 
 bool CChainManager::LoadBlockIndexDB()
 {
+    int64_t nStart = GetTimeMillis();
     if (!pblocktree->LoadBlockIndexGuts())
         return false;
+    LogPrintf("LoadBlockIndexGuts %15dms\n", GetTimeMillis() - nStart);
+    nStart = GetTimeMillis();
+
 
     boost::this_thread::interruption_point();
 
@@ -238,6 +242,8 @@ bool CChainManager::LoadBlockIndexDB()
         CBlockIndex* pindex = item.second;
         vSortedByHeight.push_back(std::make_pair(pindex->nHeight, pindex));
     }
+    LogPrintf("Sort block index %15dms\n", GetTimeMillis() - nStart);
+    nStart = GetTimeMillis();
     std::sort(vSortedByHeight.begin(), vSortedByHeight.end());
     for (const std::pair<int, CBlockIndex*>& item : vSortedByHeight)
     {
@@ -266,6 +272,8 @@ bool CChainManager::LoadBlockIndexDB()
         if (pindex->IsValid(BLOCK_VALID_TREE) && (pindexBestHeader == NULL || CBlockIndexWorkComparator()(pindexBestHeader, pindex)))
             pindexBestHeader = pindex;
     }
+    LogPrintf("calc nChainWork, nChainTx, valid, statns, pprev %15dms\n", GetTimeMillis() - nStart);
+    nStart = GetTimeMillis();
 
     // Load block file info
     pblocktree->ReadLastBlockFile(nLastBlockFile);
@@ -301,11 +309,15 @@ bool CChainManager::LoadBlockIndexDB()
             return false;
         }
     }
+    LogPrintf("block file checks %15dms\n", GetTimeMillis() - nStart);
+    nStart = GetTimeMillis();
 
     // Check whether we need to continue reindexing
     bool fReindexing = false;
     pblocktree->ReadReindexing(fReindexing);
     if(fReindexing) fReindex = true;
+    LogPrintf("reindexing check %15dms\n", GetTimeMillis() - nStart);
+    nStart = GetTimeMillis();
 
     return true;
 }
