@@ -1099,6 +1099,8 @@ public:
     void Serialize(S &s) const {
         // Serialize nVersion
         ::Serialize(s, txTo.nVersion);
+        // Serialize nTime
+        ::Serialize(s, txTo.nTime);
         // Serialize vin
         unsigned int nInputs = fAnyoneCanPay ? 1 : txTo.vin.size();
         ::WriteCompactSize(s, nInputs);
@@ -1116,7 +1118,6 @@ public:
 
 } // anon namespace
 
-/// TODO: test to see if the changes in this function need to be reverted due to issues with backwards compatibility
 uint256 SignatureHash(const CScript& scriptCode, const CTransaction& txTo, unsigned int nIn, int nHashType)
 {
     assert(nIn < txTo.vin.size());
