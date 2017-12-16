@@ -178,7 +178,9 @@ static int ecdsa_signature_parse_der_lax(const secp256k1_context* ctx, secp256k1
 
 bool CPubKey::Verify(const uint256 &hash, const std::vector<unsigned char>& vchSig) const {
     if (!IsValid())
+    {
         return false;
+    }
     CECKey key;
     if (!key.SetPubKey(*this))
     {
