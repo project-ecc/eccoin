@@ -42,7 +42,6 @@ void CNetworkManager::ConstructLegacyNetworkTemplate()
 {
     legacyTemplate->strNetworkID = "LEGACY";
     legacyTemplate->strNetworkDataDir = "";
-    legacyTemplate->consensus.nSubsidyHalvingInterval = 210000;
     legacyTemplate->consensus.nMajorityEnforceBlockUpgrade = 750;
     legacyTemplate->consensus.nMajorityRejectBlockOutdated = 950;
     legacyTemplate->consensus.nMajorityWindow = 1000;
@@ -57,11 +56,6 @@ void CNetworkManager::ConstructLegacyNetworkTemplate()
     legacyTemplate->consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].bit = 28;
     legacyTemplate->consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nStartTime = 1199145601; // January 1, 2008
     legacyTemplate->consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nTimeout = 1230767999; // December 31, 2008
-
-    // Deployment of BIP68, BIP112, and BIP113.
-    legacyTemplate->consensus.vDeployments[Consensus::DEPLOYMENT_CSV].bit = 0;
-    legacyTemplate->consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nStartTime = 1462060800; // May 1st, 2016
-    legacyTemplate->consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nTimeout = 1493596800; // May 1st, 2017
 
     /**
      * The message start string is designed to be unlikely to occur in normal data.
@@ -179,7 +173,6 @@ void CNetworkManager::ConstructTetnet0Template()
 {
     netManTestnetTemplate->strNetworkID = "TESTNET0-TEMPORARY";
     netManTestnetTemplate->strNetworkDataDir = "testnet0-temporary";
-    netManTestnetTemplate->consensus.nSubsidyHalvingInterval = 210000;
     netManTestnetTemplate->consensus.nMajorityEnforceBlockUpgrade = 750;
     netManTestnetTemplate->consensus.nMajorityRejectBlockOutdated = 950;
     netManTestnetTemplate->consensus.nMajorityWindow = 1000;
@@ -194,11 +187,6 @@ void CNetworkManager::ConstructTetnet0Template()
     netManTestnetTemplate->consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].bit = 28;
     netManTestnetTemplate->consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nStartTime = 1199145601; // January 1, 2008
     netManTestnetTemplate->consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nTimeout = 1230767999; // December 31, 2008
-
-    // Deployment of BIP68, BIP112, and BIP113.
-    netManTestnetTemplate->consensus.vDeployments[Consensus::DEPLOYMENT_CSV].bit = 0;
-    netManTestnetTemplate->consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nStartTime = 1462060800; // May 1st, 2016
-    netManTestnetTemplate->consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nTimeout = 1493596800; // May 1st, 2017
 
     /**
      * The message start string is designed to be unlikely to occur in normal data.
