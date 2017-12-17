@@ -1355,6 +1355,7 @@ void ListTransactions(const CWalletTx& wtx, const std::string& strAccount, int n
     // Received
     if (listReceived.size() > 0 && wtx.GetDepthInMainChain() >= nMinDepth)
     {
+        bool stop = false;
         for (auto const& r: listReceived)
         {
             std::string account;
@@ -1367,7 +1368,7 @@ void ListTransactions(const CWalletTx& wtx, const std::string& strAccount, int n
                     entry.push_back(Pair("involvesWatchonly", true));
                 entry.push_back(Pair("account", account));
                 MaybePushAddress(entry, r.destination);
-                if (wtx.IsCoinBase())
+                if (wtx.IsCoinBase() || wtx.IsCoinStake())
                 {
                     if (wtx.GetDepthInMainChain() < 1)
                         entry.push_back(Pair("category", "orphan"));
@@ -1380,13 +1381,23 @@ void ListTransactions(const CWalletTx& wtx, const std::string& strAccount, int n
                 {
                     entry.push_back(Pair("category", "receive"));
                 }
-                entry.push_back(Pair("amount", ValueFromAmount(r.amount)));
+                if (!wtx.IsCoinStake())
+                    entry.push_back(Pair("amount", ValueFromAmount(r.amount)));
+                else
+                {
+                    entry.push_back(Pair("amount", ValueFromAmount(-nFee)));
+                    stop = true; // only one coinstake output
+                }
                 if (pwalletMain->mapAddressBook.count(r.destination))
                     entry.push_back(Pair("label", account));
                 entry.push_back(Pair("vout", r.vout));
                 if (fLong)
                     WalletTxToJSON(wtx, entry);
                 ret.push_back(entry);
+            }
+            if(stop)
+            {
+                break;
             }
         }
     }
