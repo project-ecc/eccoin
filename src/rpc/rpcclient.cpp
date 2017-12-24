@@ -19,6 +19,8 @@ class CRPCConvertParam
 public:
     std::string methodName;            //! method whose params want conversion
     int paramIdx;                      //! 0-based idx of param to convert
+    std::string paramName;  //!< parameter name
+
 };
 
 static const CRPCConvertParam vRPCConvertParams[] =
@@ -104,12 +106,17 @@ class CRPCConvertTable
 {
 private:
     std::set<std::pair<std::string, int> > members;
+    std::set<std::pair<std::string, std::string>> membersByName;
+
 
 public:
     CRPCConvertTable();
 
     bool convert(const std::string& method, int idx) {
         return (members.count(std::make_pair(method, idx)) > 0);
+    }
+    bool convert(const std::string& method, const std::string& name) {
+        return (membersByName.count(std::make_pair(method, name)) > 0);
     }
 };
 
@@ -121,6 +128,8 @@ CRPCConvertTable::CRPCConvertTable()
     for (unsigned int i = 0; i < n_elem; i++) {
         members.insert(std::make_pair(vRPCConvertParams[i].methodName,
                                       vRPCConvertParams[i].paramIdx));
+        membersByName.insert(std::make_pair(vRPCConvertParams[i].methodName,
+                                            vRPCConvertParams[i].paramName));
     }
 }
 
@@ -158,3 +167,27 @@ UniValue RPCConvertValues(const std::string &strMethod, const std::vector<std::s
     return params;
 }
 
+UniValue RPCConvertNamedValues(const std::string &strMethod, const std::vector<std::string> &strParams)
+{
+    UniValue params(UniValue::VOBJ);
+
+    for (const std::string &s: strParams) {
+        size_t pos = s.find("=");
+        if (pos == std::string::npos) {
+            throw(std::runtime_error("No '=' in named argument '"+s+"', this needs to be present for every argument (even if it is empty)"));
+        }
+
+        std::string name = s.substr(0, pos);
+        std::string value = s.substr(pos+1);
+
+        if (!rpcCvtTable.convert(strMethod, name)) {
+            // insert string value directly
+            params.pushKV(name, value);
+        } else {
+            // parse string as JSON, insert bool/number/object/etc. value
+            params.pushKV(name, ParseNonRFCJSONValue(value));
+        }
+    }
+
+    return params;
+}

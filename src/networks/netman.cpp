@@ -256,6 +256,18 @@ std::string ChainNameFromCommandLine()
     return "LEGACY";
 }
 
+int RPCPortFromCommandLine()
+{
+    bool fRegTest = gArgs.GetBoolArg("-regtest", false);
+    bool fTestNet = gArgs.GetBoolArg("-testnet0", false);
+
+    if (fTestNet && fRegTest)
+        throw std::runtime_error("Invalid combination of -regtest and -testnet.");
+    if (fTestNet)
+        return 30001;
+    return 19119;
+}
+
 void CheckParams(const std::string& network)
 {
     if (network != "LEGACY" && network != "TESTNET0-TEMPORARY")

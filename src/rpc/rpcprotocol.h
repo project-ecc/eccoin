@@ -76,6 +76,7 @@ enum RPCErrorCode
     RPC_WALLET_ALREADY_UNLOCKED     = -17, //! Wallet is already unlocked
 };
 
+UniValue JSONRPCRequestObj(const std::string& strMethod, const UniValue& params, const UniValue& id);
 std::string JSONRPCRequest(const std::string& strMethod, const UniValue& params, const UniValue& id);
 UniValue JSONRPCReplyObj(const UniValue& result, const UniValue& error, const UniValue& id);
 std::string JSONRPCReply(const UniValue& result, const UniValue& error, const UniValue& id);
@@ -89,5 +90,7 @@ bool GenerateAuthCookie(std::string *cookie_out);
 bool GetAuthCookie(std::string *cookie_out);
 /** Delete RPC authentication cookie from disk */
 void DeleteAuthCookie();
+/** Parse JSON-RPC batch reply into a vector */
+std::vector<UniValue> JSONRPCProcessBatchReply(const UniValue &in, size_t num);
 
 #endif // BITCOIN_RPCPROTOCOL_H

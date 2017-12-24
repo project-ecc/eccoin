@@ -156,7 +156,7 @@ std::map<uint256, NodeId> mapBlockSource;
      *
      * Memory used: 1.7MB
      */
-boost::scoped_ptr<CRollingBloomFilter> recentRejects;
+std::unique_ptr<CRollingBloomFilter> recentRejects;
 
 std::map<uint256, std::pair<NodeId, std::list<QueuedBlock>::iterator> > mapBlocksInFlight;
 

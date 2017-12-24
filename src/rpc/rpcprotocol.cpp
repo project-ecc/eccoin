@@ -25,6 +25,15 @@
  * 1.2 spec: http://jsonrpc.org/historical/json-rpc-over-http.html
  */
 
+UniValue JSONRPCRequestObj(const std::string& strMethod, const UniValue& params, const UniValue& id)
+{
+    UniValue request(UniValue::VOBJ);
+    request.push_back(Pair("method", strMethod));
+    request.push_back(Pair("params", params));
+    request.push_back(Pair("id", id));
+    return request;
+}
+
 std::string JSONRPCRequest(const std::string& strMethod, const UniValue& params, const UniValue& id)
 {
     UniValue request(UniValue::VOBJ);
@@ -124,3 +133,22 @@ void DeleteAuthCookie()
     }
 }
 
+std::vector<UniValue> JSONRPCProcessBatchReply(const UniValue &in, size_t num)
+{
+    if (!in.isArray()) {
+        throw std::runtime_error("Batch must be an array");
+    }
+    std::vector<UniValue> batch(num);
+    for (size_t i=0; i<in.size(); ++i) {
+        const UniValue &rec = in[i];
+        if (!rec.isObject()) {
+            throw std::runtime_error("Batch member must be object");
+        }
+        size_t id = rec["id"].get_int();
+        if (id >= num) {
+            throw std::runtime_error("Batch member id larger than size");
+        }
+        batch[id] = rec;
+    }
+    return batch;
+}
