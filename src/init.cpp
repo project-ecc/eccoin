@@ -1398,11 +1398,6 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
         bool fFirstRun = true;
         pwalletMain = new CWallet(strWalletFile);
 
-        /// be very careful with this function. it will be removed in the future.
-        if (gArgs.IsArgSet("-forceupgradewallet"))
-        {
-            pwalletMain->ForceSetMinVersion(20502);
-        }
         DBErrors nLoadWalletRet = pwalletMain->LoadWallet(fFirstRun);
         if (nLoadWalletRet != DB_LOAD_OK)
         {
