@@ -1,7 +1,3 @@
-//
-// Created by parallels on 8/14/17.
-//
-
 #ifndef ECCOIN_ARGS_H
 #define ECCOIN_ARGS_H
 
