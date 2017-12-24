@@ -296,7 +296,8 @@ HEADERS += \
     src/tx/servicetx.h \
     src/crypto/chacha20.h \
     src/processtx.h \
-    src/verifydb.h
+    src/verifydb.h \
+    src/rpc/events.h
 
 
 # organize compiles of cpp files by section, this seems to be a logical order where the files lower down generally depend

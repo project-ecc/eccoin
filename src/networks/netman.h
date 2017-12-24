@@ -88,6 +88,9 @@ private:
 
 };
 
+/// TODO : Fix this workaround that is used for RPC on command line. shuould either construct pnetMan earlier or find another way to get this value
+int RPCPortFromCommandLine();
+
 /**
  * Looks for -regtest, -testnet and returns the appropriate BIP70 chain name.
  * @return CBaseChainParams::MAX_NETWORK_TYPES if an invalid combination is given. CBaseChainParams::MAIN by default.
