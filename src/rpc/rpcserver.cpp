@@ -651,7 +651,7 @@ int CommandLineRPC(int argc, char *argv[])
 
         // Execute
         UniValue reply = CallRPC(strMethod, params);
-	strPrint = reply.get_str();
+    strPrint = reply.write();
     }
     catch (std::exception& e)
     {
