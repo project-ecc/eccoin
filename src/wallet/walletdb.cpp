@@ -622,8 +622,15 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
         int nMinVersion = 0;
         if (Read((std::string)"minversion", nMinVersion))
         {
-            if (nMinVersion > CLIENT_VERSION)
+            if (nMinVersion > WALLET_VERSION)
+            {
                 return DB_TOO_NEW;
+            }
+            if (nMinVersion < FEATURE_WALLETCRYPT) // all ECC wallets support at least FEATURE_WALLETCRYPT
+            {
+                WriteMinVersion(FEATURE_LATEST);
+                nMinVersion = FEATURE_LATEST;
+            }
             pwallet->LoadMinVersion(nMinVersion);
         }
 
