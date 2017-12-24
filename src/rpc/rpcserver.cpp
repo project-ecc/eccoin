@@ -597,6 +597,24 @@ void RPCRunLater(const std::string& name, boost::function<void(void)> func, int6
     deadlineTimers.insert(std::make_pair(name, boost::shared_ptr<RPCTimerBase>(timerInterface->NewTimer(func, nSeconds*1000))));
 }
 
+UniValue CommandLineExecOne(const std::string &strMethod, const UniValue &params, const UniValue& id)
+{
+    UniValue rpc_result(UniValue::VOBJ);
+    try {
+        UniValue result = tableRPC.execute(strMethod, params);
+        rpc_result = JSONRPCReplyObj(result, NullUniValue, id);
+    }
+    catch (const UniValue& objError)
+    {
+        rpc_result = JSONRPCReplyObj(NullUniValue, objError, id);
+    }
+    catch (const std::exception& e)
+    {
+        rpc_result = JSONRPCReplyObj(NullUniValue, JSONRPCError(RPC_PARSE_ERROR, e.what()), id);
+    }
+    return rpc_result;
+}
+
 UniValue CallRPC(const std::string& strMethod, const UniValue& params)
 {
     if (gArgs.GetArg("-rpcuser","") == "" && gArgs.GetArg("-rpcpassword","") == "")
@@ -605,13 +623,7 @@ UniValue CallRPC(const std::string& strMethod, const UniValue& params)
               "If the file does not exist, create it with owner-readable-only file permissions."),
                 gArgs.GetConfigFile().string().c_str()));
 
-    // Send request
-    std::string strRequest = JSONRPCRequest(strMethod, params, 1);
-    // Parse reply
-    UniValue valReply;
-    if (!valReply.setStr(strRequest))
-        throw std::runtime_error("couldn't parse reply from server");
-
+    UniValue valReply = CommandLineExecOne(strMethod, params, 1);
     return valReply;
 }
 
