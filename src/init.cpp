@@ -1426,7 +1426,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
             if (nMaxVersion == 0) // the -upgradewallet without argument case
             {
                 LogPrintf("Performing wallet upgrade to %i\n", FEATURE_LATEST);
-                nMaxVersion = CLIENT_VERSION;
+                nMaxVersion = WALLET_VERSION;
                 pwalletMain->SetMinVersion(FEATURE_LATEST); // permanently upgrade the wallet immediately
             }
             else
