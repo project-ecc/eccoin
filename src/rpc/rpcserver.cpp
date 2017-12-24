@@ -36,15 +36,15 @@
 
 using namespace RPCServer;
 
-static bool fRPCRunning = false;
-static bool fRPCInWarmup = true;
-static std::string rpcWarmupStatus("RPC server started");
-static CCriticalSection cs_rpcWarmup;
+bool fRPCRunning = false;
+bool fRPCInWarmup = true;
+std::string rpcWarmupStatus("RPC server started");
+CCriticalSection cs_rpcWarmup;
 /* Timer-creating functions */
-static std::vector<RPCTimerInterface*> timerInterfaces;
+std::vector<RPCTimerInterface*> timerInterfaces;
 /* Map of name to timer.
  * @note Can be changed to std::unique_ptr when C++11 */
-static std::map<std::string, boost::shared_ptr<RPCTimerBase> > deadlineTimers;
+std::map<std::string, boost::shared_ptr<RPCTimerBase> > deadlineTimers;
 
 static struct CRPCSignals
 {
@@ -651,7 +651,7 @@ int CommandLineRPC(int argc, char *argv[])
 
         // Execute
         UniValue reply = CallRPC(strMethod, params);
-    strPrint = reply.write();
+        strPrint = reply.write();
     }
     catch (std::exception& e)
     {
