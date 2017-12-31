@@ -1217,6 +1217,8 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                 delete pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree;
 
                 pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree = new CBlockTreeDB(nBlockTreeDBCache, false, fReindex);
+                pcoinsdbview.reset(new CCoinsViewDB(nCoinDBCache, false, fReset));
+                pcoinscatcher.reset(new CCoinsViewErrorCatcher(pcoinsdbview.get()));
                 pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.reset(new CCoinsViewCache(pcoinscatcher.get()));
 
                 if (fReindex) {
@@ -1237,54 +1239,14 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                         pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.count(chainparams.GetConsensus().hashGenesisBlock) == 0)
                     return InitError(_("Incorrect or no genesis block found. Wrong datadir for network?"));
 
-                // At this point blocktree args are consistent with what's on disk.
-                // If we're not mid-reindex (based on disk + args), add a genesis block on disk
-                // (otherwise we use the one already on disk).
-                // This is called again in ThreadImport after the reindex completes.
-                if (!fReindex && !pnetMan->getActivePaymentNetwork()->getChainManager()->LoadGenesisBlock(chainparams))
+                // Initialize the block index (no-op if non-empty database was already loaded)
+                if (!pnetMan->getActivePaymentNetwork()->getChainManager()->InitBlockIndex(chainparams))
                 {
                     strLoadError = _("Error initializing block database");
                     break;
                 }
 
-                // At this point we're either in reindex or we've loaded a useful
-                // block tree into mapBlockIndex!
-
-                pcoinsdbview.reset(new CCoinsViewDB(nCoinDBCache, false, fReset));
-                pcoinscatcher.reset(new CCoinsViewErrorCatcher(pcoinsdbview.get()));
-
-                // The on-disk coinsdb is now in a good state, create the cache
-                pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.reset(new CCoinsViewCache(pcoinscatcher.get()));
-                {
-                    // LoadChainTip sets chainActive based on pcoinsTip's best block
-                    if (!pnetMan->getActivePaymentNetwork()->getChainManager()->LoadChainTip(chainparams))
-                    {
-                        strLoadError = _("Error initializing block database");
-                        break;
-                    }
-                    LogPrintf("load chain tip %15dms\n", GetTimeMillis() - lastUpdate);
-                    lastUpdate = GetTimeMillis();
-                    assert(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip() != nullptr);
-                }
-                if (!fReset && pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip() != nullptr)
-                {
-                    // Note that RewindBlockIndex MUST run even if we're about to -reindex-chainstate.
-                    // It both disconnects blocks based on chainActive, and drops block data in
-                    // mapBlockIndex based on lack of available witness data.
-                    uiInterface.InitMessage(_("Rewinding blocks..."));
-                    LogPrintf("Rewinding blocks... \n");
-                    if (!pnetMan->getActivePaymentNetwork()->getChainManager()->RewindBlockIndex(chainparams))
-                    {
-                        strLoadError = _("Unable to rewind the database to a pre-fork state. You will need to redownload the blockchain");
-                        LogPrintf("<<< breaking.... \n");
-                        break;
-                    }
-                    LogPrintf("rewind block index %15dms\n", GetTimeMillis() - lastUpdate);
-                    lastUpdate = GetTimeMillis();
-                    //uiInterface.InitMessage(_("Cleaning BlockIndex..."));
-                    //LogPrintf("Cleaning BlockIndex... \n");
                     //removeImpossibleChainTips();
-                }
                 {
                     uiInterface.InitMessage(_("Verifying blocks..."));
                     LogPrintf("Verifying blocks...");

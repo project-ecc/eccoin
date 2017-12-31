@@ -8,6 +8,8 @@
 #include "net.h"
 #include "chain/blockindex.h"
 
+extern std::unique_ptr<CRollingBloomFilter> recentRejects;
+
 /** Process protocol messages received from a given node */
 bool ProcessMessages(CNode* pfrom);
 

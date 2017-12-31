@@ -337,7 +337,6 @@ extern int nPreferredDownload;
 extern int nSyncStarted;
 extern int64_t nTimeBestReceived;
 extern int nPeersWithValidatedDownloads;
-extern std::unique_ptr<CRollingBloomFilter> recentRejects;
 
 /** Get statistics from node state */
 bool GetNodeStateStats(NodeId nodeid, CNodeStateStats &stats);

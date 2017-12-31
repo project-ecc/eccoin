@@ -156,65 +156,6 @@ bool CChainManager::InitBlockIndex(const CNetworkTemplate& chainparams)
     return true;
 }
 
-bool CChainManager::LoadChainTip(const CNetworkTemplate& chainparams)
-{
-    if (chainActive.Tip() && chainActive.Tip()->GetBlockHash() == pcoinsTip->GetBestBlock()) return true;
-
-    if (pcoinsTip->GetBestBlock().IsNull() && mapBlockIndex.size() == 1) {
-        // In case we just added the genesis block, connect it now, so
-        // that we always have a chainActive.Tip() when we return.
-        LogPrintf("%s: Connecting genesis block...\n", __func__);
-        CValidationState state;
-        if (!ActivateBestChain(state, chainparams, LOADED)) {
-            return false;
-        }
-    }
-
-    // Load pointer to end of best chain
-    BlockMap::iterator it = mapBlockIndex.find(pcoinsTip->GetBestBlock());
-    if (it == mapBlockIndex.end())
-        return false;
-    chainActive.SetTip(it->second);
-
-    PruneBlockIndexCandidates();
-
-    LogPrintf("Loaded best chain: hashBestChain=%s height=%d date=%s \n",
-        chainActive.Tip()->GetBlockHash().ToString(), chainActive.Height(),
-        DateTimeStrFormat("%Y-%m-%d %H:%M:%S", chainActive.Tip()->GetBlockTime()));
-    return true;
-}
-
-bool CChainManager::LoadGenesisBlock(const CNetworkTemplate& chainparams)
-{
-    LOCK(cs_main);
-
-    // Check whether we're already initialized by checking for genesis in
-    // mapBlockIndex. Note that we can't use chainActive here, since it is
-    // set based on the coins db, not the block index db, which is the only
-    // thing loaded at this point.
-    if (mapBlockIndex.count(chainparams.GenesisBlock().GetHash()))
-        return true;
-
-    try {
-        CBlock &block = const_cast<CBlock&>(chainparams.GenesisBlock());
-        // Start new block file
-        unsigned int nBlockSize = ::GetSerializeSize(block, SER_DISK, CLIENT_VERSION);
-        CDiskBlockPos blockPos;
-        CValidationState state;
-        if (!FindBlockPos(state, blockPos, nBlockSize+8, 0, block.GetBlockTime()))
-            return error("%s: FindBlockPos failed", __func__);
-        if (!WriteBlockToDisk(block, blockPos, chainparams.MessageStart()))
-            return error("%s: writing genesis block to disk failed", __func__);
-        CBlockIndex *pindex = AddToBlockIndex(block);
-        if (!ReceivedBlockTransactions(block, state, pindex, blockPos))
-            return error("%s: genesis block not accepted", __func__);
-    } catch (const std::runtime_error& e) {
-        return error("%s: failed to write genesis block: %s", __func__, e.what());
-    }
-
-    return true;
-}
-
 bool CChainManager::LoadBlockIndex()
 {
     // Load block index from databases
@@ -318,6 +259,14 @@ bool CChainManager::LoadBlockIndexDB()
     if(fReindexing) fReindex = true;
     LogPrintf("reindexing check %15dms\n", GetTimeMillis() - nStart);
     nStart = GetTimeMillis();
+
+    // Load pointer to end of best chain
+    BlockMap::iterator it = mapBlockIndex.find(pcoinsTip->GetBestBlock());
+    if (it == mapBlockIndex.end())
+        return true;
+    chainActive.SetTip(it->second);
+
+    PruneBlockIndexCandidates();
 
     return true;
 }
@@ -423,53 +372,6 @@ bool CChainManager::LoadExternalBlockFile(const CNetworkTemplate& chainparams, F
     if (nLoaded > 0)
         LogPrintf("Loaded %i blocks from external file in %dms\n", nLoaded, GetTimeMillis() - nStart);
     return nLoaded > 0;
-}
-
-bool CChainManager::RewindBlockIndex(const CNetworkTemplate& params)
-{
-    LOCK(cs_main);
-
-    int nHeight = chainActive.Height() + 1;
-
-    // nHeight is now the height of the first insufficiently-validated block, or
-    // tipheight + 1
-    CValidationState state;
-    CBlockIndex *pindex = chainActive.Tip();
-    while (chainActive.Height() >= nHeight)
-    {
-        if (!DisconnectTip(state, params.GetConsensus()))
-        {
-            return error(
-                "RewindBlockIndex: unable to disconnect block at height %i",
-                pindex->nHeight);
-        }
-        // Occasionally flush state to disk.
-        if (!FlushStateToDisk(state, FLUSH_STATE_PERIODIC)) {
-            return false;
-        }
-    }
-
-    // Reduce validity flag and have-data flags.
-    // We do this after actual disconnecting, otherwise we'll end up writing the
-    // lack of data to disk before writing the chainstate, resulting in a
-    // failure to continue if interrupted.
-    for (BlockMap::iterator it = mapBlockIndex.begin();
-         it != mapBlockIndex.end(); it++) {
-        CBlockIndex *pindexIter = it->second;
-
-        if (pindexIter->IsValid(BLOCK_VALID_TRANSACTIONS) &&
-            pindexIter->nChainTx) {
-            setBlockIndexCandidates.insert(pindexIter);
-        }
-    }
-
-    PruneBlockIndexCandidates();
-
-    if (!FlushStateToDisk(state, FLUSH_STATE_ALWAYS)) {
-        return false;
-    }
-
-    return true;
 }
 
 void CChainManager::UnloadBlockIndex()
