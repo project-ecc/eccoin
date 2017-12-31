@@ -85,10 +85,6 @@ public:
     /** Initialize a new block tree database + block data on disk */
     bool InitBlockIndex(const CNetworkTemplate& chainparams);
 
-    bool LoadGenesisBlock(const CNetworkTemplate& chainparams);
-    bool LoadChainTip(const CNetworkTemplate& chainparams);
-    bool RewindBlockIndex(const CNetworkTemplate& params);
-
     /** Create a new block index entry for a given block hash loaded from disk*/
     CBlockIndex* InsertBlockIndex(uint256 hash);
 
