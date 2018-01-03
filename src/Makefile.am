@@ -268,25 +268,25 @@ libbitcoin_wallet_a_SOURCES = \
 crypto_libbitcoin_crypto_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_CONFIG_INCLUDES)
 crypto_libbitcoin_crypto_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 crypto_libbitcoin_crypto_a_SOURCES = \
-  crypto/aes.cpp \
-  crypto/aes.h \
+  crypto/chacha20.cpp \
+  crypto/chacha20.h \
   crypto/common.h \
+  crypto/hash.cpp \
+  crypto/hash.h \
   crypto/hmac_sha256.cpp \
   crypto/hmac_sha256.h \
   crypto/hmac_sha512.cpp \
   crypto/hmac_sha512.h \
   crypto/ripemd160.cpp \
   crypto/ripemd160.h \
+  crypto/scrypt.cpp \
+  crypto/scrypt.h \
   crypto/sha1.cpp \
   crypto/sha1.h \
   crypto/sha256.cpp \
   crypto/sha256.h \
   crypto/sha512.cpp \
   crypto/sha512.h
-
-if USE_ASM
-crypto_libbitcoin_crypto_a_SOURCES += crypto/sha256_sse4.cpp
-endif
 
 # consensus: shared between all executables that validate any consensus rules.
 libbitcoin_consensus_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
@@ -299,13 +299,9 @@ libbitcoin_consensus_a_SOURCES = \
   consensus/merkle.h \
   consensus/params.h \
   consensus/validation.h \
-  hash.cpp \
-  hash.h \
+  crypto/hash.cpp \
+  crypto/hash.h \
   prevector.h \
-  primitives/block.cpp \
-  primitives/block.h \
-  primitives/transaction.cpp \
-  primitives/transaction.h \
   pubkey.cpp \
   pubkey.h \
   script/bitcoinconsensus.cpp \
