@@ -168,9 +168,9 @@ BITCOIN_CORE_H = \
   stat.h \
   tweak.h \
   requestManager.h \
-  util.h \
-  utilmoneystr.h \
-  utiltime.h \
+  util/util.h \
+  util/utilmoneystr.h \
+  util/utiltime.h \
   validationinterface.h \
   versionbits.h \
   wallet/crypter.h \
@@ -286,7 +286,9 @@ crypto_libbitcoin_crypto_a_SOURCES = \
   crypto/sha256.cpp \
   crypto/sha256.h \
   crypto/sha512.cpp \
-  crypto/sha512.h
+  crypto/sha512.h \
+  pubkey.cpp \
+  pubkey.h
 
 # consensus: shared between all executables that validate any consensus rules.
 libbitcoin_consensus_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
@@ -315,8 +317,8 @@ libbitcoin_consensus_a_SOURCES = \
   tinyformat.h \
   uint256.cpp \
   uint256.h \
-  utilstrencodings.cpp \
-  utilstrencodings.h \
+  util/utilstrencodings.cpp \
+  util/utilstrencodings.h \
   version.h
 
 # common: shared between bitcoind, and bitcoin-qt and non-server tools
@@ -358,10 +360,10 @@ libbitcoin_util_a_SOURCES = \
   rpc/protocol.cpp \
   support/cleanse.cpp \
   sync.cpp \
-  util.cpp \
-  utilmoneystr.cpp \
-  utilstrencodings.cpp \
-  utiltime.cpp \
+  util/util.cpp \
+  util/utilmoneystr.cpp \
+  util/utilstrencodings.cpp \
+  util/utiltime.cpp \
   $(BITCOIN_CORE_H)
 
 if GLIBC_BACK_COMPAT
