@@ -10,11 +10,6 @@
 #include "crypto/hmac_sha512.h"
 #include "random.h"
 
-#include <openssl/bn.h>
-#include <openssl/ecdsa.h>
-#include <openssl/rand.h>
-#include <openssl/obj_mac.h>
-
 #include <secp256k1.h>
 #include <secp256k1_recovery.h>
 
