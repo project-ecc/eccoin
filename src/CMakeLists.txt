@@ -218,8 +218,8 @@ include_directories(${Boost_INCLUDE_DIRS})
 find_package(OpenSSL REQUIRED)
 include_directories(${OPENSSL_INCLUDE_DIR})
 
-find_package(Event REQUIRED)
-include_directories(${Event_INCLUDE_DIRS})
+find_package(LibEvent REQUIRED)
+include_directories(${LIBEVENT_INCLUDE_DIR})
 
 # BerkeleyDB
 set(DB_VERSION 47)
@@ -247,11 +247,15 @@ target_link_libraries(eccoin leveldb
                       ${CMAKE_THREAD_LIBS_INIT}
                       ${Boost_LIBRARIES}
                       ${OPENSSL_LIBRARIES}
-                      ${Event_LIBRARIES}
+                      ${LIBEVENT_LIB}
 )
 
 add_executable(eccoind ${CMAKE_CURRENT_SOURCE_DIR}/eccoind.cpp)
-target_link_libraries(eccoind eccoin)
+target_link_libraries(eccoind eccoin leveldb
+                      ${CMAKE_THREAD_LIBS_INIT}
+                      ${Boost_LIBRARIES}
+                      ${OPENSSL_LIBRARIES}
+                      ${LIBEVENT_LIB})
 
 
 
