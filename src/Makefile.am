@@ -166,6 +166,7 @@ BITCOIN_CORE_H = \
   torcontrol.h \
   txdb.h \
   txmempool.h \
+  txmempool.cpp \
   ui_interface.h \
   undo.h \
   unlimited.h \
@@ -327,7 +328,11 @@ libbitcoin_consensus_a_SOURCES = \
   util/utilstrencodings.h \
   version.h \
   tx/tx.cpp \
-  tx/tx.h
+  tx/tx.h \
+  txmempool.cpp \
+  txmempool.h \
+  coins.cpp \
+  coins.h
 
 # common: shared between bitcoind, and bitcoin-qt and non-server tools
 libbitcoin_common_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
