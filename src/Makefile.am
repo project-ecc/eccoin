@@ -1,6 +1,6 @@
 DIST_SUBDIRS = secp256k1 univalue
 
-AM_LDFLAGS = $(PTHREAD_CFLAGS) $(LIBTOOL_LDFLAGS) $(HARDENED_LDFLAGS)
+AM_LDFLAGS = $(PTHREAD_CFLAGS) $(LIBTOOL_LDFLAGS) $(HARDENED_LDFLAGS) -L/usr/local/opt/openssl/lib -lcrypto -lssl
 if ENABLE_GPERF
 AM_CXXFLAGS = -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free $(HARDENED_CXXFLAGS)
 AM_CPPFLAGS = -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free $(HARDENED_CPPFLAGS)
@@ -25,6 +25,8 @@ AM_LDFLAGS  += -O0 -g -rdynamic
 endif
 EXTRA_LIBRARIES =
 # libtcmalloc.a
+
+AM_CPPFLAGS += -I/usr/local/opt/openssl/include
 
 BITCOIN_CONFIG_INCLUDES=-I$(builddir)/config
 BITCOIN_INCLUDES=-I$(builddir) -I$(builddir)/obj $(BDB_CPPFLAGS) $(BOOST_CPPFLAGS) $(LEVELDB_CPPFLAGS) $(CRYPTO_CFLAGS) $(SSL_CFLAGS)
@@ -129,6 +131,8 @@ BITCOIN_CORE_H = \
   merkleblock.h \
   miner.h \
   net.h \
+  networks/netman.cpp \
+  networks/netman.h \
   nodestate.h \
   leakybucket.h \
   netaddress.h \
@@ -181,7 +185,9 @@ BITCOIN_CORE_H = \
   zmq/zmqabstractnotifier.h \
   zmq/zmqconfig.h\
   zmq/zmqnotificationinterface.h \
-  zmq/zmqpublishnotifier.h
+  zmq/zmqpublishnotifier.h \
+  tx/tx.cpp \
+  tx/tx.h
 
 
 obj/build.h: FORCE
@@ -239,6 +245,8 @@ libbitcoin_server_a_SOURCES = \
   requestManager.cpp \
   validationinterface.cpp \
   versionbits.cpp \
+  networks/netman.cpp \
+  networks/netman.h \
   $(BITCOIN_CORE_H)
 
 if ENABLE_ZMQ
@@ -286,9 +294,7 @@ crypto_libbitcoin_crypto_a_SOURCES = \
   crypto/sha256.cpp \
   crypto/sha256.h \
   crypto/sha512.cpp \
-  crypto/sha512.h \
-  pubkey.cpp \
-  pubkey.h
+  crypto/sha512.h
 
 # consensus: shared between all executables that validate any consensus rules.
 libbitcoin_consensus_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
@@ -319,7 +325,9 @@ libbitcoin_consensus_a_SOURCES = \
   uint256.h \
   util/utilstrencodings.cpp \
   util/utilstrencodings.h \
-  version.h
+  version.h \
+  tx/tx.cpp \
+  tx/tx.h
 
 # common: shared between bitcoind, and bitcoin-qt and non-server tools
 libbitcoin_common_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
@@ -454,9 +462,9 @@ if GLIBC_BACK_COMPAT
   libbitcoinconsensus_la_SOURCES += compat/glibc_compat.cpp
 endif
 
-libbitcoinconsensus_la_LDFLAGS = $(AM_LDFLAGS) $(BOOST_LIBS) -no-undefined $(RELDFLAGS)
+libbitcoinconsensus_la_LDFLAGS = $(AM_LDFLAGS) $(BOOST_LIBS) -no-undefined $(RELDFLAGS) -L/usr/local/opt/openssl/lib
 libbitcoinconsensus_la_LIBADD = $(LIBSECP256K1)
-libbitcoinconsensus_la_CPPFLAGS = $(AM_CPPFLAGS) -I$(BOOST_CPPFLAGS) -I$(builddir)/obj -I$(srcdir)/secp256k1/include -DBUILD_BITCOIN_INTERNAL
+libbitcoinconsensus_la_CPPFLAGS = $(AM_CPPFLAGS) -I$(BOOST_CPPFLAGS) -I$(builddir)/obj -I$(srcdir)/secp256k1/include -DBUILD_BITCOIN_INTERNAL -I/usr/local/opt/openssl/include
 libbitcoinconsensus_la_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 
 endif
