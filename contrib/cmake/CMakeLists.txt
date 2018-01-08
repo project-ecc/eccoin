@@ -9,11 +9,16 @@
 # even the implied warranty of MERCHANTABILITY or FITNESS FOR A
 # PARTICULAR PURPOSE.
 
+# Fixes
+set(CONTRIB_CURRENT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+string(REGEX REPLACE "/contrib/cmake" "" CMAKE_CURRENT_SOURCE_DIR
+       ${CMAKE_CURRENT_SOURCE_DIR})
+
 # CMake version
 cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
 
 # Include CMake Modules
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/modules")
+list(APPEND CMAKE_MODULE_PATH "${CONTRIB_CURRENT_SOURCE_DIR}/modules")
 
 include(Custom)
 

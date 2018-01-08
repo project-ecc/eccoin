@@ -9,6 +9,11 @@
 # even the implied warranty of MERCHANTABILITY or FITNESS FOR A
 # PARTICULAR PURPOSE.
 
+# Fixes
+set(CONTRIB_CURRENT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+string(REGEX REPLACE "/contrib/cmake" "" CMAKE_CURRENT_SOURCE_DIR
+       ${CMAKE_CURRENT_SOURCE_DIR})
+
 # Setup Sources
 set(DIR_SOURCES
   txdb.cpp
@@ -241,5 +246,6 @@ ucm_add_linker_flags(SHARED ${BERKELEY_DB_LIBRARIES})
 # LevelDB
 # 
 add_subdirectory(leveldb)
+include_directories(${})
 
 ucm_print_flags()

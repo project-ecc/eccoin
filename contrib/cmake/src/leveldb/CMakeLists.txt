@@ -2,6 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file. See the AUTHORS file for names of contributors.
 
+# Fixes
+set(CONTRIB_CURRENT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+string(REGEX REPLACE "/contrib/cmake" "" CMAKE_CURRENT_SOURCE_DIR
+       ${CMAKE_CURRENT_SOURCE_DIR})
+
 cmake_minimum_required(VERSION 3.1)
 project(Leveldb VERSION 0.1.0 LANGUAGES C CXX)
 
@@ -10,8 +15,6 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED OFF)
 # TODO(pwnall): See if setting this to ON gives us the *_unlocked functions.
 set(CMAKE_CXX_EXTENSIONS OFF)
-
-set(LEVELDB_PATH "${CMAKE_SOURCE_DIR}/../../src/leveldb")
 
 include(TestBigEndian)
 test_big_endian(LEVELDB_IS_BIG_ENDIAN)
@@ -81,30 +84,30 @@ ELSE (PROJECT_OS_LINUX)
 ENDIF (PROJECT_OS_LINUX)
 
 configure_file(
-  "${CMAKE_CURRENT_SOURCE_DIR}/include/port/port_config.h.in"
+  "${CONTRIB_CURRENT_SOURCE_DIR}/include/port/port_config.h.in"
   "${PROJECT_BINARY_DIR}/include/port/port_config.h"
 )
 
 include_directories(
   "${PROJECT_BINARY_DIR}/include"
-  "${LEVELDB_PATH}"
-  "${LEVELDB_PATH}/include"
+  "${CMAKE_CURRENT_SOURCE_DIR}"
+  "${CMAKE_CURRENT_SOURCE_DIR}/include"
 )
 
 # POSIX code is specified separately so we can leave it out in the future.
 add_library(leveldb_port_posix OBJECT "")
 target_sources(leveldb_port_posix
   PRIVATE
-    "${LEVELDB_PATH}/port/port_posix.cc"
-    "${LEVELDB_PATH}/port/port_posix_sse.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/port/port_posix.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/port/port_posix_sse.cc"
 
   PUBLIC
     # The headers below are dependencies for leveldb, but aren't needed by users
     # that link to the installed version of leveldb and rely on its public API.
     $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include/port/port_config.h>
-    $<BUILD_INTERFACE:${LEVELDB_PATH}/port/atomic_pointer.h>
-    $<BUILD_INTERFACE:${LEVELDB_PATH}/port/port_posix.h>
-    $<BUILD_INTERFACE:${LEVELDB_PATH}/port/port.h>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/port/atomic_pointer.h>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/port/port_posix.h>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/port/port.h>
 )
 
 add_library(leveldb ""
@@ -114,96 +117,96 @@ add_library(leveldb ""
 )
 target_sources(leveldb
   PRIVATE
-    "${LEVELDB_PATH}/db/builder.cc"
-    "${LEVELDB_PATH}/db/builder.h"
-    "${LEVELDB_PATH}/db/c.cc"
-    "${LEVELDB_PATH}/db/db_impl.cc"
-    "${LEVELDB_PATH}/db/db_impl.h"
-    "${LEVELDB_PATH}/db/db_iter.cc"
-    "${LEVELDB_PATH}/db/db_iter.h"
-    "${LEVELDB_PATH}/db/dbformat.cc"
-    "${LEVELDB_PATH}/db/dbformat.h"
-    "${LEVELDB_PATH}/db/dumpfile.cc"
-    "${LEVELDB_PATH}/db/filename.cc"
-    "${LEVELDB_PATH}/db/filename.h"
-    "${LEVELDB_PATH}/db/log_format.h"
-    "${LEVELDB_PATH}/db/log_reader.cc"
-    "${LEVELDB_PATH}/db/log_reader.h"
-    "${LEVELDB_PATH}/db/log_writer.cc"
-    "${LEVELDB_PATH}/db/log_writer.h"
-    "${LEVELDB_PATH}/db/memtable.cc"
-    "${LEVELDB_PATH}/db/memtable.h"
-    "${LEVELDB_PATH}/db/repair.cc"
-    "${LEVELDB_PATH}/db/skiplist.h"
-    "${LEVELDB_PATH}/db/snapshot.h"
-    "${LEVELDB_PATH}/db/table_cache.cc"
-    "${LEVELDB_PATH}/db/table_cache.h"
-    "${LEVELDB_PATH}/db/version_edit.cc"
-    "${LEVELDB_PATH}/db/version_edit.h"
-    "${LEVELDB_PATH}/db/version_set.cc"
-    "${LEVELDB_PATH}/db/version_set.h"
-    "${LEVELDB_PATH}/db/write_batch_internal.h"
-    "${LEVELDB_PATH}/db/write_batch.cc"
-    "${LEVELDB_PATH}/port/port.h"
-    "${LEVELDB_PATH}/port/thread_annotations.h"
-    "${LEVELDB_PATH}/table/block_builder.cc"
-    "${LEVELDB_PATH}/table/block_builder.h"
-    "${LEVELDB_PATH}/table/block.cc"
-    "${LEVELDB_PATH}/table/block.h"
-    "${LEVELDB_PATH}/table/filter_block.cc"
-    "${LEVELDB_PATH}/table/filter_block.h"
-    "${LEVELDB_PATH}/table/format.cc"
-    "${LEVELDB_PATH}/table/format.h"
-    "${LEVELDB_PATH}/table/iterator_wrapper.h"
-    "${LEVELDB_PATH}/table/iterator.cc"
-    "${LEVELDB_PATH}/table/merger.cc"
-    "${LEVELDB_PATH}/table/merger.h"
-    "${LEVELDB_PATH}/table/table_builder.cc"
-    "${LEVELDB_PATH}/table/table.cc"
-    "${LEVELDB_PATH}/table/two_level_iterator.cc"
-    "${LEVELDB_PATH}/table/two_level_iterator.h"
-    "${LEVELDB_PATH}/util/arena.cc"
-    "${LEVELDB_PATH}/util/arena.h"
-    "${LEVELDB_PATH}/util/bloom.cc"
-    "${LEVELDB_PATH}/util/cache.cc"
-    "${LEVELDB_PATH}/util/coding.cc"
-    "${LEVELDB_PATH}/util/coding.h"
-    "${LEVELDB_PATH}/util/comparator.cc"
-    "${LEVELDB_PATH}/util/crc32c.cc"
-    "${LEVELDB_PATH}/util/crc32c.h"
-    "${LEVELDB_PATH}/util/env_posix.cc"
-    "${LEVELDB_PATH}/util/env.cc"
-    "${LEVELDB_PATH}/util/filter_policy.cc"
-    "${LEVELDB_PATH}/util/hash.cc"
-    "${LEVELDB_PATH}/util/hash.h"
-    "${LEVELDB_PATH}/util/logging.cc"
-    "${LEVELDB_PATH}/util/logging.h"
-    "${LEVELDB_PATH}/util/mutexlock.h"
-    "${LEVELDB_PATH}/util/options.cc"
-    "${LEVELDB_PATH}/util/posix_logger.h"
-    "${LEVELDB_PATH}/util/random.h"
-    "${LEVELDB_PATH}/util/status.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/db/builder.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/db/builder.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/db/c.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/db/db_impl.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/db/db_impl.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/db/db_iter.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/db/db_iter.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/db/dbformat.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/db/dbformat.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/db/dumpfile.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/db/filename.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/db/filename.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/db/log_format.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/db/log_reader.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/db/log_reader.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/db/log_writer.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/db/log_writer.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/db/memtable.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/db/memtable.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/db/repair.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/db/skiplist.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/db/snapshot.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/db/table_cache.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/db/table_cache.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/db/version_edit.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/db/version_edit.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/db/version_set.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/db/version_set.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/db/write_batch_internal.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/db/write_batch.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/port/port.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/port/thread_annotations.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/table/block_builder.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/table/block_builder.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/table/block.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/table/block.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/table/filter_block.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/table/filter_block.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/table/format.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/table/format.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/table/iterator_wrapper.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/table/iterator.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/table/merger.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/table/merger.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/table/table_builder.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/table/table.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/table/two_level_iterator.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/table/two_level_iterator.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/util/arena.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/util/arena.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/util/bloom.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/util/cache.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/util/coding.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/util/coding.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/util/comparator.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/util/crc32c.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/util/crc32c.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/util/env_posix.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/util/env.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/util/filter_policy.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/util/hash.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/util/hash.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/util/logging.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/util/logging.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/util/mutexlock.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/util/options.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/util/posix_logger.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/util/random.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/util/status.cc"
 
   # Only CMake 3.3+ supports PUBLIC sources in targets exported by "install".
   $<$<VERSION_GREATER:CMAKE_VERSION,3.2>:PUBLIC>
-    "${LEVELDB_PATH}/include/leveldb/c.h"
-    "${LEVELDB_PATH}/include/leveldb/cache.h"
-    "${LEVELDB_PATH}/include/leveldb/comparator.h"
-    "${LEVELDB_PATH}/include/leveldb/db.h"
-    "${LEVELDB_PATH}/include/leveldb/dumpfile.h"
-    "${LEVELDB_PATH}/include/leveldb/env.h"
-    "${LEVELDB_PATH}/include/leveldb/filter_policy.h"
-    "${LEVELDB_PATH}/include/leveldb/iterator.h"
-    "${LEVELDB_PATH}/include/leveldb/options.h"
-    "${LEVELDB_PATH}/include/leveldb/slice.h"
-    "${LEVELDB_PATH}/include/leveldb/status.h"
-    "${LEVELDB_PATH}/include/leveldb/table_builder.h"
-    "${LEVELDB_PATH}/include/leveldb/table.h"
-    "${LEVELDB_PATH}/include/leveldb/write_batch.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/leveldb/c.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/leveldb/cache.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/leveldb/comparator.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/leveldb/db.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/leveldb/dumpfile.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/leveldb/env.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/leveldb/filter_policy.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/leveldb/iterator.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/leveldb/options.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/leveldb/slice.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/leveldb/status.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/leveldb/table_builder.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/leveldb/table.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/leveldb/write_batch.h"
 )
 target_include_directories(leveldb
   PUBLIC
-    $<BUILD_INTERFACE:${LEVELDB_PATH}/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 target_compile_definitions(leveldb
