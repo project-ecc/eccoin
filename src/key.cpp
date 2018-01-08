@@ -13,6 +13,8 @@
 #include <secp256k1.h>
 #include <secp256k1_recovery.h>
 
+ #include <openssl/bn.h>
+
 static secp256k1_context* secp256k1_context_sign = nullptr;
 
 // Generate a private key from just the secret parameter
