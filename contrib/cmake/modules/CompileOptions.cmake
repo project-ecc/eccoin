@@ -105,31 +105,6 @@ if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU" OR "${CMAKE_CXX_COMPILER_ID}" MATCH
         -Wswitch-default
         -Wuninitialized
         -Wmissing-field-initializers
-        
-        $<$<CXX_COMPILER_ID:GNU>:
-            -Wmaybe-uninitialized
-            
-            $<$<VERSION_GREATER:$<CXX_COMPILER_VERSION>,4.8>:
-                -Wpedantic
-                
-                -Wreturn-local-addr
-            >
-        >
-        
-        $<$<CXX_COMPILER_ID:Clang>:
-            -Wpedantic
-            
-            # -Wreturn-stack-address # gives false positives
-        >
-        
-        $<$<PLATFORM_ID:Darwin>:
-            -pthread
-        >
-        
-        # Required for CMake < 3.1; should be removed if minimum required CMake version is raised.
-        $<$<VERSION_LESS:${CMAKE_VERSION},3.1>:
-            -std=c++11
-        >
     )
 endif ()
 

@@ -14,8 +14,19 @@ cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
 
 # Include CMake Modules
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/modules")
+
+include(Custom)
+
+# Set policies
+set_policy(CMP0028 NEW) # ENABLE CMP0028: Double colon in target name means ALIAS or IMPORTED target.
+set_policy(CMP0054 NEW) # ENABLE CMP0054: Only interpret if() arguments as variables or keywords when unquoted.
+set_policy(CMP0042 NEW) # ENABLE CMP0042: MACOSX_RPATH is enabled by default.
+set_policy(CMP0063 NEW) # ENABLE CMP0063: Honor visibility properties for all target types.
+
 include(GetGitRevisionDescription)
 include(HealthCheck)
+include(cotire)
+include(ucm)
 
 #
 # Generate Project Information
@@ -74,7 +85,28 @@ file(WRITE "${PROJECT_BINARY_DIR}/VERSION" "${META_NAME_VERSION}")
 # Compiler settings and options
 # 
 include(CompileOptions)
+ucm_add_flags(CXX ${DEFAULT_COMPILE_OPTIONS})
+ucm_add_linker_flags(${DEFAULT_LINKER_OPTIONS})
 
 # Configure health check tools
 enable_cppcheck(On)
 enable_clang_tidy(On)
+
+# Check for C++11/14 support
+project_check_cpp_version()
+check_cxx_compiler_flag( "-std=c++11"   COMPILER_SUPPORTS_CXX11 )
+check_cxx_compiler_flag( "-std=c++0x"   COMPILER_SUPPORTS_CXX0X )
+if( COMPILER_SUPPORTS_CXX11 )
+    if( CMAKE_COMPILER_IS_GNUCXX )
+        ucm_add_flags( CXX -std=gnu++11 )
+    else()
+        ucm_add_flags( CXX -std=c++11 )
+    endif()
+elseif( COMPILER_SUPPORTS_CXX0X)
+    ucm_add_flags( -std=c++0x )
+else()
+    # MSVC, On by default (if available)
+endif()
+
+# Append the `src`
+add_subdirectory(src)
