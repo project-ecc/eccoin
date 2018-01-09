@@ -11,12 +11,7 @@ BITCOIN_INCLUDES=-I$(builddir) -I$(builddir)/build $(BOOST_CPPFLAGS) $(LEVELDB_C
 BITCOIN_INCLUDES += -I$(srcdir)/secp256k1/include
 BITCOIN_INCLUDES += -I$(srcdir)/univalue
 
-LIBBITCOIN_SERVER=build/libbitcoin_server.a
-LIBBITCOIN_WALLET=build/libbitcoin_wallet.a
-LIBBITCOIN_COMMON=build/libbitcoin_common.a
-LIBBITCOIN_CLI=build/libbitcoin_cli.a
-LIBBITCOIN_UTIL=build/libbitcoin_util.a
-LIBBITCOIN_CRYPTO=build/crypto/libbitcoin_crypto.a
+LIBBITCOIN_SERVER=libbitcoin_server.a
 LIBSECP256K1=secp256k1/libsecp256k1.la
 
 $(LIBSECP256K1): $(wildcard secp256k1/src/*) $(wildcard secp256k1/include/*)
@@ -25,19 +20,14 @@ $(LIBSECP256K1): $(wildcard secp256k1/src/*) $(wildcard secp256k1/include/*)
 # Make is not made aware of per-object dependencies to avoid limiting building parallelization
 # But to build the less dependent modules first, we manually select their order here:
 EXTRA_LIBRARIES += \
-  build/crypto/libbitcoin_crypto.a \
-  build/libbitcoin_util.a \
-  build/libbitcoin_common.a \
-  build/libbitcoin_server.a \
-  build/libbitcoin_cli.a
-if ENABLE_WALLET
+  libbitcoin_server.a
+ 
 BITCOIN_INCLUDES += $(BDB_CPPFLAGS)
-EXTRA_LIBRARIES += build/libbitcoin_wallet.a
-endif
+EXTRA_LIBRARIES += libbitcoin_wallet.a
 
 if BUILD_BITCOIN_LIBS
 lib_LTLIBRARIES = libbitcoinconsensus.la
-LIBBITCOIN_CONSENSUS=build/libbitcoinconsensus.la
+LIBBITCOIN_CONSENSUS=libbitcoinconsensus.la
 else
 LIBBITCOIN_CONSENSUS=
 endif
@@ -47,7 +37,7 @@ TESTS =
 BENCHMARKS =
 
 if BUILD_BITCOIND
-  bin_PROGRAMS += bitcoind
+  bin_PROGRAMS += eccoind
 endif
 
 .PHONY: FORCE check-symbols check-security
@@ -55,6 +45,7 @@ endif
 BITCOIN_CORE_H = \
   addrman.h \
   amount.h \
+  args.h \
   arith_uint256.h \
   base58.h \
   bloom.h \
@@ -78,19 +69,24 @@ BITCOIN_CORE_H = \
   core_io.h \
   core_memusage.h \
   crypto/hash.h \
+  dbwrapper.h \
   httprpc.h \
   httpserver.h \
   init.h \
+  kernel.h \
   key.h \
   keystore.h \
-  dbwrapper.h \
   limitedmap.h \
   main.h \
+  messages.h \
   memusage.h \
   merkleblock.h \
   miner.h \
   net.h \
   netbase.h \
+  networks/netman.h \
+  networks/network.h \
+  networks/networktemplate.h \
   noui.h \
   policy/fees.h \
   policy/policy.h \
@@ -99,6 +95,10 @@ BITCOIN_CORE_H = \
   prevector.h \
   chain/block.h \
   tx/tx.h \
+  pbkdf2.h \
+  processblock.h \
+  processheader.h \
+  processtx.h \
   protocol.h \
   pubkey.h \
   random.h \
@@ -112,8 +112,11 @@ BITCOIN_CORE_H = \
   script/script_error.h \
   script/sigcache.h \
   script/sign.h \
+  script/stakescript.h \
   script/standard.h \
+  crypto/scrypt.h \
   serialize.h \
+  signals.h \
   streams.h \
   support/allocators/secure.h \
   support/allocators/zeroafterfree.h \
@@ -136,6 +139,7 @@ BITCOIN_CORE_H = \
   util/utilstrencodings.h \
   util/utiltime.h \
   validationinterface.h \
+  verifydb.h \
   version.h \
   versionbits.h \
   wallet/crypter.h \
@@ -162,6 +166,7 @@ libbitcoin_server_a_SOURCES = \
   httpserver.cpp \
   init.cpp \
   dbwrapper.cpp \
+  kernel.cpp \
   main.cpp \
   merkleblock.cpp \
   miner.cpp \
@@ -184,48 +189,6 @@ libbitcoin_server_a_SOURCES = \
   txmempool.cpp \
   validationinterface.cpp \
   versionbits.cpp \
-  $(BITCOIN_CORE_H)
-
-
-# wallet: bitcoin, but only linked
-# when wallet enabled
-libbitcoin_wallet_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
-libbitcoin_wallet_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
-libbitcoin_wallet_a_SOURCES = \
-  wallet/crypter.cpp \
-  wallet/db.cpp \
-  rpc/rpcdump.cpp \
-  rpc/rpcwallet.cpp \
-  wallet/wallet.cpp \
-  wallet/wallet_ismine.cpp \
-  wallet/walletdb.cpp \
-  policy/rbf.cpp \
-  $(BITCOIN_CORE_H)
-
-# crypto primitives library
-crypto_libbitcoin_crypto_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_CONFIG_INCLUDES)
-crypto_libbitcoin_crypto_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
-crypto_libbitcoin_crypto_a_SOURCES = \
-  crypto/chacha20.cpp \
-  crypto/chacha20.h \
-  crypto/common.h \
-  crypto/hmac_sha256.cpp \
-  crypto/hmac_sha256.h \
-  crypto/hmac_sha512.cpp \
-  crypto/hmac_sha512.h \
-  crypto/ripemd160.cpp \
-  crypto/ripemd160.h \
-  crypto/sha1.cpp \
-  crypto/sha1.h \
-  crypto/sha256.cpp \
-  crypto/sha256.h \
-  crypto/sha512.cpp \
-  crypto/sha512.h
-
-# common: shared between bitcoin and non-server tools
-libbitcoin_common_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
-libbitcoin_common_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
-libbitcoin_common_a_SOURCES = \
   amount.cpp \
   arith_uint256.cpp \
   base58.cpp \
@@ -240,29 +203,30 @@ libbitcoin_common_a_SOURCES = \
   keystore.cpp \
   netbase.cpp \
   chain/block.cpp \
+  chain/blockindex.cpp \
+  processblock.cpp \
+  processheader.cpp \
+  processtx.cpp \
   tx/tx.cpp \
   protocol.cpp \
   pubkey.cpp \
   scheduler.cpp \
+  pbkdf2.cpp \
   script/interpreter.cpp \
   script/script.cpp \
   script/script_error.cpp \
   script/sign.cpp \
   script/standard.cpp \
-  $(BITCOIN_CORE_H)
-
-# util: shared between all executables.
-# This library *must* be included to make sure that the glibc
-# backward-compatibility objects and their sanity checks are linked.
-libbitcoin_util_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
-libbitcoin_util_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
-libbitcoin_util_a_SOURCES = \
+  script/stakescript.cpp \
+  args.cpp \
   support/pagelocker.cpp \
   chain/chainman.cpp \
   clientversion.cpp \
   compat/glibc_sanity.cpp \
   compat/glibcxx_sanity.cpp \
   compat/strnlen.cpp \
+  networks/netman.cpp \
+  messages.cpp \
   random.cpp \
   rpc/rpcprotocol.cpp \
   support/cleanse.cpp \
@@ -275,58 +239,53 @@ libbitcoin_util_a_SOURCES = \
   util/utilmoneystr.cpp \
   util/utilstrencodings.cpp \
   util/utiltime.cpp \
-  $(BITCOIN_CORE_H)
-
-if GLIBC_BACK_COMPAT
-libbitcoin_util_a_SOURCES += compat/glibc_compat.cpp
-endif
-
-# cli: shared between bitcoin-cli and bitcoin-qt
-libbitcoin_cli_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
-libbitcoin_cli_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
-libbitcoin_cli_a_SOURCES = \
+  verifydb.cpp \
+  signals.cpp \
+  crypto/chacha20.cpp \
+  crypto/chacha20.h \
+  crypto/common.h \
+  crypto/hmac_sha256.cpp \
+  crypto/hmac_sha256.h \
+  crypto/hmac_sha512.cpp \
+  crypto/hmac_sha512.h \
+  crypto/ripemd160.cpp \
+  crypto/ripemd160.h \
+  crypto/sha1.cpp \
+  crypto/sha1.h \
+  crypto/sha256.cpp \
+  crypto/sha256.h \
+  crypto/sha512.cpp \
+  crypto/sha512.h \
+  crypto/scrypt.cpp \
+  wallet/crypter.cpp \
+  wallet/db.cpp \
+  rpc/rpcdump.cpp \
+  rpc/rpcwallet.cpp \
+  wallet/wallet.cpp \
+  wallet/wallet_ismine.cpp \
+  wallet/walletdb.cpp \
+  policy/rbf.cpp \
   rpc/rpcclient.cpp \
   $(BITCOIN_CORE_H)
 
-nodist_libbitcoin_util_a_SOURCES = $(srcdir)/build/build.h
-#
+if GLIBC_BACK_COMPAT
+libbitcoin_server_a_SOURCES += compat/glibc_compat.cpp
+endif
 
 # bitcoin binary #
-bitcoin_SOURCES = eccoin.cpp
-bitcoin_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
-bitcoin_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
-bitcoin_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
+eccoind_SOURCES = eccoind.cpp
+eccoind_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
+eccoind_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+eccoind_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
 
-bitcoin_LDADD = \
+eccoind_LDADD = \
   $(LIBBITCOIN_SERVER) \
-  $(LIBBITCOIN_COMMON) \
-  $(LIBBITCOIN_UTIL) \
   $(LIBBITCOIN_CRYPTO) \
   $(LIBLEVELDB) \
   $(LIBMEMENV) \
   $(LIBSECP256K1)
 
-if ENABLE_WALLET
-bitcoin_LDADD += build/libbitcoin_wallet.a
-endif
-
-bitcoin_LDADD += $(BOOST_LIBS) $(BDB_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(MINIUPNPC_LIBS) $(EVENT_PTHREADS_LIBS) $(EVENT_LIBS)
-
-bitcoin_cli_LDADD = \
-  $(LIBBITCOIN_CLI) \
-  $(LIBBITCOIN_UTIL)
-
-bitcoin_cli_LDADD += $(BOOST_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(EVENT_LIBS)
-#
-
-bitcoin_tx_LDADD = \
-  $(LIBBITCOIN_COMMON) \
-  $(LIBBITCOIN_UTIL) \
-  $(LIBBITCOIN_CRYPTO) \
-  $(LIBSECP256K1)
-
-bitcoin_tx_LDADD += $(BOOST_LIBS) $(CRYPTO_LIBS)
-#
+eccoind_LDADD += $(BOOST_LIBS) $(BDB_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(MINIUPNPC_LIBS) $(EVENT_PTHREADS_LIBS) $(EVENT_LIBS)
 
 # bitcoinconsensus library #
 if BUILD_BITCOIN_LIBS
