@@ -186,6 +186,7 @@ target_sources(leveldb
     "${CMAKE_CURRENT_SOURCE_DIR}/util/posix_logger.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/util/random.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/util/status.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/helpers/memenv/memenv.cc"
 
   # Only CMake 3.3+ supports PUBLIC sources in targets exported by "install".
   $<$<VERSION_GREATER:CMAKE_VERSION,3.2>:PUBLIC>
