@@ -212,8 +212,10 @@ set(DIR_HEADERS
 #
 # Boost Dependencies
 # 
-set( Boost_USE_STATIC_LIBS        ON )
-find_package( Boost REQUIRED )
+set(Boost_USE_STATIC_LIBS OFF) 
+set(Boost_USE_MULTITHREADED ON)  
+set(Boost_USE_STATIC_RUNTIME OFF)
+find_package( Boost REQUIRED COMPONENTS system filesystem thread date_time chrono regex serialization program_options )
 include_directories( ${Boost_INCLUDE_DIR} )
 # ucm_add_linker_flags(SHARED ${Boost_LIBRARY_DIRS})
 
@@ -247,21 +249,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/leveldb/include
                     ${CMAKE_CURRENT_SOURCE_DIR}/leveldb/helpers
                     ${CMAKE_CURRENT_SOURCE_DIR}/leveldb/helpers/memenv)
 
-#
-# secp256k1 - uses the original autotools
-#
-include(ExternalProject)
-ExternalProject_Add(secp256k1
-  SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/secp256k1
-  CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/secp256k1/configure
-  BUILD_COMMAND ${MAKE}
-  INSTALL_COMMAND "")
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/secp256k1/include)
-ExternalProject_Get_Property(secp256k1 INSTALL_DIR)
-set(SECKP_DIR ${INSTALL_DIR})
-# add_library(SECP_LIB STATIC IMPORTED GLOBAL)
-# set_property(TARGET SECP_LIB PROPERTY IMPORTED_LOCATION ${SECKP_DIR}/src/secp256k1-build/libsecp256k1.la)
-# add_dependencies(SECP_LIB secp256k1)
+
 
 #
 # univalue
@@ -273,16 +261,52 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/univalue)
 # 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 add_library(eccoin ${DIR_HEADERS} ${DIR_SOURCES})
+
+
+#
+# secp256k1 - uses the original autotools
+#
+include(ExternalProject)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/secp256k1/include)
+ExternalProject_Add(SECP_EXTERNAL
+  SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/secp256k1
+  CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/secp256k1/configure
+  BUILD_COMMAND ${MAKE}
+  INSTALL_COMMAND "")
+
+ExternalProject_Get_Property(SECP_EXTERNAL INSTALL_DIR)
+set(SECKP_DIR ${INSTALL_DIR})
+add_dependencies(eccoin SECP_EXTERNAL)
+
 target_link_libraries(eccoin
-                      leveldb
-                      -L${SECKP_DIR}/src/secp256k1-build
-                      ${Boost_LIBRARY_DIRS}
+                      ${SECKP_DIR}/src/SECP_EXTERNAL-build
+                      ${Boost_LIBRARIES}
                       ${OPENSSL_LIBRARIES}
                       ${LIBEVENT_LIB}
                       ${BERKELEY_DB_LIBRARIES}
+                      event_pthreads
+                      secp256k1
+                      leveldb
+                      
 )
+
+# add_library(SECP_LIB STATIC IMPORTED GLOBAL)
+# set_property(TARGET SECP_LIB PROPERTY IMPORTED_LOCATION ${SECKP_DIR}/src/secp256k1-build/libsecp256k1.la)
+# add_dependencies(SECP_LIB secp256k1)
+
 
 add_executable(eccoind ${DIR_HEADERS} ${DIR_SOURCES})
 target_link_libraries(eccoind eccoin)
+
+# include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+# add_executable(eccoind ${DIR_HEADERS} ${DIR_SOURCES})
+# target_link_libraries(eccoin
+#                       leveldb
+#                       -L${SECKP_DIR}/src/secp256k1-build
+#                       ${Boost_LIBRARY_DIRS}
+#                       ${OPENSSL_LIBRARIES}
+#                       ${LIBEVENT_LIB}
+#                       ${BERKELEY_DB_LIBRARIES}
+# )
 
 # ucm_print_flags()
