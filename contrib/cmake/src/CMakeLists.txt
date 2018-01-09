@@ -246,6 +246,24 @@ ucm_add_linker_flags(SHARED ${BERKELEY_DB_LIBRARIES})
 # LevelDB
 # 
 add_subdirectory(leveldb)
-include_directories(${})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/leveldb/include
+                    ${CMAKE_CURRENT_SOURCE_DIR}/leveldb/helpers
+                    ${CMAKE_CURRENT_SOURCE_DIR}/leveldb/helpers/memenv)
+
+#
+# secp256k1 - uses the original autotools
+#
+include(ExternalProject)
+ExternalProject_Add(secp256k1
+  SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/secp256k1
+  CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/secp256k1/configure
+  BUILD_COMMAND ${MAKE}
+  INSTALL_COMMAND "")
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/secp256k1/include)
+ExternalProject_Get_Property(secp256k1 INSTALL_DIR)
+set(SECKP_DIR ${INSTALL_DIR})
+add_library(SECP_LIB STATIC IMPORTED GLOBAL)
+set_property(TARGET SECP_LIB PROPERTY IMPORTED_LOCATION ${SECKP_DIR}/src/secp256k1-build/libsecp256k1.la)
+add_dependencies(SECP_LIB secp256k1)
 
 ucm_print_flags()
