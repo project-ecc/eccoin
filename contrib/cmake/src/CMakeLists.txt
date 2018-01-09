@@ -16,223 +16,220 @@ string(REGEX REPLACE "/contrib/cmake" "" CMAKE_CURRENT_SOURCE_DIR
 
 # Setup Sources
 set(DIR_SOURCES
-  txdb.cpp
-  key.cpp
-  addrman.cpp
-  amount.cpp
-  arith_uint256.cpp
-  base58.cpp
-  chain/blockindex.cpp
-  bloom.cpp
-  chain/chain.cpp
-  chain/chainman.cpp
-  networks/netman.cpp
-  chain/checkpoints.cpp
-  clientversion.cpp
-  coins.cpp
-  compressor.cpp
-  core_read.cpp
-  core_write.cpp
-  dbwrapper.cpp
-  crypto/hash.cpp
-  keystore.cpp
-  main.cpp
-  merkleblock.cpp
-  messages.cpp
-  miner.cpp
-  net.cpp
-  netbase.cpp
-  noui.cpp
-  pow.cpp
-  processblock.cpp
-  processheader.cpp
-  protocol.cpp
-  pubkey.cpp
-  random.cpp
-  scheduler.cpp
-  sync.cpp
-  timedata.cpp
-  torcontrol.cpp
-  txmempool.cpp
-  uint256.cpp
-  util/util.cpp
-  fs.cpp
-  args.cpp
-  util/utilmoneystr.cpp
-  util/utilstrencodings.cpp
-  util/utiltime.cpp
-  validationinterface.cpp
-  versionbits.cpp
-  wallet/crypter.cpp
-  wallet/db.cpp
-  wallet/wallet.cpp
-  wallet/wallet_ismine.cpp
-  wallet/walletdb.cpp
-  support/cleanse.cpp
-  support/pagelocker.cpp
-  script/bitcoinconsensus.cpp
-  script/interpreter.cpp
-  script/script.cpp
-  script/script_error.cpp
-  script/sigcache.cpp
-  script/sign.cpp
-  script/standard.cpp
-  chain/block.cpp
-  tx/tx.cpp
-  policy/fees.cpp
-  policy/policy.cpp
-  policy/rbf.cpp
-  crypto/hmac_sha256.cpp
-  crypto/hmac_sha512.cpp
-  crypto/ripemd160.cpp
-  crypto/sha1.cpp
-  crypto/sha256.cpp
-  crypto/sha512.cpp
-  crypto/chacha20.cpp
-  consensus/merkle.cpp
-  compat/glibc_compat.cpp
-  compat/glibc_sanity.cpp
-  compat/glibcxx_sanity.cpp
-  compat/strnlen.cpp
-  init.cpp
-  eccoind.cpp
-  crypto/scrypt.cpp
-  kernel.cpp
-  httprpc.cpp
-  httpserver.cpp
-  rest.cpp
-  rpc/rpcblockchain.cpp
-  rpc/rpcclient.cpp
-  rpc/rpcdump.cpp
-  rpc/rpcmining.cpp
-  rpc/rpcmisc.cpp
-  rpc/rpcnet.cpp
-  rpc/rpcprotocol.cpp
-  rpc/rpcrawtransaction.cpp
-  rpc/rpcserver.cpp
-  rpc/rpcwallet.cpp
-  univalue/univalue.cpp
-  univalue/univalue_read.cpp
-  univalue/univalue_write.cpp
-  pbkdf2.cpp
-  script/stakescript.cpp
-  signals.cpp
-  processtx.cpp
-  verifydb.cpp )
+  ${CMAKE_CURRENT_SOURCE_DIR}/txdb.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/key.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/addrman.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/amount.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/arith_uint256.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/base58.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/chain/blockindex.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/bloom.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/chain/chain.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/chain/chainman.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/networks/netman.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/chain/checkpoints.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/clientversion.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/coins.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/compressor.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/core_read.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/core_write.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/dbwrapper.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/crypto/hash.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/keystore.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/merkleblock.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/messages.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/miner.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/net.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/netbase.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/noui.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/pow.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/processblock.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/processheader.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/protocol.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/pubkey.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/random.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/scheduler.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/sync.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/timedata.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/torcontrol.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/txmempool.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/uint256.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/util/util.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/fs.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/args.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/util/utilmoneystr.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/util/utilstrencodings.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/util/utiltime.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/validationinterface.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/versionbits.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/wallet/crypter.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/wallet/db.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/wallet/wallet.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/wallet/wallet_ismine.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/wallet/walletdb.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/support/cleanse.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/support/pagelocker.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/script/bitcoinconsensus.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/script/interpreter.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/script/script.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/script/script_error.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/script/sigcache.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/script/sign.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/script/standard.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/chain/block.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/tx/tx.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/policy/fees.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/policy/policy.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/policy/rbf.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/crypto/hmac_sha256.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/crypto/hmac_sha512.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ripemd160.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/crypto/sha1.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/crypto/sha256.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/crypto/sha512.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/crypto/chacha20.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/consensus/merkle.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/compat/glibc_compat.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/compat/glibc_sanity.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/compat/glibcxx_sanity.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/compat/strnlen.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/init.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/eccoind.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/crypto/scrypt.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/kernel.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/httprpc.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/httpserver.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/rest.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/rpc/rpcblockchain.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/rpc/rpcclient.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/rpc/rpcdump.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/rpc/rpcmining.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/rpc/rpcmisc.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/rpc/rpcnet.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/rpc/rpcprotocol.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/rpc/rpcrawtransaction.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/rpc/rpcserver.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/rpc/rpcwallet.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/univalue/univalue.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/univalue/univalue_read.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/univalue/univalue_write.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/pbkdf2.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/script/stakescript.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/signals.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/processtx.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/verifydb.cpp )
 
 set(DIR_HEADERS
-  build.h
-  txdb.h
-  key.h
-  addrman.h
-  amount.h
-  arith_uint256.h
-  base58.h
-  chain/blockindex.h
-  bloom.h
-  chain/chain.h
-  chain/chainman.h
-  networks/netman.h
-  chain/checkpoints.h
-  clientversion.h
-  coins.h
-  compressor.h
-  dbwrapper.h
-  crypto/hash.h
-  keystore.h
-  main.h
-  merkleblock.h
-  messages.h
-  miner.h
-  net.h
-  netbase.h
-  noui.h
-  pow.h
-  processblock.h
-  processheader.h
-  protocol.h
-  pubkey.h
-  random.h
-  scheduler.h
-  sync.h
-  timedata.h
-  torcontrol.h
-  txmempool.h
-  uint256.h
-  util/util.h
-  fs.h
-  args.h
-  util/utilmoneystr.h
-  util/utilstrencodings.h
-  util/utiltime.h
-  validationinterface.h
-  versionbits.h
-  wallet/crypter.h
-  wallet/db.h
-  wallet/wallet.h
-  wallet/wallet_ismine.h
-  wallet/walletdb.h
-  support/cleanse.h
-  support/pagelocker.h
-  script/bitcoinconsensus.h
-  script/interpreter.h
-  script/script.h
-  script/script_error.h
-  script/sigcache.h
-  script/sign.h
-  script/standard.h
-  chain/block.h
-  tx/tx.h
-  policy/fees.h
-  policy/policy.h
-  policy/rbf.h
-  crypto/hmac_sha256.h
-  crypto/hmac_sha512.h
-  crypto/ripemd160.h
-  crypto/sha1.h
-  crypto/sha256.h
-  crypto/sha512.h
-  crypto/chacha20.h
-  consensus/merkle.h
-  init.h
-  crypto/scrypt.h
-  kernel.h
-  httprpc.h
-  httpserver.h
-  rpc/rpcclient.h
-  rpc/rpcprotocol.h
-  rpc/rpcserver.h
-  univalue/univalue.h
-  pbkdf2.h
-  script/stakescript.h
-  signals.h
-  processtx.h
-  verifydb.h )
+  ${CMAKE_CURRENT_SOURCE_DIR}/build.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/txdb.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/key.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/addrman.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/amount.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/arith_uint256.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/base58.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/chain/blockindex.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/bloom.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/chain/chain.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/chain/chainman.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/networks/netman.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/chain/checkpoints.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/clientversion.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/coins.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/compressor.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/dbwrapper.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/crypto/hash.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/keystore.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/main.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/merkleblock.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/messages.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/miner.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/net.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/netbase.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/noui.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/pow.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/processblock.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/processheader.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/protocol.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/pubkey.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/random.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/scheduler.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/sync.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/timedata.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/torcontrol.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/txmempool.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/uint256.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/util/util.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/fs.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/args.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/util/utilmoneystr.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/util/utilstrencodings.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/util/utiltime.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/validationinterface.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/versionbits.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/wallet/crypter.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/wallet/db.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/wallet/wallet.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/wallet/wallet_ismine.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/wallet/walletdb.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/support/cleanse.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/support/pagelocker.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/script/bitcoinconsensus.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/script/interpreter.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/script/script.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/script/script_error.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/script/sigcache.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/script/sign.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/script/standard.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/chain/block.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/tx/tx.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/policy/fees.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/policy/policy.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/policy/rbf.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/crypto/hmac_sha256.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/crypto/hmac_sha512.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/crypto/ripemd160.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/crypto/sha1.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/crypto/sha256.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/crypto/sha512.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/crypto/chacha20.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/consensus/merkle.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/init.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/crypto/scrypt.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/kernel.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/httprpc.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/httpserver.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/rpc/rpcclient.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/rpc/rpcprotocol.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/rpc/rpcserver.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/univalue/univalue.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/pbkdf2.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/script/stakescript.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/signals.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/processtx.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/verifydb.h )
 
 #
 # Boost Dependencies
 # 
-set( Boost_USE_STATIC_LIBS        OFF )
-set( Boost_USE_MULTITHREADED      ON )
-set( Boost_USE_STATIC_RUNTIME     OFF )
-set( BOOST_ALL_DYN_LINK           ON ) # force dynamic linking for all libraries
+set( Boost_USE_STATIC_LIBS        ON )
 find_package( Boost REQUIRED )
 include_directories( ${Boost_INCLUDE_DIR} )
-ucm_add_linker_flags(SHARED ${Boost_LIBRARY_DIRS})
+# ucm_add_linker_flags(SHARED ${Boost_LIBRARY_DIRS})
 
 # 
 # OpenSSL Dependencies
 # 
 find_package(OpenSSL REQUIRED)
 include_directories(${OPENSSL_INCLUDE_DIR})
-ucm_add_linker_flags(SHARED ${OPENSSL_LIBRARIES})
+# ucm_add_linker_flags(SHARED ${OPENSSL_LIBRARIES})
 
 #
 # LibEvent Dependencies
 # 
 find_package(LibEvent REQUIRED)
 include_directories(${LIBEVENT_INCLUDE_DIR})
-ucm_add_linker_flags(SHARED ${LIBEVENT_LIB})
+# ucm_add_linker_flags(SHARED ${LIBEVENT_LIB})
 
 #
 # BerkeleyDB
@@ -240,7 +237,7 @@ ucm_add_linker_flags(SHARED ${LIBEVENT_LIB})
 set(DB_VERSION 47)
 find_package(BerkeleyDB REQUIRED)
 include_directories(${BERKELEY_DB_INCLUDE_DIR})
-ucm_add_linker_flags(SHARED ${BERKELEY_DB_LIBRARIES})
+# ucm_add_linker_flags(SHARED ${BERKELEY_DB_LIBRARIES})
 
 # 
 # LevelDB
@@ -262,8 +259,30 @@ ExternalProject_Add(secp256k1
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/secp256k1/include)
 ExternalProject_Get_Property(secp256k1 INSTALL_DIR)
 set(SECKP_DIR ${INSTALL_DIR})
-add_library(SECP_LIB STATIC IMPORTED GLOBAL)
-set_property(TARGET SECP_LIB PROPERTY IMPORTED_LOCATION ${SECKP_DIR}/src/secp256k1-build/libsecp256k1.la)
-add_dependencies(SECP_LIB secp256k1)
+# add_library(SECP_LIB STATIC IMPORTED GLOBAL)
+# set_property(TARGET SECP_LIB PROPERTY IMPORTED_LOCATION ${SECKP_DIR}/src/secp256k1-build/libsecp256k1.la)
+# add_dependencies(SECP_LIB secp256k1)
 
-ucm_print_flags()
+#
+# univalue
+# 
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/univalue)
+
+# 
+# ECCoin
+# 
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+add_library(eccoin ${DIR_HEADERS} ${DIR_SOURCES})
+target_link_libraries(eccoin
+                      leveldb
+                      -L${SECKP_DIR}/src/secp256k1-build
+                      ${Boost_LIBRARY_DIRS}
+                      ${OPENSSL_LIBRARIES}
+                      ${LIBEVENT_LIB}
+                      ${BERKELEY_DB_LIBRARIES}
+)
+
+add_executable(eccoind ${DIR_HEADERS} ${DIR_SOURCES})
+target_link_libraries(eccoind eccoin)
+
+# ucm_print_flags()
