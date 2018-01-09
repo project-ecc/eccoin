@@ -14,6 +14,11 @@ set(CONTRIB_CURRENT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 string(REGEX REPLACE "/contrib/cmake" "" CMAKE_CURRENT_SOURCE_DIR
        ${CMAKE_CURRENT_SOURCE_DIR})
 
+# Compile the `build.h` Header
+string(TIMESTAMP BUILD_DATETIME UTC)
+configure_file(build.h.in build.h)
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+
 # Setup Sources
 set(DIR_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/txdb.cpp
@@ -121,7 +126,6 @@ set(DIR_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/verifydb.cpp )
 
 set(DIR_HEADERS
-  ${CMAKE_CURRENT_SOURCE_DIR}/build.h
   ${CMAKE_CURRENT_SOURCE_DIR}/txdb.h
   ${CMAKE_CURRENT_SOURCE_DIR}/key.h
   ${CMAKE_CURRENT_SOURCE_DIR}/addrman.h
