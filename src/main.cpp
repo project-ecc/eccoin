@@ -42,6 +42,7 @@
 #include "chain/checkpoints.h"
 #include "processtx.h"
 
+#include <random>
 #include <sstream>
 #include <random>
 #include <boost/random/mersenne_twister.hpp>
