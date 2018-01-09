@@ -7,13 +7,13 @@
 
 #include "base58.h"
 #include "consensus/validation.h"
-#include "main.h" // For CheckTransaction
+#include "processtx.h" // For CheckTransaction
 #include "protocol.h"
 #include "serialize.h"
 #include "sync.h"
-#include "util.h"
+#include "util/util.h"
 #include "args.h"
-#include "utiltime.h"
+#include "util/utiltime.h"
 #include "wallet/wallet.h"
 #include "wallet.h"
 
@@ -622,8 +622,15 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
         int nMinVersion = 0;
         if (Read((std::string)"minversion", nMinVersion))
         {
-            if (nMinVersion > CLIENT_VERSION)
+            if (nMinVersion > WALLET_VERSION)
+            {
                 return DB_TOO_NEW;
+            }
+            if (nMinVersion < FEATURE_WALLETCRYPT) // all ECC wallets support at least FEATURE_WALLETCRYPT
+            {
+                WriteMinVersion(FEATURE_LATEST);
+                nMinVersion = FEATURE_LATEST;
+            }
             pwallet->LoadMinVersion(nMinVersion);
         }
 

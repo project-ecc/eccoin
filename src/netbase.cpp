@@ -9,12 +9,12 @@
 
 #include "netbase.h"
 
-#include "hash.h"
+#include "crypto/hash.h"
 #include "sync.h"
 #include "uint256.h"
 #include "random.h"
-#include "util.h"
-#include "utilstrencodings.h"
+#include "util/util.h"
+#include "util/utilstrencodings.h"
 
 #ifdef HAVE_GETADDRINFO_A
 #include <netdb.h>

@@ -15,7 +15,7 @@ namespace Consensus {
 enum DeploymentPos
 {
     DEPLOYMENT_TESTDUMMY,
-    DEPLOYMENT_CSV, // Deployment of BIP68, BIP112, and BIP113.
+    DEPLPUYMENT_CSV_PLACEHOLDER, // Deployment of BIP68, BIP112, and BIP113.
     MAX_VERSION_BITS_DEPLOYMENTS
 };
 
@@ -36,7 +36,6 @@ struct BIP9Deployment {
  */
 struct Params {
     uint256 hashGenesisBlock;
-    int nSubsidyHalvingInterval;
     /** Used to check majorities for block version upgrade */
     int nMajorityEnforceBlockUpgrade;
     int nMajorityRejectBlockOutdated;

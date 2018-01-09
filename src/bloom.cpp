@@ -4,8 +4,8 @@
 
 #include "bloom.h"
 
-#include "primitives/transaction.h"
-#include "hash.h"
+#include "tx/tx.h"
+#include "crypto/hash.h"
 #include "script/script.h"
 #include "script/standard.h"
 #include "random.h"

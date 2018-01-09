@@ -10,11 +10,6 @@
 #include "crypto/hmac_sha512.h"
 #include "random.h"
 
-#include <openssl/bn.h>
-#include <openssl/ecdsa.h>
-#include <openssl/rand.h>
-#include <openssl/obj_mac.h>
-
 #include <secp256k1.h>
 #include <secp256k1_recovery.h>
 
@@ -178,7 +173,9 @@ static int ecdsa_signature_parse_der_lax(const secp256k1_context* ctx, secp256k1
 
 bool CPubKey::Verify(const uint256 &hash, const std::vector<unsigned char>& vchSig) const {
     if (!IsValid())
+    {
         return false;
+    }
     CECKey key;
     if (!key.SetPubKey(*this))
     {

@@ -5,10 +5,6 @@
 #ifndef BITCOIN_CLIENTVERSION_H
 #define BITCOIN_CLIENTVERSION_H
 
-#if defined(HAVE_CONFIG_H)
-#include "config/bitcoin-config.h"
-#else
-
 /**
  * client versioning and copyright year
  */
@@ -17,7 +13,7 @@
 #define CLIENT_VERSION_MAJOR    0
 #define CLIENT_VERSION_MINOR    2
 #define CLIENT_VERSION_REVISION 5
-#define CLIENT_VERSION_BUILD    5
+#define CLIENT_VERSION_BUILD    6
 
 //! Set to true for release, false for prerelease or test build
 #define CLIENT_VERSION_IS_RELEASE true
@@ -27,8 +23,6 @@
  * Todo: update this when changing our copyright comments in the source
  */
 #define COPYRIGHT_YEAR 2017
-
-#endif //HAVE_CONFIG_H
 
 /**
  * Converts the parameter X to a string after macro replacement on X has been performed.
@@ -56,6 +50,8 @@ static const int CLIENT_VERSION =
                          +   10000 * CLIENT_VERSION_MINOR
                          +     100 * CLIENT_VERSION_REVISION
                          +       1 * CLIENT_VERSION_BUILD;
+
+static const int WALLET_VERSION = 60000;
 
 extern const std::string CLIENT_NAME;
 extern const std::string CLIENT_BUILD;
