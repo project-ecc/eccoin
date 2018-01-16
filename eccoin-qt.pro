@@ -297,7 +297,9 @@ HEADERS += \
     src/crypto/chacha20.h \
     src/processtx.h \
     src/verifydb.h \
-    src/rpc/events.h
+    src/rpc/events.h \
+    src/ans/ans.h \
+    src/ans/ansrecord.h
 
 
 # organize compiles of cpp files by section, this seems to be a logical order where the files lower down generally depend
@@ -407,7 +409,9 @@ SOURCES += \
     src/tx/servicetx.cpp \
     src/crypto/chacha20.cpp \
     src/processtx.cpp \
-    src/verifydb.cpp
+    src/verifydb.cpp \
+    src/ans/ans.cpp \
+    src/ans/ansrecord.cpp
 
 
 
