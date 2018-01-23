@@ -42,6 +42,28 @@ public:
         MAX_BASE58_TYPES
     };
 
+    /// TODO: make all of the data members below this point protected and make setters for them all
+
+    Consensus::Params consensus;
+    CMessageHeader::MessageStartChars pchMessageStart;
+    int nDefaultPort;
+    int nRPCPort;
+    long nMaxTipAge;
+    std::vector<CDNSSeedData> vSeeds;
+    std::vector<unsigned char> base58Prefixes[MAX_BASE58_TYPES];
+    std::string strNetworkID;
+    std::string strNetworkDataDir;
+    CBlock genesis;
+    bool fMiningRequiresPeers;
+    bool fDefaultConsistencyChecks;
+    bool fRequireStandard;
+    bool fMineBlocksOnDemand;
+    bool fTestnetToBeDeprecatedFieldRPC;
+    CCheckpointData checkpointData;
+    unsigned int nStakeMaxAge;
+    unsigned int nStakeMinAge;
+
+
     const Consensus::Params& GetConsensus() const { return consensus; }
     const CMessageHeader::MessageStartChars& MessageStart() const { return pchMessageStart; }
     int GetDefaultPort() const { return nDefaultPort; }
@@ -87,6 +109,12 @@ public:
         this->pchMessageStart[2] = param_netTemplate->getpch2();
         this->pchMessageStart[3] = param_netTemplate->getpch3();
 
+        this->base58Prefixes[CNetworkTemplate::PUBKEY_ADDRESS] = param_netTemplate->Base58Prefix(CNetworkTemplate::PUBKEY_ADDRESS);
+        this->base58Prefixes[CNetworkTemplate::SCRIPT_ADDRESS] = param_netTemplate->Base58Prefix(CNetworkTemplate::SCRIPT_ADDRESS);
+        this->base58Prefixes[CNetworkTemplate::SECRET_KEY]     = param_netTemplate->Base58Prefix(CNetworkTemplate::SECRET_KEY);
+        this->base58Prefixes[CNetworkTemplate::EXT_PUBLIC_KEY] = param_netTemplate->Base58Prefix(CNetworkTemplate::EXT_PUBLIC_KEY);
+        this->base58Prefixes[CNetworkTemplate::EXT_SECRET_KEY] = param_netTemplate->Base58Prefix(CNetworkTemplate::EXT_SECRET_KEY);
+
         this->nDefaultPort = param_netTemplate->GetDefaultPort();
         this->nRPCPort = param_netTemplate->GetRPCPort();
         this->nMaxTipAge = param_netTemplate->MaxTipAge();
@@ -104,30 +132,6 @@ public:
         this->nStakeMinAge = param_netTemplate->getStakeMinAge();
 
     }
-
-    /// TODO: make all of the data members below this point protected and make setters for them all
-
-    Consensus::Params consensus;
-    CMessageHeader::MessageStartChars pchMessageStart;
-    int nDefaultPort;
-    int nRPCPort;
-    long nMaxTipAge;
-    std::vector<CDNSSeedData> vSeeds;
-    std::vector<unsigned char> base58Prefixes[MAX_BASE58_TYPES];
-    std::string strNetworkID;
-    std::string strNetworkDataDir;
-    CBlock genesis;
-    bool fMiningRequiresPeers;
-    bool fDefaultConsistencyChecks;
-    bool fRequireStandard;
-    bool fMineBlocksOnDemand;
-    bool fTestnetToBeDeprecatedFieldRPC;
-    CCheckpointData checkpointData;
-    unsigned int nStakeMaxAge;
-    unsigned int nStakeMinAge;
-
-protected:
-
 };
 
 #endif // BITCOIN_CHAINPARAMS_H
