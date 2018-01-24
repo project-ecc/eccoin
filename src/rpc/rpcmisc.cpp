@@ -3,6 +3,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include "args.h"
 #include "base58.h"
 #include "clientversion.h"
 #include "init.h"
@@ -22,6 +23,46 @@
 #include <boost/assign/list_of.hpp>
 
 #include <univalue.h>
+
+
+static std::set<std::string> reloadableSettings = {"-staking"};
+
+UniValue reloadconfig (const UniValue& params, bool fHelp)
+{
+    if (fHelp || params.size() != 0)
+    {
+        throw std::runtime_error(
+            "reloadconfig\n"
+            "Returns an object containing the config file arguments that were reloaded.\n"
+            "The only commands supported for reloading right now are: \n"
+            "staking \n"
+        );
+    }
+    UniValue obj(UniValue::VOBJ);
+
+    boost::filesystem::ifstream streamConfig(GetConfigFile());
+    std::set<std::string>::iterator iter;
+    for (boost::program_options::detail::config_file_iterator it(streamConfig, setOptions), end; it != end; ++it)
+    {
+        // Don't overwrite existing settings so command line settings override eccoin.conf
+        std::string strKey = std::string("-") + it->string_key;
+        std::string strValue = it->value[0];
+        InterpretNegativeSetting(strKey, strValue);
+        iter = reloadableSettings.find(strKey);
+        if(iter != reloadableSettings.end() && strValue == '1')
+        {
+            obj.push_back(Pair(strKey, "was reloaded"));
+            if(strKey == "staking")
+            {
+                ThreadScryptMiner(pwalletMain);
+            }
+        }
+    }
+
+
+
+    return obj;
+}
 
 /**
  * @note Do not add or change anything in the information returned by this
