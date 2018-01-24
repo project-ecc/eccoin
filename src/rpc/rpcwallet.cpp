@@ -1934,6 +1934,12 @@ UniValue walletpassphrase(const UniValue& params, bool fHelp)
     if (!pwalletMain->IsCrypted())
         throw JSONRPCError(RPC_WALLET_WRONG_ENC_STATE, "Error: running with an unencrypted wallet, but walletpassphrase was called.");
 
+
+    // prevent trivial sendmoney commands when wallet left unlocked to stake
+    bool stakeOnly = false;
+    if (params.size() > 2)
+        stakeOnly = params[2].get_bgool();
+
     // Note that the walletpassphrase is stored in params[0] which is not mlock()ed
     SecureString strWalletPass;
     strWalletPass.reserve(100);
@@ -1958,11 +1964,8 @@ UniValue walletpassphrase(const UniValue& params, bool fHelp)
     nWalletUnlockTime = GetTime() + nSleepTime;
     RPCRunLater("lockwallet", boost::bind(LockWallet, pwalletMain), nSleepTime);
 
-    // prevent trivial sendmoney commands when wallet left unlocked to stake
-    if (params.size() > 2)
-        fWalletUnlockStakingOnly = params[2].get_bool();
-    else
-        fWalletUnlockStakingOnly = false;
+
+    fWalletUnlockStakingOnly = stakeOnly;
 
     return NullUniValue;
 }
