@@ -87,6 +87,8 @@ public:
 };
 
 extern CArgsManager gArgs;
+void InterpretNegativeSetting(std::string& strKey, std::string& strValue);
+bool InterpretBool(const std::string& strValue);
 
 
 #endif //ECCOIN_ARGS_H

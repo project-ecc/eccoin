@@ -1139,7 +1139,12 @@ void ThreadSocketHandler()
                 int nErr = WSAGetLastError();
                 LogPrintf("socket select error %s\n", NetworkErrorString(nErr));
                 for (unsigned int i = 0; i <= hSocketMax; i++)
-                    FD_SET(i, &fdsetRecv);
+                {
+                    if(FD_ISSET(i, &fdsetRecv))
+                    {
+                        FD_SET(i, &fdsetRecv);
+                    }
+                }
             }
             FD_ZERO(&fdsetSend);
             FD_ZERO(&fdsetError);
