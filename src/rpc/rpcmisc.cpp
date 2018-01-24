@@ -21,6 +21,7 @@
 #include <stdint.h>
 
 #include <boost/assign/list_of.hpp>
+#include <boost/program_options/detail/config_file.hpp>
 
 #include <univalue.h>
 
@@ -41,9 +42,11 @@ UniValue reloadconfig (const UniValue& params, bool fHelp)
     }
     UniValue obj(UniValue::VOBJ);
 
-    boost::filesystem::ifstream streamConfig(GetConfigFile());
+    boost::filesystem::ifstream streamConfig(gArgs.GetConfigFile());
     std::set<std::string>::iterator iter;
     std::set<std::string> processedArgs;
+    std::set<std::string> setOptions;
+    setOptions.insert("*");
     for (boost::program_options::detail::config_file_iterator it(streamConfig, setOptions), end; it != end; ++it)
     {
         // Don't overwrite existing settings so command line settings override eccoin.conf
@@ -51,7 +54,7 @@ UniValue reloadconfig (const UniValue& params, bool fHelp)
         std::string strValue = it->value[0];
         InterpretNegativeSetting(strKey, strValue);
         iter = reloadableSettings.find(strKey);
-        if(iter != reloadableSettings.end() && strValue == '1' && processedArgs.find(strKey) != processedArgs.end())
+        if(iter != reloadableSettings.end() && strValue == std::string("1") && processedArgs.find(strKey) != processedArgs.end())
         {
             obj.push_back(Pair(strKey, "was reloaded"));
             if(strKey == "-staking")
@@ -60,7 +63,7 @@ UniValue reloadconfig (const UniValue& params, bool fHelp)
             }
             if(strKey == "-rescan")
             {
-                pwalletMain->ScanForWalletTransactions(chainActive.Genesis(), true);
+                pwalletMain->ScanForWalletTransactions(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Genesis(), true);
             }
             processedArgs.insert(strKey);
         }
