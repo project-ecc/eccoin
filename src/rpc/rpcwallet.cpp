@@ -143,9 +143,6 @@ UniValue getnewaddress(const UniValue& params, bool fHelp)
     CKeyID keyID = newKey.GetID();
 
     pwalletMain->SetAddressBook(keyID, strAccount, "receive");
-
-	fprintf(stdout, "%s\n", CBitcoinAddress(keyID).ToString().c_str());
-
     return CBitcoinAddress(keyID).ToString();
 }
 
