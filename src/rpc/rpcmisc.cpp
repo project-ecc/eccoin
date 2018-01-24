@@ -25,7 +25,7 @@
 #include <univalue.h>
 
 
-static std::set<std::string> reloadableSettings = {"-staking"};
+static std::set<std::string> reloadableSettings = {"-staking", "-rescan"};
 
 UniValue reloadconfig (const UniValue& params, bool fHelp)
 {
@@ -36,6 +36,7 @@ UniValue reloadconfig (const UniValue& params, bool fHelp)
             "Returns an object containing the config file arguments that were reloaded.\n"
             "The only commands supported for reloading right now are: \n"
             "staking \n"
+            "rescan \n"
         );
     }
     UniValue obj(UniValue::VOBJ);
@@ -52,15 +53,16 @@ UniValue reloadconfig (const UniValue& params, bool fHelp)
         if(iter != reloadableSettings.end() && strValue == '1')
         {
             obj.push_back(Pair(strKey, "was reloaded"));
-            if(strKey == "staking")
+            if(strKey == "-staking")
             {
                 ThreadScryptMiner(pwalletMain);
             }
+            if(strKey == "-rescan")
+            {
+                pwalletMain->ScanForWalletTransactions(chainActive.Genesis(), true);
+            }
         }
     }
-
-
-
     return obj;
 }
 
