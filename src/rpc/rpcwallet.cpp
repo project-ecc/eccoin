@@ -144,6 +144,8 @@ UniValue getnewaddress(const UniValue& params, bool fHelp)
 
     pwalletMain->SetAddressBook(keyID, strAccount, "receive");
 
+	fprintf(stdout, "%s\n", CBitcoinAddress(keyID).ToString().c_str());
+
     return CBitcoinAddress(keyID).ToString();
 }
 
@@ -1934,6 +1936,13 @@ UniValue walletpassphrase(const UniValue& params, bool fHelp)
     if (!pwalletMain->IsCrypted())
         throw JSONRPCError(RPC_WALLET_WRONG_ENC_STATE, "Error: running with an unencrypted wallet, but walletpassphrase was called.");
 
+    RPCTypeCheck(params, boost::assign::list_of(UniValue::VSTR)(UniValue::VNUM)(UniValue::VBOOL), true);    
+
+    // prevent trivial sendmoney commands when wallet left unlocked to stake
+    bool stakeOnly = false;
+    if (params.size() > 2)
+        stakeOnly = params[2].get_bool();
+
     // Note that the walletpassphrase is stored in params[0] which is not mlock()ed
     SecureString strWalletPass;
     strWalletPass.reserve(100);
@@ -1958,15 +1967,11 @@ UniValue walletpassphrase(const UniValue& params, bool fHelp)
     nWalletUnlockTime = GetTime() + nSleepTime;
     RPCRunLater("lockwallet", boost::bind(LockWallet, pwalletMain), nSleepTime);
 
-    // prevent trivial sendmoney commands when wallet left unlocked to stake
-    if (params.size() > 2)
-        fWalletUnlockStakingOnly = params[2].get_bool();
-    else
-        fWalletUnlockStakingOnly = false;
+
+    fWalletUnlockStakingOnly = stakeOnly;
 
     return NullUniValue;
 }
-
 
 UniValue walletpassphrasechange(const UniValue& params, bool fHelp)
 {
