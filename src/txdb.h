@@ -39,6 +39,9 @@ public:
     uint256 GetBestBlock() const;
     bool BatchWrite(CCoinsMap &mapCoins, const uint256 &hashBlock);
     bool GetStats(CCoinsStats &stats) const;
+
+    //! Attempt to update from an older database format. Returns whether an error occurred.
+    bool Upgrade();
 };
 
 /** Access to the block database (blocks/index/) */
@@ -60,6 +63,7 @@ public:
     bool WriteFlag(const std::string &name, bool fValue);
     bool ReadFlag(const std::string &name, bool &fValue);
     bool LoadBlockIndexGuts();
+    bool EraseBlockIndex(uint256 hashToDelete);
 };
 
 #endif // BITCOIN_TXDB_H

@@ -9,19 +9,20 @@
 #include "kernel.h"
 #include "crypto/scrypt.h"
 #include "txmempool.h"
-#include "util.h"
+#include "util/util.h"
 #include "args.h"
 #include "init.h"
 #include "consensus/consensus.h"
 #include "txmempool.h"
-#include "utilmoneystr.h"
+#include "util/utilmoneystr.h"
 #include "timedata.h"
 #include "bignum.h"
 #include "coins.h"
-#include "chainparams.h"
+#include "networks/networktemplate.h"
 #include "consensus/validation.h"
 #include "consensus/merkle.h"
 #include "processblock.h"
+#include "networks/netman.h"
 
 #include <boost/thread.hpp>
 #include <openssl/sha.h>
@@ -208,7 +209,7 @@ CBlockTemplate* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
 
     // ppcoin: if coinstake available add coinstake tx
     static int64_t nLastCoinStakeSearchTime = GetAdjustedTime();  // only initialized at startup
-    CBlockIndex* pindexPrev = chainActive.Tip();
+    CBlockIndex* pindexPrev = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
 
 
     // This vector will be sorted into a priority queue:
@@ -259,7 +260,7 @@ CBlockTemplate* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
     // Collect memory pool transactions into the block
     {
         LOCK2(cs_main, mempool.cs);
-        CBlockIndex* pindexPrev = chainActive.Tip();
+        CBlockIndex* pindexPrev = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
         const int nHeight = pindexPrev->nHeight + 1;
         pblock->nTime = GetAdjustedTime();
         const int64_t nMedianTimePast = pindexPrev->GetMedianTimePast();
@@ -497,7 +498,7 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reservekey)
     // Found a solution
     {
         LOCK(cs_main);
-        if (pblock->hashPrevBlock != chainActive.Tip()->GetBlockHash())
+        if (pblock->hashPrevBlock != pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->GetBlockHash())
             return error("BMiner : generated block is stale");
 
         // Remove key from key pool
@@ -511,7 +512,7 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reservekey)
 
         // Process this block the same as if we had received it from another node
         CValidationState state;
-        const CChainParams& chainparams = Params();
+        const CNetworkTemplate& chainparams = pnetMan->getActivePaymentNetwork();
         if (!ProcessNewBlock(state, chainparams, NULL, pblock, true, NULL, GENERATED))
             return error("Miner : ProcessBlock, block not accepted");
     }
@@ -539,7 +540,7 @@ void ScryptMiner(CWallet *pwallet)
     {
         if (fShutdown)
             return;
-        while (vNodes.empty() || vNodes.size() < 6 || IsInitialBlockDownload())
+        while (vNodes.empty() || vNodes.size() < 6 || pnetMan->getActivePaymentNetwork()->getChainManager()->IsInitialBlockDownload())
         {
             MilliSleep(1000);
             if (fShutdown)
@@ -557,7 +558,7 @@ void ScryptMiner(CWallet *pwallet)
         // Create new block
         //
         unsigned int nTransactionsUpdatedLast = mempool.GetTransactionsUpdated();
-        CBlockIndex* pindexPrev = chainActive.Tip();
+        CBlockIndex* pindexPrev = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
 
         std::auto_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(pwallet, true));
         if (!pblocktemplate.get())
@@ -682,7 +683,7 @@ void ScryptMiner(CWallet *pwallet)
                 break;
             if (mempool.GetTransactionsUpdated() != nTransactionsUpdatedLast && GetTime() - nStart > 60)
                 break;
-            if (pindexPrev != chainActive.Tip())
+            if (pindexPrev != pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip())
                 break;
 
             // Update nTime every few seconds
@@ -720,11 +721,11 @@ void ThreadScryptMiner(void* parg)
         minerThreads->create_thread(boost::bind(&ScryptMiner, pwallet));
     }
     catch (std::exception& e) {
-        PrintException(&e, "ThreadBitcoinMiner()");
+        PrintException(&e, "ThreadECCMinter()");
     } catch (...) {
-        PrintException(NULL, "ThreadBitcoinMiner()");
+        PrintException(NULL, "ThreadECCMinter()");
     }
     nHPSTimerStart = 0;
         dHashesPerSec = 0;
-    LogPrintf("ThreadBitcoinMiner exiting \n");
+    LogPrintf("ThreadECCMinter exiting \n");
 }

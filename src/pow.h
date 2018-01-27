@@ -7,7 +7,7 @@
 #define BITCOIN_POW_H
 
 #include "consensus/params.h"
-#include "blockindex.h"
+#include "chain/blockindex.h"
 
 #include <stdint.h>
 

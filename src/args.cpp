@@ -3,18 +3,14 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#if defined(HAVE_CONFIG_H)
-#include "config/bitcoin-config.h"
-#endif
-
 #include "args.h"
-#include "util.h"
+#include "util/util.h"
 
-#include "chainparamsbase.h"
+#include "networks/netman.h"
 #include "random.h"
 #include "serialize.h"
-#include "utilstrencodings.h"
-#include "utiltime.h"
+#include "util/utilstrencodings.h"
+#include "util/utiltime.h"
 
 #include <stdarg.h>
 
@@ -84,10 +80,10 @@
 #include <openssl/rand.h>
 #include <openssl/conf.h>
 
-ArgsManager gArgs;
+CArgsManager gArgs;
 
 /** Interpret string as boolean, for argument parsing */
-static bool InterpretBool(const std::string& strValue)
+bool InterpretBool(const std::string& strValue)
 {
     if (strValue.empty())
         return true;
@@ -95,7 +91,7 @@ static bool InterpretBool(const std::string& strValue)
 }
 
 /** Turn -noX into -X=0 */
-static void InterpretNegativeSetting(std::string& strKey, std::string& strValue)
+void InterpretNegativeSetting(std::string& strKey, std::string& strValue)
 {
     if (strKey.length()>3 && strKey[0]=='-' && strKey[1]=='n' && strKey[2]=='o')
     {
@@ -104,7 +100,7 @@ static void InterpretNegativeSetting(std::string& strKey, std::string& strValue)
     }
 }
 
-void ArgsManager::ParseParameters(int argc, const char* const argv[])
+void CArgsManager::ParseParameters(int argc, const char* const argv[])
 {
     LOCK(cs_args);
     mapArgs.clear();
@@ -140,7 +136,7 @@ void ArgsManager::ParseParameters(int argc, const char* const argv[])
     }
 }
 
-std::vector<std::string> ArgsManager::GetArgs(const std::string& strArg)
+std::vector<std::string> CArgsManager::GetArgs(const std::string& strArg)
 {
     LOCK(cs_args);
     if (IsArgSet(strArg))
@@ -148,13 +144,13 @@ std::vector<std::string> ArgsManager::GetArgs(const std::string& strArg)
     return {};
 }
 
-bool ArgsManager::IsArgSet(const std::string& strArg)
+bool CArgsManager::IsArgSet(const std::string& strArg)
 {
     LOCK(cs_args);
     return mapArgs.count(strArg);
 }
 
-std::string ArgsManager::GetArg(const std::string& strArg, const std::string& strDefault)
+std::string CArgsManager::GetArg(const std::string& strArg, const std::string& strDefault)
 {
     LOCK(cs_args);
     if (mapArgs.count(strArg))
@@ -162,7 +158,7 @@ std::string ArgsManager::GetArg(const std::string& strArg, const std::string& st
     return strDefault;
 }
 
-int64_t ArgsManager::GetArg(const std::string& strArg, int64_t nDefault)
+int64_t CArgsManager::GetArg(const std::string& strArg, int64_t nDefault)
 {
     LOCK(cs_args);
     if (mapArgs.count(strArg))
@@ -170,7 +166,7 @@ int64_t ArgsManager::GetArg(const std::string& strArg, int64_t nDefault)
     return nDefault;
 }
 
-bool ArgsManager::GetBoolArg(const std::string& strArg, bool fDefault)
+bool CArgsManager::GetBoolArg(const std::string& strArg, bool fDefault)
 {
     LOCK(cs_args);
     if (mapArgs.count(strArg))
@@ -178,7 +174,7 @@ bool ArgsManager::GetBoolArg(const std::string& strArg, bool fDefault)
     return fDefault;
 }
 
-bool ArgsManager::SoftSetArg(const std::string& strArg, const std::string& strValue)
+bool CArgsManager::SoftSetArg(const std::string& strArg, const std::string& strValue)
 {
     LOCK(cs_args);
     if (mapArgs.count(strArg))
@@ -187,7 +183,7 @@ bool ArgsManager::SoftSetArg(const std::string& strArg, const std::string& strVa
     return true;
 }
 
-bool ArgsManager::SoftSetBoolArg(const std::string& strArg, bool fValue)
+bool CArgsManager::SoftSetBoolArg(const std::string& strArg, bool fValue)
 {
     if (fValue)
         return SoftSetArg(strArg, std::string("1"));
@@ -195,7 +191,7 @@ bool ArgsManager::SoftSetBoolArg(const std::string& strArg, bool fValue)
         return SoftSetArg(strArg, std::string("0"));
 }
 
-void ArgsManager::ForceSetArg(const std::string& strArg, const std::string& strValue)
+void CArgsManager::ForceSetArg(const std::string& strArg, const std::string& strValue)
 {
     LOCK(cs_args);
     mapArgs[strArg] = strValue;
@@ -207,7 +203,7 @@ static fs::path pathCached;
 static fs::path pathCachedNetSpecific;
 static CCriticalSection csPathCached;
 
-boost::filesystem::path ArgsManager::GetConfigFile()
+boost::filesystem::path CArgsManager::GetConfigFile()
 {
     boost::filesystem::path pathConfigFile(GetArg("-conf", CONF_FILENAME));
     if (!pathConfigFile.is_complete())
@@ -216,7 +212,7 @@ boost::filesystem::path ArgsManager::GetConfigFile()
     return pathConfigFile;
 }
 
-void ArgsManager::ReadConfigFile()
+void CArgsManager::ReadConfigFile()
 {
     init:
     boost::filesystem::ifstream streamConfig(GetConfigFile());

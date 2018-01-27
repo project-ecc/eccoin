@@ -40,7 +40,7 @@ public:
     ADD_SERIALIZE_METHODS
 
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion)
+    inline void SerializationOp(Stream& s, Operation ser_action)
     {
         READWRITE(FLATDATA(pchMessageStart));
         READWRITE(FLATDATA(pchCommand));
@@ -225,7 +225,7 @@ extern const char *SENDHEADERS;
 const std::vector<std::string> &getAllNetMessageTypes();
 
 /** nServices flags */
-enum {
+enum ServiceFlags : uint64_t {
     // NODE_NETWORK means that the node is capable of serving the block chain. It is currently
     // set by all Bitcoin Core nodes, and is unset by SPV clients or other peers that just want
     // network services but don't provide them.
@@ -260,18 +260,19 @@ public:
     ADD_SERIALIZE_METHODS
 
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion)
-    {
+    inline void SerializationOp(Stream& s, Operation ser_action)
     {
         if (ser_action.ForRead())
             Init();
-        if (nType & SER_DISK)
+        int nVersion = s.GetVersion();
+        if (s.GetType() & SER_DISK)
             READWRITE(nVersion);
-        if ((nType & SER_DISK) || !(nType & SER_GETHASH))
+        if ((s.GetType() & SER_DISK) || !(s.GetType() & SER_GETHASH))
             READWRITE(nTime);
-        READWRITE(nServices);
+        uint64_t nServicesInt = nServices;
+        READWRITE(nServicesInt);
+        nServices = (ServiceFlags)nServicesInt;
         READWRITE(*(CService*)this);
-    }
     }
 
     // TODO: make private (improves encapsulation)
@@ -293,7 +294,7 @@ public:
     ADD_SERIALIZE_METHODS
 
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion)
+    inline void SerializationOp(Stream& s, Operation ser_action)
     {
         READWRITE(type);
         READWRITE(hash);

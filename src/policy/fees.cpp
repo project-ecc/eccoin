@@ -7,10 +7,10 @@
 #include "policy/policy.h"
 
 #include "amount.h"
-#include "primitives/transaction.h"
+#include "tx/tx.h"
 #include "streams.h"
 #include "txmempool.h"
-#include "util.h"
+#include "util/util.h"
 #include "args.h"
 
 void TxConfirmStats::Initialize(std::vector<double>& defaultBuckets,
