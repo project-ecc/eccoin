@@ -1,19 +1,19 @@
 #include "httprpc.h"
 
 #include "base58.h"
-#include "chainparams.h"
+#include "networks/networktemplate.h"
 #include "httpserver.h"
-#include "rpcprotocol.h"
-#include "rpcserver.h"
+#include "rpc/rpcprotocol.h"
+#include "rpc/rpcserver.h"
 #include "random.h"
 #include "sync.h"
-#include "util.h"
+#include "util/util.h"
 #include "args.h"
-#include "utilstrencodings.h"
+#include "util/utilstrencodings.h"
 #include "ui_interface.h"
 #include "crypto/hmac_sha256.h"
 #include <stdio.h>
-#include "utilstrencodings.h"
+#include "util/utilstrencodings.h"
 
 #include <boost/algorithm/string.hpp> // boost::trim
 

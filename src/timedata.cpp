@@ -7,8 +7,8 @@
 #include "netbase.h"
 #include "sync.h"
 #include "ui_interface.h"
-#include "util.h"
-#include "utilstrencodings.h"
+#include "util/util.h"
+#include "util/utilstrencodings.h"
 
 static CCriticalSection cs_nTimeOffset;
 static int64_t nTimeOffset = 0;

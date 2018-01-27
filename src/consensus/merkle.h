@@ -8,8 +8,7 @@
 #include <stdint.h>
 #include <vector>
 
-#include "primitives/transaction.h"
-#include "primitives/block.h"
+#include "chain/block.h"
 #include "uint256.h"
 
 uint256 ComputeMerkleRoot(const std::vector<uint256>& leaves, bool* mutated = NULL);

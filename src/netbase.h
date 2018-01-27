@@ -5,10 +5,6 @@
 #ifndef BITCOIN_NETBASE_H
 #define BITCOIN_NETBASE_H
 
-#if defined(HAVE_CONFIG_H)
-#include "config/bitcoin-config.h"
-#endif
-
 #include "compat.h"
 #include "serialize.h"
 
@@ -99,7 +95,7 @@ class CNetAddr
         ADD_SERIALIZE_METHODS
 
         template <typename Stream, typename Operation>
-        inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
+        inline void SerializationOp(Stream& s, Operation ser_action) {
             READWRITE(FLATDATA(ip));
         }
 
@@ -135,7 +131,7 @@ class CSubNet
         ADD_SERIALIZE_METHODS
 
         template <typename Stream, typename Operation>
-        inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
+        inline void SerializationOp(Stream& s, Operation ser_action) {
             READWRITE(network);
             READWRITE(FLATDATA(netmask));
             READWRITE(FLATDATA(valid));
@@ -176,7 +172,7 @@ class CService : public CNetAddr
         ADD_SERIALIZE_METHODS
 
         template <typename Stream, typename Operation>
-        inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
+        inline void SerializationOp(Stream& s, Operation ser_action) {
             READWRITE(FLATDATA(ip));
             unsigned short portN = htons(port);
             READWRITE(FLATDATA(portN));

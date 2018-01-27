@@ -5,7 +5,7 @@
 
 #include "compressor.h"
 
-#include "hash.h"
+#include "crypto/hash.h"
 #include "pubkey.h"
 #include "script/standard.h"
 
