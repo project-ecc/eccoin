@@ -112,7 +112,6 @@ elseif( COMPILER_SUPPORTS_CXX0X)
 else()
     # MSVC, On by default (if available)
 endif()
-ucm_add_flags(-w)
 
 # Append the `src`
 add_subdirectory(src)
