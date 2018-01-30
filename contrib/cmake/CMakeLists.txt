@@ -1,5 +1,5 @@
 # ECC Build System
-# 
+#
 # This CMakeLists.txt is free software; the Free Software Foundation
 # gives unlimited permission to copy and/or distribute it,
 # with or without modifications, as long as this notice is preserved.
@@ -35,7 +35,7 @@ include(ucm)
 
 #
 # Generate Project Information
-# 
+#
 # Get git revision
 get_git_head_revision(GIT_REFSPEC GIT_SHA1)
 string(SUBSTRING "${GIT_SHA1}" 0 12 GIT_REV)
@@ -59,17 +59,17 @@ set(META_CMAKE_INIT_SHA      "${GIT_SHA1}")
 string(MAKE_C_IDENTIFIER ${META_PROJECT_NAME} META_PROJECT_ID)
 string(TOUPPER ${META_PROJECT_ID} META_PROJECT_ID)
 
-# 
+#
 # Project configuration options
-# 
+#
 
 # Project options
 option(OPTION_BUILD_TESTS    "Build tests."                       ON)
 option(OPTION_BUILD_DOCS     "Build documentation."              OFF)
 
-# 
+#
 # Declare project
-# 
+#
 
 # Generate folders for IDE targets (e.g., VisualStudio solutions)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -86,9 +86,9 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 # Create version file
 file(WRITE "${PROJECT_BINARY_DIR}/VERSION" "${META_NAME_VERSION}")
 
-# 
+#
 # Compiler settings and options
-# 
+#
 include(CompileOptions)
 ucm_add_flags(CXX ${DEFAULT_COMPILE_OPTIONS})
 ucm_add_linker_flags(${DEFAULT_LINKER_OPTIONS})

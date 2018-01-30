@@ -1,5 +1,5 @@
 # ECC Build System
-# 
+#
 # This CMakeLists.txt is free software; the Free Software Foundation
 # gives unlimited permission to copy and/or distribute it,
 # with or without modifications, as long as this notice is preserved.
@@ -215,102 +215,147 @@ set(DIR_HEADERS
 
 #
 # Boost Dependencies
-# 
-set(Boost_USE_STATIC_LIBS OFF) 
-set(Boost_USE_MULTITHREADED ON)  
+#
+set(Boost_USE_STATIC_LIBS OFF)
+set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_RUNTIME OFF)
 find_package( Boost REQUIRED COMPONENTS system filesystem thread date_time chrono regex serialization program_options )
 include_directories( ${Boost_INCLUDE_DIR} )
-# ucm_add_linker_flags(SHARED ${Boost_LIBRARY_DIRS})
 
-# 
+#
 # OpenSSL Dependencies
-# 
+#
+set(OPENSSL_USE_STATIC_LIBS ON)
 find_package(OpenSSL REQUIRED)
 include_directories(${OPENSSL_INCLUDE_DIR})
-# ucm_add_linker_flags(SHARED ${OPENSSL_LIBRARIES})
 
 #
 # LibEvent Dependencies
-# 
+#
 find_package(LibEvent REQUIRED)
 include_directories(${LIBEVENT_INCLUDE_DIR})
-# ucm_add_linker_flags(SHARED ${LIBEVENT_LIB})
 
 #
 # BerkeleyDB
-# 
+#
 set(DB_VERSION 47)
 find_package(BerkeleyDB REQUIRED)
 include_directories(${BERKELEY_DB_INCLUDE_DIR})
-# ucm_add_linker_flags(SHARED ${BERKELEY_DB_LIBRARIES})
 
-# 
+#
 # LevelDB
-# 
+#
 add_subdirectory(leveldb)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/leveldb/include
                     ${CMAKE_CURRENT_SOURCE_DIR}/leveldb/helpers
                     ${CMAKE_CURRENT_SOURCE_DIR}/leveldb/helpers/memenv)
 
-
+#
+# GMP
+#
+find_package(GMP REQUIRED)
+include_directories(${GMP_INCLUDE_DIR})
 
 #
 # univalue
-# 
+#
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/univalue)
 
-# 
+#
 # ECCoin
-# 
+#
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 add_library(eccoin ${DIR_HEADERS} ${DIR_SOURCES})
-
 
 #
 # secp256k1 - uses the original autotools
 #
 include(ExternalProject)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/secp256k1/include)
-ExternalProject_Add(SECP_EXTERNAL
+ExternalProject_Add(secp256k1
+  PREFIX ${CMAKE_CURRENT_BINARY_DIR}/deps/secp256k1
   SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/secp256k1
-  CONFIGURE_COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/secp256k1/configure
+  BUILD_IN_SOURCE 0
+  CONFIGURE_COMMAND
+    ${CMAKE_CURRENT_SOURCE_DIR}/secp256k1/configure
+    --prefix=<INSTALL_DIR>
   BUILD_COMMAND ${MAKE}
-  INSTALL_COMMAND "")
-
-ExternalProject_Get_Property(SECP_EXTERNAL INSTALL_DIR)
-set(SECKP_DIR ${INSTALL_DIR})
-add_dependencies(eccoin SECP_EXTERNAL)
-
-target_link_libraries(eccoin
-                      ${SECKP_DIR}/src/SECP_EXTERNAL-build
-                      ${Boost_LIBRARIES}
-                      ${OPENSSL_LIBRARIES}
-                      ${LIBEVENT_LIB}
-                      ${BERKELEY_DB_LIBRARIES}
-                      event_pthreads
-                      secp256k1
-                      leveldb
-                      
+  INSTALL_COMMAND ""
+)
+include_directories(
+  ${CMAKE_CURRENT_SOURCE_DIR}/secp256k1
+  ${CMAKE_CURRENT_SOURCE_DIR}/secp256k1/src
+  ${CMAKE_CURRENT_SOURCE_DIR}/secp256k1/include
 )
 
-# add_library(SECP_LIB STATIC IMPORTED GLOBAL)
-# set_property(TARGET SECP_LIB PROPERTY IMPORTED_LOCATION ${SECKP_DIR}/src/secp256k1-build/libsecp256k1.la)
-# add_dependencies(SECP_LIB secp256k1)
+#
+# setup all the libraries
+#
+set(ECC_LIBS
+  ${Boost_LIBRARIES}
+  ${OPENSSL_LIBRARIES}
+  ${LIBEVENT_LIB}
+  ${LIBEVENT_PTHREADS_LIB}
+  ${BERKELEY_DB_LIBRARIES}
+  ${CMAKE_CURRENT_BINARY_DIR}/deps/secp256k1/src/secp256k1-build/.libs/libsecp256k1.a
+  ${GMP_LIBRARIES}
+  leveldb
+)
 
+#--------------------------------------------------------------------------------
+#  CMake's way of creating an executable
+add_executable(Eccoind MACOSX_BUNDLE WIN32
+  ${DIR_HEADERS}
+  ${DIR_SOURCES}
+)
+add_dependencies(Eccoind secp256k1)
 
-add_executable(eccoind ${DIR_HEADERS} ${DIR_SOURCES})
-target_link_libraries(eccoind eccoin)
+# Link the libraries into the binary
+target_link_libraries(Eccoind ${ECC_LIBS})
 
-# include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-# add_executable(eccoind ${DIR_HEADERS} ${DIR_SOURCES})
-# target_link_libraries(eccoin
-#                       leveldb
-#                       -L${SECKP_DIR}/src/secp256k1-build
-#                       ${Boost_LIBRARY_DIRS}
-#                       ${OPENSSL_LIBRARIES}
-#                       ${LIBEVENT_LIB}
-#                       ${BERKELEY_DB_LIBRARIES}
-# )
+#--------------------------------------------------------------------------------
+# Now the installation stuff below
+#--------------------------------------------------------------------------------
+SET(plugin_dest_dir bin)
+SET(qtconf_dest_dir bin)
+SET(APPS "\${CMAKE_INSTALL_PREFIX}/bin/Eccoind")
+IF(APPLE)
+  SET(plugin_dest_dir Eccoind.app/Contents/MacOS)
+  SET(qtconf_dest_dir Eccoind.app/Contents/Resources)
+  SET(APPS "\${CMAKE_INSTALL_PREFIX}/Eccoind.app")
+ENDIF(APPLE)
+IF(WIN32)
+  SET(APPS "\${CMAKE_INSTALL_PREFIX}/bin/Eccoind.exe")
+ENDIF(WIN32)
 
-# ucm_print_flags()
+#--------------------------------------------------------------------------------
+# Install the Eccoind application, on Apple, the bundle is at the root of the
+# install tree, and on other platforms it'll go into the bin directory.
+INSTALL(TARGETS Eccoind
+  BUNDLE DESTINATION . COMPONENT Runtime
+  RUNTIME DESTINATION bin COMPONENT Runtime
+)
+
+#--------------------------------------------------------------------------------
+# Use BundleUtilities to get all other dependencies for the application to work.
+# It takes a bundle or executable along with possible plugins and inspects it
+# for dependencies.  If they are not system dependencies, they are copied.
+
+# directories to look for dependencies
+SET(DIRS ${ECC_LIBS})
+
+# Now the work of copying dependencies into the bundle/package
+# The quotes are escaped and variables to use at install time have their $ escaped
+# An alternative is the do a configure_file() on a script and use install(SCRIPT  ...).
+# Note that the image plugins depend on QtSvg and QtXml, and it got those copied
+# over.
+INSTALL(CODE "
+    include(BundleUtilities)
+    fixup_bundle(\"${APPS}\" \"\" \"${DIRS}\")
+    " COMPONENT Runtime
+)
+
+# To Create a package, one can run "cpack -G DragNDrop CPackConfig.cmake" on Mac OS X
+# where CPackConfig.cmake is created by including CPack
+# And then there's ways to customize this as well
+set(CPACK_BINARY_DRAGNDROP ON)
+include(CPack)
