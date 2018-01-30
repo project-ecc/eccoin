@@ -8,10 +8,12 @@ set(LibEvent_EXTRA_PREFIXES /usr/local /opt/local "$ENV{HOME}")
 foreach(prefix ${LibEvent_EXTRA_PREFIXES})
   list(APPEND LibEvent_INCLUDE_PATHS "${prefix}/include")
   list(APPEND LibEvent_LIB_PATHS "${prefix}/lib")
+  list(APPEND LibEvent_LIB_PATHS "/usr/local/Cellar/libevent/2.1.8/lib")
 endforeach()
 
 find_path(LIBEVENT_INCLUDE_DIR event.h PATHS ${LibEvent_INCLUDE_PATHS})
-find_library(LIBEVENT_LIB NAMES event PATHS ${LibEvent_LIB_PATHS})
+find_library(LIBEVENT_LIB NAMES event PATHS "/usr/local/Cellar/libevent/2.1.8/lib")
+find_library(LIBEVENT_PTHREADS_LIB NAMES event_pthreads PATHS "/usr/local/Cellar/libevent/2.1.8/lib")
 
 if (LIBEVENT_LIB AND LIBEVENT_INCLUDE_DIR)
   set(LibEvent_FOUND TRUE)
@@ -34,4 +36,5 @@ endif ()
 mark_as_advanced(
     LIBEVENT_LIB
     LIBEVENT_INCLUDE_DIR
+    LIBEVENT_PTHREADS_LIB
   )
