@@ -234,7 +234,6 @@ include_directories(${OPENSSL_INCLUDE_DIR})
 #
 find_package(LibEvent REQUIRED)
 include_directories(${LIBEVENT_INCLUDE_DIR})
-# ucm_add_linker_flags(SHARED ${LIBEVENT_LIB})
 
 #
 # BerkeleyDB
@@ -242,7 +241,6 @@ include_directories(${LIBEVENT_INCLUDE_DIR})
 set(DB_VERSION 47)
 find_package(BerkeleyDB REQUIRED)
 include_directories(${BERKELEY_DB_INCLUDE_DIR})
-# ucm_add_linker_flags(SHARED ${BERKELEY_DB_LIBRARIES})
 
 #
 # LevelDB
@@ -305,34 +303,34 @@ set(ECC_LIBS
 
 #--------------------------------------------------------------------------------
 #  CMake's way of creating an executable
-add_executable(eccoind MACOSX_BUNDLE WIN32
+add_executable(Eccoind MACOSX_BUNDLE WIN32
   ${DIR_HEADERS}
   ${DIR_SOURCES}
 )
-add_dependencies(eccoind secp256k1)
+add_dependencies(Eccoind secp256k1)
 
 # Link the libraries into the binary
-target_link_libraries(eccoind ${ECC_LIBS})
+target_link_libraries(Eccoind ${ECC_LIBS})
 
 #--------------------------------------------------------------------------------
 # Now the installation stuff below
 #--------------------------------------------------------------------------------
 SET(plugin_dest_dir bin)
 SET(qtconf_dest_dir bin)
-SET(APPS "\${CMAKE_INSTALL_PREFIX}/bin/eccoind")
+SET(APPS "\${CMAKE_INSTALL_PREFIX}/bin/Eccoind")
 IF(APPLE)
-  SET(plugin_dest_dir eccoind.app/Contents/MacOS)
-  SET(qtconf_dest_dir eccoind.app/Contents/Resources)
-  SET(APPS "\${CMAKE_INSTALL_PREFIX}/eccoind.app")
+  SET(plugin_dest_dir Eccoind.app/Contents/MacOS)
+  SET(qtconf_dest_dir Eccoind.app/Contents/Resources)
+  SET(APPS "\${CMAKE_INSTALL_PREFIX}/Eccoind.app")
 ENDIF(APPLE)
 IF(WIN32)
-  SET(APPS "\${CMAKE_INSTALL_PREFIX}/bin/eccoind.exe")
+  SET(APPS "\${CMAKE_INSTALL_PREFIX}/bin/Eccoind.exe")
 ENDIF(WIN32)
 
 #--------------------------------------------------------------------------------
-# Install the QtTest application, on Apple, the bundle is at the root of the
+# Install the Eccoind application, on Apple, the bundle is at the root of the
 # install tree, and on other platforms it'll go into the bin directory.
-INSTALL(TARGETS eccoind
+INSTALL(TARGETS Eccoind
   BUNDLE DESTINATION . COMPONENT Runtime
   RUNTIME DESTINATION bin COMPONENT Runtime
 )
@@ -352,7 +350,7 @@ SET(DIRS ${ECC_LIBS})
 # over.
 INSTALL(CODE "
     include(BundleUtilities)
-    fixup_bundle(\"${APPS}\" \"${DIRS}\")
+    fixup_bundle(\"${APPS}\" \"\" \"${DIRS}\")
     " COMPONENT Runtime
 )
 
