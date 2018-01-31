@@ -21,8 +21,12 @@ private:
 public:
     bool addRecord(AnsRecordTypes recordType, std::string key, CAnsRecord value);
     CAnsRecord getRecord(AnsRecordTypes recordType, std::string key);
+    recordSet getRecordSet(AnsRecordTypes recordType);
     uint64_t getRecordSetSize(AnsRecordTypes recordType);
     void clearRecordSet(AnsRecordTypes recordType);
 };
+
+extern CAnsZone* pansMain;
+
 
 #endif // ANS_H

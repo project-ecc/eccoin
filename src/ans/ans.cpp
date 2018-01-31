@@ -6,17 +6,19 @@
 
 #include <utility>
 
+CAnsZone* pansMain = nullptr;
+
 bool CAnsZone::addRecord(AnsRecordTypes recordType, std::string key, CAnsRecord value)
 {
     switch(recordType)
     {
-        case Arec:
+        case A_RECORD:
             A.insert(std::make_pair(key, value));
             break;
-        case CNAMErec:
+        case CNAME_RECORD:
             CNAME.insert(std::make_pair(key, value));
             break;
-        case PTRrec:
+        case PTR_RECORD:
             PTR.insert(std::make_pair(key, value));
             break;
         default:
@@ -29,7 +31,7 @@ CAnsRecord CAnsZone::getRecord(AnsRecordTypes recordType, std::string key)
 {
     switch(recordType)
     {
-        case Arec:
+        case A_RECORD:
         {
             auto Aresult = A.find(key);
             if(Aresult != A.end())
@@ -38,7 +40,7 @@ CAnsRecord CAnsZone::getRecord(AnsRecordTypes recordType, std::string key)
             }
             break;
         }
-        case CNAMErec:
+        case CNAME_RECORD:
         {
             auto CNAMEresult = CNAME.find(key);
             if(CNAMEresult != CNAME.end())
@@ -47,7 +49,7 @@ CAnsRecord CAnsZone::getRecord(AnsRecordTypes recordType, std::string key)
             }
             break;
         }
-        case PTRrec:
+        case PTR_RECORD:
         {
             auto PTRresult = PTR.find(key);
             if(PTRresult != PTR.end())
@@ -62,6 +64,28 @@ CAnsRecord CAnsZone::getRecord(AnsRecordTypes recordType, std::string key)
     return CAnsRecord();
 }
 
+recordSet CAnsZone::getRecordSet(AnsRecordTypes recordType)
+{
+    switch(recordType)
+    {
+        case A_RECORD:
+        {
+            return A;
+        }
+        case CNAME_RECORD:
+        {
+            return CNAME;
+        }
+        case PTR_RECORD:
+        {
+            return PTR;
+        }
+        default:
+            break;
+    }
+    return recordSet();
+}
+
 uint64_t CAnsZone::getRecordSetSize(AnsRecordTypes recordType)
 {
     // we use a declared uint64_t here and return that instead of returning
@@ -69,17 +93,17 @@ uint64_t CAnsZone::getRecordSetSize(AnsRecordTypes recordType)
     uint64_t recordSetSize;
     switch(recordType)
     {
-        case Arec:
+        case A_RECORD:
         {
             recordSetSize = A.size();
             break;
         }
-        case CNAMErec:
+        case CNAME_RECORD:
         {
             recordSetSize = CNAME.size();
             break;
         }
-        case PTRrec:
+        case PTR_RECORD:
         {
             recordSetSize = PTR.size();
             break;
@@ -94,13 +118,13 @@ void CAnsZone::clearRecordSet(AnsRecordTypes recordType)
 {
     switch(recordType)
     {
-        case Arec:
+        case A_RECORD:
             A.clear();
             break;
-        case CNAMErec:
+        case CNAME_RECORD:
             CNAME.clear();
             break;
-        case PTRrec:
+        case PTR_RECORD:
             PTR.clear();
             break;
         default:
