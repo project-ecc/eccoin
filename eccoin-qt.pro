@@ -417,6 +417,7 @@ SOURCES += \
     src/addrdb.cpp \
     src/threadinterrupt.cpp \
     src/netaddress.cpp
+    src/rpc/rpcans.cpp
 
 
 
