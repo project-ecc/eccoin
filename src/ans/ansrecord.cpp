@@ -4,6 +4,14 @@
 
 #include "ansrecord.h"
 
+void CAnsRecord::setNull()
+{
+    value.clear();
+    expireTime = 0;
+    paymentHash.SetNull();
+    serviceHash.SetNull();
+}
+
 void CAnsRecord::setValue(std::string strValue)
 {
     value = strValue;
