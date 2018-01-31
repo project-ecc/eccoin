@@ -4,8 +4,6 @@
 #ifndef PPCOIN_KERNEL_H
 #define PPCOIN_KERNEL_H
 
-#include <boost/assign/list_of.hpp>
-
 #include "main.h"
 
 // Compute the hash modifier for proof-of-stake
