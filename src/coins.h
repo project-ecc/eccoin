@@ -14,6 +14,7 @@
 
 #include <assert.h>
 #include <stdint.h>
+#include <unordered_map>
 
 /**
  * A UTXO entry.
