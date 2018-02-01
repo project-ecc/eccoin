@@ -301,6 +301,17 @@ set(ECC_LIBS
   leveldb
 )
 
+#
+# send definition headers
+#
+if(APPLE)
+  add_definitions(-DMAC_OSX)
+elseif(WIN32)
+  add_definitions(-DWIN32)
+else()
+  add_definitions(-DUNIX)
+endif()
+
 #--------------------------------------------------------------------------------
 #  CMake's way of creating an executable
 add_executable(Eccoind MACOSX_BUNDLE WIN32
