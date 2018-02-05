@@ -173,11 +173,11 @@ static void SendMoney(const CTxDestination &address, CAmount nValue, bool fSubtr
 
 static void CreateANStransaction(CServiceTransaction& stxnew, CAmount feePaid, std::string& strUsername)
 {
-    stxnew.nServiceId = 0; // 0 is for ANS
+    stxnew.nVersion = CServiceTransaction::CURRENT_VERSION;
+    stxnew.nServiceId = 0; // 0 is for ANS because pure payment addresses use odd number tx versions
     stxnew.nTime = GetTime();
     stxnew.nOpCode = 0; // for all ANS tx's this fields is 0;
     stxnew.nLockTime = feepaidTotal; // TODO : some fee calculation here
-
     /// TODO : SOME CALCULATION TO GET VERIFICATION CODE base on time and pub key of addr being used
 
     stxnew.vdata = strUsername; // should just be the username
@@ -261,6 +261,7 @@ UniValue getansaddress(const UniValue& params, bool fHelp)
     CServiceTransaction stx;
     CAmount nFeeRequired = SendMoney(address.Get(), nAmount, fSubtractFeeFromAmount, wtx);
     CreateANStransaction(stx, nFeeRequired, strUsername);
+
     std::string responseMessage = "The user name " + strUsername + " has been assigned to the address " + strAddress + ""
         " with PaymentHash = " + wtx.GetHash().GetHex() + " and  ServiceHash = " + stx.GetHash().GetHex();
 
