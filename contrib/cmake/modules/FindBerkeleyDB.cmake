@@ -12,11 +12,14 @@
 # For details see the accompanying COPYING-CMAKE-SCRIPTS file.
 
 find_path(BERKELEY_DB_INCLUDE_DIR db_cxx.h
+  /usr/local/opt/berkeley-db@4/include
   /usr/include/db4
   /usr/local/include/db4
 )
 
-find_library(BERKELEY_DB_LIBRARIES NAMES db_cxx )
+find_library(BERKELEY_DB_LIBRARIES NAMES db_cxx HINTS
+  /usr/local/opt/berkeley-db@4/lib
+)
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(Berkeley "Could not find Berkeley DB >= 4.1" BERKELEY_DB_INCLUDE_DIR BERKELEY_DB_LIBRARIES)

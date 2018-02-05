@@ -1,4 +1,4 @@
-E-Currency Coin (ECC) integration/staging tree
+ECC integration/staging tree
 =====================================
 
 https://ecc.network
