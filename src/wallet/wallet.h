@@ -729,6 +729,8 @@ public:
 
     bool SetAddressBook(const CTxDestination& address, const std::string& strName, const std::string& purpose);
 
+    bool AddressIsMine(const CTxDestination& address);
+
     bool DelAddressBook(const CTxDestination& address);
 
     void UpdatedTransaction(const uint256 &hashTx);

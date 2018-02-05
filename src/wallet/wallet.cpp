@@ -2500,6 +2500,12 @@ bool CWallet::SetAddressBook(const CTxDestination& address, const std::string& s
     return CWalletDB(strWalletFile).WriteName(CBitcoinAddress(address).ToString(), strName);
 }
 
+bool CWallet::AddressIsMine(const CTxDestination& address)
+{
+    isminetype mine = ::IsMine(*this, address);
+    return (mine == ISMINE_SPENDABLE);
+}
+
 bool CWallet::DelAddressBook(const CTxDestination& address)
 {
     {
