@@ -1424,6 +1424,7 @@ void removeImpossibleChainTips()
             while(curBlock->nHeight > forkHeight)
             {
                 pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree->EraseBlockIndex(curBlock->GetBlockHash());
+                pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.erase(curBlock->GetBlockHash());
                 LogPrintf("cleaning up index %s \n", curBlock->GetBlockHash().ToString().c_str());
                 deletionCount++;
                 curBlock = curBlock->pprev;
