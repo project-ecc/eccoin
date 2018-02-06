@@ -214,11 +214,11 @@ class CDiskBlockIndexOld : public CBlockIndex
 public:
     uint256 hashPrev;
 
-    CDiskBlockIndex() {
+    CDiskBlockIndexOld() {
         hashPrev = uint256();
     }
 
-    explicit CDiskBlockIndex(const CBlockIndex* pindex) : CBlockIndex(*pindex) {
+    explicit CDiskBlockIndexOld(const CBlockIndex* pindex) : CBlockIndex(*pindex) {
         hashPrev = (pprev ? pprev->GetBlockHash() : uint256());
     }
 
@@ -276,42 +276,119 @@ bool CBlockTreeDB::LoadBlockIndexGuts()
 {
     boost::scoped_ptr<CDBIterator> pcursor(NewIterator());
 
-    pcursor->Seek(std::make_pair(DB_BLOCK_INDEX, uint256()));
+    bool haveStoreHashUpgrade = false;
+    ReadFlag("hashStoreUpgrade", haveStoreHashUpgrade);
+    if(haveStoreHashUpgrade == false)
+    {
+        pcursor->Seek(std::make_pair(DB_BLOCK_INDEX, uint256()));
 
-    // Load mapBlockIndex
-    while (pcursor->Valid()) {
-        boost::this_thread::interruption_point();
-        std::pair<char, uint256> key;
-        if (pcursor->GetKey(key) && key.first == DB_BLOCK_INDEX) {
-            CDiskBlockIndex diskindex;
-            if (pcursor->GetValue(diskindex)) {
-                // Construct block index object
-                CBlockIndex* pindexNew = pnetMan->getActivePaymentNetwork()->getChainManager()->InsertBlockIndex(diskindex.GetBlockHash());
-                pindexNew->pprev          = pnetMan->getActivePaymentNetwork()->getChainManager()->InsertBlockIndex(diskindex.hashPrev);
-                pindexNew->nHeight        = diskindex.nHeight;
-                pindexNew->nFile          = diskindex.nFile;
-                pindexNew->nDataPos       = diskindex.nDataPos;
-                pindexNew->nUndoPos       = diskindex.nUndoPos;
-                pindexNew->nVersion       = diskindex.nVersion;
-                pindexNew->hashMerkleRoot = diskindex.hashMerkleRoot;
-                pindexNew->nTime          = diskindex.nTime;
-                pindexNew->nBits          = diskindex.nBits;
-                pindexNew->nNonce         = diskindex.nNonce;
-                pindexNew->nStatus        = diskindex.nStatus;
-                pindexNew->nTx            = diskindex.nTx;
-                pindexNew->nMint            = diskindex.nMint;
-                pindexNew->nMoneySupply     = diskindex.nMoneySupply;
-                pindexNew->nFlags           = diskindex.nFlags;
-                pindexNew->nStakeModifier   = diskindex.nStakeModifier;
-                pindexNew->prevoutStake     = diskindex.prevoutStake;
-                pindexNew->nStakeTime       = diskindex.nStakeTime;
-                pindexNew->hashProofOfStake = diskindex.hashProofOfStake;
-                pcursor->Next();
-            } else {
-                return error("LoadBlockIndex() : failed to read value");
+        std::vector<const CBlockIndex*> tempIndex;
+        // Load mapBlockIndex
+        while (pcursor->Valid())
+        {
+            boost::this_thread::interruption_point();
+            std::pair<char, uint256> key;
+            if (pcursor->GetKey(key) && key.first == DB_BLOCK_INDEX)
+            {
+                CDiskBlockIndexOld diskindex;
+                if (pcursor->GetValue(diskindex))
+                {
+                    // Construct block index object
+                    CBlockIndex* pindexNew = pnetMan->getActivePaymentNetwork()->getChainManager()->InsertBlockIndex(diskindex.GetBlockHash());
+                    pindexNew->pprev          = pnetMan->getActivePaymentNetwork()->getChainManager()->InsertBlockIndex(diskindex.hashPrev);
+                    pindexNew->nHeight        = diskindex.nHeight;
+                    pindexNew->nFile          = diskindex.nFile;
+                    pindexNew->nDataPos       = diskindex.nDataPos;
+                    pindexNew->nUndoPos       = diskindex.nUndoPos;
+                    pindexNew->nVersion       = diskindex.nVersion;
+                    pindexNew->hashMerkleRoot = diskindex.hashMerkleRoot;
+                    pindexNew->nTime          = diskindex.nTime;
+                    pindexNew->nBits          = diskindex.nBits;
+                    pindexNew->nNonce         = diskindex.nNonce;
+                    pindexNew->nStatus        = diskindex.nStatus;
+                    pindexNew->nTx            = diskindex.nTx;
+                    pindexNew->nMint            = diskindex.nMint;
+                    pindexNew->nMoneySupply     = diskindex.nMoneySupply;
+                    pindexNew->nFlags           = diskindex.nFlags;
+                    pindexNew->nStakeModifier   = diskindex.nStakeModifier;
+                    pindexNew->prevoutStake     = diskindex.prevoutStake;
+                    pindexNew->nStakeTime       = diskindex.nStakeTime;
+                    pindexNew->hashProofOfStake = diskindex.hashProofOfStake;
+                    tempIndex.push_back(pindexNew);
+                    pcursor->Next();
+                }
+                else
+                {
+                    return error("LoadBlockIndex() : failed to read value");
+                }
             }
-        } else {
-            break;
+            else
+            {
+                break;
+            }
+        }
+        CDBBatch batch(*this);
+        for(std::vector<const CBlockIndex*>::iterator iter = tempIndex.begin(); iter != tempIndex.end(); ++iter)
+        {
+            batch.Write(std::make_pair(DB_BLOCK_INDEX, (*iter)->GetBlockHash()), CDiskBlockIndex(*iter));
+        }
+        bool upgradeSuccess = WriteBatch(batch, true);
+        if(upgradeSuccess)
+        {
+            LogPrintf("ONE TIME UPGRADE OF INDEX DATABASE WAS A SUCCESS \n");
+            WriteFlag("hashStoreUpgrade", true);
+        }
+        else
+        {
+            LogPrintf("ONE TIME UPGRADE OF INDEX DATABASE WAS A FAILURE \n");
+            assert(false);
+        }
+    }
+    else
+    {
+        pcursor->Seek(std::make_pair(DB_BLOCK_INDEX, uint256()));
+        // Load mapBlockIndex
+        while (pcursor->Valid())
+        {
+            boost::this_thread::interruption_point();
+            std::pair<char, uint256> key;
+            if (pcursor->GetKey(key) && key.first == DB_BLOCK_INDEX)
+            {
+                CDiskBlockIndex diskindex;
+                if (pcursor->GetValue(diskindex))
+                {
+                    // Construct block index object
+                    CBlockIndex* pindexNew = pnetMan->getActivePaymentNetwork()->getChainManager()->InsertBlockIndex(diskindex.hashBlock);
+                    pindexNew->pprev          = pnetMan->getActivePaymentNetwork()->getChainManager()->InsertBlockIndex(diskindex.hashPrev);
+                    pindexNew->nHeight        = diskindex.nHeight;
+                    pindexNew->nFile          = diskindex.nFile;
+                    pindexNew->nDataPos       = diskindex.nDataPos;
+                    pindexNew->nUndoPos       = diskindex.nUndoPos;
+                    pindexNew->nVersion       = diskindex.nVersion;
+                    pindexNew->hashMerkleRoot = diskindex.hashMerkleRoot;
+                    pindexNew->nTime          = diskindex.nTime;
+                    pindexNew->nBits          = diskindex.nBits;
+                    pindexNew->nNonce         = diskindex.nNonce;
+                    pindexNew->nStatus        = diskindex.nStatus;
+                    pindexNew->nTx            = diskindex.nTx;
+                    pindexNew->nMint            = diskindex.nMint;
+                    pindexNew->nMoneySupply     = diskindex.nMoneySupply;
+                    pindexNew->nFlags           = diskindex.nFlags;
+                    pindexNew->nStakeModifier   = diskindex.nStakeModifier;
+                    pindexNew->prevoutStake     = diskindex.prevoutStake;
+                    pindexNew->nStakeTime       = diskindex.nStakeTime;
+                    pindexNew->hashProofOfStake = diskindex.hashProofOfStake;
+                    pcursor->Next();
+                }
+                else
+                {
+                    return error("LoadBlockIndex() : failed to read value");
+                }
+            }
+            else
+            {
+                break;
+            }
         }
     }
 
