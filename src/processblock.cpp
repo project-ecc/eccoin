@@ -1431,6 +1431,10 @@ void removeImpossibleChainTips()
             }
         }
     }
-    LogPrintf("found %i impossible indexes and deleted them \n", deletionCount);
+    /// only print that we deleted if we did delete something
+    if(deletionCount > 0)
+    {
+        LogPrintf("found %i impossible indexes and deleted them \n", deletionCount);
+    }
 }
 
