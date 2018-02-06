@@ -1383,16 +1383,40 @@ void removeImpossibleChainTips()
     const int currentHeight = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height();
     for (CBlockIndex* block : setTips)
     {
-        const int tipHeight = block->nHeight;
         const int forkHeight = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.FindFork(block)->nHeight;
-        const int branchLen = tipHeight - forkHeight;
+        const int branchLen = block->nHeight - forkHeight;
         std::string status = "";
         if (pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Contains(block))
         {
             // This block is part of the currently active chain.
             status = "active";
         }
-        if(status != "active" && forkHeight <  currentHeight - 50)
+        else if (block->nStatus & BLOCK_FAILED_MASK)
+        {
+            // This block or one of its ancestors is invalid.
+            status = "invalid";
+        }
+        else if (block->nChainTx == 0)
+        {
+            // This block cannot be connected because full block data for it or one of its parents is missing.
+            status = "headers-only";
+        }
+        else if (block->IsValid(BLOCK_VALID_SCRIPTS))
+        {
+            // This block is fully validated, but no longer part of the active chain. It was probably the active block once, but was reorganized.
+            status = "valid-fork";
+        }
+        else if (block->IsValid(BLOCK_VALID_TREE))
+        {
+            // The headers for this block are valid, but it has not been validated. It was probably never part of the most-work chain.
+            status = "valid-headers";
+        }
+        else
+        {
+            // No clue.
+            status = "unknown";
+        }
+        if(status != "active" && status != "unknown" && forkHeight <= currentHeight - 100 && branchLen <= 50) // after 30 blocks we cannot re-org anyway so after 100 it is definitely safe to delete data
         {
             CBlockIndex* curBlock = block;
             while(curBlock->nHeight > forkHeight)
