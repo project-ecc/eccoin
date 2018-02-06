@@ -140,6 +140,8 @@ bool ProcessNewBlock(CValidationState& state, const CNetworkTemplate& chainparam
     if (!ActivateBestChain(state, chainparams, origin, pblock))
         return error("%s: ActivateBestChain failed", __func__);
 
+    removeImpossibleChainTips();
+
     return true;
 }
 
