@@ -86,7 +86,6 @@ CTxMemPool mempool(::minRelayTxFee);
 
 std::map<uint256, COrphanTx> mapOrphanTransactions GUARDED_BY(cs_main);;
 std::map<uint256, std::set<uint256> > mapOrphanTransactionsByPrev GUARDED_BY(cs_main);;
-void EraseOrphansFor(NodeId peer) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 
 
 /**
@@ -136,9 +135,6 @@ uint32_t nBlockSequenceId = 1;
      * messages or ban them when processing happens afterwards. Protected by
      * cs_main.
      */
-std::map<uint256, NodeId> mapBlockSource;
-
-std::map<uint256, std::pair<NodeId, std::list<QueuedBlock>::iterator> > mapBlocksInFlight;
 
 /** Number of preferable block download peers. */
 int nPreferredDownload = 0;
@@ -157,76 +153,10 @@ int nPeersWithValidatedDownloads = 0;
 // Registration of network node signals.
 //
 
-
-/** std::map maintaining per-node state. Requires cs_main. */
-std::map<NodeId, CNodeState> mapNodeState;
-
-// Requires cs_main.
-CNodeState *State(NodeId pnode) {
-    std::map<NodeId, CNodeState>::iterator it = mapNodeState.find(pnode);
-    if (it == mapNodeState.end())
-        return NULL;
-    return &it->second;
-}
-
 int GetHeight()
 {
     LOCK(cs_main);
     return pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height();
-}
-
-void InitializeNode(NodeId nodeid, const CNode *pnode)
-{
-    LOCK(cs_main);
-    CNodeState &state = mapNodeState.insert(std::make_pair(nodeid, CNodeState())).first->second;
-    state.name = pnode->addrName;
-    state.address = pnode->addr;
-}
-
-void FinalizeNode(NodeId nodeid)
-{
-    LOCK(cs_main);
-    CNodeState *state = State(nodeid);
-
-    if (state->fSyncStarted)
-        nSyncStarted--;
-
-    if (state->nMisbehavior == 0 && state->fCurrentlyConnected) {
-        AddressCurrentlyConnected(state->address);
-    }
-
-    for (auto const& entry: state->vBlocksInFlight) {
-        mapBlocksInFlight.erase(entry.hash);
-    }
-    EraseOrphansFor(nodeid);
-    nPreferredDownload -= state->fPreferredDownload;
-    nPeersWithValidatedDownloads -= (state->nBlocksInFlightValidHeaders != 0);
-    assert(nPeersWithValidatedDownloads >= 0);
-
-    mapNodeState.erase(nodeid);
-
-    if (mapNodeState.empty()) {
-        // Do a consistency check after the last peer is removed.
-        assert(mapBlocksInFlight.empty());
-        assert(nPreferredDownload == 0);
-        assert(nPeersWithValidatedDownloads == 0);
-    }
-}
-
-
-bool GetNodeStateStats(NodeId nodeid, CNodeStateStats &stats) {
-    LOCK(cs_main);
-    CNodeState *state = State(nodeid);
-    if (state == NULL)
-        return false;
-    stats.nMisbehavior = state->nMisbehavior;
-    stats.nSyncHeight = state->pindexBestKnownBlock ? state->pindexBestKnownBlock->nHeight : -1;
-    stats.nCommonHeight = state->pindexLastCommonBlock ? state->pindexLastCommonBlock->nHeight : -1;
-    for (auto const& queue: state->vBlocksInFlight) {
-        if (queue.pindex)
-            stats.vHeightInFlight.push_back(queue.pindex->nHeight);
-    }
-    return true;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -657,7 +587,8 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState &state, const C
             }
         }
 
-        CTxMemPoolEntry entry(tx, nFees, GetTime(), dPriority, pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height(), pool.HasNoInputsOf(tx), inChainInputValue, fSpendsCoinbase, nSigOps, lp);
+        CTransactionRef ptx(&tx);
+        CTxMemPoolEntry entry(ptx, nFees, GetTime(), dPriority, pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height(), pool.HasNoInputsOf(tx), inChainInputValue, fSpendsCoinbase, nSigOps, lp);
         unsigned int nSize = entry.GetTxSize();
 
         // Check that the transaction doesn't have an excessive number of
@@ -890,17 +821,6 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState &state, const C
                 __func__, hash.ToString(), FormatStateMessage(state));
         }
 
-        // Remove conflicting transactions from the mempool
-        for (auto const it: allConflicting)
-        {
-            LogPrint("mempool", "replacing tx %s with %s for %s BTC additional fees, %d delta bytes\n",
-                    it->GetTx().GetHash().ToString(),
-                    hash.ToString(),
-                    FormatMoney(nModifiedFees - nConflictingFees),
-                    (int)nSize - (int)nConflictingSize);
-        }
-        pool.RemoveStaged(allConflicting);
-
         // Store transaction in memory
         pool.addUnchecked(hash, entry, setAncestors, !pnetMan->getActivePaymentNetwork()->getChainManager()->IsInitialBlockDownload());
 
@@ -911,9 +831,8 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState &state, const C
                 return state.DoS(0, false, REJECT_INSUFFICIENTFEE, "mempool full");
         }
     }
-
-    SyncWithWallets(tx, NULL);
-
+    CTransactionRef ptx (&tx);
+    GetMainSignals().TransactionAddedToMempool(ptx);
     return true;
 }
 
@@ -929,13 +848,12 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransa
     return res;
 }
 
-
 //////////////////////////////////////////////////////////////////////////////
 //
 // CBlock and CBlockIndex
 //
 
-bool WriteBlockToDisk(const CBlock& block, CDiskBlockPos& pos, const CMessageHeader::MessageStartChars& messageStart)
+bool WriteBlockToDisk(const CBlock& block, CDiskBlockPos& pos, const CMessageHeader::MessageMagic& messageStart)
 {
     // Open history file to append
     CAutoFile fileout(OpenBlockFile(pos), SER_DISK, CLIENT_VERSION);
@@ -990,26 +908,6 @@ bool ReadBlockFromDisk(CBlock& block, const CBlockIndex* pindex, const Consensus
         return error("ReadBlockFromDisk(CBlock&, CBlockIndex*): GetHash() doesn't match index for %s at %s",
                 pindex->ToString(), pindex->GetBlockPos().ToString());
     return true;
-}
-
-// Requires cs_main.
-void Misbehaving(NodeId pnode, int howmuch)
-{
-    if (howmuch == 0)
-        return;
-
-    CNodeState *state = State(pnode);
-    if (state == NULL)
-        return;
-
-    state->nMisbehavior += howmuch;
-    int banscore = gArgs.GetArg("-banscore", DEFAULT_BANSCORE_THRESHOLD);
-    if (state->nMisbehavior >= banscore && state->nMisbehavior - howmuch < banscore)
-    {
-        LogPrintf("%s: %s (%d -> %d) BAN THRESHOLD EXCEEDED\n", __func__, state->name, state->nMisbehavior-howmuch, state->nMisbehavior);
-        state->fShouldBan = true;
-    } else
-        LogPrintf("%s: %s (%d -> %d)\n", __func__, state->name, state->nMisbehavior-howmuch, state->nMisbehavior);
 }
 
 void UpdateCoins(const CTransaction& tx, CValidationState &state, CCoinsViewCache &inputs, CTxUndo &txundo, int nHeight)

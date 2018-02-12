@@ -10,6 +10,15 @@
 #include "txout.h"
 #include "consensus/params.h"
 
+/**
+ * A TxId is the identifier of a transaction. Currently identical to TxHash but
+ * differentiated for type safety.
+ */
+struct TxId : public uint256 {
+    explicit TxId(const uint256 &b) : uint256(b) {}
+};
+
+
 /** The basic transaction that is broadcasted on the network and contained in
  * blocks.  A transaction can contain multiple inputs and outputs.
  */
@@ -71,7 +80,7 @@ public:
     bool IsNull() const {
         return vin.empty() && vout.empty();
     }
-
+    const TxId GetId() const { return TxId(hash); }
     uint256 GetHash() const;
 
     // Return sum of txouts.
@@ -115,5 +124,7 @@ public:
 
 /** Retrieve a transaction (from memory pool, or from disk, if possible) */
 bool GetTransaction(const uint256 &hash, CTransaction &tx, const Consensus::Params& params, uint256 &hashBlock, bool fAllowSlow = false);
+
+typedef std::shared_ptr<const CTransaction> CTransactionRef;
 
 #endif // BITCOIN_PRIMITIVES_TRANSACTION_H

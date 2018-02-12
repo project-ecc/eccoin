@@ -109,7 +109,7 @@ bool DecodeHexBlk(CBlock& block, const std::string& strHexBlk)
     if (!IsHex(strHexBlk))
         return false;
 
-    std::vector<unsigned char> blockData(ParseHex(strHexBlk));
+    std::vector<uint8_t> blockData(ParseHex(strHexBlk));
     CDataStream ssBlock(blockData, SER_NETWORK, PROTOCOL_VERSION);
     try {
         ssBlock >> block;

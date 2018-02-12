@@ -23,6 +23,7 @@
 #include "consensus/merkle.h"
 #include "processblock.h"
 #include "networks/netman.h"
+#include "net.h"
 
 #include <boost/thread.hpp>
 #include <openssl/sha.h>
@@ -540,7 +541,13 @@ void ScryptMiner(CWallet *pwallet)
     {
         if (fShutdown)
             return;
-        while (vNodes.empty() || vNodes.size() < 6 || pnetMan->getActivePaymentNetwork()->getChainManager()->IsInitialBlockDownload())
+        if(!g_connman)
+        {
+            MilliSleep(1000);
+            if (fShutdown)
+                return;
+        }
+        while (g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL) < 6 || pnetMan->getActivePaymentNetwork()->getChainManager()->IsInitialBlockDownload())
         {
             MilliSleep(1000);
             if (fShutdown)
@@ -677,7 +684,7 @@ void ScryptMiner(CWallet *pwallet)
             // Check for stop or if block needs to be rebuilt
             if (fShutdown)
                 return;
-            if (vNodes.empty())
+            if (g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL))
                 break;
             if (nBlockNonce >= 0xffff0000)
                 break;

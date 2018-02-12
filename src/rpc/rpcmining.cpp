@@ -4,6 +4,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "amount.h"
+#include "base58.h"
 #include "chain/chain.h"
 #include "networks/netman.h"
 #include "consensus/consensus.h"
@@ -116,29 +117,43 @@ UniValue getgenerate(const UniValue& params, bool fHelp)
 UniValue generate(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() < 1 || params.size() > 1)
+    {
         throw std::runtime_error(
-            "generate numblocks\n"
+            "generate numblocks  address\n"
             "\nMine blocks immediately (before the RPC call returns)\n"
             "\nNote: this function can only be used on the regtest network\n"
             "\nArguments:\n"
             "1. numblocks    (numeric, required) How many blocks are generated immediately.\n"
             "\nResult\n"
+            "2. address      (string, required) The address to send the newly "
+            "generated bitcoin to.\n"
             "[ blockhashes ]     (array) hashes of blocks generated\n"
             "\nExamples:\n"
             "\nGenerate 11 blocks\n"
-            + HelpExampleCli("generate", "11")
+            + HelpExampleCli("generate", "11 \"myaddress\"")
         );
+    }
 
     if (!pnetMan->getActivePaymentNetwork()->MineBlocksOnDemand())
+    {
         throw JSONRPCError(RPC_METHOD_NOT_FOUND, "This method can only be used on regtest");
+    }
 
     int nHeightStart = 0;
     int nHeightEnd = 0;
     int nHeight = 0;
     int nGenerate = params[0].get_int();
 
-    boost::shared_ptr<CReserveScript> coinbaseScript;
-    GetMainSignals().ScriptForMining(coinbaseScript);
+    std::string strAddress = params[1].get_str();
+    CBitcoinAddress addr(strAddress);
+    if (!addr.IsValid())
+    {
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY,
+                           "Error: Invalid address");
+    }
+
+    std::shared_ptr<CReserveScript> coinbaseScript = std::make_shared<CReserveScript>();
+    coinbaseScript->reserveScript = GetScriptForDestination(addr.Get());
 
     // If the keypool is exhausted, no script is returned at all.  Catch this.
     if (!coinbaseScript)
@@ -436,8 +451,10 @@ UniValue getblocktemplate(const UniValue& params, bool fHelp)
     if (strMode != "template")
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid mode");
 
-    if (vNodes.empty())
+    if (g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL) == 0)
+    {
         throw JSONRPCError(RPC_CLIENT_NOT_CONNECTED, "ECC is not connected!");
+    }
 
     if (pnetMan->getActivePaymentNetwork()->getChainManager()->IsInitialBlockDownload())
         throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "ECC is downloading blocks...");

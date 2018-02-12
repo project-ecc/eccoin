@@ -292,11 +292,11 @@ bool CChainManager::LoadExternalBlockFile(const CNetworkTemplate& chainparams, F
             unsigned int nSize = 0;
             try {
                 // locate a header
-                unsigned char buf[MESSAGE_START_SIZE];
+                unsigned char buf[CMessageHeader::MESSAGE_START_SIZE];
                 blkdat.FindByte(chainparams.MessageStart()[0]);
                 nRewind = blkdat.GetPos()+1;
                 blkdat >> FLATDATA(buf);
-                if (memcmp(buf, chainparams.MessageStart(), MESSAGE_START_SIZE))
+                if (memcmp(buf, std::begin(chainparams.MessageStart()), CMessageHeader::MESSAGE_START_SIZE))
                     continue;
                 // read size
                 blkdat >> nSize;
