@@ -314,7 +314,8 @@ bool CChainManager::LoadExternalBlockFile(const CNetworkTemplate& chainparams, F
                     dbp->nPos = nBlockPos;
                 blkdat.SetLimit(nBlockPos + nSize);
                 blkdat.SetPos(nBlockPos);
-                CBlock block;
+                std::shared_ptr<CBlock> spblock = std::make_shared<CBlock>();               
+                CBlock &block = *spblock;
                 blkdat >> block;
                 nRewind = blkdat.GetPos();
 
@@ -329,32 +330,33 @@ bool CChainManager::LoadExternalBlockFile(const CNetworkTemplate& chainparams, F
                 }
 
                 // process in case the block isn't known yet
-                if (mapBlockIndex.count(hash) == 0 || (mapBlockIndex[hash]->nStatus & BLOCK_HAVE_DATA) == 0) {
+                if (mapBlockIndex.count(hash) == 0 || (mapBlockIndex[hash]->nStatus & BLOCK_HAVE_DATA) == 0) 
+                {
                     CValidationState state;
-                    const std::shared_ptr<const CBlock> spblock(&block);
                     if (ProcessNewBlock(state, chainparams, NULL, spblock, true, dbp, LOADED))
                         nLoaded++;
                     if (state.IsError())
                         break;
-                } else if (hash != chainparams.GetConsensus().hashGenesisBlock && mapBlockIndex[hash]->nHeight % 1000 == 0) {
+                } 
+                else if (hash != chainparams.GetConsensus().hashGenesisBlock && mapBlockIndex[hash]->nHeight % 1000 == 0) 
+                {
                     LogPrintf("Block Import: already had block %s at height %d\n", hash.ToString(), mapBlockIndex[hash]->nHeight);
                 }
-
                 // Recursively process earlier encountered successors of this block
                 std::deque<uint256> queue;
                 queue.push_back(hash);
-                while (!queue.empty()) {
+                while (!queue.empty()) 
+                {
                     uint256 head = queue.front();
                     queue.pop_front();
                     std::pair<std::multimap<uint256, CDiskBlockPos>::iterator, std::multimap<uint256, CDiskBlockPos>::iterator> range = mapBlocksUnknownParent.equal_range(head);
-                    while (range.first != range.second) {
+                    while (range.first != range.second) 
+                    {
                         std::multimap<uint256, CDiskBlockPos>::iterator it = range.first;
                         if (ReadBlockFromDisk(block, it->second, chainparams.GetConsensus()))
                         {
-                            LogPrintf("%s: Processing out of order child %s of %s\n", __func__, block.GetHash().ToString(),
-                                    head.ToString());
+                            LogPrintf("%s: Processing out of order child %s of %s\n", __func__, block.GetHash().ToString(),head.ToString());
                             CValidationState dummy;
-                            const std::shared_ptr<const CBlock> spblock(&block);
                             if (ProcessNewBlock(dummy, chainparams, NULL, spblock, true, &it->second, LOADED))
                             {
                                 nLoaded++;

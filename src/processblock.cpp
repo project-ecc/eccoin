@@ -230,7 +230,6 @@ bool ProcessNewBlock(CValidationState& state, const CNetworkTemplate& chainparam
         return error("%s: ActivateBestChain failed", __func__);
 
     removeImpossibleChainTips();
-
     return true;
 }
 
@@ -370,14 +369,16 @@ bool ConnectTip(CValidationState& state, const CNetworkTemplate& chainparams, CB
         pthisBlock = pblock;
     }
 
+    const CBlock &blockConnecting = *pthisBlock;
+
     // Apply the block atomically to the chain state.
     int64_t nTime2 = GetTimeMicros(); nTimeReadFromDisk += nTime2 - nTime1;
     int64_t nTime3;
     LogPrint("bench", "  - Load block from disk: %.2fms [%.2fs]\n", (nTime2 - nTime1) * 0.001, nTimeReadFromDisk * 0.000001);
     {
         CCoinsViewCache view(pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.get());
-        bool rv = ConnectBlock(*pblock, state, pindexNew, view);
-        GetMainSignals().BlockChecked(*pblock, state);
+        bool rv = ConnectBlock(blockConnecting, state, pindexNew, view);
+        GetMainSignals().BlockChecked(blockConnecting, state);
         if (!rv)
         {
             if (state.IsInvalid())
@@ -403,7 +404,7 @@ bool ConnectTip(CValidationState& state, const CNetworkTemplate& chainparams, CB
     LogPrint("bench", "  - Writing chainstate: %.2fms [%.2fs]\n", (nTime5 - nTime4) * 0.001, nTimeChainState * 0.000001);
     // Remove conflicting transactions from the mempool.
     std::list<CTransaction> txConflicted;
-    mempool.removeForBlock(pblock->vtx, pindexNew->nHeight, txConflicted, !pnetMan->getActivePaymentNetwork()->getChainManager()->IsInitialBlockDownload());
+    mempool.removeForBlock(blockConnecting.vtx, pindexNew->nHeight, txConflicted, !pnetMan->getActivePaymentNetwork()->getChainManager()->IsInitialBlockDownload());
     // Update chainActive & related variables.
     UpdateTip(pindexNew);
 
@@ -536,7 +537,8 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
         nHeight = nTargetHeight;
 
         // Connect new blocks.
-        BOOST_REVERSE_FOREACH(CBlockIndex *pindexConnect, vpindexToConnect) {
+        BOOST_REVERSE_FOREACH(CBlockIndex *pindexConnect, vpindexToConnect) 
+        {
             if (!ConnectTip(state, chainparams, pindexConnect, pindexConnect == pindexMostWork ? pblock : NULL, origin, connectTrace))
             {
                 if (state.IsInvalid())
@@ -567,18 +569,17 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
         }
     }
 
-    if (fBlocksDisconnected) {
+    if (fBlocksDisconnected) 
+    {
         mempool.removeForReorg(pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.get(), pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->nHeight + 1, STANDARD_LOCKTIME_VERIFY_FLAGS);
         LimitMempoolSize(mempool, gArgs.GetArg("-maxmempool", DEFAULT_MAX_MEMPOOL_SIZE) * 1000000, gArgs.GetArg("-mempoolexpiry", DEFAULT_MEMPOOL_EXPIRY) * 60 * 60);
     }
     mempool.check(pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.get());
-
     // Callbacks/notifications for a new best chain.
     if (fInvalidFound)
         CheckForkWarningConditionsOnNewFork(vpindexToConnect.back());
     else
         CheckForkWarningConditions();
-
     return true;
 }
 
@@ -626,14 +627,17 @@ bool ActivateBestChain(CValidationState &state, const CNetworkTemplate& chainpar
         {
             uiInterface.NotifyBlockTip(fInitialDownload, pindexNewTip);
 
-            if (!fInitialDownload) {
+            if (!fInitialDownload) 
+            {
                 // Find the hashes of all blocks that weren't previously in the best chain.
                 std::vector<uint256> vHashes;
                 CBlockIndex *pindexToAnnounce = pindexNewTip;
-                while (pindexToAnnounce != pindexFork) {
+                while (pindexToAnnounce != pindexFork) 
+                {
                     vHashes.push_back(pindexToAnnounce->GetBlockHash());
                     pindexToAnnounce = pindexToAnnounce->pprev;
-                    if (vHashes.size() == MAX_BLOCKS_TO_ANNOUNCE) {
+                    if (vHashes.size() == MAX_BLOCKS_TO_ANNOUNCE) 
+                    {
                         // Limit announcements in case of a huge reorganization.
                         // Rely on the peer's synchronization mechanism in that case.
                         break;
@@ -642,18 +646,22 @@ bool ActivateBestChain(CValidationState &state, const CNetworkTemplate& chainpar
                 // Relay inventory, but don't relay old inventory during initial block
                 // download.
                 const int nNewHeight = pindexNewTip->nHeight;
-                g_connman->ForEachNode([nNewHeight, &vHashes](CNode *pnode) {
+                g_connman->ForEachNode([nNewHeight, &vHashes](CNode *pnode) 
+                {
                     if (nNewHeight > (pnode->nStartingHeight != -1
                                           ? pnode->nStartingHeight - 2000
-                                          : 0)) {
-                        for (const uint256 &hash : boost::adaptors::reverse(vHashes)) {
+                                          : 0)) 
+                    {
+                        for (const uint256 &hash : boost::adaptors::reverse(vHashes)) 
+                        {
                             pnode->PushBlockHash(hash);
                         }
                     }
                 });
                 g_connman->WakeMessageHandler();
                 // Notify external listeners about the new tip.
-                if (!vHashes.empty()) {
+                if (!vHashes.empty()) 
+                {
                     GetMainSignals().UpdatedBlockTip(pindexNewTip, pindexFork, fInitialDownload);
                 }
             }
@@ -665,7 +673,6 @@ bool ActivateBestChain(CValidationState &state, const CNetworkTemplate& chainpar
     if (!FlushStateToDisk(state, FLUSH_STATE_PERIODIC)) {
         return false;
     }
-
     return true;
 }
 
