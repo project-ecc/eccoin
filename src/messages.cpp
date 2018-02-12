@@ -1784,6 +1784,8 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
             vRecv >> headers[n];
             // Ignore tx count; assume it is 0.
             ReadCompactSize(vRecv);
+            // ignore empty vchBlockSig
+            ReadCompactSize(vRecv);
         }
 
         if (nCount == 0) {
@@ -2312,32 +2314,43 @@ bool ProcessMessages(CNode *pfrom, CConnman &connman, const std::atomic<bool> &i
     catch (const std::ios_base::failure &e)
     {
         connman.PushMessage(pfrom, CNetMsgMaker(MIN_PROTO_VERSION).Make(NetMsgType::REJECT, strCommand, REJECT_MALFORMED, std::string("error parsing message")));
-        if (strstr(e.what(), "end of data")) {
+        if (strstr(e.what(), "end of data"))
+        {
             // Allow exceptions from under-length message on vRecv
             LogPrintf(
                 "%s(%s, %u bytes): Exception '%s' caught, normally caused by a "
                 "message being shorter than its stated length\n",
                 __func__, SanitizeString(strCommand), nMessageSize, e.what());
-        } else if (strstr(e.what(), "size too large")) {
+        }
+        else if (strstr(e.what(), "size too large"))
+        {
             // Allow exceptions from over-long size
             LogPrintf("%s(%s, %u bytes): Exception '%s' caught\n", __func__,
                       SanitizeString(strCommand), nMessageSize, e.what());
-        } else if (strstr(e.what(), "non-canonical ReadCompactSize()")) {
+        }
+        else if (strstr(e.what(), "non-canonical ReadCompactSize()"))
+        {
             // Allow exceptions from non-canonical encoding
             LogPrintf("%s(%s, %u bytes): Exception '%s' caught\n", __func__,
                       SanitizeString(strCommand), nMessageSize, e.what());
-        } else {
+        }
+        else
+        {
             PrintExceptionContinue(&e, "ProcessMessages()");
         }
-    } catch (const std::exception &e) {
+    }
+    catch (const std::exception &e)
+    {
         PrintExceptionContinue(&e, "ProcessMessages()");
-    } catch (...) {
+    }
+    catch (...)
+    {
         PrintExceptionContinue(nullptr, "ProcessMessages()");
     }
 
-    if (!fRet) {
-        LogPrintf("%s(%s, %u bytes) FAILED peer=%d\n", __func__,
-                  SanitizeString(strCommand), nMessageSize, pfrom->id);
+    if (!fRet)
+    {
+        LogPrintf("%s(%s, %u bytes) FAILED peer=%d\n", __func__, SanitizeString(strCommand), nMessageSize, pfrom->id);
     }
 
     LOCK(cs_main);
