@@ -1940,17 +1940,17 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
 
     else if (strCommand == NetMsgType::BLOCK && !fImporting && !fReindex) // Ignore blocks received while importing
     {
-        CBlock block;
-        vRecv >> block;
+        std::shared_ptr<CBlock> pblock = std::make_shared<CBlock>();
+        vRecv >> *pblock;
 
-        LogPrintf("received block %s peer=%d\n", block.GetHash().ToString(), pfrom->id);
+        LogPrintf("received block %s peer=%d\n", pblock->GetHash().ToString(), pfrom->id);
 
         // Process all blocks from whitelisted peers, even if not requested,
         // unless we're still syncing with the network. Such an unrequested
         // block may still be processed, subject to the conditions in
         // AcceptBlock().
         bool forceProcessing = pfrom->fWhitelisted && !pnetMan->getActivePaymentNetwork()->getChainManager()->IsInitialBlockDownload();
-        const uint256 hash(block.GetHash());
+        const uint256 hash(pblock->GetHash());
         {
             LOCK(cs_main);
             // Also always process if we requested the block explicitly, as we
@@ -1962,7 +1962,6 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
             mapBlockSource.emplace(hash, std::make_pair(pfrom->GetId(), true));
         }
         CValidationState state;
-        const std::shared_ptr<const CBlock> pblock(&block);
         ProcessNewBlock(state, chainparams, pfrom, pblock, forceProcessing, NULL, RECEIVED);
         int nDoS;
         if (state.IsInvalid(nDoS))
