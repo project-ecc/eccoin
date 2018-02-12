@@ -187,7 +187,8 @@ UniValue generate(const UniValue& params, bool fHelp)
             ++pblock->nNonce;
         }
         CValidationState state;
-        if (!ProcessNewBlock(state, pnetMan->getActivePaymentNetwork(), NULL, pblock, true, NULL, GENERATED))
+        const std::shared_ptr<const CBlock> spblock(pblock);
+        if (!ProcessNewBlock(state, pnetMan->getActivePaymentNetwork(), NULL, spblock, true, NULL, GENERATED))
             throw JSONRPCError(RPC_INTERNAL_ERROR, "ProcessNewBlock, block not accepted");
         ++nHeight;
         blockHashes.push_back(pblock->GetHash().GetHex());
@@ -670,7 +671,8 @@ UniValue submitblock(const UniValue& params, bool fHelp)
     CValidationState state;
     submitblock_StateCatcher sc(block.GetHash());
     RegisterValidationInterface(&sc);
-    bool fAccepted = ProcessNewBlock(state, pnetMan->getActivePaymentNetwork(), NULL, &block, true, NULL, GENERATED);
+    const std::shared_ptr<const CBlock> spblock(&block);
+    bool fAccepted = ProcessNewBlock(state, pnetMan->getActivePaymentNetwork(), NULL, spblock, true, NULL, GENERATED);
     UnregisterValidationInterface(&sc);
     if (fBlockPresent)
     {

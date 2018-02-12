@@ -246,9 +246,6 @@ void PartitionCheck(bool (*initialDownloadCheck)(), CCriticalSection& cs, const 
  */
 std::string GetWarnings(const std::string& strFor);
 
-/** Find the best known block, and make it the tip of the block chain */
-bool ActivateBestChain(CValidationState& state, const CNetworkTemplate& chainparams, BlockOrigin origin, const CBlock* pblock = NULL);
-
 enum FlushStateMode {
     FLUSH_STATE_NONE,
     FLUSH_STATE_IF_NEEDED,

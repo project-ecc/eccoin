@@ -483,7 +483,7 @@ void FormatHashBuffers(CBlock* pblock, char* pmidstate, char* pdata, char* phash
 }
 
 
-bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reservekey)
+bool CheckWork(const std::shared_ptr<const CBlock> pblock, CWallet& wallet, CReserveKey& reservekey)
 {
     arith_uint256 hash = UintToArith256(pblock->GetHash());
     arith_uint256 hashTarget = UintToArith256(CBigNum().SetCompact(pblock->nBits).getuint256());
@@ -574,6 +574,7 @@ void ScryptMiner(CWallet *pwallet)
             return;
         }
         CBlock *pblock = &pblocktemplate->block;
+        const std::shared_ptr<const CBlock> spblock(pblock);
 
         IncrementExtraNonce(pblock, pindexPrev, nExtraNonce);
 
@@ -589,7 +590,7 @@ void ScryptMiner(CWallet *pwallet)
                 strMintWarning = "";
                 LogPrintf("CPUMiner : proof-of-stake block found %s\n", pblock->GetHash().ToString().c_str());
                 SetThreadPriority(THREAD_PRIORITY_NORMAL);
-                CheckWork(pblock, *pwalletMain, reservekey);
+                CheckWork(spblock, *pwalletMain, reservekey);
                 SetThreadPriority(THREAD_PRIORITY_LOWEST);
             }
             MilliSleep(1000); // 1 second delay
@@ -652,7 +653,7 @@ void ScryptMiner(CWallet *pwallet)
                     strMintWarning = "";
 
                     SetThreadPriority(THREAD_PRIORITY_NORMAL);
-                    CheckWork(pblock, *pwalletMain, reservekey);
+                    CheckWork(spblock, *pwalletMain, reservekey);
                     SetThreadPriority(THREAD_PRIORITY_LOWEST);
                     break;
                 }

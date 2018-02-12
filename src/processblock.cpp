@@ -1,7 +1,12 @@
 #include <boost/thread.hpp>
 #include <boost/foreach.hpp>
 #include <boost/range/adaptor/reversed.hpp>
-
+#include <atomic>
+#include <sstream>
+#include <boost/algorithm/string/join.hpp>
+#include <boost/algorithm/string/replace.hpp>
+#include <boost/filesystem/fstream.hpp>
+#include <boost/math/distributions/poisson.hpp>
 
 #include "checkqueue.h"
 #include "processblock.h"
@@ -52,12 +57,12 @@ public:
     }
 };
 
-struct PerBlockConnectTrace {
+struct PerBlockConnectTrace
+{
     CBlockIndex *pindex = nullptr;
     std::shared_ptr<const CBlock> pblock;
     std::shared_ptr<std::vector<CTransactionRef>> conflictedTxs;
-    PerBlockConnectTrace()
-        : conflictedTxs(std::make_shared<std::vector<CTransactionRef>>()) {}
+    PerBlockConnectTrace(): conflictedTxs(std::make_shared<std::vector<CTransactionRef>>()) {}
 };
 
 /**
@@ -82,14 +87,14 @@ private:
     CTxMemPool &pool;
 
 public:
-    ConnectTrace(CTxMemPool &_pool) : blocksConnected(1), pool(_pool) {
-        pool.NotifyEntryRemoved.connect(
-            boost::bind(&ConnectTrace::NotifyEntryRemoved, this, _1, _2));
+    ConnectTrace(CTxMemPool &_pool) : blocksConnected(1), pool(_pool)
+    {
+        pool.NotifyEntryRemoved.connect(boost::bind(&ConnectTrace::NotifyEntryRemoved, this, _1, _2));
     }
 
-    ~ConnectTrace() {
-        pool.NotifyEntryRemoved.disconnect(
-            boost::bind(&ConnectTrace::NotifyEntryRemoved, this, _1, _2));
+    ~ConnectTrace()
+    {
+        pool.NotifyEntryRemoved.disconnect(boost::bind(&ConnectTrace::NotifyEntryRemoved, this, _1, _2));
     }
 
     void BlockConnected(CBlockIndex *pindex,
@@ -102,7 +107,8 @@ public:
         blocksConnected.emplace_back();
     }
 
-    std::vector<PerBlockConnectTrace> &GetBlocksConnected() {
+    std::vector<PerBlockConnectTrace> &GetBlocksConnected()
+    {
         // We always keep one extra block at the end of our list because blocks
         // are added after all the conflicted transactions have been filled in.
         // Thus, the last entry should always be an empty one waiting for the
@@ -114,12 +120,12 @@ public:
         return blocksConnected;
     }
 
-    void NotifyEntryRemoved(CTransactionRef txRemoved,
-                            MemPoolRemovalReason reason) {
+    void NotifyEntryRemoved(CTransactionRef txRemoved, MemPoolRemovalReason reason)
+    {
         assert(!blocksConnected.back().pindex);
-        if (reason == MemPoolRemovalReason::CONFLICT) {
-            blocksConnected.back().conflictedTxs->emplace_back(
-                std::move(txRemoved));
+        if (reason == MemPoolRemovalReason::CONFLICT)
+        {
+            blocksConnected.back().conflictedTxs->emplace_back(std::move(txRemoved));
         }
     }
 };
@@ -196,7 +202,7 @@ bool AcceptBlock(const CBlock& block, CValidationState& state, const CNetworkTem
     return true;
 }
 
-bool ProcessNewBlock(CValidationState& state, const CNetworkTemplate& chainparams, const CNode* pfrom, const CBlock* pblock, bool fForceProcessing, CDiskBlockPos* dbp, BlockOrigin origin)
+bool ProcessNewBlock(CValidationState& state, const CNetworkTemplate& chainparams, const CNode* pfrom, const std::shared_ptr<const CBlock> pblock, bool fForceProcessing, CDiskBlockPos* dbp, BlockOrigin origin)
 {
     // Preliminary checks
     bool checked = CheckBlock(*pblock, state);
@@ -344,19 +350,26 @@ static int64_t nTimeTotal = 0;
  * Connect a new block to chainActive. pblock is either NULL or a pointer to a CBlock
  * corresponding to pindexNew, to bypass loading it again from disk.
  */
-bool ConnectTip(CValidationState& state, const CNetworkTemplate& chainparams, CBlockIndex* pindexNew, const CBlock* pblock, BlockOrigin origin, ConnectTrace &connectTrace)
+bool ConnectTip(CValidationState& state, const CNetworkTemplate& chainparams, CBlockIndex* pindexNew, const std::shared_ptr<const CBlock> &pblock, BlockOrigin origin, ConnectTrace &connectTrace)
 {
     assert(pindexNew->pprev == pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip());
     // Read block from disk.
     int64_t nTime1 = GetTimeMicros();
-    CBlock block;
-    std::shared_ptr<const CBlock> pthisBlock (&block);
-    if (!pblock)
-    {
-        if (!ReadBlockFromDisk(block, pindexNew, chainparams.GetConsensus()))
+
+    std::shared_ptr<const CBlock> pthisBlock;
+    if (!pblock) {
+        std::shared_ptr<CBlock> pblockNew = std::make_shared<CBlock>();
+        if (!ReadBlockFromDisk(*pblockNew, pindexNew, chainparams.GetConsensus()))
+        {
             return AbortNode(state, "Failed to read block");
-        pblock = &block;
+        }
+        pthisBlock = pblockNew;
     }
+    else
+    {
+        pthisBlock = pblock;
+    }
+
     // Apply the block atomically to the chain state.
     int64_t nTime2 = GetTimeMicros(); nTimeReadFromDisk += nTime2 - nTime1;
     int64_t nTime3;
@@ -480,7 +493,7 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
  * Try to make some progress towards making pindexMostWork the active block.
  * pblock is either NULL or a pointer to a CBlock corresponding to pindexMostWork.
  */
- bool ActivateBestChainStep(CValidationState& state, const CNetworkTemplate& chainparams, CBlockIndex* pindexMostWork, const CBlock* pblock, BlockOrigin origin, ConnectTrace &connectTrace)
+ bool ActivateBestChainStep(CValidationState& state, const CNetworkTemplate& chainparams, CBlockIndex* pindexMostWork, const std::shared_ptr<const CBlock> &pblock, BlockOrigin origin, ConnectTrace &connectTrace)
 {
     AssertLockHeld(cs_main);
     bool fInvalidFound = false;
@@ -574,7 +587,8 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
  * or an activated best chain. pblock is either NULL or a pointer to a block
  * that is already loaded (to avoid loading it again from disk).
  */
-bool ActivateBestChain(CValidationState &state, const CNetworkTemplate& chainparams, BlockOrigin origin, const CBlock *pblock) {
+bool ActivateBestChain(CValidationState &state, const CNetworkTemplate& chainparams, BlockOrigin origin, const std::shared_ptr<const CBlock> pblock)
+{
     CBlockIndex *pindexMostWork = NULL;
     do {
         boost::this_thread::interruption_point();

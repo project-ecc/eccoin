@@ -144,7 +144,8 @@ bool CChainManager::InitBlockIndex(const CNetworkTemplate& chainparams)
             pindex->SetStakeModifier(nStakeModifier);
             if (!ReceivedBlockTransactions(block, state, pindex, blockPos))
                 return error("InitBlockIndex(): genesis block not accepted");
-            if (!ActivateBestChain(state, chainparams, LOADED, &block))
+            const std::shared_ptr<const CBlock> spblock(&block);
+            if (!ActivateBestChain(state, chainparams, LOADED, spblock))
                 return error("InitBlockIndex(): genesis block cannot be activated");
             // Force a chainstate write so that when we VerifyDB in a moment, it doesn't check stale data
             return FlushStateToDisk(state, FLUSH_STATE_ALWAYS);
@@ -330,7 +331,8 @@ bool CChainManager::LoadExternalBlockFile(const CNetworkTemplate& chainparams, F
                 // process in case the block isn't known yet
                 if (mapBlockIndex.count(hash) == 0 || (mapBlockIndex[hash]->nStatus & BLOCK_HAVE_DATA) == 0) {
                     CValidationState state;
-                    if (ProcessNewBlock(state, chainparams, NULL, &block, true, dbp, LOADED))
+                    const std::shared_ptr<const CBlock> spblock(&block);
+                    if (ProcessNewBlock(state, chainparams, NULL, spblock, true, dbp, LOADED))
                         nLoaded++;
                     if (state.IsError())
                         break;
@@ -352,7 +354,8 @@ bool CChainManager::LoadExternalBlockFile(const CNetworkTemplate& chainparams, F
                             LogPrintf("%s: Processing out of order child %s of %s\n", __func__, block.GetHash().ToString(),
                                     head.ToString());
                             CValidationState dummy;
-                            if (ProcessNewBlock(dummy, chainparams, NULL, &block, true, &it->second, LOADED))
+                            const std::shared_ptr<const CBlock> spblock(&block);
+                            if (ProcessNewBlock(dummy, chainparams, NULL, spblock, true, &it->second, LOADED))
                             {
                                 nLoaded++;
                                 queue.push_back(block.GetHash());
