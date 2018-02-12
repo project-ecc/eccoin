@@ -119,7 +119,9 @@ bool CChainManager::InitBlockIndex(const CNetworkTemplate& chainparams)
     // Only add the genesis block if not reindexing (in which case we reuse the one already on disk)
     if (!fReindex) {
         try {
-            CBlock &block = const_cast<CBlock&>(chainparams.GenesisBlock());
+            std::shared_ptr<CBlock> spblock = std::make_shared<CBlock>();
+            CBlock &block = *spblock;
+            block = chainparams.GenesisBlock();
             // Start new block file
             unsigned int nBlockSize = ::GetSerializeSize(block, SER_DISK, CLIENT_VERSION);
             CDiskBlockPos blockPos;
@@ -144,7 +146,6 @@ bool CChainManager::InitBlockIndex(const CNetworkTemplate& chainparams)
             pindex->SetStakeModifier(nStakeModifier);
             if (!ReceivedBlockTransactions(block, state, pindex, blockPos))
                 return error("InitBlockIndex(): genesis block not accepted");
-            const std::shared_ptr<const CBlock> spblock(&block);
             if (!ActivateBestChain(state, chainparams, LOADED, spblock))
                 return error("InitBlockIndex(): genesis block cannot be activated");
             // Force a chainstate write so that when we VerifyDB in a moment, it doesn't check stale data
