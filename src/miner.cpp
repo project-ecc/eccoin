@@ -521,8 +521,6 @@ bool CheckWork(const std::shared_ptr<const CBlock> pblock, CWallet& wallet, CRes
     return true;
 }
 
-void ThreadBitcoinMiner(void* parg);
-
 void ScryptMiner(CWallet *pwallet)
 {
     void *scratchbuf = scrypt_buffer_alloc();
@@ -708,16 +706,22 @@ void ScryptMiner(CWallet *pwallet)
     scrypt_buffer_free(scratchbuf);
 }
 
-boost::thread_group* minerThreads = NULL;
+boost::thread_group* minerThreads = nullptr;
 
-void ThreadScryptMiner(void* parg)
+void ThreadScryptMiner(void* parg, bool shutdownOnly)
 {
 
-    if (minerThreads != NULL)
+    if (minerThreads != nullptr)
     {
         minerThreads->interrupt_all();
         delete minerThreads;
-        minerThreads = NULL;
+        minerThreads = nullptr;
+        LogPrintf("CPUMiner stopped for proof-of-%s\n", "stake");
+        return;
+    }
+    if(shutdownOnly)
+    {
+        LogPrintf("CPUMiner stopped for proof-of-%s\n", "stake");
         return;
     }
 

@@ -191,7 +191,7 @@ void Shutdown()
 
     if (pwalletMain)
         pwalletMain->Flush(false);
-    ThreadScryptMiner(pwalletMain);
+    ThreadScryptMiner(pwalletMain, true);
     MapPort(false);
     UnregisterValidationInterface(peerLogic.get());
     peerLogic.reset();

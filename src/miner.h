@@ -21,13 +21,11 @@ bool CheckStake(CBlock* pblock, CWallet& wallet);
 /** Base sha256 mining transform */
 void SHA256Transform(void* pstate, void* pinput, const void* pinit);
 
-void ScryptMiner(CWallet *pwallet);
-
 void IncrementExtraNonce(CBlock* pblock, CBlockIndex* pindexPrev, unsigned int& nExtraNonce);
 void FormatHashBuffers(CBlock* pblock, char* pmidstate, char* pdata, char* phash1);
 bool CheckWork(const std::shared_ptr<const CBlock> pblock, CWallet& wallet, CReserveKey& reservekey);
 
-void ThreadScryptMiner(void* parg);
+void ThreadScryptMiner(void* parg, bool shutdownOnly = false);
 
 struct CBlockTemplate
 {
