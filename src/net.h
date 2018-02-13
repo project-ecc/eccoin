@@ -377,8 +377,8 @@ private:
     /** Services this instance cares about */
     ServiceFlags nRelevantServices;
 
-    CSemaphore *semOutbound;
-    CSemaphore *semAddnode;
+    std::unique_ptr<CSemaphore> semOutbound;
+    std::unique_ptr<CSemaphore> semAddnode;
     int nMaxConnections;
     int nMaxOutbound;
     int nMaxAddnode;
@@ -404,6 +404,7 @@ private:
     std::thread threadOpenConnections;
     std::thread threadMessageHandler;
 };
+
 extern std::unique_ptr<CConnman> g_connman;
 void Discover(boost::thread_group &threadGroup);
 void MapPort(bool fUseUPnP);

@@ -33,6 +33,7 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/thread.hpp>
+#include <memory>
 
 #include <cmath>
 
@@ -2337,31 +2338,37 @@ bool CConnman::Start(CScheduler &scheduler, std::string &strNodeError,
     SetBestHeight(connOptions.nBestHeight);
 
     clientInterface = connOptions.uiInterface;
-    if (clientInterface) {
+    if (clientInterface)
+    {
         clientInterface->InitMessage(_("Loading addresses..."));
     }
     // Load addresses from peers.dat
     int64_t nStart = GetTimeMillis();
     {
         CAddrDB adb;
-        if (adb.Read(addrman)) {
+        if (adb.Read(addrman))
+        {
             LogPrintf("Loaded %i addresses from peers.dat  %dms\n",
                       addrman.size(), GetTimeMillis() - nStart);
-        } else {
+        }
+        else
+        {
             // Addrman can be in an inconsistent state after failure, reset it
             addrman.Clear();
             LogPrintf("Invalid or missing peers.dat; recreating\n");
             DumpAddresses();
         }
     }
-    if (clientInterface) {
+    if (clientInterface)
+    {
         clientInterface->InitMessage(_("Loading banlist..."));
     }
     // Load addresses from banlist.dat
     nStart = GetTimeMillis();
     CBanDB bandb;
     banmap_t banmap;
-    if (bandb.Read(banmap)) {
+    if (bandb.Read(banmap))
+    {
         // thread save setter
         SetBanned(banmap);
         // no need to write down, just read data
@@ -2371,7 +2378,9 @@ bool CConnman::Start(CScheduler &scheduler, std::string &strNodeError,
 
         LogPrintf("Loaded %d banned node ips/subnets from banlist.dat  %dms\n",
                  banmap.size(), GetTimeMillis() - nStart);
-    } else {
+    }
+    else
+    {
         LogPrintf("Invalid or missing banlist.dat; recreating\n");
         // force write
         SetBannedSetDirty(true);
@@ -2385,12 +2394,13 @@ bool CConnman::Start(CScheduler &scheduler, std::string &strNodeError,
     if (semOutbound == nullptr)
     {
         // initialize semaphore
-        semOutbound = new CSemaphore(
-            std::min((nMaxOutbound + nMaxFeeler), nMaxConnections));
+        semOutbound = MakeUnique<CSemaphore>(std::min((nMaxOutbound + nMaxFeeler), nMaxConnections));
     }
-    if (semAddnode == nullptr) {
+
+    if (semAddnode == nullptr)
+    {
         // initialize semaphore
-        semAddnode = new CSemaphore(nMaxAddnode);
+        semAddnode = MakeUnique<CSemaphore>(nMaxAddnode);
     }
 
     //
@@ -2475,8 +2485,10 @@ void CConnman::Interrupt() {
         }
     }
 
-    if (semAddnode) {
-        for (int i = 0; i < nMaxAddnode; i++) {
+    if (semAddnode)
+    {
+        for (int i = 0; i < nMaxAddnode; i++)
+        {
             semAddnode->post();
         }
     }
@@ -2527,10 +2539,8 @@ void CConnman::Stop() {
     vNodes.clear();
     vNodesDisconnected.clear();
     vhListenSocket.clear();
-    delete semOutbound;
-    semOutbound = nullptr;
-    delete semAddnode;
-    semAddnode = nullptr;
+    semOutbound.reset();
+    semAddnode.reset();
 }
 
 void CConnman::DeleteNode(CNode *pnode) {
