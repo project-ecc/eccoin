@@ -217,7 +217,7 @@ UniValue setgenerate(const UniValue& params, bool fHelp)
     if (pnetMan->getActivePaymentNetwork()->MineBlocksOnDemand())
         throw JSONRPCError(RPC_METHOD_NOT_FOUND, "Use the generate method instead of setgenerate on this network");
 
-    ThreadScryptMiner(pwalletMain);
+    ThreadScryptMiner(pwalletMain, false);
 
     return NullUniValue;
 }

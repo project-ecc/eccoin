@@ -59,7 +59,7 @@ UniValue reloadconfig (const UniValue& params, bool fHelp)
             obj.push_back(Pair(strKey, "was reloaded"));
             if(strKey == "-staking")
             {
-                ThreadScryptMiner(pwalletMain);
+                ThreadScryptMiner(pwalletMain, false);
             }
             if(strKey == "-rescan")
             {

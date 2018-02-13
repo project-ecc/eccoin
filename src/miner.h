@@ -34,7 +34,7 @@ struct CBlockTemplate
     std::vector<int64_t> vTxSigOps;
 };
 
-CBlockTemplate* CreateNewBlock(CWallet* pwallet, bool fProofOfStake=false);
+CBlockTemplate* CreateNewBlock(CWallet* pwallet, bool fProofOfStake);
 
 extern boost::thread_group* minerThreads;
 
