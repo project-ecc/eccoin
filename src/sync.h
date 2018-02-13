@@ -13,6 +13,9 @@
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/recursive_mutex.hpp>
 
+#include <condition_variable>
+#include <thread>
+#include <mutex>
 
 ////////////////////////////////////////////////
 //                                            //
@@ -181,25 +184,23 @@ typedef CMutexLock<CCriticalSection> CCriticalBlock;
 class CSemaphore
 {
 private:
-    boost::condition_variable condition;
-    boost::mutex mutex;
+    std::condition_variable condition;
+    std::mutex mutex;
     int value;
 
 public:
-    CSemaphore(int init) : value(init) {}
+    explicit CSemaphore(int init) : value(init) {}
 
     void wait()
     {
-        boost::unique_lock<boost::mutex> lock(mutex);
-        while (value < 1) {
-            condition.wait(lock);
-        }
+        std::unique_lock<std::mutex> lock(mutex);
+        condition.wait(lock, [&]() { return value >= 1; });
         value--;
     }
 
     bool try_wait()
     {
-        boost::unique_lock<boost::mutex> lock(mutex);
+        std::lock_guard<std::mutex> lock(mutex);
         if (value < 1)
             return false;
         value--;
@@ -209,12 +210,14 @@ public:
     void post()
     {
         {
-            boost::unique_lock<boost::mutex> lock(mutex);
+            std::lock_guard<std::mutex> lock(mutex);
             value++;
         }
         condition.notify_one();
     }
 };
+
+
 
 /** RAII-style semaphore lock */
 class CSemaphoreGrant

@@ -1958,18 +1958,23 @@ std::vector<AddedNodeInfo> CConnman::GetAddedNodeInfo() {
 void CConnman::ThreadOpenAddedConnections() {
     {
         LOCK(cs_vAddedNodes);
-        if (gArgs.IsArgSet("-addnode")) {
+        if (gArgs.IsArgSet("-addnode"))
+        {
             vAddedNodes = gArgs.GetArgs("-addnode");
         }
     }
 
-    while (true) {
+    while (true)
+    {
         CSemaphoreGrant grant(*semAddnode);
         std::vector<AddedNodeInfo> vInfo = GetAddedNodeInfo();
         bool tried = false;
-        for (const AddedNodeInfo &info : vInfo) {
-            if (!info.fConnected) {
-                if (!grant.TryAcquire()) {
+        for (const AddedNodeInfo &info : vInfo)
+        {
+            if (!info.fConnected)
+            {
+                if (!grant.TryAcquire())
+                {
                     // If we've used up our semaphore and need a new one, lets
                     // not wait here since while we are waiting the
                     // addednodeinfo state might change.
@@ -1979,19 +1984,18 @@ void CConnman::ThreadOpenAddedConnections() {
                 // OpenNetworkConnection can detect existing connections to that
                 // IP/port.
                 tried = true;
-                CService service(LookupNumeric(info.strAddedNode.c_str(),
-                                               pnetMan->getActivePaymentNetwork()->GetDefaultPort()));
-                OpenNetworkConnection(CAddress(service, NODE_NONE), false,
-                                      &grant, info.strAddedNode.c_str(), false,
-                                      false, true);
-                if (!interruptNet.sleep_for(std::chrono::milliseconds(500))) {
+                CService service(LookupNumeric(info.strAddedNode.c_str(),pnetMan->getActivePaymentNetwork()->GetDefaultPort()));
+                OpenNetworkConnection(CAddress(service, NODE_NONE), false, &grant, info.strAddedNode.c_str(), false, false, true);
+                if (!interruptNet.sleep_for(std::chrono::milliseconds(500)))
+                {
                     return;
                 }
             }
         }
         // Retry every 60 seconds if a connection was attempted, otherwise two
         // seconds.
-        if (!interruptNet.sleep_for(std::chrono::seconds(tried ? 60 : 2))) {
+        if (!interruptNet.sleep_for(std::chrono::seconds(tried ? 60 : 2)))
+        {
             return;
         }
     }
@@ -2378,7 +2382,8 @@ bool CConnman::Start(CScheduler &scheduler, std::string &strNodeError,
 
     fAddressesInitialized = true;
 
-    if (semOutbound == nullptr) {
+    if (semOutbound == nullptr)
+    {
         // initialize semaphore
         semOutbound = new CSemaphore(
             std::min((nMaxOutbound + nMaxFeeler), nMaxConnections));
