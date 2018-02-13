@@ -805,7 +805,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
 
     if (nMaxConnections < nUserMaxConnections)
     {
-        LogPrintf("Reducing -maxconnections from %d to %d, because of system limitations."), nUserMaxConnections, nMaxConnections);
+        LogPrintf("Reducing -maxconnections from %d to %d, because of system limitations.", nUserMaxConnections, nMaxConnections);
         InitWarning(strprintf(_("Reducing -maxconnections from %d to %d, because of system limitations."), nUserMaxConnections, nMaxConnections));
     }
 
