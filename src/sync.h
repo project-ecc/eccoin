@@ -261,7 +261,7 @@ public:
 
     CSemaphoreGrant() : sem(NULL), fHaveGrant(false) {}
 
-    CSemaphoreGrant(CSemaphore& sema, bool fTry = false) : sem(&sema), fHaveGrant(false)
+    explicit CSemaphoreGrant(CSemaphore& sema, bool fTry = false) : sem(&sema), fHaveGrant(false)
     {
         if (fTry)
             TryAcquire();
