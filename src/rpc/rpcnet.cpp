@@ -104,7 +104,13 @@ UniValue getpeerinfo(const UniValue& params, bool fHelp)
 
     LOCK(cs_main);
 
+    if (!g_connman) 
+    {
+        throw JSONRPCError(RPC_CLIENT_P2P_DISABLED, "Error: Peer-to-peer functionality missing or disabled");
+    }
+
     std::vector<CNodeStats> vstats;
+    g_connman->GetNodeStats(vstats);
 
     UniValue ret(UniValue::VARR);
 
