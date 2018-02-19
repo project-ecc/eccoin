@@ -1441,30 +1441,38 @@ void CConnman::ThreadSocketHandler() {
             // Inactivity checking
             //
             int64_t nTime = GetSystemTimeInSeconds();
-            if (nTime - pnode->nTimeConnected > 60) {
-                if (pnode->nLastRecv == 0 || pnode->nLastSend == 0) {
+            if (nTime - pnode->nTimeConnected > 60) 
+            {
+                if (pnode->nLastRecv == 0 || pnode->nLastSend == 0) 
+                {
                     LogPrintf("socket no message in first 60 "
                                          "seconds, %d %d from %d\n",
                              pnode->nLastRecv != 0, pnode->nLastSend != 0,
                              pnode->id);
                     pnode->fDisconnect = true;
-                } else if (nTime - pnode->nLastSend > TIMEOUT_INTERVAL) {
+                } 
+                else if (nTime - pnode->nLastSend > TIMEOUT_INTERVAL) 
+                {
                     LogPrintf("socket sending timeout: %is\n",
                               nTime - pnode->nLastSend);
                     pnode->fDisconnect = true;
-                } else if (nTime - pnode->nLastRecv >
-                           (pnode->nVersion > TIMEOUT_INTERVAL)) {
+                } 
+                else if (nTime - pnode->nLastRecv > TIMEOUT_INTERVAL) 
+                {
                     LogPrintf("socket receive timeout: %is\n",
                               nTime - pnode->nLastRecv);
                     pnode->fDisconnect = true;
-                } else if (pnode->nPingNonceSent &&
-                           pnode->nPingUsecStart + TIMEOUT_INTERVAL * 1000000 <
-                               GetTimeMicros()) {
+                } 
+                else if (pnode->nPingNonceSent &&
+                           pnode->nPingUsecStart + TIMEOUT_INTERVAL * 1000000 < GetTimeMicros()) 
+                {
                     LogPrintf("ping timeout: %fs\n",
                               0.000001 *
                                   (GetTimeMicros() - pnode->nPingUsecStart));
                     pnode->fDisconnect = true;
-                } else if (!pnode->fSuccessfullyConnected) {
+                } 
+                else if (!pnode->fSuccessfullyConnected) 
+                {
                     LogPrintf("version handshake timeout from %d\n", pnode->id);
                     pnode->fDisconnect = true;
                 }
@@ -1968,10 +1976,17 @@ void CConnman::ThreadOpenAddedConnections() {
     while (true)
     {
         CSemaphoreGrant grant(*semAddnode);
+
         std::vector<AddedNodeInfo> vInfo = GetAddedNodeInfo();
         bool tried = false;
+        int instance = 0;
         for (const AddedNodeInfo &info : vInfo)
         {
+            instance++;
+            if(instance > 7)
+            {
+                return;
+            }
             if (!info.fConnected)
             {
                 if (!grant.TryAcquire())
