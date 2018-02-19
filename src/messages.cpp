@@ -467,7 +467,7 @@ void UpdatePreferredDownload(CNode* node, CNodeState* state)
     nPreferredDownload -= state->fPreferredDownload;
 
     // Whether this node should be marked as a preferred download node.
-    state->fPreferredDownload = (!node->fInbound || node->fWhitelisted) && !node->fOneShot && !node->fClient;
+    state->fPreferredDownload = !node->fOneShot && !node->fClient;
 
     nPreferredDownload += state->fPreferredDownload;
 }
@@ -841,6 +841,7 @@ void static ProcessGetData(CNode* pfrom, CConnman &connman, const Consensus::Par
          // Don't bother if send buffer is too full to respond anyway.
          if (pfrom->fPauseSend)
          {
+            LogPrintf("PAUSE SEND \n");
              break;
          }
 
@@ -848,6 +849,7 @@ void static ProcessGetData(CNode* pfrom, CConnman &connman, const Consensus::Par
          {
              if (interruptMsgProc)
              {
+                LogPrintf("INTERRUPTED \n");
                  return;
              }
 
@@ -859,6 +861,8 @@ void static ProcessGetData(CNode* pfrom, CConnman &connman, const Consensus::Par
                  BlockMap::iterator mi = pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.find(inv.hash);
                  if (mi != pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.end())
                  {
+
+/*
                      if (mi->second->nChainTx &&
                          !mi->second->IsValid(BLOCK_VALID_SCRIPTS) &&
                          mi->second->IsValid(BLOCK_VALID_TREE))
@@ -877,6 +881,8 @@ void static ProcessGetData(CNode* pfrom, CConnman &connman, const Consensus::Par
                          CValidationState dummy;
                          ActivateBestChain(dummy, pnetMan->getActivePaymentNetwork(), RECEIVED, a_recent_block);
                      }
+
+*/
                      if (pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Contains(mi->second))
                      {
                          send = true;
@@ -927,6 +933,8 @@ void static ProcessGetData(CNode* pfrom, CConnman &connman, const Consensus::Par
                  }
                  // Pruned nodes may have deleted the block, so check whether
                  // it's available before trying to send.
+                 LogPrintf("SEND %d \n", send);
+                 LogPrintf("OTHER ARG = %d \n", (mi->second->nStatus & BLOCK_HAVE_DATA));
                  if (send && (mi->second->nStatus & BLOCK_HAVE_DATA))
                  {
                      // Send block from disk
@@ -935,9 +943,9 @@ void static ProcessGetData(CNode* pfrom, CConnman &connman, const Consensus::Par
                      {
                          assert(!"cannot load block from disk");
                      }
-
                      if (inv.type == MSG_BLOCK)
                      {
+                         LogPrintf("PUSHING BLOCK MESSAGE \n");
                          connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::BLOCK, block));
                      }
                      else if (inv.type == MSG_FILTERED_BLOCK)
@@ -1029,7 +1037,7 @@ void static ProcessGetData(CNode* pfrom, CConnman &connman, const Consensus::Par
              }
          }
      }
-
+    LogPrintf("DONE WITH PROCESSING GETDATA /n");
      pfrom->vRecvGetData.erase(pfrom->vRecvGetData.begin(), it);
 
      if (!vNotFound.empty())
@@ -1044,7 +1052,6 @@ void static ProcessGetData(CNode* pfrom, CConnman &connman, const Consensus::Par
          // entire memory pool.
          connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::NOTFOUND, vNotFound));
      }
-
 }
 
 void RegisterNodeSignals(CNodeSignals &nodeSignals) {
@@ -1286,12 +1293,14 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
         pfrom->fSuccessfullyConnected = true;
     }
 
+/*
     else if (!pfrom->fSuccessfullyConnected) {
         // Must have a verack message before anything else
         LOCK(cs_main);
         Misbehaving(pfrom, 1, "missing-verack");
         return false;
     }
+*/
 
     else if (strCommand == NetMsgType::ADDR)
     {
@@ -1405,6 +1414,14 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
                     // getheaders response here. When we receive the headers, we
                     // will then ask for the blocks we need.
                     connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::GETHEADERS, pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.GetLocator(pnetMan->getActivePaymentNetwork()->getChainManager()->pindexBestHeader), inv.hash));
+                    CNodeState *nodestate = State(pfrom->GetId());
+                    if (CanDirectFetch(chainparams.GetConsensus()) && nodestate->nBlocksInFlight < MAX_BLOCKS_IN_TRANSIT_PER_PEER) 
+                    {
+                        vToFetch.push_back(inv);
+                        // Mark block as in flight already, even though the actual "getdata" message only goes out
+                        // later (within the same cs_main lock, though).
+                        MarkBlockAsInFlight(pfrom->GetId(), inv.hash, chainparams.GetConsensus());
+                    }
                     LogPrintf("getheaders (%d) %s to peer=%d\n", pnetMan->getActivePaymentNetwork()->getChainManager()->pindexBestHeader->nHeight, inv.hash.ToString(), pfrom->id);
                 }
             } else {
@@ -1515,6 +1532,7 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
         vRecv >> locator >> hashStop;
 
         LOCK(cs_main);
+
         if (pnetMan->getActivePaymentNetwork()->getChainManager()->IsInitialBlockDownload() && !pfrom->fWhitelisted)
         {
             LogPrintf("Ignoring getheaders from peer=%d because node is in initial block download\n",pfrom->id);
@@ -1788,175 +1806,113 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
     {
         std::vector<CBlockHeader> headers;
 
-        // Bypass the normal CBlock deserialization, as we don't want to risk
-        // deserializing 2000 full blocks.
+        // Bypass the normal CBlock deserialization, as we don't want to risk deserializing 2000 full blocks.
         unsigned int nCount = ReadCompactSize(vRecv);
-        if (nCount > MAX_HEADERS_RESULTS)
-        {
+        if (nCount > MAX_HEADERS_RESULTS) {
             LOCK(cs_main);
-            Misbehaving(pfrom, 20, "too-many-headers");
+            Misbehaving(pfrom->GetId(), 20, "too-many-headers");
             return error("headers message size = %u", nCount);
         }
         headers.resize(nCount);
         for (unsigned int n = 0; n < nCount; n++) {
             vRecv >> headers[n];
-            // Ignore tx count; assume it is 0.
-            ReadCompactSize(vRecv);
-            // ignore empty vchBlockSig
-            ReadCompactSize(vRecv);
+            ReadCompactSize(vRecv); // ignore tx count; assume it is 0.
+            ReadCompactSize(vRecv); // ignore empty vchBlockSig
         }
 
-        if (nCount == 0) {
+        LOCK(cs_main);
+
+        if (nCount == 0) 
+        {
+            LogPrintf("STOP ASKING PEER FOR MORE HEADERS \n");
             // Nothing interesting. Stop asking this peers for more headers.
             return true;
         }
 
-        CBlockIndex *pindexLast = nullptr;
-        {
-            LOCK(cs_main);
-            CNodeState *nodestate = State(pfrom->GetId());
-
-            // If this looks like it could be a block announcement (nCount <
-            // MAX_BLOCKS_TO_ANNOUNCE), use special logic for handling headers
-            // that
-            // don't connect:
-            // - Send a getheaders message in response to try to connect the
-            // chain.
-            // - The peer can send up to MAX_UNCONNECTING_HEADERS in a row that
-            //   don't connect before giving DoS points
-            // - Once a headers message is received that is valid and does
-            // connect,
-            //   nUnconnectingHeaders gets reset back to 0.
-            if (pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.find(headers[0].hashPrevBlock)
-                    == pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.end() && nCount < MAX_BLOCKS_TO_ANNOUNCE)
-            {
-                nodestate->nUnconnectingHeaders++;
-                connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::GETHEADERS,
-                                                         pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.GetLocator(
-                                                         pnetMan->getActivePaymentNetwork()->getChainManager()->pindexBestHeader), uint256()));
-
-                LogPrintf("received header %s: missing prev block %s, sending getheaders (%d) to end "
-                                     "(peer=%d, nUnconnectingHeaders=%d)\n",
-                         headers[0].GetHash().ToString(),
-                         headers[0].hashPrevBlock.ToString(),
-                         pnetMan->getActivePaymentNetwork()->getChainManager()->pindexBestHeader->nHeight, pfrom->id,
-                         nodestate->nUnconnectingHeaders);
-                // Set hashLastUnknownBlock for this peer, so that if we
-                // eventually get the headers - even from a different peer -
-                // we can use this peer to download.
-                UpdateBlockAvailability(pfrom->GetId(), headers.back().GetHash());
-
-                if (nodestate->nUnconnectingHeaders % MAX_UNCONNECTING_HEADERS ==0)
-                {
-                    // The peer is sending us many headers we can't connect.
-                    Misbehaving(pfrom, 20, "too-many-unconnected-headers");
-                }
-                return true;
+        CBlockIndex *pindexLast = NULL;
+        for(const CBlockHeader& header : headers) {
+            CValidationState state;
+            if (pindexLast != NULL && header.hashPrevBlock != pindexLast->GetBlockHash()) {
+                Misbehaving(pfrom->GetId(), 20, "disconnected-header");
+                return error("non-continuous headers sequence");
             }
-
-            uint256 hashLastBlock;
-            for (const CBlockHeader &header : headers)
-            {
-                if (!hashLastBlock.IsNull() && header.hashPrevBlock != hashLastBlock)
-                {
-                    Misbehaving(pfrom, 20, "disconnected-header");
-                    return error("non-continuous headers sequence");
-                }
-                hashLastBlock = header.GetHash();
-                CValidationState state;
-                if (!AcceptBlockHeader(header, state, pnetMan->getActivePaymentNetwork(), &pindexLast))
-                {
-                    int nDoS;
-                    if (state.IsInvalid(nDoS))
-                    {
-                        if (nDoS > 0) {
-                            LOCK(cs_main);
-                            Misbehaving(pfrom, nDoS, state.GetRejectReason());
-                        }
-                        return error("invalid header received");
-                    }
+            if (!AcceptBlockHeader(header, state, chainparams, &pindexLast)) {
+                int nDoS;
+                if (state.IsInvalid(nDoS)) {
+                    if (nDoS > 0)
+                        Misbehaving(pfrom->GetId(), nDoS, state.GetRejectReason());
+                    return error("invalid header received");
                 }
             }
         }
 
-        {
-            LOCK(cs_main);
-            CNodeState *nodestate = State(pfrom->GetId());
-            if (nodestate->nUnconnectingHeaders > 0)
-            {
-                LogPrintf("peer=%d: resetting nUnconnectingHeaders (%d -> 0)\n", pfrom->id, nodestate->nUnconnectingHeaders);
-            }
-            nodestate->nUnconnectingHeaders = 0;
-
-            assert(pindexLast);
+        if (pindexLast)
             UpdateBlockAvailability(pfrom->GetId(), pindexLast->GetBlockHash());
 
-            if (nCount == MAX_HEADERS_RESULTS)
-            {
-                // Headers message had its maximum size; the peer may have more
-                // headers.
-                // TODO: optimize: if pindexLast is an ancestor of
-                // chainActive.Tip or pindexBestHeader, continue from there
-                // instead.
-                LogPrintf("more getheaders (%d) to end to peer=%d (startheight:%d)\n", pindexLast->nHeight, pfrom->id, pfrom->nStartingHeight);
-                connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::GETHEADERS, pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.GetLocator(pindexLast), uint256()));
-            }
+        if (nCount == MAX_HEADERS_RESULTS && pindexLast) 
+        {
+            // Headers message had its maximum size; the peer may have more headers.
+            // TODO: optimize: if pindexLast is an ancestor of chainActive.Tip or pindexBestHeader, continue
+            // from there instead.
+            LogPrint("net", "more getheaders (%d) to end to peer=%d (startheight:%d)\n", pindexLast->nHeight, pfrom->id, pfrom->nStartingHeight);
+            connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::GETHEADERS, pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.GetLocator(pindexLast), uint256()));
+        }
 
-            bool fCanDirectFetch = CanDirectFetch(chainparams.GetConsensus());
-            // If this set of headers is valid and ends in a block with at least
-            // as much work as our tip, download as much as possible.
-            if (fCanDirectFetch && pindexLast->IsValid(BLOCK_VALID_TREE) && pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->nChainWork <= pindexLast->nChainWork)
+        bool fCanDirectFetch = CanDirectFetch(chainparams.GetConsensus());
+        CNodeState *nodestate = State(pfrom->GetId());
+        // If this set of headers is valid and ends in a block with at least as
+        // much work as our tip, download as much as possible.
+        if (fCanDirectFetch && pindexLast->IsValid(BLOCK_VALID_TREE) && pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->nChainWork <= pindexLast->nChainWork) {
+            LogPrintf("TRYING TO DOWNLOAD AS MUCH AS POSSIBLE \n");
+            std::vector<CBlockIndex *> vToFetch;
+            CBlockIndex *pindexWalk = pindexLast;
+            // Calculate all the blocks we'd need to switch to pindexLast, up to a limit.
+            while (pindexWalk && !pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Contains(pindexWalk) && vToFetch.size() <= MAX_BLOCKS_IN_TRANSIT_PER_PEER) {
+                if (!(pindexWalk->nStatus & BLOCK_HAVE_DATA) &&
+                        !mapBlocksInFlight.count(pindexWalk->GetBlockHash())) {
+                    // We don't have this block, and it's not yet in flight.
+                    vToFetch.push_back(pindexWalk);
+                }
+                pindexWalk = pindexWalk->pprev;
+            }
+            // If pindexWalk still isn't on our main chain, we're looking at a
+            // very large reorg at a time we think we're close to caught up to
+            // the main chain -- this shouldn't really happen.  Bail out on the
+            // direct fetch and rely on parallel download instead.
+            if (!pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Contains(pindexWalk)) 
             {
-                std::vector<CBlockIndex *> vToFetch;
-                CBlockIndex *pindexWalk = pindexLast;
-                // Calculate all the blocks we'd need to switch to pindexLast,
-                // up to a limit.
-                while (pindexWalk && !pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Contains(pindexWalk) &&
-                       vToFetch.size() <= MAX_BLOCKS_IN_TRANSIT_PER_PEER)
-                {
-                    if (!(pindexWalk->nStatus & BLOCK_HAVE_DATA) && !mapBlocksInFlight.count(pindexWalk->GetBlockHash()))
-                    {
-                        // We don't have this block, and it's not yet in flight.
-                        vToFetch.push_back(pindexWalk);
+                LogPrintf("WONT DIRECT FECTH \n");
+                LogPrint("net", "Large reorg, won't direct fetch to %s (%d)\n",
+                        pindexLast->GetBlockHash().ToString(),
+                        pindexLast->nHeight);
+            } 
+            else 
+            {
+                std::vector<CInv> vGetData;
+                // Download as much as possible, from earliest to latest.
+                BOOST_REVERSE_FOREACH(CBlockIndex *pindex, vToFetch) {
+                    if (nodestate->nBlocksInFlight >= MAX_BLOCKS_IN_TRANSIT_PER_PEER) {
+                        // Can't download any more from this peer
+                        break;
                     }
-                    pindexWalk = pindexWalk->pprev;
+                    vGetData.push_back(CInv(MSG_BLOCK, pindex->GetBlockHash()));
+                    MarkBlockAsInFlight(pfrom->GetId(), pindex->GetBlockHash(), chainparams.GetConsensus(), pindex);
+                    LogPrintf("REQUESTING BLOCKS \n");
+                    LogPrint("net", "Requesting block %s from  peer=%d\n",
+                            pindex->GetBlockHash().ToString(), pfrom->id);
                 }
-                // If pindexWalk still isn't on our main chain, we're looking at
-                // a very large reorg at a time we think we're close to caught
-                // up to the main chain -- this shouldn't really happen. Bail
-                // out on the direct fetch and rely on parallel download
-                // instead.
-                if (!pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Contains(pindexWalk))
-                {
-                    LogPrintf("Large reorg, won't direct fetch to %s (%d)\n", pindexLast->GetBlockHash().ToString(), pindexLast->nHeight);
+                if (vGetData.size() > 1) {
+                    LogPrint("net", "Downloading blocks toward %s (%d) via headers direct fetch\n",
+                            pindexLast->GetBlockHash().ToString(), pindexLast->nHeight);
                 }
-                else
+                if (vGetData.size() > 0) 
                 {
-                    std::vector<CInv> vGetData;
-                    // Download as much as possible, from earliest to latest.
-                    for (CBlockIndex *pindex : boost::adaptors::reverse(vToFetch))
-                    {
-                        if (nodestate->nBlocksInFlight >= MAX_BLOCKS_IN_TRANSIT_PER_PEER)
-                        {
-                            // Can't download any more from this peer
-                            break;
-                        }
-                        uint32_t nFetchFlags = GetFetchFlags(pfrom, pindex->pprev, pnetMan->getActivePaymentNetwork()->GetConsensus());
-                        vGetData.push_back(CInv(MSG_BLOCK | nFetchFlags, pindex->GetBlockHash()));
-                        MarkBlockAsInFlight(pfrom->GetId(), pindex->GetBlockHash(), chainparams.GetConsensus(), pindex);
-                        LogPrintf("Requesting block %s from  peer=%d\n", pindex->GetBlockHash().ToString(), pfrom->id);
-                    }
-                    if (vGetData.size() > 1)
-                    {
-                        LogPrintf("Downloading blocks toward %s (%d) via headers direct fetch\n", pindexLast->GetBlockHash().ToString(), pindexLast->nHeight);
-                    }
-                    if (vGetData.size() > 0)
-                    {
-                        connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::GETDATA, vGetData));
-                    }
+                    LogPrintf("PUSHING GETDATA \n");
+                    connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::GETDATA, vGetData));
                 }
             }
         }
+        CheckBlockIndex(chainparams.GetConsensus());
     }
 
     else if (strCommand == NetMsgType::BLOCK && !fImporting && !fReindex) // Ignore blocks received while importing
