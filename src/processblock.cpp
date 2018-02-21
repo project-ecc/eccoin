@@ -140,7 +140,11 @@ bool ProcessNewBlock(CValidationState& state, const CNetworkTemplate& chainparam
     if (!ActivateBestChain(state, chainparams, origin, pblock))
         return error("%s: ActivateBestChain failed", __func__);
 
-    removeImpossibleChainTips();
+    /// this is expensive so only run it about once every 12 hours. (960 blocks is ~12 hours with a 45 second block time)
+    if( (pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height() % 960 )== 0)
+    {
+        removeImpossibleChainTips();
+    }
 
     return true;
 }
