@@ -15,6 +15,7 @@
 #include "uint256.h"
 #include "version.h"
 
+#include <array>
 #include <stdint.h>
 #include <string>
 
