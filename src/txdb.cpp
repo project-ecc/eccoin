@@ -222,19 +222,19 @@ bool CBlockTreeDB::LoadBlockIndexGuts()
             if (pcursor->GetValue(diskindex))
             {
                 // Construct block index object
-                CBlockIndex* pindexNew = pnetMan->getActivePaymentNetwork()->getChainManager()->InsertBlockIndex(diskindex.hashBlock);
-                pindexNew->pprev          = pnetMan->getActivePaymentNetwork()->getChainManager()->InsertBlockIndex(diskindex.hashPrev);
-                pindexNew->nHeight        = diskindex.nHeight;
-                pindexNew->nFile          = diskindex.nFile;
-                pindexNew->nDataPos       = diskindex.nDataPos;
-                pindexNew->nUndoPos       = diskindex.nUndoPos;
-                pindexNew->nVersion       = diskindex.nVersion;
-                pindexNew->hashMerkleRoot = diskindex.hashMerkleRoot;
-                pindexNew->nTime          = diskindex.nTime;
-                pindexNew->nBits          = diskindex.nBits;
-                pindexNew->nNonce         = diskindex.nNonce;
-                pindexNew->nStatus        = diskindex.nStatus;
-                pindexNew->nTx            = diskindex.nTx;
+                CBlockIndex* pindexNew      = pnetMan->getActivePaymentNetwork()->getChainManager()->InsertBlockIndex(diskindex.hashBlock);
+                pindexNew->pprev            = pnetMan->getActivePaymentNetwork()->getChainManager()->InsertBlockIndex(diskindex.hashPrev);
+                pindexNew->nHeight          = diskindex.nHeight;
+                pindexNew->nFile            = diskindex.nFile;
+                pindexNew->nDataPos         = diskindex.nDataPos;
+                pindexNew->nUndoPos         = diskindex.nUndoPos;
+                pindexNew->nVersion         = diskindex.nVersion;
+                pindexNew->hashMerkleRoot   = diskindex.hashMerkleRoot;
+                pindexNew->nTime            = diskindex.nTime;
+                pindexNew->nBits            = diskindex.nBits;
+                pindexNew->nNonce           = diskindex.nNonce;
+                pindexNew->nStatus          = diskindex.nStatus;
+                pindexNew->nTx              = diskindex.nTx;
                 pindexNew->nMint            = diskindex.nMint;
                 pindexNew->nMoneySupply     = diskindex.nMoneySupply;
                 pindexNew->nFlags           = diskindex.nFlags;
