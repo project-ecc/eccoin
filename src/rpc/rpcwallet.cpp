@@ -393,7 +393,8 @@ static void SendMoney(const CTxDestination &address, CAmount nValue, bool fSubtr
             strError = strprintf("Error: This transaction requires a transaction fee of at least %s because of its amount, complexity, or use of recently received funds!", FormatMoney(nFeeRequired));
         throw JSONRPCError(RPC_WALLET_ERROR, strError);
     }
-    if (!pwalletMain->CommitTransaction(wtxNew, reservekey))
+    CValidationState state;
+    if (!pwalletMain->CommitTransaction(wtxNew, reservekey, g_connman.get(), state))
         throw JSONRPCError(RPC_WALLET_ERROR, "Error: The transaction was rejected! This might happen if some of the coins in your wallet were already spent, such as if you used a copy of wallet.dat and coins were spent in the copy but not marked as spent here.");
 }
 
@@ -1042,7 +1043,8 @@ UniValue sendmany(const UniValue& params, bool fHelp)
     bool fCreated = pwalletMain->CreateTransaction(vecSend, wtx, keyChange, nFeeRequired, nChangePosRet, strFailReason);
     if (!fCreated)
         throw JSONRPCError(RPC_WALLET_INSUFFICIENT_FUNDS, strFailReason);
-    if (!pwalletMain->CommitTransaction(wtx, keyChange))
+    CValidationState state;
+    if (!pwalletMain->CommitTransaction(wtx, keyChange, g_connman.get(), state))
         throw JSONRPCError(RPC_WALLET_ERROR, "Transaction commit failed");
 
     return wtx.GetHash().GetHex();
@@ -2330,7 +2332,7 @@ UniValue resendwallettransactions(const UniValue& params, bool fHelp)
 
     LOCK2(cs_main, pwalletMain->cs_wallet);
 
-    std::vector<uint256> txids = pwalletMain->ResendWalletTransactionsBefore(GetTime());
+    std::vector<uint256> txids = pwalletMain->ResendWalletTransactionsBefore(GetTime(), g_connman.get());
     UniValue result(UniValue::VARR);
     for (auto const& txid: txids)
     {

@@ -223,9 +223,9 @@ void CArgsManager::ReadConfigFile()
         fprintf(ConfFile, "maxconnections=100\n");
         fprintf(ConfFile, "rpcuser=yourusername\n");
         fprintf(ConfFile, "rpcpassword=yourpassword\n");
-        fprintf(ConfFile, "addnode=www.cryptounited.io\n");
         fprintf(ConfFile, "rpcport=19119\n");
         fprintf(ConfFile, "rpcconnect=127.0.0.1\n");
+        fprintf(ConfFile, "rpcallowip=127.0.0.1\n");
         fclose(ConfFile);
         goto init;
     }

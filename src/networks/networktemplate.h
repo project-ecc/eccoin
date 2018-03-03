@@ -13,8 +13,13 @@
 
 struct CDNSSeedData {
     std::string name, host;
-    CDNSSeedData(const std::string &strName, const std::string &strHost) : name(strName), host(strHost) {}
+    bool supportsServiceBitsFiltering;
+    CDNSSeedData(const std::string &strName, const std::string &strHost,
+                 bool supportsServiceBitsFilteringIn = false)
+        : name(strName), host(strHost),
+          supportsServiceBitsFiltering(supportsServiceBitsFilteringIn) {}
 };
+
 
 typedef std::map<int, uint256> MapCheckpoints;
 
@@ -45,7 +50,7 @@ public:
     /// TODO: make all of the data members below this point protected and make setters for them all
 
     Consensus::Params consensus;
-    CMessageHeader::MessageStartChars pchMessageStart;
+    CMessageHeader::MessageMagic pchMessageStart;
     int nDefaultPort;
     int nRPCPort;
     long nMaxTipAge;
@@ -65,7 +70,7 @@ public:
 
 
     const Consensus::Params& GetConsensus() const { return consensus; }
-    const CMessageHeader::MessageStartChars& MessageStart() const { return pchMessageStart; }
+    const CMessageHeader::MessageMagic& MessageStart() const { return pchMessageStart; }
     int GetDefaultPort() const { return nDefaultPort; }
     int GetRPCPort() const { return nRPCPort; }
 

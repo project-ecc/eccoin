@@ -1,7 +1,3 @@
-//
-// Created by parallels on 8/14/17.
-//
-
 #ifndef ECCOIN_FS_H
 #define ECCOIN_FS_H
 
@@ -19,6 +15,6 @@ namespace fs = boost::filesystem;
 namespace fsbridge {
     FILE *fopen(const fs::path& p, const char *mode);
     FILE *freopen(const fs::path& p, const char *mode, FILE *stream);
-};
+}
 
 #endif //ECCOIN_FS_H

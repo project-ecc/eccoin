@@ -36,16 +36,26 @@ static inline size_t RecursiveDynamicUsage(const CTransaction& tx) {
     return mem;
 }
 
-static inline size_t RecursiveDynamicUsage(const CBlock& block) {
+/*
+static inline size_t RecursiveDynamicUsage(const CBlock &block)
+{
     size_t mem = memusage::DynamicUsage(block.vtx);
-    for (std::vector<CTransaction>::const_iterator it = block.vtx.begin(); it != block.vtx.end(); it++) {
-        mem += RecursiveDynamicUsage(*it);
+    for (const auto &tx : block.vtx)
+    {
+        mem += memusage::DynamicUsage(tx) + RecursiveDynamicUsage(tx);
     }
     return mem;
 }
+*/
 
 static inline size_t RecursiveDynamicUsage(const CBlockLocator& locator) {
     return memusage::DynamicUsage(locator.vHave);
 }
+
+template <typename X>
+static inline size_t RecursiveDynamicUsage(const std::shared_ptr<X> &p) {
+    return p ? memusage::DynamicUsage(p) + RecursiveDynamicUsage(*p) : 0;
+}
+
 
 #endif // BITCOIN_CORE_MEMUSAGE_H

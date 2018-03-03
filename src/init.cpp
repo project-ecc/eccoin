@@ -17,6 +17,7 @@
 #include "httprpc.h"
 #include "key.h"
 #include "main.h"
+#include "messages.h"
 #include "miner.h"
 #include "net.h"
 #include "policy/policy.h"
@@ -34,7 +35,6 @@
 #include "util/utilmoneystr.h"
 #include "util/utilstrencodings.h"
 #include "validationinterface.h"
-#include "signals.h"
 #include "verifydb.h"
 #include "wallet/db.h"
 #include "wallet/wallet.h"
@@ -62,6 +62,9 @@
 bool fShutdown = false;
 CWallet* pwalletMain = NULL;
 CNetworkManager* pnetMan = NULL;
+
+std::unique_ptr<CConnman> g_connman;
+std::unique_ptr<PeerLogicValidation> peerLogic;
 
 bool fFeeEstimatesInitialized = false;
 static const bool DEFAULT_PROXYRANDOMIZE = true;
@@ -188,8 +191,11 @@ void Shutdown()
 
     if (pwalletMain)
         pwalletMain->Flush(false);
-    ThreadScryptMiner(pwalletMain);
-    StopNode();
+    ThreadScryptMiner(pwalletMain, true);
+    MapPort(false);
+    UnregisterValidationInterface(peerLogic.get());
+    peerLogic.reset();
+    g_connman.reset();
     StopTorControl();
     UnregisterNodeSignals(GetNodeSignals());
 
@@ -269,11 +275,11 @@ bool static InitWarning(const std::string &str)
     return true;
 }
 
-bool static Bind(const CService &addr, unsigned int flags) {
+bool static Bind(CConnman &connman, const CService &addr, unsigned int flags) {
     if (!(flags & BF_EXPLICIT) && IsLimited(addr))
         return false;
     std::string strError;
-    if (!BindListenPort(addr, strError, (flags & BF_WHITELIST) != 0)) {
+    if (!connman.BindListenPort(addr, strError, (flags & BF_WHITELIST) != 0)) {
         if (flags & BF_REPORT_ERROR)
             return InitError(strError);
         return false;
@@ -688,6 +694,11 @@ void InitParameterInteraction()
     }
 }
 
+static std::string ResolveErrMsg(const char *const optname,
+                                 const std::string &strBind) {
+    return strprintf(_("Cannot resolve -%s address: '%s'"), optname, strBind);
+}
+
 void InitLogging()
 {
     fPrintToConsole = gArgs.GetBoolArg("-printtoconsole", false);
@@ -698,6 +709,15 @@ void InitLogging()
     LogPrintf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
     LogPrintf("ECC version %s (%s)\n", FormatFullVersion(), CLIENT_DATE);
 }
+
+namespace { // Variables internal to initialization process only
+
+ServiceFlags nRelevantServices = NODE_NETWORK;
+int nMaxConnections;
+int nUserMaxConnections;
+int nFD;
+ServiceFlags nLocalServices = NODE_NETWORK;
+} // namespace
 
 void GenerateNetworkTemplates()
 {
@@ -784,7 +804,10 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
     nMaxConnections = std::min(nFD - MIN_CORE_FILEDESCRIPTORS, nMaxConnections);
 
     if (nMaxConnections < nUserMaxConnections)
+    {
+        LogPrintf("Reducing -maxconnections from %d to %d, because of system limitations.", nUserMaxConnections, nMaxConnections);
         InitWarning(strprintf(_("Reducing -maxconnections from %d to %d, because of system limitations."), nUserMaxConnections, nMaxConnections));
+    }
 
     // ********************************************************* Step 3: parameter-to-internal-flags
 
@@ -928,7 +951,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
     SetMockTime(gArgs.GetArg("-mocktime", 0)); // SetMockTime(0) is a no-op
 
     if (gArgs.GetBoolArg("-peerbloomfilters", true))
-        nLocalServices |= NODE_BLOOM;
+        nLocalServices = ServiceFlags(nLocalServices | NODE_BLOOM);
 
     fEnableReplacement = gArgs.GetBoolArg("-mempoolreplacement", DEFAULT_ENABLE_REPLACEMENT);
     if ((!fEnableReplacement) && gArgs.IsArgSet("-mempoolreplacement")) {
@@ -1030,6 +1053,14 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
     } // (!fDisableWallet)
     // ********************************************************* Step 6: network initialization
 
+    assert(!g_connman);
+    g_connman = std::unique_ptr<CConnman>(
+        new CConnman(GetRand(std::numeric_limits<uint64_t>::max()),
+                     GetRand(std::numeric_limits<uint64_t>::max())));
+    CConnman &connman = *g_connman;
+
+    peerLogic.reset(new PeerLogicValidation(&connman));
+    RegisterValidationInterface(peerLogic.get());
     RegisterNodeSignals(GetNodeSignals());
 
     // sanitize comments per BIP-0014, format user agent and check total size
@@ -1040,11 +1071,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
             return InitError(strprintf(_("User Agent comment (%s) contains unsafe characters."), cmt));
         uacomments.push_back(SanitizeString(cmt, SAFE_CHARS_UA_COMMENT));
     }
-    strSubVersion = FormatSubVersion(CLIENT_NAME, CLIENT_VERSION, uacomments);
-    if (strSubVersion.size() > MAX_SUBVERSION_LENGTH) {
-        return InitError(strprintf(_("Total length of network version string (%i) exceeds maximum length (%i). Reduce the number or size of uacomments."),
-            strSubVersion.size(), MAX_SUBVERSION_LENGTH));
-    }
+
 
     if (gArgs.IsArgSet("-onlynet")) {
         std::set<enum Network> nets;
@@ -1062,45 +1089,59 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
     }
 
     if (gArgs.IsArgSet("-whitelist")) {
-        for (auto const& net: gArgs.GetArgs("-whitelist")) {
-            CSubNet subnet(net);
+        for (const std::string &net : gArgs.GetArgs("-whitelist")) {
+            CSubNet subnet;
+            LookupSubNet(net.c_str(), subnet);
             if (!subnet.IsValid())
-                return InitError(strprintf(_("Invalid netmask specified in -whitelist: '%s'"), net));
-            CNode::AddWhitelistedRange(subnet);
+                return InitError(strprintf(
+                    _("Invalid netmask specified in -whitelist: '%s'"), net));
+            connman.AddWhitelistedRange(subnet);
         }
     }
 
     bool proxyRandomize = gArgs.GetBoolArg("-proxyrandomize", DEFAULT_PROXYRANDOMIZE);
     // -proxy sets a proxy for all outgoing network traffic
-    // -noproxy (or -proxy=0) as well as the empty string can be used to not set a proxy, this is the default
+    // -noproxy (or -proxy=0) as well as the empty string can be used to not set
+    // a proxy, this is the default
     std::string proxyArg = gArgs.GetArg("-proxy", "");
+    SetLimited(NET_TOR);
     if (proxyArg != "" && proxyArg != "0") {
-        proxyType addrProxy = proxyType(CService(proxyArg, 9050), proxyRandomize);
-        if (!addrProxy.IsValid())
-            return InitError(strprintf(_("Invalid -proxy address: '%s'"), proxyArg));
+        CService resolved(LookupNumeric(proxyArg.c_str(), 9050));
+        proxyType addrProxy = proxyType(resolved, proxyRandomize);
+        if (!addrProxy.IsValid()) {
+            return InitError(
+                strprintf(_("Invalid -proxy address: '%s'"), proxyArg));
+        }
 
         SetProxy(NET_IPV4, addrProxy);
         SetProxy(NET_IPV6, addrProxy);
         SetProxy(NET_TOR, addrProxy);
         SetNameProxy(addrProxy);
-        SetReachable(NET_TOR); // by default, -proxy sets onion as reachable, unless -noonion later
+        SetLimited(NET_TOR, false); // by default, -proxy sets onion as
+                                    // reachable, unless -noonion later
     }
 
-    // -onion can be used to set only a proxy for .onion, or override normal proxy for .onion addresses
-    // -noonion (or -onion=0) disables connecting to .onion entirely
-    // An empty string is used to not override the onion proxy (in which case it defaults to -proxy set above, or none)
+    // -onion can be used to set only a proxy for .onion, or override normal
+    // proxy for .onion addresses.
+    // -noonion (or -onion=0) disables connecting to .onion entirely. An empty
+    // string is used to not override the onion proxy (in which case it defaults
+    // to -proxy set above, or none)
     std::string onionArg = gArgs.GetArg("-onion", "");
     if (onionArg != "") {
-        if (onionArg == "0") { // Handle -noonion/-onion=0
-            SetReachable(NET_TOR, false); // set onions as unreachable
+        if (onionArg == "0") {   // Handle -noonion/-onion=0
+            SetLimited(NET_TOR); // set onions as unreachable
         } else {
-            proxyType addrOnion = proxyType(CService(onionArg, 9050), proxyRandomize);
-            if (!addrOnion.IsValid())
-                return InitError(strprintf(_("Invalid -onion address: '%s'"), onionArg));
+            CService resolved(LookupNumeric(onionArg.c_str(), 9050));
+            proxyType addrOnion = proxyType(resolved, proxyRandomize);
+            if (!addrOnion.IsValid()) {
+                return InitError(
+                    strprintf(_("Invalid -onion address: '%s'"), onionArg));
+            }
             SetProxy(NET_TOR, addrOnion);
-            SetReachable(NET_TOR);
+            SetLimited(NET_TOR, false);
         }
     }
+
 
     // see Step 2: parameter interactions for more information about these
     fListen = gArgs.GetBoolArg("-listen", DEFAULT_LISTEN);
@@ -1114,7 +1155,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                 CService addrBind;
                 if (!Lookup(strBind.c_str(), addrBind, GetListenPort(), false))
                     return InitError(strprintf(_("Cannot resolve -bind address: '%s'"), strBind));
-                fBound |= Bind(addrBind, (BF_EXPLICIT | BF_REPORT_ERROR));
+                fBound |= Bind(connman, addrBind, (BF_EXPLICIT | BF_REPORT_ERROR));
             }
             for (auto const& strBind: gArgs.GetArgs("-whitebind")) {
                 CService addrBind;
@@ -1122,33 +1163,46 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                     return InitError(strprintf(_("Cannot resolve -whitebind address: '%s'"), strBind));
                 if (addrBind.GetPort() == 0)
                     return InitError(strprintf(_("Need to specify a port with -whitebind: '%s'"), strBind));
-                fBound |= Bind(addrBind, (BF_EXPLICIT | BF_REPORT_ERROR | BF_WHITELIST));
+                fBound |= Bind(connman, addrBind, (BF_EXPLICIT | BF_REPORT_ERROR | BF_WHITELIST));
             }
         }
         else {
             struct in_addr inaddr_any;
             inaddr_any.s_addr = INADDR_ANY;
-            fBound |= Bind(CService(in6addr_any, GetListenPort()), BF_NONE);
-            fBound |= Bind(CService(inaddr_any, GetListenPort()), !fBound ? BF_REPORT_ERROR : BF_NONE);
+            fBound |= Bind(connman, CService(in6addr_any, GetListenPort()), BF_NONE);
+            fBound |= Bind(connman, CService(inaddr_any, GetListenPort()), !fBound ? BF_REPORT_ERROR : BF_NONE);
         }
         if (!fBound)
             return InitError(_("Failed to listen on any port. Use -listen=0 if you want this."));
     }
 
     if (gArgs.IsArgSet("-externalip")) {
-        for (auto const& strAddr: gArgs.GetArgs("-externalip")) {
-            CService addrLocal(strAddr, GetListenPort(), fNameLookup);
-            if (!addrLocal.IsValid())
-                return InitError(strprintf(_("Cannot resolve -externalip address: '%s'"), strAddr));
-            AddLocal(CService(strAddr, GetListenPort(), fNameLookup), LOCAL_MANUAL);
+        for (const std::string &strAddr : gArgs.GetArgs("-externalip")) {
+            CService addrLocal;
+            if (Lookup(strAddr.c_str(), addrLocal, GetListenPort(),
+                       fNameLookup) &&
+                addrLocal.IsValid()) {
+                AddLocal(addrLocal, LOCAL_MANUAL);
+            } else {
+                return InitError(ResolveErrMsg("externalip", strAddr));
+            }
         }
     }
 
-    for (auto const& strDest: gArgs.GetArgs("-seednode"))
-        AddOneShot(strDest);
+    if (gArgs.IsArgSet("-seednode"))
+    {
+        for (const std::string &strDest : gArgs.GetArgs("-seednode"))
+        {
+            connman.AddOneShot(strDest);
+        }
+    }
 
-    if (gArgs.IsArgSet("-maxuploadtarget")) {
-        CNode::SetMaxOutboundTarget(gArgs.GetArg("-maxuploadtarget", DEFAULT_MAX_UPLOAD_TARGET)*1024*1024);
+    uint64_t nMaxOutboundLimit = 0;
+    uint64_t nMaxOutboundTimeframe = MAX_UPLOAD_TIMEFRAME;
+
+    if (gArgs.IsArgSet("-maxuploadtarget"))
+    {
+        nMaxOutboundLimit = gArgs.GetArg("-maxuploadtarget", DEFAULT_MAX_UPLOAD_TARGET) * 1024 * 1024;
     }
 
     // ********************************************************* Step 7: load block chain
@@ -1517,7 +1571,33 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
     if (gArgs.GetBoolArg("-listenonion", DEFAULT_LISTEN_ONION))
         StartTorControl(threadGroup, scheduler);
 
-    StartNode(threadGroup, scheduler);
+    Discover(threadGroup);
+
+    // Map ports with UPnP
+    MapPort(gArgs.GetBoolArg("-upnp", DEFAULT_UPNP));
+
+    std::string strNodeError;
+    CConnman::Options connOptions;
+    connOptions.nLocalServices = nLocalServices;
+    connOptions.nRelevantServices = nRelevantServices;
+    connOptions.nMaxConnections = nMaxConnections;
+    connOptions.nMaxOutbound = std::min(MAX_OUTBOUND_CONNECTIONS, connOptions.nMaxConnections);
+    connOptions.nMaxAddnode = MAX_ADDNODE_CONNECTIONS;
+    connOptions.nMaxFeeler = 1;
+    connOptions.nBestHeight = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height();
+    connOptions.uiInterface = &uiInterface;
+    connOptions.nSendBufferMaxSize =
+        1000 * gArgs.GetArg("-maxsendbuffer", DEFAULT_MAXSENDBUFFER);
+    connOptions.nReceiveFloodSize =
+        1000 * gArgs.GetArg("-maxreceivebuffer", DEFAULT_MAXRECEIVEBUFFER);
+
+    connOptions.nMaxOutboundTimeframe = nMaxOutboundTimeframe;
+    connOptions.nMaxOutboundLimit = nMaxOutboundLimit;
+
+    if (!connman.Start(scheduler, strNodeError, connOptions))
+    {
+        return InitError(strNodeError);
+    }
 
     // Monitor the chain, and alert if we get blocks much quicker or slower than expected
     // The "bad chain alert" scheduler has been disabled because the current system gives far

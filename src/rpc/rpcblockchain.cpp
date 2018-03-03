@@ -22,6 +22,7 @@
 #include "util/utilstrencodings.h"
 #include "init.h"
 #include "verifydb.h"
+#include "processblock.h"
 
 #include <stdint.h>
 
