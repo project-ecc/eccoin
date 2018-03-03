@@ -35,6 +35,7 @@ const char *FILTERADD="filteradd";
 const char *FILTERCLEAR="filterclear";
 const char *REJECT="reject";
 const char *SENDHEADERS="sendheaders";
+const char *FEEFILTER = "feefilter";
 };
 
 static const char* ppszTypeName[] =
@@ -70,63 +71,67 @@ const static std::string allNetMessageTypes[] = {
     NetMsgType::FILTERADD,
     NetMsgType::FILTERCLEAR,
     NetMsgType::REJECT,
-    NetMsgType::SENDHEADERS
+    NetMsgType::SENDHEADERS,
+    NetMsgType::FEEFILTER
 };
 const static std::vector<std::string> allNetMessageTypesVec(allNetMessageTypes, allNetMessageTypes+ARRAYLEN(allNetMessageTypes));
 
-CMessageHeader::CMessageHeader(const MessageStartChars& pchMessageStartIn)
-{
-    memcpy(pchMessageStart, pchMessageStartIn, MESSAGE_START_SIZE);
+
+CMessageHeader::CMessageHeader(const MessageMagic &pchMessageStartIn) {
+    memcpy(std::begin(pchMessageStart), std::begin(pchMessageStartIn),
+           MESSAGE_START_SIZE);
     memset(pchCommand, 0, sizeof(pchCommand));
     nMessageSize = -1;
-    nChecksum = 0;
+    memset(pchChecksum, 0, CHECKSUM_SIZE);
 }
 
-CMessageHeader::CMessageHeader(const MessageStartChars& pchMessageStartIn, const char* pszCommand, unsigned int nMessageSizeIn)
-{
-    memcpy(pchMessageStart, pchMessageStartIn, MESSAGE_START_SIZE);
+CMessageHeader::CMessageHeader(const MessageMagic &pchMessageStartIn,
+                               const char *pszCommand,
+                               unsigned int nMessageSizeIn) {
+    memcpy(std::begin(pchMessageStart), std::begin(pchMessageStartIn),
+           MESSAGE_START_SIZE);
     memset(pchCommand, 0, sizeof(pchCommand));
     strncpy(pchCommand, pszCommand, COMMAND_SIZE);
     nMessageSize = nMessageSizeIn;
-    nChecksum = 0;
+    memset(pchChecksum, 0, CHECKSUM_SIZE);
 }
 
-std::string CMessageHeader::GetCommand() const
-{
-    return std::string(pchCommand, pchCommand + strnlen(pchCommand, COMMAND_SIZE));
+std::string CMessageHeader::GetCommand() const {
+    return std::string(pchCommand,
+                       pchCommand + strnlen(pchCommand, COMMAND_SIZE));
 }
 
-bool CMessageHeader::IsValid(const MessageStartChars& pchMessageStartIn) const
-{
+bool CMessageHeader::IsValid(const MessageMagic &pchMessageStartIn) const {
     // Check start string
-    if (memcmp(pchMessageStart, pchMessageStartIn, MESSAGE_START_SIZE) != 0)
+    if (memcmp(std::begin(pchMessageStart), std::begin(pchMessageStartIn),
+               MESSAGE_START_SIZE) != 0) {
         return false;
+    }
 
     // Check the command string for errors
-    for (const char* p1 = pchCommand; p1 < pchCommand + COMMAND_SIZE; p1++)
-    {
-        if (*p1 == 0)
-        {
+    for (const char *p1 = pchCommand; p1 < pchCommand + COMMAND_SIZE; p1++) {
+        if (*p1 == 0) {
             // Must be all zeros after the first zero
-            for (; p1 < pchCommand + COMMAND_SIZE; p1++)
-                if (*p1 != 0)
+            for (; p1 < pchCommand + COMMAND_SIZE; p1++) {
+                if (*p1 != 0) {
                     return false;
-        }
-        else if (*p1 < ' ' || *p1 > 0x7E)
+                }
+            }
+        } else if (*p1 < ' ' || *p1 > 0x7E) {
             return false;
+        }
     }
 
     // Message size
-    if (nMessageSize > MAX_SIZE)
-    {
-        LogPrintf("CMessageHeader::IsValid(): (%s, %u bytes) nMessageSize > MAX_SIZE\n", GetCommand(), nMessageSize);
+    if (nMessageSize > MAX_SIZE) {
+        LogPrintf("CMessageHeader::IsValid(): (%s, %u bytes) nMessageSize > "
+                  "MAX_SIZE\n",
+                  GetCommand(), nMessageSize);
         return false;
     }
 
     return true;
 }
-
-
 
 CAddress::CAddress() : CService()
 {

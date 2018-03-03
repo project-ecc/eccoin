@@ -1,6 +1,12 @@
 #include <boost/thread.hpp>
 #include <boost/foreach.hpp>
-
+#include <boost/range/adaptor/reversed.hpp>
+#include <atomic>
+#include <sstream>
+#include <boost/algorithm/string/join.hpp>
+#include <boost/algorithm/string/replace.hpp>
+#include <boost/filesystem/fstream.hpp>
+#include <boost/math/distributions/poisson.hpp>
 
 #include "checkqueue.h"
 #include "processblock.h"
@@ -51,6 +57,80 @@ public:
     }
 };
 
+struct PerBlockConnectTrace
+{
+    CBlockIndex *pindex = nullptr;
+    std::shared_ptr<const CBlock> pblock;
+    std::shared_ptr<std::vector<CTransactionRef>> conflictedTxs;
+    PerBlockConnectTrace(): conflictedTxs(std::make_shared<std::vector<CTransactionRef>>()) {}
+};
+
+/**
+ * Used to track blocks whose transactions were applied to the UTXO state as a
+ * part of a single ActivateBestChainStep call.
+ *
+ * This class also tracks transactions that are removed from the mempool as
+ * conflicts (per block) and can be used to pass all those transactions through
+ * SyncTransaction.
+ *
+ * This class assumes (and asserts) that the conflicted transactions for a given
+ * block are added via mempool callbacks prior to the BlockConnected()
+ * associated with those transactions. If any transactions are marked
+ * conflicted, it is assumed that an associated block will always be added.
+ *
+ * This class is single-use, once you call GetBlocksConnected() you have to
+ * throw it away and make a new one.
+ */
+class ConnectTrace {
+private:
+    std::vector<PerBlockConnectTrace> blocksConnected;
+    CTxMemPool &pool;
+
+public:
+    ConnectTrace(CTxMemPool &_pool) : blocksConnected(1), pool(_pool)
+    {
+        pool.NotifyEntryRemoved.connect(boost::bind(&ConnectTrace::NotifyEntryRemoved, this, _1, _2));
+    }
+
+    ~ConnectTrace()
+    {
+        pool.NotifyEntryRemoved.disconnect(boost::bind(&ConnectTrace::NotifyEntryRemoved, this, _1, _2));
+    }
+
+    void BlockConnected(CBlockIndex *pindex,
+                        std::shared_ptr<const CBlock> pblock) {
+        assert(!blocksConnected.back().pindex);
+        assert(pindex);
+        assert(pblock);
+        blocksConnected.back().pindex = pindex;
+        blocksConnected.back().pblock = std::move(pblock);
+        blocksConnected.emplace_back();
+    }
+
+    std::vector<PerBlockConnectTrace> &GetBlocksConnected()
+    {
+        // We always keep one extra block at the end of our list because blocks
+        // are added after all the conflicted transactions have been filled in.
+        // Thus, the last entry should always be an empty one waiting for the
+        // transactions from the next block. We pop the last entry here to make
+        // sure the list we return is sane.
+        assert(!blocksConnected.back().pindex);
+        assert(blocksConnected.back().conflictedTxs->empty());
+        blocksConnected.pop_back();
+        return blocksConnected;
+    }
+
+    void NotifyEntryRemoved(CTransactionRef txRemoved, MemPoolRemovalReason reason)
+    {
+        assert(!blocksConnected.back().pindex);
+        if (reason == MemPoolRemovalReason::CONFLICT)
+        {
+            blocksConnected.back().conflictedTxs->emplace_back(std::move(txRemoved));
+        }
+    }
+};
+
+
 /** Store block on disk. If dbp is non-NULL, the file is known to already reside on disk */
 bool AcceptBlock(const CBlock& block, CValidationState& state, const CNetworkTemplate& chainparams, CBlockIndex** ppindex, bool fRequested, CDiskBlockPos* dbp)
 {
@@ -90,6 +170,16 @@ bool AcceptBlock(const CBlock& block, CValidationState& state, const CNetworkTem
         return false;
     }
 
+    // Header is valid/has work, merkle tree and segwit merkle tree are
+    // good...RELAY NOW (but if it does not build on our best tip, let the
+    // SendMessages loop relay it)
+    if (!pnetMan->getActivePaymentNetwork()->getChainManager()->IsInitialBlockDownload() && pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip() == pindex->pprev)
+    {
+        const std::shared_ptr<const CBlock> pblock(&block);
+        GetMainSignals().NewPoWValidBlock(pindex, pblock);
+    }
+
+
     int nHeight = pindex->nHeight;
 
     // Write block to history file
@@ -112,7 +202,7 @@ bool AcceptBlock(const CBlock& block, CValidationState& state, const CNetworkTem
     return true;
 }
 
-bool ProcessNewBlock(CValidationState& state, const CNetworkTemplate& chainparams, const CNode* pfrom, const CBlock* pblock, bool fForceProcessing, CDiskBlockPos* dbp, BlockOrigin origin)
+bool ProcessNewBlock(CValidationState& state, const CNetworkTemplate& chainparams, const CNode* pfrom, const std::shared_ptr<const CBlock> pblock, bool fForceProcessing, CDiskBlockPos* dbp, BlockOrigin origin)
 {
     // Preliminary checks
     bool checked = CheckBlock(*pblock, state);
@@ -128,13 +218,12 @@ bool ProcessNewBlock(CValidationState& state, const CNetworkTemplate& chainparam
         // Store to disk
         CBlockIndex *pindex = NULL;
         bool ret = AcceptBlock(*pblock, state, chainparams, &pindex, fRequested, dbp);
-        if (pindex && pfrom)
-        {
-            mapBlockSource[pindex->GetBlockHash()] = pfrom->GetId();
-        }
         CheckBlockIndex(chainparams.GetConsensus());
         if (!ret)
+        {
+            GetMainSignals().BlockChecked(*pblock, state);
             return error("%s: AcceptBlock FAILED", __func__);
+        }
     }
 
     if (!ActivateBestChain(state, chainparams, origin, pblock))
@@ -145,7 +234,6 @@ bool ProcessNewBlock(CValidationState& state, const CNetworkTemplate& chainparam
     {
         removeImpossibleChainTips();
     }
-
     return true;
 }
 
@@ -211,7 +299,8 @@ bool DisconnectTip(CValidationState& state, const Consensus::Params& consensusPa
     CBlockIndex *pindexDelete = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
     assert(pindexDelete);
     // Read block from disk.
-    CBlock block;
+    std::shared_ptr<CBlock> pblock = std::make_shared<CBlock>();
+    CBlock &block = *pblock;
     if (!ReadBlockFromDisk(block, pindexDelete, consensusParams))
         return AbortNode(state, "Failed to read block");
     // Apply the block atomically to the chain state.
@@ -248,9 +337,7 @@ bool DisconnectTip(CValidationState& state, const Consensus::Params& consensusPa
     UpdateTip(pindexDelete->pprev);
     // Let wallets know transactions went from 1-confirmed to
     // 0-confirmed or conflicted:
-    for (auto const& tx: block.vtx) {
-        SyncWithWallets(tx, NULL);
-    }
+    GetMainSignals().BlockDisconnected(pblock);
     return true;
 }
 
@@ -266,25 +353,36 @@ static int64_t nTimeTotal = 0;
  * Connect a new block to chainActive. pblock is either NULL or a pointer to a CBlock
  * corresponding to pindexNew, to bypass loading it again from disk.
  */
-bool ConnectTip(CValidationState& state, const CNetworkTemplate& chainparams, CBlockIndex* pindexNew, const CBlock* pblock, BlockOrigin origin)
+bool ConnectTip(CValidationState& state, const CNetworkTemplate& chainparams, CBlockIndex* pindexNew, const std::shared_ptr<const CBlock> &pblock, BlockOrigin origin, ConnectTrace &connectTrace)
 {
     assert(pindexNew->pprev == pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip());
     // Read block from disk.
     int64_t nTime1 = GetTimeMicros();
-    CBlock block;
+
+    std::shared_ptr<const CBlock> pthisBlock;
     if (!pblock) {
-        if (!ReadBlockFromDisk(block, pindexNew, chainparams.GetConsensus()))
+        std::shared_ptr<CBlock> pblockNew = std::make_shared<CBlock>();
+        if (!ReadBlockFromDisk(*pblockNew, pindexNew, chainparams.GetConsensus()))
+        {
             return AbortNode(state, "Failed to read block");
-        pblock = &block;
+        }
+        pthisBlock = pblockNew;
     }
+    else
+    {
+        pthisBlock = pblock;
+    }
+
+    const CBlock &blockConnecting = *pthisBlock;
+
     // Apply the block atomically to the chain state.
     int64_t nTime2 = GetTimeMicros(); nTimeReadFromDisk += nTime2 - nTime1;
     int64_t nTime3;
     LogPrint("bench", "  - Load block from disk: %.2fms [%.2fs]\n", (nTime2 - nTime1) * 0.001, nTimeReadFromDisk * 0.000001);
     {
         CCoinsViewCache view(pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.get());
-        bool rv = ConnectBlock(*pblock, state, pindexNew, view);
-        GetMainSignals().BlockChecked(*pblock, state);
+        bool rv = ConnectBlock(blockConnecting, state, pindexNew, view);
+        GetMainSignals().BlockChecked(blockConnecting, state);
         if (!rv)
         {
             if (state.IsInvalid())
@@ -297,7 +395,6 @@ bool ConnectTip(CValidationState& state, const CNetworkTemplate& chainparams, CB
             }
             return error("ConnectTip(): ConnectBlock %s failed", pindexNew->GetBlockHash().ToString());
         }
-        mapBlockSource.erase(pindexNew->GetBlockHash());
         nTime3 = GetTimeMicros(); nTimeConnectTotal += nTime3 - nTime2;
         LogPrint("bench", "  - Connect total: %.2fms [%.2fs]\n", (nTime3 - nTime2) * 0.001, nTimeConnectTotal * 0.000001);
         assert(view.Flush());
@@ -311,22 +408,15 @@ bool ConnectTip(CValidationState& state, const CNetworkTemplate& chainparams, CB
     LogPrint("bench", "  - Writing chainstate: %.2fms [%.2fs]\n", (nTime5 - nTime4) * 0.001, nTimeChainState * 0.000001);
     // Remove conflicting transactions from the mempool.
     std::list<CTransaction> txConflicted;
-    mempool.removeForBlock(pblock->vtx, pindexNew->nHeight, txConflicted, !pnetMan->getActivePaymentNetwork()->getChainManager()->IsInitialBlockDownload());
+    mempool.removeForBlock(blockConnecting.vtx, pindexNew->nHeight, txConflicted, !pnetMan->getActivePaymentNetwork()->getChainManager()->IsInitialBlockDownload());
     // Update chainActive & related variables.
     UpdateTip(pindexNew);
-    // Tell wallet about transactions that went from mempool
-    // to conflicted:
-    for (auto const& tx: txConflicted) {
-        SyncWithWallets(tx, NULL);
-    }
-    // ... and about transactions that got confirmed:
-    for (auto const& tx: pblock->vtx) {
-        SyncWithWallets(tx, pblock);
-    }
 
     int64_t nTime6 = GetTimeMicros(); nTimePostConnect += nTime6 - nTime5; nTimeTotal += nTime6 - nTime1;
     LogPrint("bench", "  - Connect postprocess: %.2fms [%.2fs]\n", (nTime6 - nTime5) * 0.001, nTimePostConnect * 0.000001);
     LogPrint("bench", "- Connect block: %.2fms [%.2fs]\n", (nTime6 - nTime1) * 0.001, nTimeTotal * 0.000001);
+
+    connectTrace.BlockConnected(pindexNew, std::move(pthisBlock));
     return true;
 }
 
@@ -408,7 +498,7 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
  * Try to make some progress towards making pindexMostWork the active block.
  * pblock is either NULL or a pointer to a CBlock corresponding to pindexMostWork.
  */
- bool ActivateBestChainStep(CValidationState& state, const CNetworkTemplate& chainparams, CBlockIndex* pindexMostWork, const CBlock* pblock, BlockOrigin origin)
+ bool ActivateBestChainStep(CValidationState& state, const CNetworkTemplate& chainparams, CBlockIndex* pindexMostWork, const std::shared_ptr<const CBlock> &pblock, BlockOrigin origin, ConnectTrace &connectTrace)
 {
     AssertLockHeld(cs_main);
     bool fInvalidFound = false;
@@ -451,8 +541,9 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
         nHeight = nTargetHeight;
 
         // Connect new blocks.
-        BOOST_REVERSE_FOREACH(CBlockIndex *pindexConnect, vpindexToConnect) {
-            if (!ConnectTip(state, chainparams, pindexConnect, pindexConnect == pindexMostWork ? pblock : NULL, origin))
+        BOOST_REVERSE_FOREACH(CBlockIndex *pindexConnect, vpindexToConnect) 
+        {
+            if (!ConnectTip(state, chainparams, pindexConnect, pindexConnect == pindexMostWork ? pblock : NULL, origin, connectTrace))
             {
                 if (state.IsInvalid())
                 {
@@ -482,18 +573,17 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
         }
     }
 
-    if (fBlocksDisconnected) {
+    if (fBlocksDisconnected) 
+    {
         mempool.removeForReorg(pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.get(), pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->nHeight + 1, STANDARD_LOCKTIME_VERIFY_FLAGS);
         LimitMempoolSize(mempool, gArgs.GetArg("-maxmempool", DEFAULT_MAX_MEMPOOL_SIZE) * 1000000, gArgs.GetArg("-mempoolexpiry", DEFAULT_MEMPOOL_EXPIRY) * 60 * 60);
     }
     mempool.check(pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.get());
-
     // Callbacks/notifications for a new best chain.
     if (fInvalidFound)
         CheckForkWarningConditionsOnNewFork(vpindexToConnect.back());
     else
         CheckForkWarningConditions();
-
     return true;
 }
 
@@ -502,7 +592,8 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
  * or an activated best chain. pblock is either NULL or a pointer to a block
  * that is already loaded (to avoid loading it again from disk).
  */
-bool ActivateBestChain(CValidationState &state, const CNetworkTemplate& chainparams, BlockOrigin origin, const CBlock *pblock) {
+bool ActivateBestChain(CValidationState &state, const CNetworkTemplate& chainparams, BlockOrigin origin, const std::shared_ptr<const CBlock> pblock)
+{
     CBlockIndex *pindexMostWork = NULL;
     do {
         boost::this_thread::interruption_point();
@@ -513,7 +604,11 @@ bool ActivateBestChain(CValidationState &state, const CNetworkTemplate& chainpar
         const CBlockIndex *pindexFork;
         bool fInitialDownload;
         {
-            LOCK(cs_main);
+            LOCK(cs_main);            
+
+            // Destructed before cs_main is unlocked.
+            ConnectTrace connectTrace(mempool);
+
             CBlockIndex *pindexOldTip = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
             pindexMostWork = FindMostWorkChain();
 
@@ -521,7 +616,7 @@ bool ActivateBestChain(CValidationState &state, const CNetworkTemplate& chainpar
             if (pindexMostWork == NULL || pindexMostWork == pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip())
                 return true;
 
-            if (!ActivateBestChainStep(state, chainparams, pindexMostWork, pblock && pblock->GetHash() == pindexMostWork->GetBlockHash() ? pblock : NULL, origin))
+            if (!ActivateBestChainStep(state, chainparams, pindexMostWork, pblock && pblock->GetHash() == pindexMostWork->GetBlockHash() ? pblock : NULL, origin, connectTrace))
                 return false;
 
             pindexNewTip = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
@@ -536,36 +631,42 @@ bool ActivateBestChain(CValidationState &state, const CNetworkTemplate& chainpar
         {
             uiInterface.NotifyBlockTip(fInitialDownload, pindexNewTip);
 
-            if (!fInitialDownload) {
+            if (!fInitialDownload) 
+            {
                 // Find the hashes of all blocks that weren't previously in the best chain.
                 std::vector<uint256> vHashes;
                 CBlockIndex *pindexToAnnounce = pindexNewTip;
-                while (pindexToAnnounce != pindexFork) {
+                while (pindexToAnnounce != pindexFork) 
+                {
                     vHashes.push_back(pindexToAnnounce->GetBlockHash());
                     pindexToAnnounce = pindexToAnnounce->pprev;
-                    if (vHashes.size() == MAX_BLOCKS_TO_ANNOUNCE) {
+                    if (vHashes.size() == MAX_BLOCKS_TO_ANNOUNCE) 
+                    {
                         // Limit announcements in case of a huge reorganization.
                         // Rely on the peer's synchronization mechanism in that case.
                         break;
                     }
                 }
-                // Relay inventory, but don't relay old inventory during initial block download.
-                int nBlockEstimate = 0;
-                if (fCheckpointsEnabled)
-                    nBlockEstimate = Checkpoints::GetTotalBlocksEstimate(chainparams.Checkpoints());
+                // Relay inventory, but don't relay old inventory during initial block
+                // download.
+                const int nNewHeight = pindexNewTip->nHeight;
+                g_connman->ForEachNode([nNewHeight, &vHashes](CNode *pnode) 
                 {
-                    LOCK(cs_vNodes);
-                    for (auto* pnode: vNodes) {
-                        if (pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height() > (pnode->nStartingHeight != -1 ? pnode->nStartingHeight - 2000 : nBlockEstimate)) {
-                            BOOST_REVERSE_FOREACH(const uint256& hash, vHashes) {
-                                pnode->PushBlockHash(hash);
-                            }
+                    if (nNewHeight > (pnode->nStartingHeight != -1
+                                          ? pnode->nStartingHeight - 2000
+                                          : 0)) 
+                    {
+                        for (const uint256 &hash : boost::adaptors::reverse(vHashes)) 
+                        {
+                            pnode->PushBlockHash(hash);
                         }
                     }
-                }
+                });
+                g_connman->WakeMessageHandler();
                 // Notify external listeners about the new tip.
-                if (!vHashes.empty()) {
-                    GetMainSignals().UpdatedBlockTip(pindexNewTip);
+                if (!vHashes.empty()) 
+                {
+                    GetMainSignals().UpdatedBlockTip(pindexNewTip, pindexFork, fInitialDownload);
                 }
             }
         }
@@ -576,7 +677,6 @@ bool ActivateBestChain(CValidationState &state, const CNetworkTemplate& chainpar
     if (!FlushStateToDisk(state, FLUSH_STATE_PERIODIC)) {
         return false;
     }
-
     return true;
 }
 
@@ -835,19 +935,6 @@ void InvalidChainFound(CBlockIndex* pindexNew)
 
 void InvalidBlockFound(CBlockIndex *pindex, const CValidationState &state)
 {
-    int nDoS = 0;
-    if (state.IsInvalid(nDoS))
-    {
-        std::map<uint256, NodeId>::iterator it = mapBlockSource.find(pindex->GetBlockHash());
-        if (it != mapBlockSource.end() && State(it->second))
-        {
-            assert (state.GetRejectCode() < REJECT_INTERNAL); // Blocks are never rejected with internal reject codes
-            CBlockReject reject = {(unsigned char)state.GetRejectCode(), state.GetRejectReason().substr(0, MAX_REJECT_MESSAGE_LENGTH), pindex->GetBlockHash()};
-            State(it->second)->rejects.push_back(reject);
-            if (nDoS > 0)
-                Misbehaving(it->second, nDoS);
-        }
-    }
     if (!state.CorruptionPossible()) {
         pindex->nStatus |= BLOCK_FAILED_VALID;
         setDirtyBlockIndex.insert(pindex);
@@ -886,7 +973,7 @@ bool FindUndoPos(CValidationState &state, int nFile, CDiskBlockPos &pos, unsigne
     return true;
 }
 
-bool UndoWriteToDisk(const CBlockUndo& blockundo, CDiskBlockPos& pos, const uint256& hashBlock, const CMessageHeader::MessageStartChars& messageStart)
+bool UndoWriteToDisk(const CBlockUndo& blockundo, CDiskBlockPos& pos, const uint256& hashBlock, const CMessageHeader::MessageMagic& messageStart)
 {
     // Open history file to append
     CAutoFile fileout(OpenUndoFile(pos), SER_DISK, CLIENT_VERSION);
@@ -1242,12 +1329,6 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 
     int64_t nTime5 = GetTimeMicros(); nTimeIndex += nTime5 - nTime4;
     LogPrint("bench", "    - Index writing: %.2fms [%.2fs]\n", 0.001 * (nTime5 - nTime4), nTimeIndex * 0.000001);
-
-    // Watch for changes to the previous coinbase transaction.
-    static uint256 hashPrevBestCoinBase;
-    GetMainSignals().UpdatedTransaction(hashPrevBestCoinBase);
-    hashPrevBestCoinBase = block.vtx[0].GetHash();
-
     int64_t nTime6 = GetTimeMicros(); nTimeCallbacks += nTime6 - nTime5;
     LogPrint("bench", "    - Callbacks: %.2fms [%.2fs]\n", 0.001 * (nTime6 - nTime5), nTimeCallbacks * 0.000001);
 

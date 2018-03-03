@@ -23,6 +23,7 @@
 #include "consensus/merkle.h"
 #include "processblock.h"
 #include "networks/netman.h"
+#include "net.h"
 
 #include <boost/thread.hpp>
 #include <openssl/sha.h>
@@ -482,7 +483,7 @@ void FormatHashBuffers(CBlock* pblock, char* pmidstate, char* pdata, char* phash
 }
 
 
-bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reservekey)
+bool CheckWork(const std::shared_ptr<const CBlock> pblock, CWallet& wallet, CReserveKey& reservekey)
 {
     arith_uint256 hash = UintToArith256(pblock->GetHash());
     arith_uint256 hashTarget = UintToArith256(CBigNum().SetCompact(pblock->nBits).getuint256());
@@ -520,8 +521,6 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reservekey)
     return true;
 }
 
-void ThreadBitcoinMiner(void* parg);
-
 void ScryptMiner(CWallet *pwallet)
 {
     void *scratchbuf = scrypt_buffer_alloc();
@@ -540,7 +539,13 @@ void ScryptMiner(CWallet *pwallet)
     {
         if (fShutdown)
             return;
-        while (vNodes.empty() || vNodes.size() < 6 || pnetMan->getActivePaymentNetwork()->getChainManager()->IsInitialBlockDownload())
+        if(!g_connman)
+        {
+            MilliSleep(1000);
+            if (fShutdown)
+                return;
+        }
+        while (g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL) < 6 || pnetMan->getActivePaymentNetwork()->getChainManager()->IsInitialBlockDownload())
         {
             MilliSleep(1000);
             if (fShutdown)
@@ -567,6 +572,7 @@ void ScryptMiner(CWallet *pwallet)
             return;
         }
         CBlock *pblock = &pblocktemplate->block;
+        const std::shared_ptr<const CBlock> spblock(pblock);
 
         IncrementExtraNonce(pblock, pindexPrev, nExtraNonce);
 
@@ -582,7 +588,7 @@ void ScryptMiner(CWallet *pwallet)
                 strMintWarning = "";
                 LogPrintf("CPUMiner : proof-of-stake block found %s\n", pblock->GetHash().ToString().c_str());
                 SetThreadPriority(THREAD_PRIORITY_NORMAL);
-                CheckWork(pblock, *pwalletMain, reservekey);
+                CheckWork(spblock, *pwalletMain, reservekey);
                 SetThreadPriority(THREAD_PRIORITY_LOWEST);
             }
             MilliSleep(1000); // 1 second delay
@@ -645,7 +651,7 @@ void ScryptMiner(CWallet *pwallet)
                     strMintWarning = "";
 
                     SetThreadPriority(THREAD_PRIORITY_NORMAL);
-                    CheckWork(pblock, *pwalletMain, reservekey);
+                    CheckWork(spblock, *pwalletMain, reservekey);
                     SetThreadPriority(THREAD_PRIORITY_LOWEST);
                     break;
                 }
@@ -677,7 +683,7 @@ void ScryptMiner(CWallet *pwallet)
             // Check for stop or if block needs to be rebuilt
             if (fShutdown)
                 return;
-            if (vNodes.empty())
+            if (g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL))
                 break;
             if (nBlockNonce >= 0xffff0000)
                 break;
@@ -700,16 +706,22 @@ void ScryptMiner(CWallet *pwallet)
     scrypt_buffer_free(scratchbuf);
 }
 
-boost::thread_group* minerThreads = NULL;
+boost::thread_group* minerThreads = nullptr;
 
-void ThreadScryptMiner(void* parg)
+void ThreadScryptMiner(void* parg, bool shutdownOnly)
 {
 
-    if (minerThreads != NULL)
+    if (minerThreads != nullptr)
     {
         minerThreads->interrupt_all();
         delete minerThreads;
-        minerThreads = NULL;
+        minerThreads = nullptr;
+        LogPrintf("CPUMiner stopped for proof-of-%s\n", "stake");
+        return;
+    }
+    if(shutdownOnly)
+    {
+        LogPrintf("CPUMiner stopped for proof-of-%s\n", "stake");
         return;
     }
 

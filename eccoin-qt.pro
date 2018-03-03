@@ -291,7 +291,6 @@ HEADERS += \
     src/crypto/hash.h \
     src/chain/checkpoints.h \
     src/chain/chainman.h \
-    src/signals.h \
     src/networks/networktemplate.h \
     src/tx/servicetx.h \
     src/crypto/chacha20.h \
@@ -299,7 +298,11 @@ HEADERS += \
     src/verifydb.h \
     src/rpc/events.h \
     src/ans/ans.h \
-    src/ans/ansrecord.h
+    src/ans/ansrecord.h \
+    src/addrdb.h \
+    src/threadinterrupt.h \
+    src/netaddress.h \
+    src/netmessagemaker.h
 
 
 # organize compiles of cpp files by section, this seems to be a logical order where the files lower down generally depend
@@ -404,14 +407,16 @@ SOURCES += \
     src/crypto/hash.cpp \
     src/chain/checkpoints.cpp \
     src/chain/chainman.cpp \
-    src/signals.cpp \
     src/eccoind.cpp \
     src/tx/servicetx.cpp \
     src/crypto/chacha20.cpp \
     src/processtx.cpp \
     src/verifydb.cpp \
     src/ans/ans.cpp \
-    src/ans/ansrecord.cpp
+    src/ans/ansrecord.cpp \
+    src/addrdb.cpp \
+    src/threadinterrupt.cpp \
+    src/netaddress.cpp
 
 
 

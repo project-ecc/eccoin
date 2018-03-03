@@ -219,9 +219,11 @@ OBJS= \
     build/univalue/univalue_write.o \
     build/pbkdf2.o \
     build/script/stakescript.o \
-    build/signals.o \
     build/processtx.o \
-    build/verifydb.o
+    build/verifydb.o \
+    build/addrdb.o \
+    build/threadinterrupt.o \
+    build/netaddress.o
 
 
 

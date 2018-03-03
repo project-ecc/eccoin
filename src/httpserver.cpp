@@ -205,18 +205,27 @@ static bool ClientAllowed(const CNetAddr& netaddr)
 }
 
 /** Initialize ACL list for HTTP server */
-static bool InitHTTPAllowList()
-{
+static bool InitHTTPAllowList() {
     rpc_allow_subnets.clear();
-    rpc_allow_subnets.push_back(CSubNet("127.0.0.0/8")); // always allow IPv4 local subnet
-    rpc_allow_subnets.push_back(CSubNet("::1"));         // always allow IPv6 localhost
+    CNetAddr localv4;
+    CNetAddr localv6;
+    LookupHost("127.0.0.1", localv4, false);
+    LookupHost("::1", localv6, false);
+    // always allow IPv4 local subnet.
+    rpc_allow_subnets.push_back(CSubNet(localv4, 8));
+    // always allow IPv6 localhost.
+    rpc_allow_subnets.push_back(CSubNet(localv6));
     if (gArgs.IsArgSet("-rpcallowip")) {
-        const std::vector<std::string>& vAllow = gArgs.GetArgs("-rpcallowip");
-        for (auto strAllow: vAllow) {
-            CSubNet subnet(strAllow);
+        for (const std::string &strAllow : gArgs.GetArgs("-rpcallowip")) {
+            CSubNet subnet;
+            LookupSubNet(strAllow.c_str(), subnet);
             if (!subnet.IsValid()) {
                 uiInterface.ThreadSafeMessageBox(
-                    strprintf("Invalid -rpcallowip subnet specification: %s. Valid are a single IP (e.g. 1.2.3.4), a network/netmask (e.g. 1.2.3.4/255.255.255.0) or a network/CIDR (e.g. 1.2.3.4/24).", strAllow),
+                    strprintf("Invalid -rpcallowip subnet specification: %s. "
+                              "Valid are a single IP (e.g. 1.2.3.4), a "
+                              "network/netmask (e.g. 1.2.3.4/255.255.255.0) or "
+                              "a network/CIDR (e.g. 1.2.3.4/24).",
+                              strAllow),
                     "", CClientUIInterface::MSG_ERROR);
                 return false;
             }
@@ -224,9 +233,9 @@ static bool InitHTTPAllowList()
         }
     }
     std::string strAllowed;
-    for (auto const& subnet: rpc_allow_subnets)
+    for (const CSubNet &subnet : rpc_allow_subnets)
         strAllowed += subnet.ToString() + " ";
-    LogPrint("http", "Allowing HTTP connections from: %s\n", strAllowed);
+    LogPrintf("Allowing HTTP connections from: %s\n", strAllowed);
     return true;
 }
 
@@ -612,16 +621,15 @@ void HTTPRequest::WriteReply(int nStatus, const std::string& strReply)
     req = 0; // transferred back to main thread
 }
 
-CService HTTPRequest::GetPeer()
-{
-    evhttp_connection* con = evhttp_request_get_connection(req);
+CService HTTPRequest::GetPeer() {
+    evhttp_connection *con = evhttp_request_get_connection(req);
     CService peer;
     if (con) {
         // evhttp retains ownership over returned address string
-        const char* address = "";
+        const char *address = "";
         uint16_t port = 0;
-        evhttp_connection_get_peer(con, (char**)&address, &port);
-        peer = CService(address, port);
+        evhttp_connection_get_peer(con, (char **)&address, &port);
+        peer = LookupNumeric(address, port);
     }
     return peer;
 }
