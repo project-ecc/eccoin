@@ -7,13 +7,14 @@
 
 #include <string>
 #include "uint256.h"
+#include "serialize.h"
 
 enum AnsRecordTypes{
     A_RECORD, // name to address
     CNAME_RECORD, // name to name
     PTR_RECORD, // address to name
 
-    UNKNOWN_RECORD,
+    UNKNOWN_RECORD, // ???
 };
 
 class CAnsRecord
@@ -36,6 +37,15 @@ public:
         this->paymentHash = _paymentHash;
         this->serviceHash = _serviceHash;
     }
+
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITE(value);
+        READWRITE(expireTime);
+        READWRITE(paymentHash);
+        READWRITE(serviceHash);
+    }
+
 
     friend bool operator==(const CAnsRecord& a, const CAnsRecord& b)
     {
