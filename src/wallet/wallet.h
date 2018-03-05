@@ -10,6 +10,7 @@
 #include "net.h"
 #include "streams.h"
 #include "tinyformat.h"
+#include "tx/servicetx.h"
 #include "ui_interface.h"
 #include "util/utilstrencodings.h"
 #include "validationinterface.h"
@@ -679,7 +680,16 @@ public:
      */
     bool CreateTransaction(const std::vector<CRecipient>& vecSend, CWalletTx& wtxNew, CReserveKey& reservekey, CAmount& nFeeRet, int& nChangePosRet,
                            std::string& strFailReason, const CCoinControl *coinControl = NULL, bool sign = true);
-    bool CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey, CConnman *connman, CValidationState &state);
+
+    /**
+     * Create a new transaction paying a set amount of coins for a service
+     * There should be no change output. receipient will it itself so that address still owns the service item being paid for
+     */
+    bool CreateTransactionForService(const CRecipient& recipient, CWalletTx& wtxNew, CReserveKey& reservekey, CAmount& nFeeRequired,
+                           std::string& strFailReason, bool sign = true);
+
+    bool CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey);
+    bool CommitTransactionForService(CWalletTx& wtxNew, CServiceTransaction& stxNew, CReserveKey& reservekey);
 
     bool AddAccountingEntry(const CAccountingEntry&, CWalletDB & pwalletdb);
 
