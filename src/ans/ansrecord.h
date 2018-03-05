@@ -38,6 +38,8 @@ public:
         this->serviceHash = _serviceHash;
     }
 
+    ADD_SERIALIZE_METHODS
+
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(value);
@@ -53,6 +55,14 @@ public:
                a.expireTime == b.expireTime &&
                a.paymentHash == b.paymentHash &&
                a.serviceHash == b.serviceHash;
+    }
+
+    friend bool operator!=(const CAnsRecord& a, const CAnsRecord& b)
+    {
+        return a.value != b.value ||
+               a.expireTime != b.expireTime ||
+               a.paymentHash != b.paymentHash ||
+               a.serviceHash != b.serviceHash;
     }
 
     void setNull();

@@ -1331,6 +1331,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                 }
 
                 /// once we have loaded the main chain, load the services
+                pansMain = new CAnsZone();
                 g_ans.reset();
                 g_ans.reset(new CServiceDB("ans", nBlockTreeDBCache, false, false));
 
