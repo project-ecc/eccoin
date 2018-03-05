@@ -7,23 +7,19 @@
 
 #include "ansrecord.h"
 
+#include "service_leveldb.h"
+
 #include <string>
 #include <unordered_map>
+#include <memory>
 
-typedef std::unordered_map<std::string, CAnsRecord> recordSet;
+extern std::unique_ptr<CServiceDB> g_ans;
 
 class CAnsZone
 {
-private:
-    recordSet A;
-    recordSet CNAME;
-    recordSet PTR;
 public:
     bool addRecord(AnsRecordTypes recordType, std::string key, CAnsRecord value);
     CAnsRecord getRecord(AnsRecordTypes recordType, std::string key);
-    recordSet getRecordSet(AnsRecordTypes recordType);
-    uint64_t getRecordSetSize(AnsRecordTypes recordType);
-    void clearRecordSet(AnsRecordTypes recordType);
 };
 
 extern CAnsZone* pansMain;
