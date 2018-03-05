@@ -27,7 +27,6 @@ class CTransaction
 private:
     /** Memory only. */
     const uint256 hash;
-    void UpdateHash() const;
 
 public:
     // Default transaction version.
@@ -162,6 +161,8 @@ public:
     int64_t GetMinFee(unsigned int nBlockSize=1, unsigned int nBytes = 0) const;
     bool GetCoinAge(uint64_t& nCoinAge) const;  // ppcoin: get transaction coin age
     uint64_t GetCoinAge(uint64_t nCoinAge, bool byValue) const;
+
+    void UpdateHash() const;
 };
 
 /** Retrieve a transaction (from memory pool, or from disk, if possible) */
