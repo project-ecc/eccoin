@@ -686,7 +686,7 @@ public:
      * There should be no change output. receipient will it itself so that address still owns the service item being paid for
      */
     bool CreateTransactionForService(const CRecipient& recipient, CWalletTx& wtxNew, CReserveKey& reservekey, CAmount& nFeeRequired,
-                           std::string& strFailReason, bool sign = true);
+                           CAmount& nFeeRet, std::string& strFailReason, bool sign = true);
 
     bool CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey);
     bool CommitTransactionForService(CWalletTx& wtxNew, CServiceTransaction& stxNew, CReserveKey& reservekey);

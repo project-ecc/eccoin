@@ -2338,7 +2338,7 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CWalletT
 }
 
 bool CWallet::CreateTransactionForService(const CRecipient& recipient, CWalletTx& wtxNew, CReserveKey& reservekey, CAmount& nFeeRequired,
-                                          std::string& strFailReason, bool sign)
+                                          CAmount& nFeeRet, std::string& strFailReason, bool sign)
 {
     if (fWalletUnlockStakingOnly)
     {
@@ -2437,7 +2437,7 @@ bool CWallet::CreateTransactionForService(const CRecipient& recipient, CWalletTx
                 // Choose coins to use
                 std::set<std::pair<const CWalletTx*,unsigned int> > setCoins;
                 CAmount nValueIn = 0;
-                if (!SelectCoins(nValueToSelect, setCoins, nValueIn, coinControl))
+                if (!SelectCoins(nValueToSelect, setCoins, nValueIn, nullptr))
                 {
                     strFailReason = _("Insufficient funds");
                     return false;
@@ -2464,12 +2464,11 @@ bool CWallet::CreateTransactionForService(const CRecipient& recipient, CWalletTx
                     {
                         CAmount nDust = newTxOut.GetDustThreshold(::minRelayTxFee) - newTxOut.nValue;
                         newTxOut.nValue += nDust; // raise change until no more dust
-                        for (unsigned int i = 0; i < vecSend.size(); i++) // subtract from first recipient
                         {
-                            if (vecSend[i].fSubtractFeeFromAmount)
+                            if (recipient.fSubtractFeeFromAmount)
                             {
-                                txNew.vout[i].nValue -= nDust;
-                                if (txNew.vout[i].IsDust(::minRelayTxFee))
+                                txNew.vout[0].nValue -= nDust;
+                                if (txNew.vout[0].IsDust(::minRelayTxFee))
                                 {
                                     strFailReason = _("The transaction amount is too small to send after the fee has been deducted");
                                     return false;
@@ -2479,19 +2478,10 @@ bool CWallet::CreateTransactionForService(const CRecipient& recipient, CWalletTx
                         }
                     }
 
-                    // Never create dust outputs; if we would, just
-                    // add the dust to the fee.
-                    if (newTxOut.IsDust(::minRelayTxFee))
+                    // add the dust to the fee since there is no change not that this should ever happen anyway.
                     {
                         nFeeRet += nChange;
                         reservekey.ReturnKey();
-                    }
-                    else
-                    {
-                        // Insert change txn at random position:
-                        nChangePosRet = GetRandInt(txNew.vout.size()+1);
-                        std::vector<CTxOut>::iterator position = txNew.vout.begin()+nChangePosRet;
-                        txNew.vout.insert(position, newTxOut);
                     }
                 }
                 else
@@ -2544,22 +2534,19 @@ bool CWallet::CreateTransactionForService(const CRecipient& recipient, CWalletTx
                     return false;
                 }
 
-                // fee needs to be the required fee but you can pay more i suppose...
-                CAmount nFeeNeeded = nFeeRequired;
-
                 // If we made it here and we aren't even able to meet the relay fee on the next pass, give up
                 // because we must be at the maximum allowed fee.
-                if (nFeeNeeded < ::minRelayTxFee.GetFee(nBytes))
+                if (nFeeRequired < ::minRelayTxFee.GetFee(nBytes))
                 {
                     strFailReason = _("Transaction too large for fee policy");
                     return false;
                 }
 
-                if (nFeeRequired >= nFeeNeeded)
+                if (nFeeRet >= nFeeRequired)
                     break; // Done, enough fee included.
 
                 // Include more fee and try again.
-                nFeeRet = nFeeNeeded;
+                nFeeRet = nFeeRequired;
                 continue;
             }
         }
