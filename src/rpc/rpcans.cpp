@@ -4,9 +4,13 @@
 
 #include "ans/ans.h"
 #include "base58.h"
+#include "main.h"
 #include "rpcserver.h"
 #include "tx/servicetx.h"
+#include "util/utilmoneystr.h"
 #include "wallet/wallet.h"
+
+bool EnsureWalletIsAvailable(bool avoidException);
 
 AnsRecordTypes resolveRecordType(std::string strRecordType)
 {
@@ -74,16 +78,16 @@ UniValue getansrecordset(const UniValue& params, bool fHelp)
 /// TODO : consider passing by reference for getRecord instead of returning a value
 CAnsRecord getRecordUnknownType(std::string strRecordName)
 {
-    CAnsRecord record();
+    CAnsRecord record;
     if(strRecordName.size() <= 25)
     {
-        record = g_ans->getRecord(AnsRecordTypes::A_RECORD, strRecordName);
+        record = pansMain->getRecord(AnsRecordTypes::A_RECORD, strRecordName);
         if(record != CAnsRecord())
         {
            return record;
         }
         record.setNull();
-        record = g_ans->getRecord(AnsRecordTypes::CNAME_RECORD, strRecordName);
+        record = pansMain->getRecord(AnsRecordTypes::CNAME_RECORD, strRecordName);
         if(record != CAnsRecord())
         {
            return record;
@@ -91,7 +95,7 @@ CAnsRecord getRecordUnknownType(std::string strRecordName)
     }
     else
     {
-        record = g_ans->getRecord(AnsRecordTypes::PTR_RECORD, strRecordName);
+        record = pansMain->getRecord(AnsRecordTypes::PTR_RECORD, strRecordName);
         if(record != CAnsRecord())
         {
            return record;
@@ -147,7 +151,7 @@ UniValue getansrecord(const UniValue& params, bool fHelp)
 
 
 
-static void SendMoney(const CTxDestination &address, CAmount nValue, CWalletTx& wtxNew)
+static void SendMoney(const CTxDestination &address, CAmount nValue, CWalletTx& wtxNew, CReserveKey& reservekey, CAmount& nFeeRet)
 {
     CAmount curBalance = pwalletMain->GetBalance();
 
@@ -161,15 +165,13 @@ static void SendMoney(const CTxDestination &address, CAmount nValue, CWalletTx& 
     // Parse Bitcoin address
     CScript scriptPubKey = GetScriptForDestination(address);
 
-    // Create and send the transaction
-    CReserveKey reservekey(pwalletMain);
     // TODO : make an actual fee calculation for services, just use 1 ECC for now for testing purposes
     CAmount nFeeRequired = (1 * COIN);
     std::string strError;
     CRecipient recipient = {scriptPubKey, nValue, false};
-    if (!pwalletMain->CreateTransactionForService(recipient, wtxNew, reservekey, nFeeRequired, strError))
+    if (!pwalletMain->CreateTransactionForService(recipient, wtxNew, reservekey, nFeeRequired, nFeeRet, strError))
     {
-        if (!fSubtractFeeFromAmount && nValue + nFeeRequired > pwalletMain->GetBalance())
+        if (nValue + nFeeRequired > pwalletMain->GetBalance())
         {
             strError = strprintf("Error: This transaction requires a transaction fee of at least %s because of its amount, complexity, or use of recently received funds!", FormatMoney(nFeeRequired));
         }
@@ -177,22 +179,23 @@ static void SendMoney(const CTxDestination &address, CAmount nValue, CWalletTx& 
     }
 }
 
-static void CreateANStransaction(CServiceTransaction& stxnew, CWalletTx& wtxnew, std::string& strUsername)
+static void CreateANStransaction(CServiceTransaction& stxnew, CWalletTx& wtxnew, std::string& strUsername, CAmount& nFeeRet)
 {
     stxnew.nVersion = CServiceTransaction::CURRENT_VERSION;
     stxnew.nServiceId = 0; // 0 is for ANS because pure payment addresses use odd number tx versions
     stxnew.nTime = GetTime();
     stxnew.nOpCode = 0; // for all ANS tx's this fields is 0;
-    stxnew.nLockTime = feepaidTotal; // TODO : some fee calculation here
+
+    /// TODO : Make a real time calculation, this should suffice for testing though.
+    uint32_t lockTime = (60 * 60 * 24 *30); // 30 days
+    lockTime = lockTime * (nFeeRet / 1); // allow payment for multiple months at a time
+    stxnew.nLockTime = lockTime;
     /// TODO : SOME CALCULATION TO GET VERIFICATION CODE base on time and pub key of addr being used
 
-    stxnew.vdata = strUsername; // should just be the username
+    stxnew.vdata = std::vector<unsigned char>(strUsername.begin(), strUsername.end()); // should just be the username
 
     // add service transaction hash to payment hash so it can be rehashed later
     wtxnew.serviceReferenceHash = stxnew.GetHash();
-
-
-
 }
 
 UniValue getansaddress(const UniValue& params, bool fHelp)
@@ -272,13 +275,17 @@ UniValue getansaddress(const UniValue& params, bool fHelp)
     EnsureWalletIsUnlocked();
     CWalletTx wtx;
     CServiceTransaction stx;
-    SendMoney(address.Get(), nAmount, wtx);
-    CreateANStransaction(stx, wtx, strUsername);
+    CAmount nAmount = 0;
+    CAmount nFeeRet = 0;
+    // Create and send the transaction
+    CReserveKey reservekey(pwalletMain);
+    SendMoney(address.Get(), nAmount, wtx, reservekey, nFeeRet);
+    CreateANStransaction(stx, wtx, strUsername, nFeeRet);
     // update the payment hash to include the service transactions hash as a member of its hash
     wtx.UpdateHash();
     // paymentReferenceHash of service transaction must be set AFTER rehashing the payment hash as the rehash of the payment hash will include the hash of the service transaction
     stx.paymentReferenceHash = wtx.GetHash();
-    if (!pwalletMain->CommitTransaction(wtxNew, reservekey))
+    if (!pwalletMain->CommitTransaction(wtx, reservekey))
     {
         throw JSONRPCError(RPC_WALLET_ERROR, "Error: The transaction was rejected! This might happen if some of the coins in your wallet were already spent, such as if you used a copy of wallet.dat and coins were spent in the copy but not marked as spent here.");
     }
