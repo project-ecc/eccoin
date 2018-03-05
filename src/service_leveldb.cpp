@@ -2,7 +2,7 @@
 
 #include "util/util.h"
 
-CServiceDB::CServiceDB(std::string name, size_t nCacheSize, bool fMemory, bool fWipe) : CDBWrapper(GetDataDir() / "services" / + name, nCacheSize, fMemory, fWipe)
+CServiceDB::CServiceDB(std::string name, size_t nCacheSize, bool fMemory, bool fWipe) : CDBWrapper(GetDataDir() / "services" / + name.c_str(), nCacheSize, fMemory, fWipe)
 {
 
 }
@@ -26,24 +26,6 @@ bool CServiceDB::EraseFlag(const char &SERVICE_FLAG, const std::string &name)
     CDBBatch batch(*this);
     batch.Erase(std::make_pair(SERVICE_FLAG,name));
     return WriteBatch(batch);
-}
-
-bool CServiceDB::WriteEntry(const char &SERVICE_FLAG, const std::string &name, void* value)
-{
-    if(SERVICE_FLAG != 'X')
-    {
-        return Write(std::make_pair(SERVICE_FLAG, name), *value);
-    }
-    return Write(name, *value);
-}
-
-bool CServiceDB::ReadEntry(const char &SERVICE_FLAG, const std::string &name, void* value)
-{
-    if(SERVICE_FLAG != 'X')
-    {
-        return Read(std::make_pair(SERVICE_FLAG, name), *value);
-    }
-    return Read(name, *value);
 }
 
 bool CServiceDB::EraseEntry(const char &SERVICE_FLAG, const std::string &name)

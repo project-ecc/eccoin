@@ -26,8 +26,24 @@ public:
     bool ReadFlag(const char &SERVICE_FLAG, const std::string &name, bool &fValue);
     bool EraseFlag(const char &SERVICE_FLAG, const std::string &name);
 
-    bool WriteEntry(const char &SERVICE_FLAG, const std::string &name, void *value);
-    bool ReadEntry(const char &SERVICE_FLAG, const std::string &name, void *value);
+    template <class T>
+    bool WriteEntry(const char &SERVICE_FLAG, const std::string &name, T value)
+    {
+        if(SERVICE_FLAG != 'X')
+        {
+            return Write(std::make_pair(SERVICE_FLAG, name), value);
+        }
+        return Write(name, value);
+    }
+    template <class T>
+    bool ReadEntry(const char &SERVICE_FLAG, const std::string &name, T value)
+    {
+        if(SERVICE_FLAG != 'X')
+        {
+            return Read(std::make_pair(SERVICE_FLAG, name), value);
+        }
+        return Read(name, value);
+    }
     bool EraseEntry(const char &SERVICE_FLAG, const std::string &name);
 };
 
