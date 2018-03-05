@@ -30,6 +30,8 @@ AnsRecordTypes resolveRecordType(std::string strRecordType)
     return recordtype;
 }
 
+/// TODO : Revisit this for possibility later. right now it doesnt seem like this is doable with a db dynamic for all services
+/*
 UniValue getansrecordset(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
@@ -55,7 +57,7 @@ UniValue getansrecordset(const UniValue& params, bool fHelp)
         ret.push_back(Pair("ERROR", "invalid record type requested. Valid record types are: A, CNAME, PTR"));
         return ret;
     }
-    recordSet records = pansMain->getRecordSet(recordtype);
+    recordSet records = g_ans->getRecordSet(recordtype);
     if(records.size() == 0)
     {
         ret.push_back(Pair("ERROR", "the record set requested contains no records"));
@@ -67,7 +69,37 @@ UniValue getansrecordset(const UniValue& params, bool fHelp)
     }
     return ret;
 }
+*/
 
+/// TODO : consider passing by reference for getRecord instead of returning a value
+CAnsRecord getRecordUnknownType(std::string strRecordName)
+{
+    CAnsRecord record();
+    if(strRecordName.size() <= 25)
+    {
+        record = g_ans->getRecord(AnsRecordTypes::A_RECORD, strRecordName);
+        if(record != CAnsRecord())
+        {
+           return record;
+        }
+        record.setNull();
+        record = g_ans->getRecord(AnsRecordTypes::CNAME_RECORD, strRecordName);
+        if(record != CAnsRecord())
+        {
+           return record;
+        }
+    }
+    else
+    {
+        record = g_ans->getRecord(AnsRecordTypes::PTR_RECORD, strRecordName);
+        if(record != CAnsRecord())
+        {
+           return record;
+        }
+    }
+    record.setNull();
+    return record;
+}
 
 UniValue getansrecord(const UniValue& params, bool fHelp)
 {
@@ -98,32 +130,7 @@ UniValue getansrecord(const UniValue& params, bool fHelp)
     }
     else
     {
-        if(strRecordName.size() <= 25)
-        {
-            recordSet Arecords = pansMain->getRecordSet(AnsRecordTypes::A_RECORD);
-            recordSet::iterator Aiter = Arecords.find(strRecordName);
-            if(Aiter != Arecords.end())
-            {
-                record = Aiter->second;
-            }
-            else
-            {
-                recordSet CNAMErecords = pansMain->getRecordSet(AnsRecordTypes::CNAME_RECORD);
-                recordSet::iterator CNAMEiter = CNAMErecords.find(strRecordName);
-                if(CNAMEiter != CNAMErecords.end())
-                {
-                    record = CNAMEiter->second;
-                }
-            }
-        }
-        else
-        {
-            recordSet records = pansMain->getRecordSet(AnsRecordTypes::PTR_RECORD);
-            for ( recordSet::iterator iter = records.begin(); iter != records.end(); ++iter )
-            {
-                ret.push_back(Pair(iter->first, iter->second.getValue()));
-            }
-        }
+        record = getRecordUnknownType(strRecordName);
     }
     if(record == CAnsRecord())
     {
@@ -140,7 +147,7 @@ UniValue getansrecord(const UniValue& params, bool fHelp)
 
 
 
-static void SendMoney(const CTxDestination &address, CAmount nValue, bool fSubtractFeeFromAmount, CWalletTx& wtxNew)
+static void SendMoney(const CTxDestination &address, CAmount nValue, CWalletTx& wtxNew)
 {
     CAmount curBalance = pwalletMain->GetBalance();
 
@@ -156,22 +163,21 @@ static void SendMoney(const CTxDestination &address, CAmount nValue, bool fSubtr
 
     // Create and send the transaction
     CReserveKey reservekey(pwalletMain);
-    CAmount nFeeRequired;
+    // TODO : make an actual fee calculation for services, just use 1 ECC for now for testing purposes
+    CAmount nFeeRequired = (1 * COIN);
     std::string strError;
-    std::vector<CRecipient> vecSend;
-    int nChangePosRet = -1;
-    CRecipient recipient = {scriptPubKey, nValue, fSubtractFeeFromAmount};
-    vecSend.push_back(recipient);
-    if (!pwalletMain->CreateTransaction(vecSend, wtxNew, reservekey, nFeeRequired, nChangePosRet, strError)) {
+    CRecipient recipient = {scriptPubKey, nValue, false};
+    if (!pwalletMain->CreateTransactionForService(recipient, wtxNew, reservekey, nFeeRequired, strError))
+    {
         if (!fSubtractFeeFromAmount && nValue + nFeeRequired > pwalletMain->GetBalance())
+        {
             strError = strprintf("Error: This transaction requires a transaction fee of at least %s because of its amount, complexity, or use of recently received funds!", FormatMoney(nFeeRequired));
+        }
         throw JSONRPCError(RPC_WALLET_ERROR, strError);
     }
-    if (!pwalletMain->CommitTransaction(wtxNew, reservekey))
-        throw JSONRPCError(RPC_WALLET_ERROR, "Error: The transaction was rejected! This might happen if some of the coins in your wallet were already spent, such as if you used a copy of wallet.dat and coins were spent in the copy but not marked as spent here.");
 }
 
-static void CreateANStransaction(CServiceTransaction& stxnew, CAmount feePaid, std::string& strUsername)
+static void CreateANStransaction(CServiceTransaction& stxnew, CWalletTx& wtxnew, std::string& strUsername)
 {
     stxnew.nVersion = CServiceTransaction::CURRENT_VERSION;
     stxnew.nServiceId = 0; // 0 is for ANS because pure payment addresses use odd number tx versions
@@ -181,6 +187,10 @@ static void CreateANStransaction(CServiceTransaction& stxnew, CAmount feePaid, s
     /// TODO : SOME CALCULATION TO GET VERIFICATION CODE base on time and pub key of addr being used
 
     stxnew.vdata = strUsername; // should just be the username
+
+    // add service transaction hash to payment hash so it can be rehashed later
+    wtxnew.serviceReferenceHash = stxnew.GetHash();
+
 
 
 }
@@ -219,7 +229,9 @@ UniValue getansaddress(const UniValue& params, bool fHelp)
     std::string strAddress = params[0].get_str();
     CBitcoinAddress address(strAddress);
     if (!address.IsValid())
+    {
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Bitcoin address");
+    }
     if(!pwalletMain->AddressIsMine(address.Get()))
     {
         throw JSONRPCError(RPC_WALLET_ERROR, "Private key for address " + address.ToString() + " is not known");
@@ -250,6 +262,7 @@ UniValue getansaddress(const UniValue& params, bool fHelp)
     std::string::size_type i = 0;
     while(i<strUsername.length())
     {
+        /// ANS names can only have ascii values in them
         if(isalnum(strUsername[i]) == false)
         {
             throw JSONRPCError(RPC_INVALID_PARAMS, "Username contains invalid charactar. All alphanumeric characters EXCEPT for zero, capital i, capital o, and lowercase L are allowed");
@@ -259,8 +272,16 @@ UniValue getansaddress(const UniValue& params, bool fHelp)
     EnsureWalletIsUnlocked();
     CWalletTx wtx;
     CServiceTransaction stx;
-    CAmount nFeeRequired = SendMoney(address.Get(), nAmount, fSubtractFeeFromAmount, wtx);
-    CreateANStransaction(stx, nFeeRequired, strUsername);
+    SendMoney(address.Get(), nAmount, wtx);
+    CreateANStransaction(stx, wtx, strUsername);
+    // update the payment hash to include the service transactions hash as a member of its hash
+    wtx.UpdateHash();
+    // paymentReferenceHash of service transaction must be set AFTER rehashing the payment hash as the rehash of the payment hash will include the hash of the service transaction
+    stx.paymentReferenceHash = wtx.GetHash();
+    if (!pwalletMain->CommitTransaction(wtxNew, reservekey))
+    {
+        throw JSONRPCError(RPC_WALLET_ERROR, "Error: The transaction was rejected! This might happen if some of the coins in your wallet were already spent, such as if you used a copy of wallet.dat and coins were spent in the copy but not marked as spent here.");
+    }
 
     std::string responseMessage = "The user name " + strUsername + " has been assigned to the address " + strAddress + ""
         " with PaymentHash = " + wtx.GetHash().GetHex() + " and  ServiceHash = " + stx.GetHash().GetHex();
