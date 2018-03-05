@@ -7,6 +7,8 @@
 #include <utility>
 
 std::unique_ptr<CServiceDB> g_ans = nullptr;
+CAnsZone* pansMain = nullptr;
+
 
 static const char A_REC     = 'A';
 static const char CNAME_REC = 'C';
@@ -33,7 +35,8 @@ bool CAnsZone::addRecord(AnsRecordTypes recordType, std::string key, CAnsRecord 
 
 CAnsRecord CAnsZone::getRecord(AnsRecordTypes recordType, std::string key)
 {
-    CAnsRecord* value = new CAnsRecord();
+    CAnsRecord value;
+    value.setNull();
     switch(recordType)
     {
         case A_RECORD:
@@ -54,6 +57,6 @@ CAnsRecord CAnsZone::getRecord(AnsRecordTypes recordType, std::string key)
         default:
             break;
     }
-    return *value;
+    return value;
 }
 
