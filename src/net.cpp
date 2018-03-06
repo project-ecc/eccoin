@@ -78,6 +78,8 @@ static bool vfLimited[NET_MAX] = {};
 
 limitedmap<uint256, int64_t> mapAlreadyAskedFor(MAX_INV_SZ);
 
+std::string strSubVersion;
+
 // Signals for message handling
 static CNodeSignals g_signals;
 CNodeSignals &GetNodeSignals() {
@@ -1985,7 +1987,7 @@ void CConnman::ThreadOpenAddedConnections() {
             instance++;
             if(instance > 7)
             {
-                return;
+               break;
             }
             if (!info.fConnected)
             {

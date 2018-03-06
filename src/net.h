@@ -98,6 +98,9 @@ static const ServiceFlags REQUIRED_SERVICES = ServiceFlags(NODE_NETWORK);
 // NOTE: When adjusting this, update rpcnet:setban's help ("24h")
 static const unsigned int DEFAULT_MISBEHAVING_BANTIME = 60 * 60 * 24;
 
+/** Subversion as sent to the P2P network in `version` messages */
+extern std::string strSubVersion;
+
 typedef int64_t NodeId;
 
 struct AddedNodeInfo {
