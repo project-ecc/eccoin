@@ -111,7 +111,7 @@ void PushNodeVersion(CNode *pnode, CConnman &connman, int64_t nTime) {
                         CNetMsgMaker(MIN_PROTO_VERSION)
                             .Make(NetMsgType::VERSION, PROTOCOL_VERSION,
                                   (uint64_t)nLocalNodeServices, nTime, addrYou,
-                                  addrMe, nonce,
+                                  addrMe, nonce, strSubVersion,
                                   nNodeStartingHeight, ::fRelayTxes));
 
     if (fLogIPs) {
