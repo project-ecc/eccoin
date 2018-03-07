@@ -223,7 +223,11 @@ OBJS= \
     build/verifydb.o \
     build/addrdb.o \
     build/threadinterrupt.o \
-    build/netaddress.o
+    build/netaddress.o \
+    build/ans/ansrecord.o \
+    build/ans/ans.o \
+    build/tx/servicetx.o \
+    build/service_leveldb.o 
 
 
 
