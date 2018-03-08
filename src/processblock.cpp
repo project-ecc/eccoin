@@ -132,13 +132,13 @@ public:
 
 
 /** Store block on disk. If dbp is non-NULL, the file is known to already reside on disk */
-bool AcceptBlock(const CBlock& block, CValidationState& state, const CNetworkTemplate& chainparams, CBlockIndex** ppindex, bool fRequested, CDiskBlockPos* dbp)
+bool AcceptBlock(const std::shared_ptr<const CBlock> pblock, CValidationState& state, const CNetworkTemplate& chainparams, CBlockIndex** ppindex, bool fRequested, CDiskBlockPos* dbp)
 {
     AssertLockHeld(cs_main);
 
     CBlockIndex *&pindex = *ppindex;
 
-    if (!AcceptBlockHeader(block, state, chainparams, &pindex))
+    if (!AcceptBlockHeader(*pblock, state, chainparams, &pindex))
         return false;
 
     // Try to process all requested blocks that we don't have, but only
@@ -162,7 +162,7 @@ bool AcceptBlock(const CBlock& block, CValidationState& state, const CNetworkTem
         if (fTooFarAhead) return true;      // Block height is too high
     }
 
-    if ((!CheckBlock(block, state)) || !ContextualCheckBlock(block, state, pindex->pprev)) {
+    if ((!CheckBlock(*pblock, state)) || !ContextualCheckBlock(*pblock, state, pindex->pprev)) {
         if (state.IsInvalid() && !state.CorruptionPossible()) {
             pindex->nStatus |= BLOCK_FAILED_VALID;
             setDirtyBlockIndex.insert(pindex);
@@ -175,7 +175,6 @@ bool AcceptBlock(const CBlock& block, CValidationState& state, const CNetworkTem
     // SendMessages loop relay it)
     if (!pnetMan->getActivePaymentNetwork()->getChainManager()->IsInitialBlockDownload() && pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip() == pindex->pprev)
     {
-        const std::shared_ptr<const CBlock> pblock(&block);
         GetMainSignals().NewPoWValidBlock(pindex, pblock);
     }
 
@@ -184,16 +183,16 @@ bool AcceptBlock(const CBlock& block, CValidationState& state, const CNetworkTem
 
     // Write block to history file
     try {
-        unsigned int nBlockSize = ::GetSerializeSize(block, SER_DISK, CLIENT_VERSION);
+        unsigned int nBlockSize = ::GetSerializeSize(*pblock, SER_DISK, CLIENT_VERSION);
         CDiskBlockPos blockPos;
         if (dbp != NULL)
             blockPos = *dbp;
-        if (!FindBlockPos(state, blockPos, nBlockSize+8, nHeight, block.GetBlockTime(), dbp != NULL))
+        if (!FindBlockPos(state, blockPos, nBlockSize+8, nHeight, (*pblock).GetBlockTime(), dbp != NULL))
             return error("AcceptBlock(): FindBlockPos failed");
         if (dbp == NULL)
-            if (!WriteBlockToDisk(block, blockPos, chainparams.MessageStart()))
+            if (!WriteBlockToDisk(*pblock, blockPos, chainparams.MessageStart()))
                 AbortNode(state, "Failed to write block");
-        if (!ReceivedBlockTransactions(block, state, pindex, blockPos))
+        if (!ReceivedBlockTransactions(*pblock, state, pindex, blockPos))
             return error("AcceptBlock(): ReceivedBlockTransactions failed");
     } catch (const std::runtime_error& e) {
         return AbortNode(state, std::string("System error: ") + e.what());
@@ -217,7 +216,7 @@ bool ProcessNewBlock(CValidationState& state, const CNetworkTemplate& chainparam
 
         // Store to disk
         CBlockIndex *pindex = NULL;
-        bool ret = AcceptBlock(*pblock, state, chainparams, &pindex, fRequested, dbp);
+        bool ret = AcceptBlock(pblock, state, chainparams, &pindex, fRequested, dbp);
         CheckBlockIndex(chainparams.GetConsensus());
         if (!ret)
         {
@@ -1454,6 +1453,7 @@ struct CompareBlocksByHeight
 
 void removeImpossibleChainTips()
 {
+    LOCK(cs_main);
     int deletionCount = 0;
     std::set<CBlockIndex*, CompareBlocksByHeight> setTips;
     for (auto& item: pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex)
