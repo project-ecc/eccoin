@@ -1981,14 +1981,8 @@ void CConnman::ThreadOpenAddedConnections() {
 
         std::vector<AddedNodeInfo> vInfo = GetAddedNodeInfo();
         bool tried = false;
-        int instance = 0;
         for (const AddedNodeInfo &info : vInfo)
         {
-            instance++;
-            if(instance > 7)
-            {
-               break;
-            }
             if (!info.fConnected)
             {
                 if (!grant.TryAcquire())
@@ -2008,6 +2002,7 @@ void CConnman::ThreadOpenAddedConnections() {
                 {
                     return;
                 }
+                break;
             }
         }
         // Retry every 60 seconds if a connection was attempted, otherwise two
@@ -2017,6 +2012,7 @@ void CConnman::ThreadOpenAddedConnections() {
             return;
         }
     }
+
 }
 
 // If successful, this moves the passed grant to the constructed node.
