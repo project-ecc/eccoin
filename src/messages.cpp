@@ -841,7 +841,6 @@ void static ProcessGetData(CNode* pfrom, CConnman &connman, const Consensus::Par
          // Don't bother if send buffer is too full to respond anyway.
          if (pfrom->fPauseSend)
          {
-            LogPrintf("PAUSE SEND \n");
              break;
          }
 
@@ -849,7 +848,6 @@ void static ProcessGetData(CNode* pfrom, CConnman &connman, const Consensus::Par
          {
              if (interruptMsgProc)
              {
-                LogPrintf("INTERRUPTED \n");
                  return;
              }
 
@@ -933,19 +931,16 @@ void static ProcessGetData(CNode* pfrom, CConnman &connman, const Consensus::Par
                  }
                  // Pruned nodes may have deleted the block, so check whether
                  // it's available before trying to send.
-                 LogPrintf("SEND %d \n", send);
-                 LogPrintf("OTHER ARG = %d \n", (mi->second->nStatus & BLOCK_HAVE_DATA));
                  if (send && (mi->second->nStatus & BLOCK_HAVE_DATA))
                  {
                      // Send block from disk
                      CBlock block;
                      if (!ReadBlockFromDisk(block, (*mi).second, consensusParams))
                      {
-                         assert(!"cannot load block from disk");
+-                         assert(!"cannot load block from disk");
                      }
                      if (inv.type == MSG_BLOCK)
                      {
-                         LogPrintf("PUSHING BLOCK MESSAGE \n");
                          connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::BLOCK, block));
                      }
                      else if (inv.type == MSG_FILTERED_BLOCK)
@@ -1037,7 +1032,6 @@ void static ProcessGetData(CNode* pfrom, CConnman &connman, const Consensus::Par
              }
          }
      }
-    LogPrintf("DONE WITH PROCESSING GETDATA /n");
      pfrom->vRecvGetData.erase(pfrom->vRecvGetData.begin(), it);
 
      if (!vNotFound.empty())
@@ -2727,7 +2721,6 @@ bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interr
                 // Fetch the top element from the heap
                 std::pop_heap(vInvTx.begin(), vInvTx.end(), compareInvMempoolOrder);
                 std::set<uint256>::iterator it = vInvTx.back();
-                vInvTx.pop_back();
                 uint256 hash = *it;
                 // Remove it from the to-be-sent set
                 pto->setInventoryTxToSend.erase(it);
@@ -2771,6 +2764,7 @@ bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interr
                     vInv.clear();
                 }
                 pto->filterInventoryKnown.insert(hash);
+                vInvTx.pop_back();
             }
         }
     }
