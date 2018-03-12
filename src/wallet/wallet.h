@@ -310,7 +310,9 @@ public:
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
         if (ser_action.ForRead())
-            Init(NULL);
+        {
+            Init(nullptr);
+        }
         char fSpent = false;
 
         if (!ser_action.ForRead())
