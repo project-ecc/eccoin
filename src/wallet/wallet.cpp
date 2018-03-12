@@ -3092,6 +3092,7 @@ int CMerkleTx::SetMerkleBranch(const CBlock& block)
         {
             break;
         }
+    }
     if (nIndex == (int)block.vtx.size())
     {
         nIndex = -1;
