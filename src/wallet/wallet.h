@@ -266,15 +266,10 @@ public:
 
     CWalletTx()
     {
-        Init(NULL);
+        Init(nullptr);
     }
 
-    CWalletTx(const CWallet* pwalletIn)
-    {
-        Init(pwalletIn);
-    }
-
-    CWalletTx(const CWallet* pwalletIn, CTransactionRef arg)
+    CWalletTx(const CWallet* pwalletIn, CTransactionRef arg) : CMerkleTx(std::move(arg))
     {
         Init(pwalletIn);
     }
