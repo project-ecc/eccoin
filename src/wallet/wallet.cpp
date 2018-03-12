@@ -755,12 +755,15 @@ bool CWallet::AddToWalletIfInvolvingMe(const CTransactionRef &ptx, const CBlock*
     {
         const CTransaction &tx = *ptx;
         AssertLockHeld(cs_wallet);
-
-        if (pblock) {
-            for (auto const& txin: tx.vin) {
+        if (pblock)
+        {
+            for (auto const& txin: tx.vin)
+            {
                 std::pair<TxSpends::const_iterator, TxSpends::const_iterator> range = mapTxSpends.equal_range(txin.prevout);
-                while (range.first != range.second) {
-                    if (range.first->second != tx.GetHash()) {
+                while (range.first != range.second)
+                {
+                    if (range.first->second != tx.GetHash())
+                    {
                         LogPrintf("Transaction %s (in block %s) conflicts with wallet transaction %s (both spend %s:%i)\n", tx.GetHash().ToString(), pblock->GetHash().ToString(), range.first->second.ToString(), range.first->first.hash.ToString(), range.first->first.n);
                         MarkConflicted(pblock->GetHash(), range.first->second);
                     }
@@ -768,21 +771,19 @@ bool CWallet::AddToWalletIfInvolvingMe(const CTransactionRef &ptx, const CBlock*
                 }
             }
         }
-
         bool fExisted = mapWallet.count(tx.GetHash()) != 0;
         if (fExisted && !fUpdate) return false;
         if (fExisted || IsMine(tx) || IsFromMe(tx))
         {
             CWalletTx wtx(this, ptx);
-
             // Get merkle branch if transaction was found in a block
             if (pblock)
+            {
                 wtx.SetMerkleBranch(*pblock);
-
+            }
             // Do not flush the wallet here for performance reasons
             // this is safe, as in case of a crash, we rescan the necessary blocks on startup through our SetBestChain-mechanism
             CWalletDB walletdb(strWalletFile, "r+", false);
-
             return AddToWallet(wtx, false, &walletdb);
         }
     }
@@ -2637,7 +2638,10 @@ void CWallet::ReturnKey(int64_t nIndex)
         LOCK(cs_wallet);
         setKeyPool.insert(nIndex);
     }
-    LogPrintf("keypool return %d\n", nIndex);
+    if(fDebug)
+    {
+        LogPrintf("keypool return %d\n", nIndex);
+    }
 }
 
 bool CWallet::GetKeyFromPool(CPubKey& result)
@@ -3083,8 +3087,11 @@ int CMerkleTx::SetMerkleBranch(const CBlock& block)
 
     // Locate the transaction
     for (nIndex = 0; nIndex < (int)block.vtx.size(); nIndex++)
+    {
         if (block.vtx[nIndex] == *(CTransaction*)this)
+        {
             break;
+        }
     if (nIndex == (int)block.vtx.size())
     {
         nIndex = -1;
@@ -3095,11 +3102,14 @@ int CMerkleTx::SetMerkleBranch(const CBlock& block)
     // Is the tx in a block that's in the main chain
     BlockMap::iterator mi = pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.find(hashBlock);
     if (mi == pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.end())
+    {
         return 0;
+    }
     const CBlockIndex* pindex = (*mi).second;
     if (!pindex || !pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Contains(pindex))
+    {
         return 0;
-
+    }
     return pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height() - pindex->nHeight + 1;
 }
 

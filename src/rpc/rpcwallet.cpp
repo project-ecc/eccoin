@@ -66,29 +66,40 @@ void WalletTxToJSON(const CWalletTx& wtx, UniValue& entry)
         entry.push_back(Pair("blockhash", wtx.hashBlock.GetHex()));
         entry.push_back(Pair("blockindex", wtx.nIndex));
         entry.push_back(Pair("blocktime", pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex[wtx.hashBlock]->GetBlockTime()));
-    } else {
+    }
+    else
+    {
         entry.push_back(Pair("trusted", wtx.IsTrusted()));
     }
     uint256 hash = wtx.GetHash();
     entry.push_back(Pair("txid", hash.GetHex()));
     UniValue conflicts(UniValue::VARR);
     for(auto const& conflict: wtx.GetConflicts())
+    {
         conflicts.push_back(conflict.GetHex());
+    }
     entry.push_back(Pair("walletconflicts", conflicts));
     entry.push_back(Pair("time", wtx.GetTxTime()));
     entry.push_back(Pair("timereceived", (int64_t)wtx.nTimeReceived));
 
     // Add opt-in RBF status
     std::string rbfStatus = "no";
-    if (confirms <= 0) {
+    if (confirms <= 0)
+    {
         LOCK(mempool.cs);
-        if (!mempool.exists(hash)) {
-            if (SignalsOptInRBF(wtx)) {
+        if (!mempool.exists(hash))
+        {
+            if (SignalsOptInRBF(wtx))
+            {
                 rbfStatus = "yes";
-            } else {
+            }
+            else
+            {
                 rbfStatus = "unknown";
             }
-        } else if (IsRBFOptIn(*mempool.mapTx.find(hash), mempool)) {
+        }
+        else if (IsRBFOptIn(*mempool.mapTx.find(hash), mempool))
+        {
             rbfStatus = "yes";
         }
     }
@@ -97,9 +108,9 @@ void WalletTxToJSON(const CWalletTx& wtx, UniValue& entry)
     for(auto const& item: wtx.mapValue)
     {
         if(!item.first.empty() && !item.second.empty())
-	{
+        {
         	entry.push_back(Pair(item.first, item.second));
-	}
+        }
     }
 }
 
