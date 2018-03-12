@@ -24,13 +24,13 @@ private:
 public:
     static const size_t OUTPUT_SIZE = CSHA256::OUTPUT_SIZE;
 
-    void Finalize(unsigned char hash[OUTPUT_SIZE]) {
-        unsigned char buf[sha.OUTPUT_SIZE];
+    void Finalize(uint8_t hash[OUTPUT_SIZE]) {
+        uint8_t buf[CSHA256::OUTPUT_SIZE];
         sha.Finalize(buf);
-        sha.Reset().Write(buf, sha.OUTPUT_SIZE).Finalize(hash);
+        sha.Reset().Write(buf, CSHA256::OUTPUT_SIZE).Finalize(hash);
     }
 
-    CHash256& Write(const unsigned char *data, size_t len) {
+    CHash256& Write(const uint8_t *data, size_t len) {
         sha.Write(data, len);
         return *this;
     }
