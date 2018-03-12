@@ -937,7 +937,8 @@ void static ProcessGetData(CNode* pfrom, CConnman &connman, const Consensus::Par
                      CBlock block;
                      if (!ReadBlockFromDisk(block, (*mi).second, consensusParams))
                      {
--                         assert(!"cannot load block from disk");
+                         LogPrintf("cannot load block from disk");
+                         assert(false);
                      }
                      if (inv.type == MSG_BLOCK)
                      {
@@ -1599,9 +1600,9 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
 
         std::deque<COutPoint> vWorkQueue;
         std::vector<uint256> vEraseQueue;
-        CTransaction ptx;
-        vRecv >> ptx;
-        const CTransaction tx = ptx;
+        CTransaction tx;
+        vRecv >> tx;
+        const CTransactionRef ptx = std::make_shared<CTransaction>(tx);
 
         CInv inv(MSG_TX, tx.GetId());
         pfrom->AddInventoryKnown(inv);
@@ -1647,8 +1648,10 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
                 {
                     const uint256& orphanHash = *mi;
                     const CTransaction orphanTx = mapOrphanTransactions[orphanHash].tx;
+                    const CTransactionRef &porphanTx = std::make_shared<CTransaction>(orphanTx);
                     const uint256 &orphanId = orphanTx.GetId();
                     NodeId fromPeer = mapOrphanTransactions[orphanHash].fromPeer;
+
                     bool fMissingInputs2 = false;
                     // Use a dummy CValidationState so someone can't setup nodes
                     // to counter-DoS based on orphan resolution (that is,
@@ -1659,7 +1662,7 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
                     if (setMisbehaving.count(fromPeer)) {
                         continue;
                     }
-                    if (AcceptToMemoryPool(mempool, stateDummy, orphanTx, true, &fMissingInputs2, &lRemovedTxn))
+                    if (AcceptToMemoryPool(mempool, stateDummy, porphanTx, true, &fMissingInputs2, &lRemovedTxn))
                     {
                         LogPrintf("   accepted orphan tx %s\n", orphanId.ToString());
                         RelayTransaction(orphanTx, connman);
@@ -1723,7 +1726,7 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
                         pfrom->AskFor(_inv);
                     }
                 }
-                AddOrphanTx(ptx, pfrom->GetId());
+                AddOrphanTx(tx, pfrom->GetId());
 
                 // DoS prevention: do not allow mapOrphanTransactions to grow
                 // unbounded

@@ -753,6 +753,7 @@ bool CWallet::AddToWallet(const CWalletTx& wtxIn, bool fFromLoadWallet, CWalletD
 bool CWallet::AddToWalletIfInvolvingMe(const CTransactionRef &ptx, const CBlock* pblock, bool fUpdate)
 {
     {
+        const CTransaction &tx = *ptx;
         AssertLockHeld(cs_wallet);
 
         if (pblock) {
@@ -905,12 +906,16 @@ void CWallet::MarkConflicted(const uint256& hashBlock, const uint256& hashTx)
     }
 }
 
-void CWallet::SyncTransaction(const CTransaction& tx, const CBlock* pblock)
+void CWallet::SyncTransaction(const CTransactionRef& ptx, const CBlock* pblock)
 {
     LOCK2(cs_main, cs_wallet);
 
-    if (!AddToWalletIfInvolvingMe(tx, pblock, true))
+    const CTransaction &tx = *ptx;
+
+    if (!AddToWalletIfInvolvingMe(ptx, pblock, true))
+    {
         return; // Not one of ours
+    }
 
     // If a transaction changes 'conflicted' state, that changes the balance
     // available of the outputs it spends. So force those to be
@@ -1227,7 +1232,8 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate)
             ReadBlockFromDisk(block, pindex, pnetMan->getActivePaymentNetwork()->GetConsensus());
             for (auto& tx: block.vtx)
             {
-                if (AddToWalletIfInvolvingMe(tx, &block, fUpdate))
+                std::shared_ptr<CTransaction> ptx = std::make_shared<CTransaction>(tx);
+                if (AddToWalletIfInvolvingMe(ptx, &block, fUpdate))
                 {
                     ret++;
                 }
