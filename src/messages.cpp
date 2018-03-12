@@ -1821,7 +1821,6 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
 
         if (nCount == 0) 
         {
-            LogPrintf("STOP ASKING PEER FOR MORE HEADERS \n");
             // Nothing interesting. Stop asking this peers for more headers.
             return true;
         }
@@ -1860,7 +1859,6 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
         // If this set of headers is valid and ends in a block with at least as
         // much work as our tip, download as much as possible.
         if (fCanDirectFetch && pindexLast->IsValid(BLOCK_VALID_TREE) && pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->nChainWork <= pindexLast->nChainWork) {
-            LogPrintf("TRYING TO DOWNLOAD AS MUCH AS POSSIBLE \n");
             std::vector<CBlockIndex *> vToFetch;
             CBlockIndex *pindexWalk = pindexLast;
             // Calculate all the blocks we'd need to switch to pindexLast, up to a limit.
@@ -1878,7 +1876,6 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
             // direct fetch and rely on parallel download instead.
             if (!pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Contains(pindexWalk)) 
             {
-                LogPrintf("WONT DIRECT FECTH \n");
                 LogPrint("net", "Large reorg, won't direct fetch to %s (%d)\n",
                         pindexLast->GetBlockHash().ToString(),
                         pindexLast->nHeight);
@@ -1894,7 +1891,6 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
                     }
                     vGetData.push_back(CInv(MSG_BLOCK, pindex->GetBlockHash()));
                     MarkBlockAsInFlight(pfrom->GetId(), pindex->GetBlockHash(), chainparams.GetConsensus(), pindex);
-                    LogPrintf("REQUESTING BLOCKS \n");
                     LogPrint("net", "Requesting block %s from  peer=%d\n",
                             pindex->GetBlockHash().ToString(), pfrom->id);
                 }
@@ -1904,7 +1900,6 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
                 }
                 if (vGetData.size() > 0) 
                 {
-                    LogPrintf("PUSHING GETDATA \n");
                     connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::GETDATA, vGetData));
                 }
             }
