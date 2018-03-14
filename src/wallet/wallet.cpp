@@ -1231,9 +1231,8 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate)
 
             CBlock block;
             ReadBlockFromDisk(block, pindex, pnetMan->getActivePaymentNetwork()->GetConsensus());
-            for (auto& tx: block.vtx)
+            for (auto& ptx: block.vtx)
             {
-                std::shared_ptr<CTransaction> ptx = std::make_shared<CTransaction>(tx);
                 if (AddToWalletIfInvolvingMe(ptx, &block, fUpdate))
                 {
                     ret++;
@@ -3080,7 +3079,6 @@ CWalletKey::CWalletKey(int64_t nExpires)
 int CMerkleTx::SetMerkleBranch(const CBlock& block)
 {
     AssertLockHeld(cs_main);
-    CBlock blockTmp;
 
     // Update the tx's hashBlock
     hashBlock = block.GetHash();
@@ -3088,7 +3086,7 @@ int CMerkleTx::SetMerkleBranch(const CBlock& block)
     // Locate the transaction
     for (nIndex = 0; nIndex < (int)block.vtx.size(); nIndex++)
     {
-        if (block.vtx[nIndex] == *(CTransaction*)this)
+        if (*(block.vtx[nIndex]) == *(CTransaction*)this)
         {
             break;
         }

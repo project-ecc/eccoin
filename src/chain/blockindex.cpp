@@ -52,8 +52,8 @@ void CBlockIndex::updateForPos(const CBlock& block)
     if(block.IsProofOfStake())
     {
         SetProofOfStake();
-        prevoutStake = block.vtx[1].vin[0].prevout;
-        nStakeTime = block.vtx[1].nTime;
+        prevoutStake = block.vtx[1]->vin[0].prevout;
+        nStakeTime = block.vtx[1]->nTime;
     }
 
 }

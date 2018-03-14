@@ -668,9 +668,9 @@ void PeerLogicValidation::BlockConnected(
 
     std::vector<uint256> vOrphanErase;
 
-    for (const CTransaction &ptx : pblock->vtx)
+    for (const CTransactionRef &ptx : pblock->vtx)
     {
-        const CTransaction tx = ptx;
+        const CTransaction tx = *ptx;
 
         // Which orphan pool entries must we evict?
         for (size_t j = 0; j < tx.vin.size(); j++)
@@ -2723,11 +2723,12 @@ bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interr
                 // Remove it from the to-be-sent set
                 pto->setInventoryTxToSend.erase(it);
                 // Check if not in the filter already
-                if (pto->filterInventoryKnown.contains(hash)) {
+                if (pto->filterInventoryKnown.contains(hash))
+                {
                     continue;
                 }
                 // Not in the mempool anymore? don't bother sending it.
-                auto txinfo = mempool.info(hash);
+                TxMempoolInfo txinfo = mempool.info(hash);
                 if (!txinfo.tx)
                 {
                     continue;
