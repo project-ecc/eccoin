@@ -40,7 +40,7 @@ std::string CBlock::ToString() const
         vtx.size());
     for (unsigned int i = 0; i < vtx.size(); i++)
     {
-        s << "  " << vtx[i].ToString() << "\n";
+        s << "  " << vtx[i]->ToString() << "\n";
     }
     return s.str();
 }
@@ -49,7 +49,7 @@ std::string CBlock::ToString() const
 // ppcoin: two types of block: proof-of-work or proof-of-stake
 bool CBlock::IsProofOfStake() const
 {
-    return (vtx.size() > 1 && vtx[1].IsCoinStake());
+    return (vtx.size() > 1 && vtx[1]->IsCoinStake());
 }
 
 bool CBlock::IsProofOfWork() const
@@ -60,7 +60,7 @@ bool CBlock::IsProofOfWork() const
 std::pair<COutPoint, unsigned int> CBlock::GetProofOfStake() const
 {
     //return IsProofOfStake()? std::make_pair(vtx[1].vin[0].prevout, vtx[1].nTime) : std::make_pair(COutPoint(), (unsigned int)0);
-    return IsProofOfStake()? std::make_pair(vtx[1].vin[0].prevout, this->nTime) : std::make_pair(COutPoint(), (unsigned int)0);
+    return IsProofOfStake()? std::make_pair(vtx[1]->vin[0].prevout, this->nTime) : std::make_pair(COutPoint(), (unsigned int)0);
 }
 
 
@@ -71,9 +71,9 @@ bool CBlock::SignScryptBlock(const CKeyStore& keystore)
 
     if(!IsProofOfStake())
     {
-        for(unsigned int i = 0; i < vtx[0].vout.size(); i++)
+        for(unsigned int i = 0; i < vtx[0]->vout.size(); i++)
         {
-            const CTxOut& txout = vtx[0].vout[i];
+            const CTxOut& txout = vtx[0]->vout[i];
 
             if (!Solver(txout.scriptPubKey, whichType, vSolutions))
                 continue;
@@ -97,7 +97,7 @@ bool CBlock::SignScryptBlock(const CKeyStore& keystore)
     }
     else
     {
-        const CTxOut& txout = vtx[1].vout[1];
+        const CTxOut& txout = vtx[1]->vout[1];
 
         if (!Solver(txout.scriptPubKey, whichType, vSolutions))
             return false;
@@ -131,7 +131,7 @@ bool CBlock::CheckBlockSignature() const
 
         if(IsProofOfStake())
         {
-            const CTxOut& txout = vtx[1].vout[1];
+            const CTxOut& txout = vtx[1]->vout[1];
 
             if (!Solver(txout.scriptPubKey, whichType, vSolutions))
                 return false;
@@ -145,9 +145,9 @@ bool CBlock::CheckBlockSignature() const
         }
         else
         {
-            for(unsigned int i = 0; i < vtx[0].vout.size(); i++)
+            for(unsigned int i = 0; i < vtx[0]->vout.size(); i++)
             {
-                const CTxOut& txout = vtx[0].vout[i];
+                const CTxOut& txout = vtx[0]->vout[i];
 
                 if (!Solver(txout.scriptPubKey, whichType, vSolutions))
                     return false;
@@ -179,6 +179,6 @@ int64_t CBlock::GetMaxTransactionTime() const
 {
     int64_t maxTransactionTime = 0;
     for (auto const& tx: vtx)
-        maxTransactionTime = std::max(maxTransactionTime, (int64_t)tx.nTime);
+        maxTransactionTime = std::max(maxTransactionTime, (int64_t)tx->nTime);
     return maxTransactionTime;
 }

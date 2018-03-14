@@ -316,14 +316,18 @@ bool DisconnectTip(CValidationState& state, const Consensus::Params& consensusPa
         return false;
     // Resurrect mempool transactions from the disconnected block.
     std::vector<uint256> vHashUpdate;
-    for (auto const& tx: block.vtx) {
+    for (auto const& ptx: block.vtx)
+    {
+        const CTransaction &tx = *ptx;
         // ignore validation errors in resurrected transactions
         std::list<CTransaction> removed;
         CValidationState stateDummy;
-        CTransactionRef ptx = std::make_shared<CTransaction>(tx);
-        if (tx.IsCoinBase() || tx.IsCoinStake() || !AcceptToMemoryPool(mempool, stateDummy, ptx, false, NULL, true)) {
+        if (tx.IsCoinBase() || tx.IsCoinStake() || !AcceptToMemoryPool(mempool, stateDummy, ptx, false, NULL, true))
+        {
             mempool.remove(tx, removed, true);
-        } else if (mempool.exists(tx.GetHash())) {
+        }
+        else if (mempool.exists(tx.GetHash()))
+        {
             vHashUpdate.push_back(tx.GetHash());
         }
     }
@@ -1085,7 +1089,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     {
         for(auto const& tx: block.vtx)
         {
-            const CCoins* coins = view.AccessCoins(tx.GetHash());
+            const CCoins* coins = view.AccessCoins(tx->GetHash());
             if (coins && !coins->IsPruned())
                 return state.DoS(100, error("ConnectBlock(): tried to overwrite transaction"),
                                  REJECT_INVALID, "bad-txns-BIP30");
@@ -1130,7 +1134,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     blockundo.vtxundo.reserve(block.vtx.size() - 1);
     for (unsigned int i = 0; i < block.vtx.size(); i++)
     {
-        const CTransaction &tx = block.vtx[i];
+        const CTransaction &tx = *(block.vtx[i]);
 
         nInputs += tx.vin.size();
         nSigOps += GetLegacySigOpCount(tx);
@@ -1223,29 +1227,28 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     if(block.IsProofOfWork() && pindex->nHeight >= 1504000)
     {
         blockReward = GetProofOfWorkReward(nFees, pindex->nHeight, block.hashPrevBlock);
-        if (block.vtx[0].GetValueOut() > blockReward)
+        if (block.vtx[0]->GetValueOut() > blockReward)
         {
             return state.DoS(100,
                          error("ConnectBlock(): coinbase pays too much (actual=%d vs limit=%d)",
-                               block.vtx[0].GetValueOut(), blockReward), REJECT_INVALID, "bad-cb-amount");
+                               block.vtx[0]->GetValueOut(), blockReward), REJECT_INVALID, "bad-cb-amount");
         }
     }
     else
     {
         for(auto tx : block.vtx)
         {
-            if(tx.IsCoinStake())
+            if(tx->IsCoinStake())
             {
                 uint64_t nCoinAge;
-                if (!tx.GetCoinAge(nCoinAge))
-                    return state.DoS(100, error("ConnectBlock() : %s unable to get coin age for coinstake", tx.GetHash().ToString().substr(0,10).c_str()));
-                blockReward = blockReward + GetProofOfStakeReward(tx.GetCoinAge(nCoinAge, true), pindex->nHeight);
+                if (!tx->GetCoinAge(nCoinAge))
+                    return state.DoS(100, error("ConnectBlock() : %s unable to get coin age for coinstake", tx->GetHash().ToString().substr(0,10).c_str()));
+                blockReward = blockReward + GetProofOfStakeReward(tx->GetCoinAge(nCoinAge, true), pindex->nHeight);
             }
         }
-        if (block.vtx[0].GetValueOut() > blockReward && pindex->nHeight >= 1504000)
+        if (block.vtx[0]->GetValueOut() > blockReward && pindex->nHeight >= 1504000)
         {
-            return state.DoS(100,
-                         error("ConnectBlock(): coinstake pays too much"), REJECT_INVALID, "bad-cb-amount");
+            return state.DoS(100, error("ConnectBlock(): coinstake pays too much"), REJECT_INVALID, "bad-cb-amount");
         }
     }
     retry:
@@ -1270,7 +1273,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     hashProofOfStake.SetNull();
     if (block.IsProofOfStake())
     {
-        if (!CheckProofOfStake(pindex->nHeight, block.vtx[1], hashProofOfStake))
+        if (!CheckProofOfStake(pindex->nHeight, *(block.vtx[1]), hashProofOfStake))
         {
             return state.DoS(100, error("WARNING: ProcessBlock(): check proof-of-stake failed for block %s\n", block.GetHash().ToString().c_str()), REJECT_INVALID, "bad-proofofstake");
         }
@@ -1289,12 +1292,12 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     nStakeModifier.SetNull();
     if(block.IsProofOfStake())
     {
-        if (!ComputeNextStakeModifier(pindex->pprev, block.vtx[1], nStakeModifier))
+        if (!ComputeNextStakeModifier(pindex->pprev, *(block.vtx[1]), nStakeModifier))
             return state.DoS(100, error("ConnectBlock() : ComputeNextStakeModifier() failed") , REJECT_INVALID, "bad-stakemodifier-pos");
     }
     else
     {
-        if (!ComputeNextStakeModifier(pindex->pprev, block.vtx[0], nStakeModifier))
+        if (!ComputeNextStakeModifier(pindex->pprev, *(block.vtx[0]), nStakeModifier))
             return state.DoS(100, error("ConnectBlock() : ComputeNextStakeModifier() failed"), REJECT_INVALID, "bad-stakemodifier-pow");
     }
     pindex->SetStakeModifier(nStakeModifier);
@@ -1381,47 +1384,64 @@ bool DisconnectBlock(const CBlock& block, CValidationState& state, const CBlockI
     CBlockUndo blockUndo;
     CDiskBlockPos pos = pindex->GetUndoPos();
     if (pos.IsNull())
+    {
         return error("DisconnectBlock(): no undo data available");
+    }
     if (!UndoReadFromDisk(blockUndo, pos, pindex->pprev->GetBlockHash()))
+    {
         return error("DisconnectBlock(): failure reading undo data");
+    }
 
     if (blockUndo.vtxundo.size() + 1 != block.vtx.size())
+    {
         return error("DisconnectBlock(): block and undo data inconsistent");
+    }
 
     // undo transactions in reverse order
-    for (int i = block.vtx.size() - 1; i >= 0; i--) {
-        const CTransaction &tx = block.vtx[i];
+    for (int i = block.vtx.size() - 1; i >= 0; i--)
+    {
+        const CTransaction &tx = *(block.vtx[i]);
         uint256 hash = tx.GetHash();
 
         // Check that all outputs are available and match the outputs in the block itself
         // exactly.
         {
-        CCoinsModifier outs = view.ModifyCoins(hash);
-        outs->ClearUnspendable();
+            CCoinsModifier outs = view.ModifyCoins(hash);
+            outs->ClearUnspendable();
 
-        CCoins outsBlock(tx, pindex->nHeight);
-        // The CCoins serialization does not serialize negative numbers.
-        // No network rules currently depend on the version here, so an inconsistency is harmless
-        // but it must be corrected before txout nversion ever influences a network rule.
-        if (outsBlock.nVersion < 0)
-            outs->nVersion = outsBlock.nVersion;
-        if (*outs != outsBlock)
-            fClean = fClean && error("DisconnectBlock(): added transaction mismatch? database corrupted");
+            CCoins outsBlock(tx, pindex->nHeight);
+            // The CCoins serialization does not serialize negative numbers.
+            // No network rules currently depend on the version here, so an inconsistency is harmless
+            // but it must be corrected before txout nversion ever influences a network rule.
+            if (outsBlock.nVersion < 0)
+            {
+                outs->nVersion = outsBlock.nVersion;
+            }
+            if (*outs != outsBlock)
+            {
+                fClean = fClean && error("DisconnectBlock(): added transaction mismatch? database corrupted");
+            }
 
-        // remove outputs
-        outs->Clear();
+            // remove outputs
+            outs->Clear();
         }
 
         // restore inputs
-        if (i > 0) { // not coinbases
+        if (i > 0) // not coinbases
+        {
             const CTxUndo &txundo = blockUndo.vtxundo[i-1];
             if (txundo.vprevout.size() != tx.vin.size())
+            {
                 return error("DisconnectBlock(): transaction and undo data inconsistent");
-            for (unsigned int j = tx.vin.size(); j-- > 0;) {
+            }
+            for (unsigned int j = tx.vin.size(); j-- > 0;)
+            {
                 const COutPoint &out = tx.vin[j].prevout;
                 const CTxInUndo &undo = txundo.vprevout[j];
                 if (!ApplyTxInUndo(undo, view, out))
+                {
                     fClean = false;
+                }
             }
         }
     }

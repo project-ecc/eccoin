@@ -81,7 +81,7 @@ void CNetworkManager::ConstructLegacyNetworkTemplate()
     txNew.vout[0].SetEmpty();
     txNew.vout[0].SetEmpty();
 
-    legacyTemplate->genesis.vtx.push_back(txNew);
+    legacyTemplate->genesis.vtx.push_back(MakeTransactionRef(txNew));
     legacyTemplate->genesis.hashPrevBlock.SetNull();
     legacyTemplate->genesis.nVersion = 1;
     legacyTemplate->genesis.nTime    = 1393744307;
@@ -212,7 +212,7 @@ void CNetworkManager::ConstructTetnet0Template()
     txNew.vout[0].SetEmpty();
     txNew.vout[0].SetEmpty();
 
-    netManTestnetTemplate->genesis.vtx.push_back(txNew);
+    netManTestnetTemplate->genesis.vtx.push_back(MakeTransactionRef(txNew));
     netManTestnetTemplate->genesis.hashPrevBlock.SetNull();
     netManTestnetTemplate->genesis.nVersion = 1;
     netManTestnetTemplate->genesis.nTime    = 1512338805;

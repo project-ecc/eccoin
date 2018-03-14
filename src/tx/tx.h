@@ -59,6 +59,7 @@ public:
 
     CTransaction& operator=(const CTransaction& tx);
 
+
     ADD_SERIALIZE_METHODS
 
     template <typename Stream, typename Operation>
@@ -74,7 +75,48 @@ public:
             READWRITE(*const_cast<uint256*>(&this->serviceReferenceHash));
         }
         if (ser_action.ForRead())
+        {
             UpdateHash();
+        }
+    }
+
+
+    /*
+    template <typename Stream> inline void Serialize(Stream &s) const
+    {
+        s << this->nVersion;
+        s << this->nTime;
+        s << vin;
+        s << vout;
+        s << nLockTime;
+        if (this->nVersion == 2)
+        {
+            s << this->serviceReferenceHash;
+        }
+    }
+
+    template <typename Stream> inline void Unserialize(Stream &s)
+    {
+        s >> this->nVersion;
+        this->vin.clear();
+        this->vout.clear();
+        s >> this->nTime;
+        s >> vin;
+        s >> vout;
+        s >> nLockTime;
+        if (this->nVersion == 2)
+        {
+            s >> this->serviceReferenceHash;
+        }
+        UpdateHash();
+    }
+    */
+
+
+    template <typename Stream>
+    CTransaction(deserialize_type, Stream &s)
+    {
+        Unserialize(s);
     }
 
     bool IsNull() const {
@@ -125,15 +167,15 @@ public:
 /** Retrieve a transaction (from memory pool, or from disk, if possible) */
 bool GetTransaction(const uint256 &hash, CTransaction &tx, const Consensus::Params& params, uint256 &hashBlock, bool fAllowSlow = false);
 
-typedef std::shared_ptr<const CTransaction> CTransactionRef;
+typedef std::shared_ptr<CTransaction> CTransactionRef;
 static inline CTransactionRef MakeTransactionRef()
 {
-    return std::make_shared<const CTransaction>();
+    return std::make_shared<CTransaction>();
 }
 template <typename Tx>
 static inline CTransactionRef MakeTransactionRef(Tx &&txIn)
 {
-    return std::make_shared<const CTransaction>(std::forward<Tx>(txIn));
+    return std::make_shared<CTransaction>(std::forward<Tx>(txIn));
 }
 
 #endif // BITCOIN_PRIMITIVES_TRANSACTION_H

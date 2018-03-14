@@ -263,14 +263,20 @@ UniValue gettxoutproof(const UniValue& params, bool fHelp)
 
     CBlock block;
     if(!ReadBlockFromDisk(block, pblockindex, pnetMan->getActivePaymentNetwork()->GetConsensus()))
+    {
         throw JSONRPCError(RPC_INTERNAL_ERROR, "Can't read block from disk");
+    }
 
     unsigned int ntxFound = 0;
     for (auto const& tx: block.vtx)
-        if (setTxids.count(tx.GetHash()))
+        if (setTxids.count(tx->GetHash()))
+        {
             ntxFound++;
+        }
     if (ntxFound != setTxids.size())
+    {
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "(Not all) transactions not found in specified block");
+    }
 
     CDataStream ssMB(SER_NETWORK, PROTOCOL_VERSION);
     CMerkleBlock mb(block, setTxids);

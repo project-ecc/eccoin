@@ -349,8 +349,9 @@ bool GetTransaction(const uint256 &hash, CTransaction &txOut, const Consensus::P
         CBlock block;
         if (ReadBlockFromDisk(block, pindexSlow, consensusParams)) {
             for (auto const& tx: block.vtx) {
-                if (tx.GetHash() == hash) {
-                    txOut = tx;
+                if (tx->GetHash() == hash)
+                {
+                    txOut = *tx;
                     hashBlock = pindexSlow->GetBlockHash();
                     return true;
                 }
