@@ -440,7 +440,9 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState &state, const C
 
 
     if (pfMissingInputs)
+    {
         *pfMissingInputs = false;
+    }
 
     if (!CheckTransaction(tx, state))
         return false;

@@ -1206,8 +1206,6 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate)
 {
     int ret = 0;
     int64_t nNow = GetTime();
-    const CNetworkTemplate& chainParams = pnetMan->getActivePaymentNetwork();
-
     CBlockIndex* pindex = pindexStart;
     {
         LOCK2(cs_main, cs_wallet);
@@ -1220,13 +1218,16 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate)
         }
 
         ShowProgress(_("Rescanning..."), 0); // show rescan progress in GUI as dialog or on splashscreen, if -rescan on startup
-        double dProgressStart = Checkpoints::GuessVerificationProgress(chainParams.Checkpoints(), pindex, false);
-        double dProgressTip = Checkpoints::GuessVerificationProgress(chainParams.Checkpoints(), pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip(), false);
+        double dProgressStart = Checkpoints::GuessVerificationProgress(pnetMan->getActivePaymentNetwork()->Checkpoints(), pindex, false);
+        double dProgressTip = Checkpoints::GuessVerificationProgress(pnetMan->getActivePaymentNetwork()->Checkpoints(),
+                                                                     pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip(), false);
         while (pindex)
         {
             if (pindex->nHeight % 100 == 0 && dProgressTip - dProgressStart > 0.0)
             {
-                ShowProgress(_("Rescanning..."), std::max(1, std::min(99, (int)((Checkpoints::GuessVerificationProgress(chainParams.Checkpoints(), pindex, false) - dProgressStart) / (dProgressTip - dProgressStart) * 100))));
+                ShowProgress(_("Rescanning..."), std::max(1, std::min(99,
+                          (int)((Checkpoints::GuessVerificationProgress(pnetMan->getActivePaymentNetwork()->Checkpoints(), pindex, false) -
+                                 dProgressStart) / (dProgressTip - dProgressStart) * 100))));
             }
 
             CBlock block;
@@ -1242,7 +1243,8 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate)
             if (GetTime() >= nNow + 60)
             {
                 nNow = GetTime();
-                LogPrintf("Still rescanning. At block %d. Progress=%f\n", pindex->nHeight, Checkpoints::GuessVerificationProgress(chainParams.Checkpoints(), pindex));
+                LogPrintf("Still rescanning. At block %d. Progress=%f\n", pindex->nHeight,
+                          Checkpoints::GuessVerificationProgress(pnetMan->getActivePaymentNetwork()->Checkpoints(), pindex));
             }
         }
         ShowProgress(_("Rescanning..."), 100); // hide progress dialog in GUI
