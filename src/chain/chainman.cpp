@@ -172,8 +172,6 @@ bool CChainManager::LoadBlockIndexDB()
     if (!pblocktree->LoadBlockIndexGuts())
         return false;
     LogPrintf("LoadBlockIndexGuts %15dms\n", GetTimeMillis() - nStart);
-    nStart = GetTimeMillis();
-
 
     boost::this_thread::interruption_point();
 
@@ -185,8 +183,6 @@ bool CChainManager::LoadBlockIndexDB()
         CBlockIndex* pindex = item.second;
         vSortedByHeight.push_back(std::make_pair(pindex->nHeight, pindex));
     }
-    LogPrintf("Sort block index %15dms\n", GetTimeMillis() - nStart);
-    nStart = GetTimeMillis();
     std::sort(vSortedByHeight.begin(), vSortedByHeight.end());
     for (const std::pair<int, CBlockIndex*>& item : vSortedByHeight)
     {
@@ -194,43 +190,61 @@ bool CChainManager::LoadBlockIndexDB()
         pindex->nChainWork = (pindex->pprev ? pindex->pprev->nChainWork : 0) + GetBlockProof(*pindex);
         // We can link the chain of blocks for which we've received transactions at some point.
         // Pruned nodes may have deleted the block.
-        if (pindex->nTx > 0) {
-            if (pindex->pprev) {
-                if (pindex->pprev->nChainTx) {
+        if (pindex->nTx > 0)
+        {
+            if (pindex->pprev)
+            {
+                if (pindex->pprev->nChainTx)
+                {
                     pindex->nChainTx = pindex->pprev->nChainTx + pindex->nTx;
-                } else {
+                }
+                else
+                {
                     pindex->nChainTx = 0;
                     mapBlocksUnlinked.insert(std::make_pair(pindex->pprev, pindex));
                 }
-            } else {
+            }
+            else
+            {
                 pindex->nChainTx = pindex->nTx;
             }
         }
         if (pindex->IsValid(BLOCK_VALID_TRANSACTIONS) && (pindex->nChainTx || pindex->pprev == NULL))
+        {
             setBlockIndexCandidates.insert(pindex);
+        }
         if (pindex->nStatus & BLOCK_FAILED_MASK && (!pindexBestInvalid || pindex->nChainWork > pindexBestInvalid->nChainWork))
+        {
             pindexBestInvalid = pindex;
+        }
         if (pindex->pprev)
+        {
             pindex->BuildSkip();
+        }
         if (pindex->IsValid(BLOCK_VALID_TREE) && (pindexBestHeader == NULL || CBlockIndexWorkComparator()(pindexBestHeader, pindex)))
+        {
             pindexBestHeader = pindex;
+        }
     }
-    LogPrintf("calc nChainWork, nChainTx, valid, statns, pprev %15dms\n", GetTimeMillis() - nStart);
-    nStart = GetTimeMillis();
 
     // Load block file info
     pblocktree->ReadLastBlockFile(nLastBlockFile);
     vinfoBlockFile.resize(nLastBlockFile + 1);
     LogPrintf("%s: last block file = %i\n", __func__, nLastBlockFile);
-    for (int nFile = 0; nFile <= nLastBlockFile; nFile++) {
+    for (int nFile = 0; nFile <= nLastBlockFile; nFile++)
+    {
         pblocktree->ReadBlockFileInfo(nFile, vinfoBlockFile[nFile]);
     }
     LogPrintf("%s: last block file info: %s\n", __func__, vinfoBlockFile[nLastBlockFile].ToString());
-    for (int nFile = nLastBlockFile + 1; true; nFile++) {
+    for (int nFile = nLastBlockFile + 1; true; nFile++)
+    {
         CBlockFileInfo info;
-        if (pblocktree->ReadBlockFileInfo(nFile, info)) {
+        if (pblocktree->ReadBlockFileInfo(nFile, info))
+        {
             vinfoBlockFile.push_back(info);
-        } else {
+        }
+        else
+        {
             break;
         }
     }
@@ -241,31 +255,31 @@ bool CChainManager::LoadBlockIndexDB()
     for (auto const& item: mapBlockIndex)
     {
         CBlockIndex* pindex = item.second;
-        if (pindex->nStatus & BLOCK_HAVE_DATA) {
+        if (pindex->nStatus & BLOCK_HAVE_DATA)
+        {
             setBlkDataFiles.insert(pindex->nFile);
         }
     }
     for (std::set<int>::iterator it = setBlkDataFiles.begin(); it != setBlkDataFiles.end(); it++)
     {
         CDiskBlockPos pos(*it, 0);
-        if (CAutoFile(OpenBlockFile(pos, true), SER_DISK, CLIENT_VERSION).IsNull()) {
+        if (CAutoFile(OpenBlockFile(pos, true), SER_DISK, CLIENT_VERSION).IsNull())
+        {
             return false;
         }
     }
-    LogPrintf("block file checks %15dms\n", GetTimeMillis() - nStart);
-    nStart = GetTimeMillis();
 
     // Check whether we need to continue reindexing
     bool fReindexing = false;
     pblocktree->ReadReindexing(fReindexing);
     if(fReindexing) fReindex = true;
-    LogPrintf("reindexing check %15dms\n", GetTimeMillis() - nStart);
-    nStart = GetTimeMillis();
 
     // Load pointer to end of best chain
     BlockMap::iterator it = mapBlockIndex.find(pcoinsTip->GetBestBlock());
     if (it == mapBlockIndex.end())
+    {
         return true;
+    }
     chainActive.SetTip(it->second);
 
     PruneBlockIndexCandidates();
