@@ -3088,7 +3088,7 @@ int CMerkleTx::SetMerkleBranch(const CBlock& block)
     // Locate the transaction
     for (nIndex = 0; nIndex < (int)block.vtx.size(); nIndex++)
     {
-        if (*(block.vtx[nIndex]) == *(CTransaction*)this)
+        if (block.vtx[nIndex]->GetHash() == this->GetHash())
         {
             break;
         }
