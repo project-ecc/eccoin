@@ -1505,7 +1505,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
 
                 for (auto const& wtxOld: vWtx)
                 {
-                    uint256 hash = wtxOld.GetHash();
+                    uint256 hash = wtxOld.tx->GetHash();
                     std::map<uint256, CWalletTx>::iterator mi = pwalletMain->mapWallet.find(hash);
                     if (mi != pwalletMain->mapWallet.end())
                     {

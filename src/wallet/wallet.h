@@ -158,7 +158,7 @@ struct COutputEntry
 };
 
 /** A transaction with a merkle branch linking it to the block chain. */
-class CMerkleTx : public CTransaction
+class CMerkleTx
 {
 private:
   /** Constant used in hashBlock to indicate tx has been abandoned */
@@ -196,29 +196,19 @@ public:
     void SetTx(CTransactionRef arg)
     {
         tx = std::move(arg);
-        if(arg)
-        {
-            this->nVersion = tx->nVersion;
-            this->nTime = tx->nTime;
-            this->vin = tx->vin;
-            this->vout = tx->vout;
-            this->nLockTime = tx->nLockTime;
-            this->serviceReferenceHash = tx->serviceReferenceHash;
-        }
     }
 
     ADD_SERIALIZE_METHODS
 
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action) {
-        std::vector<uint256> vMerkleBranch; // For compatibility with older versions.
-        READWRITE(*(CTransaction*)this);
-        nVersion = this->nVersion;
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        // For compatibility with older versions.
+        std::vector<uint256> vMerkleBranch;
+        READWRITE(tx);
         READWRITE(hashBlock);
         READWRITE(vMerkleBranch);
         READWRITE(nIndex);
     }
-
     int SetMerkleBranch(const CBlock& block);
 
     /**
