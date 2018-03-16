@@ -20,6 +20,28 @@
 #include "init.h"
 #include "txmempool.h"
 
+
+struct serializeTx
+{
+    int32_t nVersion;
+    unsigned int nTime;
+    std::vector<CTxIn> vin;
+    std::vector<CTxOut> vout;
+    uint32_t nLockTime;
+
+    ADD_SERIALIZE_METHODS
+
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITE(*const_cast<int32_t*>(&this->nVersion));
+        nVersion = this->nVersion;
+        READWRITE(*const_cast<uint32_t*>(&this->nTime));
+        READWRITE(*const_cast<std::vector<CTxIn>*>(&vin));
+        READWRITE(*const_cast<std::vector<CTxOut>*>(&vout));
+        READWRITE(*const_cast<uint32_t*>(&nLockTime));
+    }
+};
+
 std::string COutPoint::ToString() const
 {
     return strprintf("COutPoint(%s, %u)", hash.ToString().substr(0,10), n);
@@ -72,12 +94,35 @@ std::string CTxOut::ToString() const
 
 uint256 CTransaction::GetHash() const
 {
+    if(this->nVersion == 1)
+    {
+        serializeTx txtohash;
+        txtohash.nVersion = this->nVersion;
+        txtohash.nTime = this->nTime;
+        txtohash.vin = this->vin;
+        txtohash.vout = this->vout;
+        txtohash.nLockTime = this->nLockTime;
+        return SerializeHash(txtohash);
+    }
     return SerializeHash(*this);
 }
 
 void CTransaction::UpdateHash() const
 {
-    *const_cast<uint256*>(&hash) = SerializeHash(*this);
+    if(this->nVersion == 1)
+    {
+        serializeTx txtohash;
+        txtohash.nVersion = this->nVersion;
+        txtohash.nTime = this->nTime;
+        txtohash.vin = this->vin;
+        txtohash.vout = this->vout;
+        txtohash.nLockTime = this->nLockTime;
+        *const_cast<uint256*>(&hash) = SerializeHash(txtohash);
+    }
+    else
+    {
+        *const_cast<uint256*>(&hash) = SerializeHash(*this);
+    }
 }
 
 CTransaction::CTransaction() : nVersion(CTransaction::CURRENT_VERSION), nTime(GetAdjustedTime()), vin(), vout(), nLockTime(0), serviceReferenceHash() {

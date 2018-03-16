@@ -7,7 +7,7 @@
 #include "streams.h"
 #include "timedata.h"
 
-struct serializetx
+struct serializeServiceTx
 {
     int32_t nVersion;
     uint16_t nServiceId;
@@ -32,7 +32,7 @@ struct serializetx
 
 uint256 CServiceTransaction::GetHash() const
 {
-    serializetx txtohash;
+    serializeServiceTx txtohash;
     txtohash.nVersion = this->nVersion;
     txtohash.nServiceId = this->nServiceId;
     txtohash.nTime = this->nTime;
@@ -44,7 +44,7 @@ uint256 CServiceTransaction::GetHash() const
 
 void CServiceTransaction::UpdateHash() const
 {
-    serializetx txtohash;
+    serializeServiceTx txtohash;
     txtohash.nVersion = this->nVersion;
     txtohash.nServiceId = this->nServiceId;
     txtohash.nTime = this->nTime;
