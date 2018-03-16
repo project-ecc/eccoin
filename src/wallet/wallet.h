@@ -193,7 +193,19 @@ public:
         nIndex = -1;
     }
 
-    void SetTx(CTransactionRef arg) { tx = std::move(arg); }
+    void SetTx(CTransactionRef arg)
+    {
+        tx = std::move(arg);
+        if(arg)
+        {
+            this->nVersion = tx->nVersion;
+            this->nTime = tx->nTime;
+            this->vin = tx->vin;
+            this->vout = tx->vout;
+            this->nLockTime = tx->nLockTime;
+            this->serviceReferenceHash = tx->serviceReferenceHash;
+        }
+    }
 
     ADD_SERIALIZE_METHODS
 
