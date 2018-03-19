@@ -2719,6 +2719,7 @@ bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interr
                 // Fetch the top element from the heap
                 std::pop_heap(vInvTx.begin(), vInvTx.end(), compareInvMempoolOrder);
                 std::set<uint256>::iterator it = vInvTx.back();
+                vInvTx.pop_back();
                 uint256 hash = *it;
                 // Remove it from the to-be-sent set
                 pto->setInventoryTxToSend.erase(it);
@@ -2763,7 +2764,6 @@ bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interr
                     vInv.clear();
                 }
                 pto->filterInventoryKnown.insert(hash);
-                vInvTx.pop_back();
             }
         }
     }
