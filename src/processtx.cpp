@@ -2,13 +2,11 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "tx/tx.h"
-#include "tx/servicetx.h"
-#include "validationinterface.h"
 #include "main.h"
 #include "consensus/consensus.h"
 #include "script/standard.h"
 #include "base58.h"
+#include "messages.h"
 
 bool CheckTransaction(const CTransaction& tx, CValidationState &state)
 {
@@ -54,7 +52,13 @@ bool CheckTransaction(const CTransaction& tx, CValidationState &state)
             if (txin.prevout.IsNull())
                 return state.DoS(10, false, REJECT_INVALID, "bad-txns-prevout-null");
     }
-
+    if(tx.nVersion == 2)
+    {
+        if(tx.serviceReferenceHash.IsNull())
+        {
+            state.DoS(100, false, REJECT_INVALID, "bad-stx-ref-hash");
+        }
+    }
     return true;
 }
 

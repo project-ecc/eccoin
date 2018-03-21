@@ -8,6 +8,7 @@
 #include "validationinterface.h"
 #include "net.h"
 #include "chain/blockindex.h"
+#include "tx/servicetx.h"
 
 
 /** Average delay between trickled inventory transmissions in seconds.
@@ -78,6 +79,8 @@ struct QueuedBlock {
 
 extern std::map<uint256, std::pair<NodeId, std::list<QueuedBlock>::iterator> > mapBlocksInFlight;
 extern std::map<uint256, std::pair<NodeId, bool>> mapBlockSource;
+
+extern std::map<uint256, CServiceTransaction> stxpool;
 
 
 

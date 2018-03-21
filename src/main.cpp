@@ -16,6 +16,7 @@
 #include "crypto/hash.h"
 #include "init.h"
 #include "merkleblock.h"
+#include "messages.h"
 #include "net.h"
 #include "networks/netman.h"
 #include "policy/policy.h"
@@ -1543,31 +1544,39 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
     // These are checks that are independent of context.
 
     if (block.fChecked)
+    {
         return true;
+    }
 
     if (block.IsProofOfWork() && fCheckPOW && !CheckProofOfWork(block.GetHash(), block.nBits, pnetMan->getActivePaymentNetwork()->GetConsensus()))
-        return state.DoS(50, error("CheckBlockHeader(): proof of work failed"),
-                         REJECT_INVALID, "high-hash");
+    {
+        return state.DoS(50, error("CheckBlockHeader(): proof of work failed"), REJECT_INVALID, "high-hash");
+    }
 
     // Check that the header is valid (particularly PoW).  This is mostly
     // redundant with the call in AcceptBlockHeader.
     if (!CheckBlockHeader(block, state, fCheckPOW))
+    {
         return false;
+    }
 
     // Check the merkle root.
-    if (fCheckMerkleRoot) {
+    if (fCheckMerkleRoot)
+    {
         bool mutated;
         uint256 hashMerkleRoot2 = BlockMerkleRoot(block, &mutated);
         if (block.hashMerkleRoot != hashMerkleRoot2)
-            return state.DoS(100, error("CheckBlock(): hashMerkleRoot mismatch"),
-                             REJECT_INVALID, "bad-txnmrklroot", true);
+        {
+            return state.DoS(100, error("CheckBlock(): hashMerkleRoot mismatch"), REJECT_INVALID, "bad-txnmrklroot", true);
+        }
 
         // Check for merkle tree malleability (CVE-2012-2459): repeating sequences
         // of transactions in a block without affecting the merkle root of a block,
         // while still invalidating it.
         if (mutated)
-            return state.DoS(100, error("CheckBlock(): duplicate transaction"),
-                             REJECT_INVALID, "bad-txns-duplicate", true);
+        {
+            return state.DoS(100, error("CheckBlock(): duplicate transaction"), REJECT_INVALID, "bad-txns-duplicate", true);
+        }
     }
 
     // All potential-corruption validation must be done before we do any
@@ -1576,23 +1585,28 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
 
     // Size limits
     if (block.vtx.empty() || block.vtx.size() > MAX_BLOCK_SIZE || ::GetSerializeSize(block, SER_NETWORK, PROTOCOL_VERSION) > MAX_BLOCK_SIZE)
-        return state.DoS(100, error("CheckBlock(): size limits failed"),
-                         REJECT_INVALID, "bad-blk-length");
+    {
+        return state.DoS(100, error("CheckBlock(): size limits failed"), REJECT_INVALID, "bad-blk-length");
+    }
 
     // First transaction must be coinbase, the rest must not be
     if (block.vtx.empty() || !block.vtx[0]->IsCoinBase())
-        return state.DoS(100, error("CheckBlock(): first tx is not coinbase"),
-                         REJECT_INVALID, "bad-cb-missing");
+    {
+        return state.DoS(100, error("CheckBlock(): first tx is not coinbase"), REJECT_INVALID, "bad-cb-missing");
+    }
 
     for (unsigned int i = 1; i < block.vtx.size(); i++)
+    {
         if (block.vtx[i]->IsCoinBase())
-            return state.DoS(100, error("CheckBlock(): more than one coinbase"),
-                             REJECT_INVALID, "bad-cb-multiple");
+        {
+            return state.DoS(100, error("CheckBlock(): more than one coinbase"), REJECT_INVALID, "bad-cb-multiple");
+        }
+    }
 
     // PoS: only the second transaction can be the optional coinstake
     for (unsigned int i = 2; i < block.vtx.size(); i++)
     {
-        if ((*block.vtx[i]).IsCoinStake())
+        if (block.vtx[i]->IsCoinStake())
         {
             return state.DoS(100, error("CheckBlock() : coinstake in wrong position"));
         }
@@ -1614,7 +1628,25 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
                 strprintf("Transaction check failed (txid %s) %s",
                           tx->GetId().ToString(), state.GetDebugMessage()));
         }
-
+        if(tx.nVersion == 2)
+        {
+            std::map<uint256, CServiceTransaction>::iterator iter;
+            iter = stxpool.find(tx.serviceReferenceHash);
+            if(iter == stxpool.end())
+            {
+                LogPrintf("tx with hash %s pays for service transaction with hash %s but none can be found \n", tx.GetHash().GetHex().c_str(), tx.serviceReferenceHash.GetHex().c_str());
+            }
+            else
+            {
+                CServiceTransaction stx = iter->second;
+                if(!CheckTransactionANS(stx, tx, state))
+                {
+                    return error("CheckBlock(): CheckTransactionANS of %s failed with %s",
+                        tx.GetHash().ToString(),
+                        FormatStateMessage(state));
+                }
+            }
+        }
         // PoS: check transaction timestamp
         if (block.GetBlockTime() < (int64_t)tx->nTime)
         {

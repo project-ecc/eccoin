@@ -7,6 +7,7 @@
 #include "serialize.h"
 #include "sync.h"
 #include "tx/tx.h"
+#include "tx/servicetx.h"
 #include "txmempool.h"
 #include "main.h"
 #include "util/util.h"
@@ -71,6 +72,8 @@ std::map<uint256, std::pair<NodeId, bool>> mapBlockSource;
 typedef std::map<uint256, CTransaction> MapRelay;
 MapRelay mapRelay;
 std::deque<std::pair<int64_t, MapRelay::iterator>> vRelayExpiration;
+
+std::map<uint256, CServiceTransaction> stxpool;
 
 static CCriticalSection cs_most_recent_block;
 static std::shared_ptr<const CBlock> most_recent_block;
@@ -1744,7 +1747,9 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
                 // parents so avoid re-requesting it from other peers.
                 recentRejects->insert(tx.GetId());
             }
-        } else {
+        }
+        else
+        {
             if (!state.CorruptionPossible()) {
                 // Do not use rejection cache for witness transactions or
                 // witness-stripped transactions, as they can have been
@@ -1779,7 +1784,6 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
                 }
             }
         }
-
         int nDoS = 0;
         if (state.IsInvalid(nDoS)) {
             LogPrintf("%s from peer=%d was not accepted: %s\n", tx.GetHash().ToString(), pfrom->id, FormatStateMessage(state));
@@ -1796,6 +1800,14 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
                 Misbehaving(pfrom, nDoS, state.GetRejectReason());
             }
         }
+    }
+
+    else if (strCommand == NetMsgType::STX)
+    {
+        CServiceTransaction pstx;
+        vRecv >> pstx;
+        //const CServiceTransaction stx = pstx;
+        stxpool.emplace(pstx);
     }
 
     // Ignore headers received while importing
