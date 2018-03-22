@@ -450,7 +450,9 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState &state, const C
 
     // Coinbase/Coinstake is only valid in a block, not as a loose transaction
     if (tx.IsCoinBase() || tx.IsCoinStake())
+    {
         return state.DoS(100, false, REJECT_INVALID, "coinbase");
+    }
 
     // Rather not work on nonstandard transactions (unless -testnet/-regtest)
     std::string reason;
