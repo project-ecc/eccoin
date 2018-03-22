@@ -688,8 +688,8 @@ public:
     bool CreateTransactionForService(const CRecipient& recipient, CWalletTx& wtxNew, CReserveKey& reservekey, CAmount& nFeeRequired,
                            CAmount& nFeeRet, std::string& strFailReason, bool sign = true);
 
-    bool CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey);
-    bool CommitTransactionForService(CWalletTx& wtxNew, CServiceTransaction& stxNew, CReserveKey& reservekey);
+    bool CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey, CConnman *connman, CValidationState &state);
+    bool CommitTransactionForService(CWalletTx& wtxNew, CServiceTransaction& stxNew, CReserveKey& reservekey, CConnman *connman, CValidationState &state);
 
     bool AddAccountingEntry(const CAccountingEntry&, CWalletDB & pwalletdb);
 

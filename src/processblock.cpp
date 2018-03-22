@@ -162,8 +162,10 @@ bool AcceptBlock(const std::shared_ptr<const CBlock> pblock, CValidationState& s
         if (fTooFarAhead) return true;      // Block height is too high
     }
 
-    if ((!CheckBlock(*pblock, state)) || !ContextualCheckBlock(*pblock, state, pindex->pprev)) {
-        if (state.IsInvalid() && !state.CorruptionPossible()) {
+    if ((!CheckBlock(*pblock, state)) || !ContextualCheckBlock(*pblock, state, pindex->pprev))
+    {
+        if (state.IsInvalid() && !state.CorruptionPossible())
+        {
             pindex->nStatus |= BLOCK_FAILED_VALID;
             setDirtyBlockIndex.insert(pindex);
         }

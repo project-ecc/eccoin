@@ -2492,22 +2492,25 @@ bool CWallet::CreateTransactionForService(const CRecipient& recipient, CWalletTx
                 // Note how the sequence number is set to max()-1 so that the
                 // nLockTime set above actually works.
                 for (auto const& coin: setCoins)
-                    txNew.vin.push_back(CTxIn(coin.first->GetHash(),coin.second,CScript(),
-                                              std::numeric_limits<unsigned int>::max()-1));
-
+                {
+                    txNew.vin.push_back(CTxIn(coin.first->tx->GetHash(),coin.second,CScript(), std::numeric_limits<unsigned int>::max()-1));
+                }
                 // Sign
                 int nIn = 0;
                 CTransaction txNewConst(txNew);
                 for (auto const& coin: setCoins)
                 {
                     bool signSuccess;
-                    const CScript& scriptPubKey = coin.first->vout[coin.second].scriptPubKey;
+                    const CScript& scriptPubKey = coin.first->tx->vout[coin.second].scriptPubKey;
                     CScript& scriptSigRes = txNew.vin[nIn].scriptSig;
                     if (sign)
+                    {
                         signSuccess = ProduceSignature(TransactionSignatureCreator(this, &txNewConst, nIn, SIGHASH_ALL), scriptPubKey, scriptSigRes);
+                    }
                     else
+                    {
                         signSuccess = ProduceSignature(DummySignatureCreator(this), scriptPubKey, scriptSigRes);
-
+                    }
                     if (!signSuccess)
                     {
                         strFailReason = _("Signing transaction failed");
@@ -2519,13 +2522,16 @@ bool CWallet::CreateTransactionForService(const CRecipient& recipient, CWalletTx
                 unsigned int nBytes = ::GetSerializeSize(txNew, SER_NETWORK, PROTOCOL_VERSION);
 
                 // Remove scriptSigs if we used dummy signatures for fee calculation
-                if (!sign) {
+                if (!sign)
+                {
                     for (auto& vin: txNew.vin)
+                    {
                         vin.scriptSig = CScript();
+                    }
                 }
 
                 // Embed the constructed transaction data in wtxNew.
-                *static_cast<CTransaction*>(&wtxNew) = CTransaction(txNew);
+                wtxNew.SetTx(MakeTransactionRef(std::move(txNew)));
 
                 // Limit size
                 if (nBytes >= MAX_STANDARD_TX_SIZE)
@@ -2543,7 +2549,9 @@ bool CWallet::CreateTransactionForService(const CRecipient& recipient, CWalletTx
                 }
 
                 if (nFeeRet >= nFeeRequired)
+                {
                     break; // Done, enough fee included.
+                }
 
                 // Include more fee and try again.
                 nFeeRet = nFeeRequired;
@@ -2610,11 +2618,11 @@ bool CWallet::CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey, CCon
 /**
  * Call after CreateTransaction unless you want to abort
  */
-bool CWallet::CommitTransactionForService(CWalletTx& wtxNew, CServiceTransaction& stxNew, CReserveKey& reservekey)
+bool CWallet::CommitTransactionForService(CWalletTx& wtxNew, CServiceTransaction& stxNew, CReserveKey& reservekey, CConnman *connman, CValidationState &state)
 {
     {
         LOCK2(cs_main, cs_wallet);
-        LogPrintf("CommitTransaction:\n%s", wtxNew.ToString());
+        LogPrintf("CommitTransaction:\n%s", wtxNew.tx->ToString());
         {
             // This is only to keep the database open to defeat the auto-flush for the
             // duration of this scope.  This is the only place where this optimization
@@ -2632,11 +2640,11 @@ bool CWallet::CommitTransactionForService(CWalletTx& wtxNew, CServiceTransaction
 
             // Notify that old coins are spent
             std::set<CWalletTx*> setCoins;
-            for (auto const& txin: wtxNew.vin)
+            for (auto const& txin: wtxNew.tx->vin)
             {
                 CWalletTx &coin = mapWallet[txin.prevout.hash];
                 coin.BindWallet(this);
-                NotifyTransactionChanged(this, coin.GetHash(), CT_UPDATED);
+                NotifyTransactionChanged(this, coin.tx->GetHash(), CT_UPDATED);
             }
 
             if (fFileBacked)
@@ -2644,7 +2652,7 @@ bool CWallet::CommitTransactionForService(CWalletTx& wtxNew, CServiceTransaction
         }
 
         // Track how many getdata requests our transaction gets
-        mapRequestCount[wtxNew.GetHash()] = 0;
+        mapRequestCount[wtxNew.tx->GetHash()] = 0;
 
         if (fBroadcastTransactions)
         {
@@ -2655,7 +2663,7 @@ bool CWallet::CommitTransactionForService(CWalletTx& wtxNew, CServiceTransaction
                 LogPrintf("CommitTransaction(): Error: Transaction not valid\n");
                 return false;
             }
-            wtxNew.RelayWalletTransaction();
+            wtxNew.RelayWalletTransaction(connman);
 
             /// TODO : need to relay service transaction here, will need to update relays to be able to handle service transactions as well
             // stxNew.RelayServiceTransaction();

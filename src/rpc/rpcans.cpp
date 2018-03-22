@@ -195,7 +195,7 @@ static void CreateANStransaction(CServiceTransaction& stxnew, CWalletTx& wtxnew,
     stxnew.vdata = std::vector<unsigned char>(strUsername.begin(), strUsername.end()); // should just be the username
 
     // add service transaction hash to payment hash so it can be rehashed later
-    wtxnew.serviceReferenceHash = stxnew.GetHash();
+    wtxnew.tx->serviceReferenceHash = stxnew.GetHash();
 }
 
 UniValue getansaddress(const UniValue& params, bool fHelp)
@@ -282,16 +282,17 @@ UniValue getansaddress(const UniValue& params, bool fHelp)
     SendMoney(address.Get(), nAmount, wtx, reservekey, nFeeRet);
     CreateANStransaction(stx, wtx, strUsername, nFeeRet);
     // update the payment hash to include the service transactions hash as a member of its hash
-    wtx.UpdateHash();
+    wtx.tx->UpdateHash();
     // paymentReferenceHash of service transaction must be set AFTER rehashing the payment hash as the rehash of the payment hash will include the hash of the service transaction
-    stx.paymentReferenceHash = wtx.GetHash();
-    if (!pwalletMain->CommitTransaction(wtx, reservekey))
+    stx.paymentReferenceHash = wtx.tx->GetHash();
+    CValidationState state;
+    if (!pwalletMain->CommitTransaction(wtx, reservekey, g_connman.get(), state))
     {
         throw JSONRPCError(RPC_WALLET_ERROR, "Error: The transaction was rejected! This might happen if some of the coins in your wallet were already spent, such as if you used a copy of wallet.dat and coins were spent in the copy but not marked as spent here.");
     }
 
     std::string responseMessage = "The user name " + strUsername + " has been assigned to the address " + strAddress + ""
-        " with PaymentHash = " + wtx.GetHash().GetHex() + " and  ServiceHash = " + stx.GetHash().GetHex();
+        " with PaymentHash = " + wtx.tx->GetHash().GetHex() + " and  ServiceHash = " + stx.GetHash().GetHex();
 
     return responseMessage;
 }

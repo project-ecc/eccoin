@@ -1807,7 +1807,7 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
         CServiceTransaction pstx;
         vRecv >> pstx;
         //const CServiceTransaction stx = pstx;
-        stxpool.emplace(pstx);
+        stxpool.emplace(std::make_pair(pstx.GetHash(), pstx));
     }
 
     // Ignore headers received while importing

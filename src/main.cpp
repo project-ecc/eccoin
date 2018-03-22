@@ -1628,21 +1628,21 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
                 strprintf("Transaction check failed (txid %s) %s",
                           tx->GetId().ToString(), state.GetDebugMessage()));
         }
-        if(tx.nVersion == 2)
+        if(tx->nVersion == 2)
         {
             std::map<uint256, CServiceTransaction>::iterator iter;
-            iter = stxpool.find(tx.serviceReferenceHash);
+            iter = stxpool.find(tx->serviceReferenceHash);
             if(iter == stxpool.end())
             {
-                LogPrintf("tx with hash %s pays for service transaction with hash %s but none can be found \n", tx.GetHash().GetHex().c_str(), tx.serviceReferenceHash.GetHex().c_str());
+                LogPrintf("tx with hash %s pays for service transaction with hash %s but none can be found \n", tx->GetHash().GetHex().c_str(), tx->serviceReferenceHash.GetHex().c_str());
             }
             else
             {
                 CServiceTransaction stx = iter->second;
-                if(!CheckTransactionANS(stx, tx, state))
+                if(!CheckTransactionANS(stx, *tx, state))
                 {
                     return error("CheckBlock(): CheckTransactionANS of %s failed with %s",
-                        tx.GetHash().ToString(),
+                        tx->GetHash().ToString(),
                         FormatStateMessage(state));
                 }
             }
