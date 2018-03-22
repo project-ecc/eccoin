@@ -60,3 +60,10 @@ CAnsRecord CAnsZone::getRecord(AnsRecordTypes recordType, std::string key)
     return value;
 }
 
+const uint64_t oneMonth = 2592000; // 30 days in seconds
+
+// TODO : NEEDS ACTUAL TIME CALC METHOD
+uint64_t CalcValidTime(uint64_t nTime, uint256 paymentHash)
+{
+    return nTime + oneMonth;
+}
