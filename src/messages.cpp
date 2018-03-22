@@ -4,6 +4,7 @@
 
 #include "messages.h"
 
+#include "ans/ans.h"
 #include "serialize.h"
 #include "sync.h"
 #include "tx/tx.h"
@@ -826,6 +827,9 @@ bool AlreadyHave(const CInv& inv) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
         }
     case MSG_BLOCK:
         return pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.count(inv.hash);
+    case MSG_STX:
+        // TODO : need some sort of memory pool to hold hashes of service transactions
+
     }
     // Don't know what it is, just say we already got one
     return true;
@@ -1025,6 +1029,11 @@ void static ProcessGetData(CNode* pfrom, CConnman &connman, const Consensus::Par
                  {
                      vNotFound.push_back(inv);
                  }
+             }
+
+             else if (inv.type == MSG_STX)
+             {
+                 // TODO : need to handle STX messages based on hash
              }
 
              // Track requests for our stuff.
