@@ -829,7 +829,7 @@ bool AlreadyHave(const CInv& inv) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
         return pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.count(inv.hash);
     case MSG_STX:
         // TODO : need some sort of memory pool to hold hashes of service transactions
-
+        return true;
     }
     // Don't know what it is, just say we already got one
     return true;
