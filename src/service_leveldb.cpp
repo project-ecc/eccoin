@@ -28,11 +28,3 @@ bool CServiceDB::EraseFlag(const char &SERVICE_FLAG, const std::string &name)
     return WriteBatch(batch);
 }
 
-bool CServiceDB::EraseEntry(const char &SERVICE_FLAG, const std::string &name)
-{
-    if(SERVICE_FLAG != 'X')
-    {
-        return Erase(std::make_pair(SERVICE_FLAG, name));
-    }
-    return Erase(name);
-}

@@ -80,4 +80,21 @@ public:
     uint256 getServiceHash();
 };
 
+class CAnsKey
+{
+private:
+    const char record;
+    const std::string name;
+public:
+    CAnsKey(const char& _record, std::string& _name) : record(_record), name(_name) {}
+
+    ADD_SERIALIZE_METHODS
+
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITE(record);
+        READWRITE(name);
+    }
+};
+
 #endif // ANSRECORD_H

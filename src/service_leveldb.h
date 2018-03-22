@@ -26,25 +26,21 @@ public:
     bool ReadFlag(const char &SERVICE_FLAG, const std::string &name, bool &fValue);
     bool EraseFlag(const char &SERVICE_FLAG, const std::string &name);
 
-    template <class T>
-    bool WriteEntry(const char &SERVICE_FLAG, const std::string &name, T value)
+    template <class K, class V>
+    bool WriteEntry(K key, V value)
     {
-        if(SERVICE_FLAG != 'X')
-        {
-            return Write(std::make_pair(SERVICE_FLAG, name), value);
-        }
-        return Write(name, value);
+        return Write(key, value);
     }
-    template <class T>
-    bool ReadEntry(const char &SERVICE_FLAG, const std::string &name, T value)
+    template <class K, class V>
+    bool ReadEntry(K key, V value)
     {
-        if(SERVICE_FLAG != 'X')
-        {
-            return Read(std::make_pair(SERVICE_FLAG, name), value);
-        }
-        return Read(name, value);
+        return Read(key, value);
     }
-    bool EraseEntry(const char &SERVICE_FLAG, const std::string &name);
+    template <class K>
+    bool EraseEntry(K key)
+    {
+        return Erase(key);
+    }
 };
 
 #endif // SERVICE_LEVELDB_H

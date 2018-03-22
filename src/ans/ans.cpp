@@ -19,14 +19,23 @@ bool CAnsZone::addRecord(AnsRecordTypes recordType, std::string key, CAnsRecord 
     switch(recordType)
     {
         case A_RECORD:
-            g_ans->WriteEntry(A_REC, key, value);
+        {
+            CAnsKey Akey(A_REC,key);
+            g_ans->WriteEntry(Akey, value);
             break;
+        }
         case CNAME_RECORD:
-            g_ans->WriteEntry(CNAME_REC, key, value);
+        {
+            CAnsKey CNAMEkey(CNAME_REC,key);
+            g_ans->WriteEntry(CNAMEkey, value);
             break;
+        }
         case PTR_RECORD:
-            g_ans->WriteEntry(PTR_REC, key, value);
+        {
+            CAnsKey PTRkey(PTR_REC,key);
+            g_ans->WriteEntry(PTRkey, value);
             break;
+        }
         default:
             return false;
     }
@@ -41,17 +50,20 @@ CAnsRecord CAnsZone::getRecord(AnsRecordTypes recordType, std::string key)
     {
         case A_RECORD:
         {
-            g_ans->ReadEntry(A_REC, key, value);
+            CAnsKey Akey(A_REC,key);
+            g_ans->ReadEntry(Akey, value);
             break;
         }
         case CNAME_RECORD:
         {
-            g_ans->ReadEntry(CNAME_REC, key, value);
+            CAnsKey CNAMEkey(CNAME_REC,key);
+            g_ans->ReadEntry(CNAMEkey, value);
             break;
         }
         case PTR_RECORD:
         {
-            g_ans->ReadEntry(PTR_REC, key, value);
+            CAnsKey PTRkey(PTR_REC,key);
+            g_ans->ReadEntry(PTRkey, value);
             break;
         }
         default:
