@@ -290,7 +290,10 @@ UniValue getansaddress(const UniValue& params, bool fHelp)
     {
         throw JSONRPCError(RPC_WALLET_ERROR, "Error: The transaction was rejected! This might happen if some of the coins in your wallet were already spent, such as if you used a copy of wallet.dat and coins were spent in the copy but not marked as spent here.");
     }
-
+    if (!pwalletMain->CommitTransactionForService(stx, strUsername, g_connman.get()))
+    {
+        throw JSONRPCError(RPC_WALLET_ERROR, "Error: The transaction was rejected! This might happen if some of the coins in your wallet were already spent, such as if you used a copy of wallet.dat and coins were spent in the copy but not marked as spent here.");
+    }
     std::string responseMessage = "The user name " + strUsername + " has been assigned to the address " + strAddress + ""
         " with PaymentHash = " + wtx.tx->GetHash().GetHex() + " and  ServiceHash = " + stx.GetHash().GetHex();
 
