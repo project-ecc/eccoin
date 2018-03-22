@@ -5,6 +5,7 @@
 
 #include "wallet/wallet.h"
 
+#include "ans/ans.h"
 #include "base58.h"
 #include "chain/checkpoints.h"
 #include "chain/chain.h"
@@ -1292,18 +1293,36 @@ bool CWalletTx::RelayWalletTransaction(CConnman *connman)
         return false;
     }
 
-    CValidationState state;
     // GetDepthInMainChain already catches known conflicts.
-    if (InMempool()) {
+    if (InMempool())
+    {
         LogPrintf("Relaying wtx %s\n", tx->GetHash().ToString().c_str());
-        if (connman) {
+        if (connman)
+        {
             CInv inv(MSG_TX, tx->GetId());
-            connman->ForEachNode(
-                [&inv](CNode *pnode) { pnode->PushInventory(inv); });
+            connman->ForEachNode([&inv](CNode *pnode) { pnode->PushInventory(inv); });
             return true;
         }
     }
+    return false;
+}
 
+bool RelayServiceTransaction(CConnman *connman, const CServiceTransaction& stx, std::string username)
+{
+    assert(pwalletMain->GetBroadcastTransactions());
+
+    CAnsRecord emptyRec;
+    emptyRec.setNull();
+    if (pansMain->getRecord(A_RECORD, username) != emptyRec)
+    {
+        LogPrintf("Relaying stx %s\n", stx.GetHash().ToString().c_str());
+        if (connman)
+        {
+            CInv inv(MSG_STX, stx.GetId());
+            connman->ForEachNode([&inv](CNode *pnode) { pnode->PushInventory(inv); });
+            return true;
+        }
+    }
     return false;
 }
 
@@ -2618,55 +2637,22 @@ bool CWallet::CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey, CCon
 /**
  * Call after CreateTransaction unless you want to abort
  */
-bool CWallet::CommitTransactionForService(CWalletTx& wtxNew, CServiceTransaction& stxNew, CReserveKey& reservekey, CConnman *connman, CValidationState &state)
+bool CWallet::CommitTransactionForService(CServiceTransaction& stxNew, std::string username, CConnman *connman)
 {
     {
         LOCK2(cs_main, cs_wallet);
-        LogPrintf("CommitTransaction:\n%s", wtxNew.tx->ToString());
+        LogPrintf("CommitTransaction:\n%s", stxNew.ToString());
         {
-            // This is only to keep the database open to defeat the auto-flush for the
-            // duration of this scope.  This is the only place where this optimization
-            // maybe makes sense; please don't do it anywhere else.
-            CWalletDB* pwalletdb = fFileBacked ? new CWalletDB(strWalletFile,"r+") : NULL;
-
-            // Take key pair from key pool so it won't be used again
-            reservekey.KeepKey();
-
-            // Add tx to wallet, because if it has change it's also ours,
-            // otherwise just for transaction history.
-            AddToWallet(wtxNew, false, pwalletdb);
-
-            /// TODO : look into needing a service transaction as ours, they have no change so this might not be needed
-
-            // Notify that old coins are spent
-            std::set<CWalletTx*> setCoins;
-            for (auto const& txin: wtxNew.tx->vin)
-            {
-                CWalletTx &coin = mapWallet[txin.prevout.hash];
-                coin.BindWallet(this);
-                NotifyTransactionChanged(this, coin.tx->GetHash(), CT_UPDATED);
-            }
-
-            if (fFileBacked)
-                delete pwalletdb;
+            CAnsRecord newRec(username, CalcValidTime(stxNew.nTime, stxNew.paymentReferenceHash), stxNew.paymentReferenceHash, stxNew.GetHash());
+            pansMain->addRecord(A_RECORD, username, newRec);
         }
 
         // Track how many getdata requests our transaction gets
-        mapRequestCount[wtxNew.tx->GetHash()] = 0;
+        mapRequestCount[stxNew.GetHash()] = 0;
 
         if (fBroadcastTransactions)
         {
-            // Broadcast
-            if (!wtxNew.AcceptToMemoryPool(false))
-            {
-                // This must not fail. The transaction has already been signed and recorded.
-                LogPrintf("CommitTransaction(): Error: Transaction not valid\n");
-                return false;
-            }
-            wtxNew.RelayWalletTransaction(connman);
-
-            /// TODO : need to relay service transaction here, will need to update relays to be able to handle service transactions as well
-            // stxNew.RelayServiceTransaction();
+            RelayServiceTransaction(connman, stxNew, username);
         }
     }
     return true;
