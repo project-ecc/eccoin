@@ -1,3 +1,7 @@
+// Copyright (c) 2018 Greg Griffith and the ECC developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #include "service_leveldb.h"
 
 #include "util/util.h"
