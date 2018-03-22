@@ -80,8 +80,6 @@ struct QueuedBlock {
 extern std::map<uint256, std::pair<NodeId, std::list<QueuedBlock>::iterator> > mapBlocksInFlight;
 extern std::map<uint256, std::pair<NodeId, bool>> mapBlockSource;
 
-extern std::map<uint256, CServiceTransaction> stxpool;
-
 
 
 /**

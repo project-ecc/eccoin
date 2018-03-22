@@ -29,6 +29,7 @@
 #include "netmessagemaker.h"
 #include "policy/policy.h"
 #include "policy/fees.h"
+#include "stxmempool.h"
 
 #include <algorithm>
 #include <vector>
@@ -73,8 +74,6 @@ std::map<uint256, std::pair<NodeId, bool>> mapBlockSource;
 typedef std::map<uint256, CTransaction> MapRelay;
 MapRelay mapRelay;
 std::deque<std::pair<int64_t, MapRelay::iterator>> vRelayExpiration;
-
-std::map<uint256, CServiceTransaction> stxpool;
 
 static CCriticalSection cs_most_recent_block;
 static std::shared_ptr<const CBlock> most_recent_block;
@@ -828,8 +827,8 @@ bool AlreadyHave(const CInv& inv) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
     case MSG_BLOCK:
         return pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.count(inv.hash);
     case MSG_STX:
-        // TODO : need some sort of memory pool to hold hashes of service transactions
-        return true;
+        return g_stxmempool->exists(inv.hash);
+
     }
     // Don't know what it is, just say we already got one
     return true;
@@ -1033,7 +1032,19 @@ void static ProcessGetData(CNode* pfrom, CConnman &connman, const Consensus::Par
 
              else if (inv.type == MSG_STX)
              {
-                 // TODO : need to handle STX messages based on hash
+                 // Send stream from relay memory
+                 bool push = false;
+                 int nSendFlags = 0;
+                 CServiceTransaction stx;
+                 if(g_stxmempool->lookup(inv.hash, stx))
+                 {
+                     connman.PushMessage(pfrom, msgMaker.Make(nSendFlags, NetMsgType::STX, stx));
+                     push = true;
+                 }
+                 if (!push)
+                 {
+                     vNotFound.push_back(inv);
+                 }
              }
 
              // Track requests for our stuff.
@@ -1393,7 +1404,8 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
 
         std::vector<CInv> vToFetch;
 
-        for (size_t nInv = 0; nInv < vInv.size(); nInv++) {
+        for (size_t nInv = 0; nInv < vInv.size(); nInv++)
+        {
             CInv &inv = vInv[nInv];
 
             if (interruptMsgProc)
@@ -1405,7 +1417,8 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
             LogPrintf("got inv: %s  %s peer=%d\n", inv.ToString(),
                      fAlreadyHave ? "have" : "new", pfrom->id);
 
-            if (inv.type == MSG_TX) {
+            if (inv.type == MSG_TX || inv.type == MSG_STX)
+            {
                 inv.type |= nFetchFlags;
             }
 
@@ -1815,8 +1828,20 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
     {
         CServiceTransaction pstx;
         vRecv >> pstx;
-        //const CServiceTransaction stx = pstx;
-        stxpool.emplace(std::make_pair(pstx.GetHash(), pstx));
+        CTransaction tx;
+        uint256 blockHashOfTx;
+        if(pstx.paymentReferenceHash.IsNull())
+        {
+            return error("invalid service transaction with hash %s recieved", pstx.GetHash());
+        }
+        if (GetTransaction(pstx.paymentReferenceHash, tx, pnetMan->getActivePaymentNetwork()->GetConsensus(), blockHashOfTx))
+        {
+            g_stxmempool->add(pstx.GetHash(), pstx);
+        }
+        else
+        {
+            // do nothing, we dont have the payment tx so we wont accept the service tx for it
+        }
     }
 
     // Ignore headers received while importing
