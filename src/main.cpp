@@ -42,6 +42,7 @@
 #include "chain/chain.h"
 #include "chain/checkpoints.h"
 #include "processtx.h"
+#include "stxmempool.h"
 
 #include <random>
 #include <sstream>
@@ -1632,15 +1633,20 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
         }
         if(tx->nVersion == 2)
         {
-            std::map<uint256, CServiceTransaction>::iterator iter;
-            iter = stxpool.find(tx->serviceReferenceHash);
-            if(iter == stxpool.end())
+            CServiceTransaction stx;
+            if(g_stxmempool->lookup(tx->serviceReferenceHash, stx))
             {
                 LogPrintf("tx with hash %s pays for service transaction with hash %s but none can be found \n", tx->GetHash().GetHex().c_str(), tx->serviceReferenceHash.GetHex().c_str());
+                // we should request this stx
+                LogPrintf("Requesting stx %s\n", stx.GetHash().ToString().c_str());
+                {
+                    CInv inv(MSG_STX, stx.GetId());
+                    g_connman->ForEachNode([&inv](CNode *pnode) { pnode->AskFor(inv); });
+                }
+                // this will be reprocessed when we get the stx. if the stx is invalid but they paid for it, oh well
             }
             else
             {
-                CServiceTransaction stx = iter->second;
                 if(!CheckTransactionANS(stx, *tx, state))
                 {
                     return error("CheckBlock(): CheckTransactionANS of %s failed with %s",

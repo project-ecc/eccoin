@@ -17,8 +17,6 @@
 //! -stxcache default (MiB)
 static const int64_t nDefaultStxCache = 512;
 
-extern std::unique_ptr<CStxMemPool> g_stxmempool;
-
 /** Access to a service transaction storage database since they arent stored in blocks
 * Use leveldb since we already implement it for txindex and blockindexes.
 * no need to find a new db when leveldb already works
@@ -51,5 +49,7 @@ public:
     bool lookup(uint256 hash, CServiceTransaction& result) const;
     bool add(uint256 hash, CServiceTransaction& stx) const;
 };
+
+extern std::unique_ptr<CStxMemPool> g_stxmempool;
 
 #endif // STXMEMPOOL_H

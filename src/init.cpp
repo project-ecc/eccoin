@@ -247,6 +247,8 @@ void Shutdown()
 
     delete pwalletMain;
     pwalletMain = NULL;
+    g_ans.reset();
+    g_stxmempool.reset();
     globalVerifyHandle.reset();
     ECC_Stop();
     LogPrintf("%s: done\n", __func__);
@@ -1333,7 +1335,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
 
                 /// once we have loaded the main chain, load the services
                 g_stxmempool.reset();
-                g_stxmempool(new CStxMemPool());
+                g_stxmempool.reset(new CStxMemPool());
                 pansMain = new CAnsZone();
                 g_ans.reset();
                 g_ans.reset(new CServiceDB("ans", nBlockTreeDBCache, false, false));

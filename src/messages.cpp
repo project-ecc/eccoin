@@ -30,6 +30,7 @@
 #include "policy/policy.h"
 #include "policy/fees.h"
 #include "stxmempool.h"
+#include "processtx.h"
 
 #include <algorithm>
 #include <vector>
@@ -1421,8 +1422,8 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
             {
                 inv.type |= nFetchFlags;
             }
-
-            if (inv.type == MSG_BLOCK) {
+            if (inv.type == MSG_BLOCK)
+            {
                 UpdateBlockAvailability(pfrom->GetId(), inv.hash);
                 if (!fAlreadyHave && !fImporting && !fReindex &&
                     !mapBlocksInFlight.count(inv.hash)) {
@@ -1444,7 +1445,9 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
                     }
                     LogPrintf("getheaders (%d) %s to peer=%d\n", pnetMan->getActivePaymentNetwork()->getChainManager()->pindexBestHeader->nHeight, inv.hash.ToString(), pfrom->id);
                 }
-            } else {
+            }
+            else
+            {
                 pfrom->AddInventoryKnown(inv);
                 if (fBlocksOnly)
                 {
@@ -1832,11 +1835,35 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
         uint256 blockHashOfTx;
         if(pstx.paymentReferenceHash.IsNull())
         {
-            return error("invalid service transaction with hash %s recieved", pstx.GetHash());
+            return error("invalid service transaction with hash %s recieved", pstx.GetHash().GetHex().c_str());
         }
         if (GetTransaction(pstx.paymentReferenceHash, tx, pnetMan->getActivePaymentNetwork()->GetConsensus(), blockHashOfTx))
         {
-            g_stxmempool->add(pstx.GetHash(), pstx);
+            //if we can get the transaction we have already processed it so it is safe to call CheckTransactionANS here
+            CValidationState state;
+            if(CheckTransactionANS(pstx, tx, state))
+            {
+                g_stxmempool->add(pstx.GetHash(), pstx);
+            }
+            else
+            {
+                int nDoS = 0;
+                if (state.IsInvalid(nDoS))
+                {
+                    LogPrintf("%s from peer=%d was not accepted: %s\n", pstx.GetHash().ToString().c_str(), pfrom->id, FormatStateMessage(state));
+                    // Never send AcceptToMemoryPool's internal codes over P2P.
+                    if (state.GetRejectCode() > 0 && state.GetRejectCode() < REJECT_INTERNAL)
+                    {
+                        connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::REJECT, strCommand,
+                                          uint8_t(state.GetRejectCode()),
+                                          state.GetRejectReason().substr(0, MAX_REJECT_MESSAGE_LENGTH),pstx.GetId()));
+                    }
+                    if (nDoS > 0)
+                    {
+                        Misbehaving(pfrom, nDoS, state.GetRejectReason());
+                    }
+                }
+            }
         }
         else
         {
@@ -2893,7 +2920,8 @@ bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interr
                 connman.PushMessage(pto, msgMaker.Make(NetMsgType::GETDATA, vGetData));
                 vGetData.clear();
             }
-        } else
+        }
+        else
         {
             // If we're not going to ask, don't expect a response.
             pto->setAskFor.erase(inv.hash);
