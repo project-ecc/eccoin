@@ -1316,9 +1316,8 @@ bool RelayServiceTransaction(CConnman *connman, const CServiceTransaction& stx, 
     if (pansMain->getRecord(A_RECORD, username) != emptyRec)
     {
         LogPrintf("Relaying stx %s\n", stx.GetHash().ToString().c_str());
-        if (connman)
         {
-            CInv inv(MSG_STX, stx.GetId());
+            CInv inv(MSG_STX, stx.GetHash());
             connman->ForEachNode([&inv](CNode *pnode) { pnode->PushInventory(inv); });
             return true;
         }
@@ -2653,7 +2652,7 @@ bool CWallet::CommitTransactionForService(CServiceTransaction& stxNew, std::stri
 {
     {
         LOCK2(cs_main, cs_wallet);
-        LogPrintf("CommitTransaction:\n%s", stxNew.ToString());
+        LogPrintf("CommitServiceTransaction:\n%s", stxNew.ToString());
         {
             CAnsRecord newRec(username, CalcValidTime(stxNew.nTime, stxNew.paymentReferenceHash), stxNew.paymentReferenceHash, stxNew.GetHash());
             pansMain->addRecord(A_RECORD, username, newRec);

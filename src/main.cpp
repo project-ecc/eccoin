@@ -1646,7 +1646,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
                 // we should request this stx
                 LogPrintf("Requesting stx %s\n", stx.GetHash().ToString().c_str());
                 {
-                    CInv inv(MSG_STX, stx.GetId());
+                    CInv inv(MSG_STX, stx.GetHash());
                     g_connman->ForEachNode([&inv](CNode *pnode) { pnode->AskFor(inv); });
                 }
                 // this will be reprocessed when we get the stx. if the stx is invalid but they paid for it, oh well

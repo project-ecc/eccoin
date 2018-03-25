@@ -1394,8 +1394,8 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
 
         // Allow whitelisted peers to send data other than blocks in blocks only
         // mode if whitelistrelay is true
-        if (pfrom->fWhitelisted &&
-            gArgs.GetBoolArg("-whitelistrelay", DEFAULT_WHITELISTRELAY)) {
+        if (pfrom->fWhitelisted && gArgs.GetBoolArg("-whitelistrelay", DEFAULT_WHITELISTRELAY)) 
+        {
             fBlocksOnly = false;
         }
 
@@ -1856,7 +1856,7 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
                     {
                         connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::REJECT, strCommand,
                                           uint8_t(state.GetRejectCode()),
-                                          state.GetRejectReason().substr(0, MAX_REJECT_MESSAGE_LENGTH),pstx.GetId()));
+                                          state.GetRejectReason().substr(0, MAX_REJECT_MESSAGE_LENGTH),pstx.GetHash()));
                     }
                     if (nDoS > 0)
                     {
@@ -2763,7 +2763,8 @@ bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interr
         }
 
         // Determine transactions to relay
-        if (fSendTrickle) {
+        if (fSendTrickle) 
+        {
             // Produce a vector with all candidates for sending
             std::vector<std::set<uint256>::iterator> vInvTx;
             vInvTx.reserve(pto->setInventoryTxToSend.size());
@@ -2838,6 +2839,36 @@ bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interr
                 }
                 pto->filterInventoryKnown.insert(hash);
             }
+        }
+
+        if(!pto->setInventoryStxToSend.empty())
+        {
+            std::vector<std::set<uint256>::iterator> vInvStx;
+            for (std::set<uint256>::iterator it = pto->setInventoryStxToSend.begin(); it != pto->setInventoryStxToSend.end(); it++) 
+            {
+                vInvStx.push_back(it);
+            }
+            uint64_t nRelayedTransactions = 0;
+            while (!vInvStx.empty() && nRelayedTransactions < INVENTORY_BROADCAST_MAX)
+            {
+                std::set<uint256>::iterator it = vInvStx.back();
+                vInvStx.pop_back();
+                uint256 hash = *it;
+                pto->setInventoryStxToSend.erase(it);
+                if (pto->filterInventoryKnown.contains(hash))
+                {
+                    continue;
+                }
+                vInv.push_back(CInv(MSG_STX, hash));
+                nRelayedTransactions++;
+                if (vInv.size() == MAX_INV_SZ)
+                {
+                    connman.PushMessage(pto, msgMaker.Make(NetMsgType::INV, vInv));
+                    vInv.clear();
+                }
+                pto->filterInventoryKnown.insert(hash);
+            }
+
         }
     }
     if (!vInv.empty())

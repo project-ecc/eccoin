@@ -8,16 +8,6 @@
 #include "uint256.h"
 #include "serialize.h"
 
-
-/**
- * A StxId is the identifier of a transaction. Currently identical to TxHash but
- * differentiated for type safety.
- */
-struct StxId : public uint256 {
-    explicit StxId(const uint256 &b) : uint256(b) {}
-};
-
-
 /** The basic transaction that is broadcasted on the network and contained in
  * blocks.  A transaction can contain multiple inputs and outputs.
  */
@@ -95,7 +85,6 @@ public:
         return a.hash != b.hash;
     }
 
-    const StxId GetId() const { return StxId(hash); }
     std::string ToString() const;
     //void setSecurityHash();
 };
