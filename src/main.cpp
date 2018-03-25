@@ -447,7 +447,9 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState &state, const C
     }
 
     if (!CheckTransaction(tx, state))
+    {
         return false;
+    }
 
     // Coinbase/Coinstake is only valid in a block, not as a loose transaction
     if (tx.IsCoinBase() || tx.IsCoinStake())
@@ -667,6 +669,7 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState &state, const C
 
         if (fRejectAbsurdFee && nFees > ::minRelayTxFee.GetFee(nSize) * 10000)
         {
+            LogPrintf("Absurdly-high-fee of %d \n", nFees);
             return state.Invalid(false, REJECT_HIGHFEE, "absurdly-high-fee",
                 strprintf("%d > %d", nFees, ::minRelayTxFee.GetFee(nSize) * 10000));
         }
@@ -889,8 +892,11 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransa
     bool res = AcceptToMemoryPoolWorker(pool, state, tx, fLimitFree, pfMissingInputs, fOverrideMempoolLimit, fRejectAbsurdFee, vHashTxToUncache);
     if (!res)
     {
+        LogPrintf("AcceptToMemoryPool(): ERROR, %s \n",state.GetRejectReason().c_str());
         for (auto const& hashTx: vHashTxToUncache)
+        {
             pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip->Uncache(hashTx);
+        }
     }
     return res;
 }

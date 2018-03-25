@@ -1307,7 +1307,7 @@ bool CWalletTx::RelayWalletTransaction(CConnman *connman)
     return false;
 }
 
-bool RelayServiceTransaction(CConnman *connman, const CServiceTransaction& stx, std::string username)
+bool RelayServiceTransaction(CConnman *connman, const CServiceTransaction& stx, std::string& username)
 {
     assert(pwalletMain->GetBroadcastTransactions());
 
@@ -2426,6 +2426,7 @@ bool CWallet::CreateTransactionForService(const CRecipient& recipient, CWalletTx
                 txNew.vin.clear();
                 txNew.vout.clear();
                 wtxNew.fFromMe = true;
+                int nChangePosRet = -1;
                 bool fFirst = true;
 
                 CAmount nValueToSelect = nValue;
@@ -2497,14 +2498,25 @@ bool CWallet::CreateTransactionForService(const CRecipient& recipient, CWalletTx
                         }
                     }
 
-                    // add the dust to the fee since there is no change not that this should ever happen anyway.
+                    // Never create dust outputs; if we would, just
+                    // add the dust to the fee.
+                    if (newTxOut.IsDust(::minRelayTxFee))
                     {
                         nFeeRet += nChange;
                         reservekey.ReturnKey();
                     }
+                    else
+                    {
+                        // Insert change txn at random position:
+                        nChangePosRet = GetRandInt(txNew.vout.size()+1);
+                        std::vector<CTxOut>::iterator position = txNew.vout.begin()+nChangePosRet;
+                        txNew.vout.insert(position, newTxOut);
+                    }
                 }
                 else
+                {
                     reservekey.ReturnKey();
+                }
 
                 // Fill vin
                 //
@@ -2637,7 +2649,7 @@ bool CWallet::CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey, CCon
 /**
  * Call after CreateTransaction unless you want to abort
  */
-bool CWallet::CommitTransactionForService(CServiceTransaction& stxNew, std::string username, CConnman *connman)
+bool CWallet::CommitTransactionForService(CServiceTransaction& stxNew, std::string& username, CConnman *connman)
 {
     {
         LOCK2(cs_main, cs_wallet);

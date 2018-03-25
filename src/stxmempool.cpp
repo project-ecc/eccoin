@@ -8,7 +8,7 @@
 
 std::unique_ptr<CStxMemPool> g_stxmempool = nullptr;
 
-CStxDB::CStxDB(size_t nCacheSize, bool fMemory, bool fWipe) : CDBWrapper(GetDataDir() / "services" / "mempool", nCacheSize, fMemory, fWipe)
+CStxDB::CStxDB(size_t nCacheSize, bool fMemory, bool fWipe) : CDBWrapper(GetDataDir() / "services/mempool", nCacheSize, fMemory, fWipe)
 {
 
 }

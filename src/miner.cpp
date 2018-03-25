@@ -411,7 +411,11 @@ CBlockTemplate* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
             pblock->nTime          = std::max(pblock->GetBlockTime(), pindexPrev->GetBlockTime() - nMaxClockDrift);
         }
         if (pblock->IsProofOfWork())
+        {
             pblock->UpdateTime();
+            pblock->vtx[0]->vout[0].nValue = GetProofOfWorkReward(nFees, pindexPrev->nHeight+1, pindexPrev->GetBlockHash());
+
+        }
         pblock->nNonce         = 0;
     }
 

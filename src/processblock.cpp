@@ -212,7 +212,9 @@ bool ProcessNewBlock(CValidationState& state, const CNetworkTemplate& chainparam
         LOCK(cs_main);
         bool fRequested = MarkBlockAsReceived(pblock->GetHash());
         fRequested |= fForceProcessing;
-        if (!checked) {
+        if (!checked) 
+        {
+            LogPrintf("%s \n", state.GetRejectReason().c_str());
             return error("%s: CheckBlock FAILED", __func__);
         }
 

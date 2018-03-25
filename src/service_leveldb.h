@@ -31,12 +31,12 @@ public:
     bool EraseFlag(const char &SERVICE_FLAG, const std::string &name);
 
     template <class K, class V>
-    bool WriteEntry(K key, V value)
+    bool WriteEntry(K key, V &value)
     {
         return Write(key, value);
     }
     template <class K, class V>
-    bool ReadEntry(K key, V value)
+    bool ReadEntry(K key, V &value)
     {
         return Read(key, value);
     }

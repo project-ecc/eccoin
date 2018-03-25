@@ -1271,7 +1271,6 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
         do {
             try
             {
-                int64_t lastUpdate = nStart;
                 pnetMan->getActivePaymentNetwork()->getChainManager()->UnloadBlockIndex();
                 pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.reset();
                 pcoinsdbview.reset();
@@ -1292,9 +1291,6 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                     strLoadError = _("Error loading block database");
                     break;
                 }
-                lastUpdate = GetTimeMillis() - nStart;
-                LogPrintf("load block index function took %15dms\n", lastUpdate);
-
                 // If the loaded chain has a wrong genesis, bail out immediately
                 // (we're likely using a testnet datadir, or the other way around).
                 if (!pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.empty() &&
@@ -1329,9 +1325,23 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                         strLoadError = _("Corrupted block database detected");
                         break;
                     }
-                    LogPrintf("verify db function %15dms\n", GetTimeMillis() - lastUpdate);
-                    lastUpdate = GetTimeMillis();
                 }
+
+                /// check for services folder, if does not exist. make it
+                boost::filesystem::path servicesFolder = (GetDataDir() / "services");
+                if (boost::filesystem::exists(servicesFolder))
+                {
+                    if(!boost::filesystem::is_directory(servicesFolder))
+                    {
+                        LogPrintf("services exists but is not a folder, check your ecc data files \n");
+                        assert(false);
+                    }
+                }
+                else
+                {
+                    boost::filesystem::create_directory(servicesFolder);
+                }
+
 
                 /// once we have loaded the main chain, load the services
                 g_stxmempool.reset();

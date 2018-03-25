@@ -24,7 +24,9 @@ bool CheckTransaction(const CTransaction& tx, CValidationState &state)
     for (auto const& txout: tx.vout)
     {
         if (txout.nValue < 0)
+        {
             return state.DoS(100, false, REJECT_INVALID, "bad-txns-vout-negative");
+        }
         if (txout.nValue > MAX_MONEY)
             return state.DoS(100, false, REJECT_INVALID, "bad-txns-vout-toolarge");
         nValueOut += txout.nValue;

@@ -14,7 +14,7 @@ static const char A_REC     = 'A';
 static const char CNAME_REC = 'C';
 static const char PTR_REC   = 'P';
 
-bool CAnsZone::addRecord(AnsRecordTypes recordType, std::string key, CAnsRecord value)
+bool CAnsZone::addRecord(AnsRecordTypes recordType, std::string key, CAnsRecord& value)
 {
     switch(recordType)
     {

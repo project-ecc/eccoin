@@ -6,6 +6,7 @@
 #include "crypto/hash.h"
 #include "streams.h"
 #include "timedata.h"
+#include "tinyformat.h"
 
 struct serializeServiceTx
 {
@@ -80,7 +81,18 @@ CServiceTransaction& CServiceTransaction::operator=(const CServiceTransaction &t
 
 std::string CServiceTransaction::ToString() const
 {
-    return "";
+    std::string str;
+    std::string datastr(vdata.begin(), vdata.end());
+    str += strprintf("CServiceTransaction(hash=%s, ver=%d, nServiceId=%u, nTime=%u, nOpCode=%u, nLockTime=%u, vdata=%s, paymentReferenceHash=%s)\n",
+        GetHash().ToString().substr(0,10),
+        nVersion,
+        nServiceId,
+        nTime,
+        nOpCode,
+        nLockTime,
+        datastr.c_str(),
+        paymentReferenceHash.GetHex().c_str());
+    return str;
 }
 
 /*

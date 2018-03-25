@@ -18,7 +18,7 @@ extern std::unique_ptr<CServiceDB> g_ans;
 class CAnsZone
 {
 public:
-    bool addRecord(AnsRecordTypes recordType, std::string key, CAnsRecord value);
+    bool addRecord(AnsRecordTypes recordType, std::string key, CAnsRecord& value);
     CAnsRecord getRecord(AnsRecordTypes recordType, std::string key);
 };
 

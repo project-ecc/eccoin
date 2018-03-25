@@ -166,7 +166,7 @@ static void SendMoney(const CTxDestination &address, CAmount nValue, CWalletTx& 
     CScript scriptPubKey = GetScriptForDestination(address);
 
     // TODO : make an actual fee calculation for services, just use 1 ECC for now for testing purposes
-    CAmount nFeeRequired = (1 * COIN);
+    CAmount nFeeRequired = ((1 * COIN) / 100);
     std::string strError;
     CRecipient recipient = {scriptPubKey, nValue, false};
     if (!pwalletMain->CreateTransactionForService(recipient, wtxNew, reservekey, nFeeRequired, nFeeRet, strError))
@@ -203,29 +203,22 @@ UniValue getansaddress(const UniValue& params, bool fHelp)
     if (!EnsureWalletIsAvailable(fHelp))
         return NullUniValue;
 
-    if (fHelp || params.size() < 2 || params.size() > 5)
+    if (fHelp || params.size() != 2)
+    {
         throw std::runtime_error(
-            "sendtoaddress \"bitcoinaddress\" \"username\" \n"
-            "\nSend an amount to a given address.\n"
+            "getansaddress \"bitcoinaddress\" \"username\" \n"
+            "\nAssign a username to an owned address.\n"
             + HelpRequiringPassphrase() +
             "\nArguments:\n"
-            "1. \"bitcoinaddress\"  (string, required) The bitcoin address to send to.\n"
-            "2. \"amount\"      (numeric or string, required) The amount in " + CURRENCY_UNIT + " to send. eg 0.1\n"
-            "3. \"comment\"     (string, optional) A comment used to store what the transaction is for. \n"
-            "                             This is not part of the transaction, just kept in your wallet.\n"
-            "4. \"comment-to\"  (string, optional) A comment to store the name of the person or organization \n"
-            "                             to which you're sending the transaction. This is not part of the \n"
-            "                             transaction, just kept in your wallet.\n"
-            "5. subtractfeefromamount  (boolean, optional, default=false) The fee will be deducted from the amount being sent.\n"
-            "                             The recipient will receive less bitcoins than you enter in the amount field.\n"
+            "1. \"bitcoinaddress\"  (string, required) The bitcoin address to have a username set to.\n"
+            "2. \"username\"  (string, required) The username to be set.\n"
             "\nResult:\n"
-            "\"transactionid\"  (string) The transaction id.\n"
+            "\"transactionid\"  (string) The transaction id and additional info.\n"
             "\nExamples:\n"
-            + HelpExampleCli("sendtoaddress", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\" 0.1")
-            + HelpExampleCli("sendtoaddress", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\" 0.1 \"donation\" \"seans outpost\"")
-            + HelpExampleCli("sendtoaddress", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\" 0.1 \"\" \"\" true")
-            + HelpExampleRpc("sendtoaddress", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\", 0.1, \"donation\", \"seans outpost\"")
+            + HelpExampleCli("sendtoaddress", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\" \"alice\"")
+            + HelpExampleRpc("sendtoaddress", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\", \"bob\"")
         );
+    }
 
     LOCK2(cs_main, pwalletMain->cs_wallet);
 
@@ -241,7 +234,8 @@ UniValue getansaddress(const UniValue& params, bool fHelp)
     }
 
     // Amount
-    std::string strUsername = params[1].get_str();
+    std::string strUsername;
+    strUsername = params[1].get_str();
 
     // check for banned letters/numbers
     /** All alphanumeric characters except for "0", "I", "O", and "l" */
@@ -273,9 +267,19 @@ UniValue getansaddress(const UniValue& params, bool fHelp)
         i++;
     }
     EnsureWalletIsUnlocked();
+
+    // check to make sure we dont already have an A record for that name
+    AnsRecordTypes recordtype = AnsRecordTypes::A_RECORD;
+    if(pansMain->getRecord(recordtype, strUsername) != CAnsRecord())
+    {
+        throw JSONRPCError(RPC_INVALID_PARAMS, "Username already exists for an address");
+    }
+
+
     CWalletTx wtx;
     CServiceTransaction stx;
-    CAmount nAmount = 0;
+    // TODO : have user enter coin amount to pay for ans address, right now it is set to the default 1 month and cant be changed
+    CAmount nAmount = (1 * COIN);
     CAmount nFeeRet = 0;
     // Create and send the transaction
     CReserveKey reservekey(pwalletMain);
@@ -285,6 +289,9 @@ UniValue getansaddress(const UniValue& params, bool fHelp)
     wtx.tx->UpdateHash();
     // paymentReferenceHash of service transaction must be set AFTER rehashing the payment hash as the rehash of the payment hash will include the hash of the service transaction
     stx.paymentReferenceHash = wtx.tx->GetHash();
+    LogPrintf("payment transaction made was: %s \n", wtx.tx->ToString().c_str());
+    LogPrintf("service transaction made was: %s \n", stx.ToString().c_str());
+    
     CValidationState state;
     if (!pwalletMain->CommitTransaction(wtx, reservekey, g_connman.get(), state))
     {
@@ -292,8 +299,9 @@ UniValue getansaddress(const UniValue& params, bool fHelp)
     }
     if (!pwalletMain->CommitTransactionForService(stx, strUsername, g_connman.get()))
     {
-        throw JSONRPCError(RPC_WALLET_ERROR, "Error: The transaction was rejected! This might happen if some of the coins in your wallet were already spent, such as if you used a copy of wallet.dat and coins were spent in the copy but not marked as spent here.");
+        throw JSONRPCError(RPC_WALLET_ERROR, "Error: The service transaction was rejected! This might happen for a variety of reasons.");
     }
+    
     std::string responseMessage = "The user name " + strUsername + " has been assigned to the address " + strAddress + ""
         " with PaymentHash = " + wtx.tx->GetHash().GetHex() + " and  ServiceHash = " + stx.GetHash().GetHex();
 

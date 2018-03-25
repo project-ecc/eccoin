@@ -38,7 +38,7 @@ public:
 class CStxMemPool
 {
 private:
-    CStxDB* stxdb;
+    CStxDB* stxdb = nullptr;
 public:
     CStxMemPool()
     {
