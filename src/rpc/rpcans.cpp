@@ -215,8 +215,8 @@ UniValue getansaddress(const UniValue& params, bool fHelp)
             "\nResult:\n"
             "\"transactionid\"  (string) The transaction id and additional info.\n"
             "\nExamples:\n"
-            + HelpExampleCli("sendtoaddress", "\"3QHsvyM7ywWUWzpdGk6atTxcCdMBsNUPuT\" \"alice\"")
-            + HelpExampleRpc("sendtoaddress", "\"3QHsvyM7ywWUWzpdGk6atTxcCdMBsNUPuT\", \"bob\"")
+            + HelpExampleCli("sendtoaddress", "\"EQT4WawJ6BN2JuaTfViuztHFeiqj2KCvTf\" \"alice\"")
+            + HelpExampleRpc("sendtoaddress", "\"EQT4WawJ6BN2JuaTfViuztHFeiqj2KCvTf\", \"bob\"")
         );
     }
 
@@ -228,10 +228,10 @@ UniValue getansaddress(const UniValue& params, bool fHelp)
     {
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Bitcoin address");
     }
-    if(!pwalletMain->AddressIsMine(address.Get()))
+    /*if(!pwalletMain->AddressIsMine(address.Get()))
     {
         throw JSONRPCError(RPC_WALLET_ERROR, "Private key for address " + address.ToString() + " is not known");
-    }
+    }*/
 
     // Amount
     std::string strUsername;
