@@ -169,12 +169,19 @@ int GetHeight()
 bool IsFinalTx(const CTransaction &tx, int nBlockHeight, int64_t nBlockTime)
 {
     if (tx.nLockTime == 0)
+    {
         return true;
+    }
     if ((int64_t)tx.nLockTime < ((int64_t)tx.nLockTime < LOCKTIME_THRESHOLD ? (int64_t)nBlockHeight : nBlockTime))
+    {
         return true;
-    for (auto const& txin: tx.vin) {
+    }
+    for (auto const& txin: tx.vin)
+    {
         if (!(txin.nSequence == CTxIn::SEQUENCE_FINAL))
+        {
             return false;
+        }
     }
     return true;
 }

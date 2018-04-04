@@ -724,8 +724,12 @@ bool CWallet::AddToWallet(const CWalletTx& wtxIn, bool fFromLoadWallet, CWalletD
 
         // Write to disk
         if (fInsertedNew || fUpdated)
+        {
             if (!wtx.WriteToDisk(pwalletdb))
+            {
                 return false;
+            }
+        }
 
         // Break debit/credit balance caches:
         wtx.MarkDirty();
@@ -926,6 +930,41 @@ void CWallet::SyncTransaction(const CTransactionRef& ptx, const CBlock* pblock)
     {
         if (mapWallet.count(txin.prevout.hash))
             mapWallet[txin.prevout.hash].MarkDirty();
+    }
+}
+
+void CWallet::TransactionAddedToMempool(const CTransactionRef &ptx) {
+    LOCK2(cs_main, cs_wallet);
+    SyncTransaction(ptx);
+}
+
+void CWallet::BlockConnected(
+    const std::shared_ptr<const CBlock> &pblock, const CBlockIndex *pindex,
+    const std::vector<CTransactionRef> &vtxConflicted) {
+    LOCK2(cs_main, cs_wallet);
+    // TODO: Tempoarily ensure that mempool removals are notified before
+    // connected transactions. This shouldn't matter, but the abandoned state of
+    // transactions in our wallet is currently cleared when we receive another
+    // notification and there is a race condition where notification of a
+    // connected conflict might cause an outside process to abandon a
+    // transaction and then have it inadvertantly cleared by the notification
+    // that the conflicted transaction was evicted.
+
+    for (const CTransactionRef &ptx : vtxConflicted)
+    {
+        SyncTransaction(ptx);
+    }
+    for (size_t i = 0; i < pblock->vtx.size(); i++)
+    {
+        SyncTransaction(pblock->vtx[i], pblock.get());
+    }
+}
+
+void CWallet::BlockDisconnected(const std::shared_ptr<const CBlock> &pblock) {
+    LOCK2(cs_main, cs_wallet);
+
+    for (const CTransactionRef &ptx : pblock->vtx) {
+        SyncTransaction(ptx);
     }
 }
 
@@ -1513,15 +1552,23 @@ bool CWalletTx::IsTrusted() const
         return false;
     int nDepth = GetDepthInMainChain();
     if (nDepth >= 1)
+    {
         return true;
+    }
     if (nDepth < 0)
+    {
         return false;
+    }
     if (!bSpendZeroConfChange || !IsFromMe(ISMINE_ALL)) // using wtx's cached debit
+    {
         return false;
+    }
 
     // Don't trust unconfirmed transactions from us unless they are in the mempool.
     if (!InMempool())
+    {
         return false;
+    }
 
     // Trusted if all inputs are from us and are in the mempool:
     for (auto const& txin: tx->vin)
@@ -1529,10 +1576,14 @@ bool CWalletTx::IsTrusted() const
         // Transactions not sent by us: not trusted
         const CWalletTx* parent = pwallet->GetWalletTx(txin.prevout.hash);
         if (parent == NULL)
+        {
             return false;
+        }
         const CTxOut& parentOut = parent->tx->vout[txin.prevout.n];
         if (pwallet->IsMine(parentOut) != ISMINE_SPENDABLE)
+        {
             return false;
+        }
     }
     return true;
 }
@@ -3408,18 +3459,21 @@ int CMerkleTx::SetMerkleBranch(const CBlock& block)
 int CMerkleTx::GetDepthInMainChain(const CBlockIndex* &pindexRet) const
 {
     if (hashUnset())
+    {
         return 0;
-
+    }
     AssertLockHeld(cs_main);
-
     // Find the block it claims to be in
     BlockMap::iterator mi = pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.find(hashBlock);
     if (mi == pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.end())
+    {
         return 0;
+    }
     CBlockIndex* pindex = (*mi).second;
     if (!pindex || !pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Contains(pindex))
+    {
         return 0;
-
+    }
     pindexRet = pindex;
     return ((nIndex == -1) ? (-1) : 1) * (pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height() - pindex->nHeight + 1);
 }

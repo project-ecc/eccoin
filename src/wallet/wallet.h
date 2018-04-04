@@ -219,7 +219,11 @@ public:
      * >=1 : this many blocks deep in the main chain
      */
     int GetDepthInMainChain(const CBlockIndex* &pindexRet) const;
-    int GetDepthInMainChain() const { const CBlockIndex *pindexRet; return GetDepthInMainChain(pindexRet); }
+    int GetDepthInMainChain() const
+    {
+        const CBlockIndex *pindexRet;
+        return GetDepthInMainChain(pindexRet);
+    }
     bool IsInMainChain() const { const CBlockIndex *pindexRet; return GetDepthInMainChain(pindexRet) > 0; }
     int GetBlocksToMaturity() const;
     bool AcceptToMemoryPool(bool fLimitFree=true, bool fRejectAbsurdFee=true);
@@ -653,7 +657,7 @@ public:
 
     void MarkDirty();
     bool AddToWallet(const CWalletTx& wtxIn, bool fFromLoadWallet, CWalletDB* pwalletdb);
-    void SyncTransaction(const CTransactionRef &ptx, const CBlock* pblock);
+    void SyncTransaction(const CTransactionRef &ptx, const CBlock* pblock = nullptr);
     bool AddToWalletIfInvolvingMe(const CTransactionRef& ptx, const CBlock* pblock, bool fUpdate);
     int ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate = false);
     void ReacceptWalletTransactions();
@@ -736,6 +740,12 @@ public:
     void SetBestChain(const CBlockLocator& loc);
 
     DBErrors LoadWallet(bool& fFirstRunRet);
+    void TransactionAddedToMempool(const CTransactionRef &tx) override;
+    void BlockConnected(const std::shared_ptr<const CBlock> &pblock,
+                   const CBlockIndex *pindex,
+                   const std::vector<CTransactionRef> &vtxConflicted) override;
+    void BlockDisconnected(const std::shared_ptr<const CBlock> &pblock) override;
+
     DBErrors ZapWalletTx(std::vector<CWalletTx>& vWtx);
 
     bool SetAddressBook(const CTxDestination& address, const std::string& strName, const std::string& purpose);

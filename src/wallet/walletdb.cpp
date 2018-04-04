@@ -662,7 +662,9 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
                 // losing keys is considered a catastrophic error, anything else
                 // we assume the user can live with:
                 if (IsKeyType(strType))
+                {
                     result = DB_CORRUPT;
+                }
                 else
                 {
                     // Leave other errors alone, if we try to fix them we might make things worse.
@@ -673,7 +675,9 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
                 }
             }
             if (!strErr.empty())
+            {
                 LogPrintf("%s\n", strErr);
+            }
         }
         pcursor->close();
     }
@@ -716,7 +720,8 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
 
     pwallet->laccentries.clear();
     ListAccountCreditDebit("*", pwallet->laccentries);
-    for (auto& entry: pwallet->laccentries) {
+    for (auto& entry: pwallet->laccentries)
+    {
         pwallet->wtxOrdered.insert(make_pair(entry.nOrderPos, CWallet::TxPair((CWalletTx*)0, &entry)));
     }
 
