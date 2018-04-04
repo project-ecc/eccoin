@@ -136,11 +136,19 @@ public:
     //! as new tx version will probably only be introduced at certain heights
     int nVersion;
 
+    //! whether transaction is a coinstake
+    bool fCoinStake;
+
+    //! transaction timestamp
+    unsigned int nTime;
+
     void FromTx(const CTransaction &tx, int nHeightIn) {
         fCoinBase = tx.IsCoinBase();
         vout = tx.vout;
         nHeight = nHeightIn;
         nVersion = tx.nVersion;
+        fCoinStake = tx.IsCoinStake();
+        nTime = tx.nTime;
         ClearUnspendable();
     }
 
@@ -154,10 +162,12 @@ public:
         std::vector<CTxOut>().swap(vout);
         nHeight = 0;
         nVersion = 0;
+        fCoinStake = false;
+        nTime = 0;
     }
 
     //! empty constructor
-    CCoins() : fCoinBase(false), vout(0), nHeight(0), nVersion(0) { }
+    CCoins() : fCoinBase(false), vout(0), nHeight(0), nVersion(0), fCoinStake(false), nTime(0) { }
 
     //!remove spent outputs at the end of vout
     void Cleanup() {
@@ -180,6 +190,8 @@ public:
         to.vout.swap(vout);
         std::swap(to.nHeight, nHeight);
         std::swap(to.nVersion, nVersion);
+        std::swap(to.fCoinStake, fCoinStake);
+        std::swap(to.nTime, nTime);
     }
 
     //! equality test
@@ -190,7 +202,9 @@ public:
          return a.fCoinBase == b.fCoinBase &&
                 a.nHeight == b.nHeight &&
                 a.nVersion == b.nVersion &&
-                a.vout == b.vout;
+                a.vout == b.vout &&
+                a.fCoinStake == b.fCoinStake &&
+                a.nTime == b.nTime;
     }
     friend bool operator!=(const CCoins &a, const CCoins &b) {
         return !(a == b);
@@ -199,6 +213,10 @@ public:
     void CalcMaskSize(unsigned int &nBytes, unsigned int &nNonzeroBytes) const;
 
     bool IsCoinBase() const {
+        return fCoinBase;
+    }
+
+    bool IsCoinStake() const {
         return fCoinBase;
     }
 
@@ -222,6 +240,11 @@ public:
                 nSize += ::GetSerializeSize(CTxOutCompressor(REF(vout[i])), nType, nVersion);
         // height
         nSize += ::GetSerializeSize(VARINT(nHeight), nType, nVersion);
+        // pos flags
+        unsigned int nFlag = fCoinStake? 1 : 0;
+        nSize += ::GetSerializeSize(VARINT(nFlag), nType, nVersion);
+        // transaction timestamp
+        nSize += ::GetSerializeSize(VARINT(nTime), nType, nVersion);
         return nSize;
     }
 
@@ -252,6 +275,11 @@ public:
         }
         // coinbase height
         ::Serialize(s, VARINT(nHeight));
+        // pos flags
+        unsigned int nFlag = fCoinStake? 1 : 0;
+        ::Serialize(s, VARINT(nFlag));
+        // transaction timestamp
+        ::Serialize(s, VARINT(nTime));
     }
 
     template<typename Stream>
@@ -285,6 +313,12 @@ public:
         }
         // coinbase height
         ::Unserialize(s, VARINT(nHeight));
+        // pos flags
+        unsigned int nFlag = 0;
+        ::Unserialize(s, VARINT(nFlag));
+        fCoinStake = nFlag & 1;
+        // transaction timestamp
+        ::Unserialize(s, VARINT(nTime));
         Cleanup();
     }
 

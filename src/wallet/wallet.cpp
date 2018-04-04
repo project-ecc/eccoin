@@ -1102,7 +1102,7 @@ int CWalletTx::GetRequestCount() const
     int nRequests = -1;
     {
         LOCK(pwallet->cs_wallet);
-        if (tx->IsCoinBase())
+        if (tx->IsCoinBase() || tx->IsCoinStake())
         {
             // Generated block
             if (!hashUnset())
@@ -1410,7 +1410,7 @@ CAmount CWalletTx::GetDebit(const isminefilter& filter) const
 CAmount CWalletTx::GetCredit(const isminefilter& filter) const
 {
     // Must wait until coinbase is safely deep enough in the chain before valuing it
-    if (tx->IsCoinBase() && GetBlocksToMaturity() > 0)
+    if ((tx->IsCoinBase() || tx->IsCoinStake()) && GetBlocksToMaturity() > 0)
         return 0;
 
     int64_t credit = 0;
@@ -1460,7 +1460,7 @@ CAmount CWalletTx::GetAvailableCredit(bool fUseCache) const
         return 0;
 
     // Must wait until coinbase is safely deep enough in the chain before valuing it
-    if (tx->IsCoinBase() && GetBlocksToMaturity() > 0)
+    if ((tx->IsCoinBase() || tx->IsCoinStake()) && GetBlocksToMaturity() > 0)
         return 0;
 
     if (fUseCache && fAvailableCreditCached)
@@ -1504,7 +1504,7 @@ CAmount CWalletTx::GetAvailableWatchOnlyCredit(const bool& fUseCache) const
         return 0;
 
     // Must wait until coinbase is safely deep enough in the chain before valuing it
-    if (tx->IsCoinBase() && GetBlocksToMaturity() > 0)
+    if ((tx->IsCoinBase() || tx->IsCoinStake()) && GetBlocksToMaturity() > 0)
         return 0;
 
     if (fUseCache && fAvailableWatchCreditCached)
@@ -1762,7 +1762,7 @@ void CWallet::AvailableCoins(std::vector<COutput>& vCoins, bool fOnlyConfirmed, 
             if (fOnlyConfirmed && !pcoin->IsTrusted())
                 continue;
 
-            if (pcoin->tx->IsCoinBase() && pcoin->GetBlocksToMaturity() > 0)
+            if ((pcoin->tx->IsCoinBase() || pcoin->tx->IsCoinStake()) && pcoin->GetBlocksToMaturity() > 0)
                 continue;
 
             int nDepth = pcoin->GetDepthInMainChain();
@@ -3484,7 +3484,6 @@ int CMerkleTx::GetBlocksToMaturity() const
         return 0;
     return std::max(0, (COINBASE_MATURITY+1) - GetDepthInMainChain());
 }
-
 
 bool CMerkleTx::AcceptToMemoryPool(bool fLimitFree, bool fRejectAbsurdFee)
 {

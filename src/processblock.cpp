@@ -1150,7 +1150,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         {
             nValueOut += tx.GetValueOut();
         }
-        if (!tx.IsCoinBase())
+        else
         {
             if (!view.HaveInputs(tx))
             {
