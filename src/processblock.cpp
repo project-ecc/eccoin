@@ -630,6 +630,12 @@ bool ActivateBestChain(CValidationState &state, const CNetworkTemplate& chainpar
             pindexNewTip = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
             pindexFork = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.FindFork(pindexOldTip);
             fInitialDownload = pnetMan->getActivePaymentNetwork()->getChainManager()->IsInitialBlockDownload();
+
+            for (const PerBlockConnectTrace &trace : connectTrace.GetBlocksConnected())
+            {
+                assert(trace.pblock && trace.pindex);
+                GetMainSignals().BlockConnected(trace.pblock, trace.pindex, *trace.conflictedTxs);
+            }
         }
         // When we reach this point, we switched to a new tip (stored in pindexNewTip).
 
