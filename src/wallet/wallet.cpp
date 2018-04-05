@@ -1972,6 +1972,29 @@ bool CWallet::SelectCoinsMinConf(const CAmount& nTargetValue, int nConfMine, int
     return true;
 }
 
+bool CWallet::SelectCoinsByOwner(const CAmount& nTargetValue, const CRecipient& recipient, std::set<std::pair<const CWalletTx*,unsigned int> >& setCoinsRet, CAmount& nValueRet) const
+{
+    std::vector<COutput> vCoins;
+    AvailableCoins(vCoins, true, nullptr);
+
+    std::vector<COutput>::iterator iter;
+    std::vector<COutput> vCoinsTemp;
+    for(iter = vCoins.begin(); iter != vCoins.end(); iter++)
+    {
+        if(*it.tx->tx->vout[out.i].scriptPubKey == recipient.scriptPubKey)
+        {
+            vCoinsTemp.emplace_back(*iter);
+        }
+    }
+    vCoins = vCoinsTemp;
+
+    bool res = SelectCoinsMinConf(nTargetValue, 1, 6, vCoins, setCoinsRet, nValueRet) ||
+               SelectCoinsMinConf(nTargetValue, 1, 1, vCoins, setCoinsRet, nValueRet) ||
+               (bSpendZeroConfChange && SelectCoinsMinConf(nTargetValue, 0, 1, vCoins, setCoinsRet, nValueRet));
+
+    return res;
+}
+
 bool CWallet::SelectCoins(const CAmount& nTargetValue, std::set<std::pair<const CWalletTx*,unsigned int> >& setCoinsRet, CAmount& nValueRet, const CCoinControl* coinControl) const
 {
     std::vector<COutput> vCoins;
@@ -2480,7 +2503,6 @@ bool CWallet::CreateTransactionForService(const CRecipient& recipient, CWalletTx
                 txNew.vout.clear();
                 wtxNew.fFromMe = true;
                 int nChangePosRet = -1;
-                bool fFirst = true;
 
                 CAmount nValueToSelect = nValue;
                 if (nSubtractFeeFromAmount == 0)
@@ -2510,7 +2532,7 @@ bool CWallet::CreateTransactionForService(const CRecipient& recipient, CWalletTx
                 // Choose coins to use
                 std::set<std::pair<const CWalletTx*,unsigned int> > setCoins;
                 CAmount nValueIn = 0;
-                if (!SelectCoins(nValueToSelect, setCoins, nValueIn, nullptr))
+                if (!SelectCoinsByOwner(nValueToSelect, recipient, setCoins, nValueIn, nullptr))
                 {
                     strFailReason = _("Insufficient funds");
                     return false;
