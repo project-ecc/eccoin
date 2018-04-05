@@ -2435,6 +2435,8 @@ bool CWallet::CreateTransactionForService(const CRecipient& recipient, CWalletTx
     wtxNew.fTimeReceivedIsTxTime = true;
     wtxNew.BindWallet(this);
     CTransaction txNew;
+    //service transactions use a version 2 transaction
+    txNew.nVersion = 2;
 
     // Discourage fee sniping.
     //
