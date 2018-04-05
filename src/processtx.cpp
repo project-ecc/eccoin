@@ -2,6 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include "ans/ans.h"
 #include "main.h"
 #include "consensus/consensus.h"
 #include "script/standard.h"
@@ -184,7 +185,8 @@ bool CheckTransactionANS(const CServiceTransaction &stx, const CTransaction& ptx
 
     if(stx.nOpCode == 0)
     {
-        CAnsRecord newRec(username, CalcValidTime(stxNew.nTime, stxNew.paymentReferenceHash), stxNew.paymentReferenceHash, stxNew.GetHash());
+        std::string username(stx.vdata.begin(), stx.vdata.end());
+        CAnsRecord newRec(username, CalcValidTime(stx.nTime, stx.paymentReferenceHash), stx.paymentReferenceHash, stx.GetHash());
         pansMain->addRecord(A_RECORD, username, newRec);
     }
     // else, leave blank for future use
