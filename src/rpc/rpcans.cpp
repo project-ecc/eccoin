@@ -237,6 +237,11 @@ UniValue getansaddress(const UniValue& params, bool fHelp)
     std::string strUsername;
     strUsername = params[1].get_str();
 
+    if(strUsername.length() > 25)
+    {
+        throw JSONRPCError(RPC_INVALID_PARAMS, "Username exceeds maxiumum length of 25");
+    }
+
     // check for banned letters/numbers
     /** All alphanumeric characters except for "0", "I", "O", and "l" */
 
@@ -256,6 +261,7 @@ UniValue getansaddress(const UniValue& params, bool fHelp)
     {
         throw JSONRPCError(RPC_INVALID_PARAMS, "Username contains invalid charactar. All alphanumeric characters EXCEPT for zero, capital i, capital o, and lowercase L are allowed");
     }
+
     std::string::size_type i = 0;
     while(i<strUsername.length())
     {

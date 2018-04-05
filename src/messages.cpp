@@ -1030,7 +1030,6 @@ void static ProcessGetData(CNode* pfrom, CConnman &connman, const Consensus::Par
                      vNotFound.push_back(inv);
                  }
              }
-
              else if (inv.type == MSG_STX)
              {
                  // Send stream from relay memory
@@ -1047,10 +1046,8 @@ void static ProcessGetData(CNode* pfrom, CConnman &connman, const Consensus::Par
                      vNotFound.push_back(inv);
                  }
              }
-
              // Track requests for our stuff.
              GetMainSignals().Inventory(inv.hash);
-
              if (inv.type == MSG_BLOCK || inv.type == MSG_FILTERED_BLOCK)
              {
                  break;

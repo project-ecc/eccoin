@@ -2707,6 +2707,7 @@ bool CWallet::CommitTransactionForService(CServiceTransaction& stxNew, std::stri
         {
             CAnsRecord newRec(username, CalcValidTime(stxNew.nTime, stxNew.paymentReferenceHash), stxNew.paymentReferenceHash, stxNew.GetHash());
             pansMain->addRecord(A_RECORD, username, newRec);
+            g_stxmempool->add(stxNew.GetHash(), stxNew);
         }
 
         // Track how many getdata requests our transaction gets
