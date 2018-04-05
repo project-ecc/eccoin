@@ -88,7 +88,7 @@ bool CheckTransactionANS(const CServiceTransaction &stx, const CTransaction& ptx
         return state.DoS(100, false, REJECT_INVALID, "service-hash-not-referenced");
     }
 
-    if(stx.paymentReferenceHash != stx.GetHash())
+    if(stx.paymentReferenceHash != ptx.GetHash())
     {
         return state.DoS(100, false, REJECT_INVALID, "payment-hash-not-referenced");
     }
