@@ -102,7 +102,7 @@ bool CheckTransactionANS(const CServiceTransaction &stx, const CTransaction& ptx
     {
         return state.DoS(100, false, REJECT_INVALID, "payment-tx-vin-improper-size");
     }
-    if(ptx.vout.size() != 1)
+    if(ptx.vout.size() != 2)
     {
         return state.DoS(100, false, REJECT_INVALID, "payment-tx-vout-improper-size");
     }
