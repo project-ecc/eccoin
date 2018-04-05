@@ -23,6 +23,7 @@
 #include "tx/tx.h"
 #include "script/script.h"
 #include "script/sign.h"
+#include "stxmempool.h"
 #include "timedata.h"
 #include "txdb.h"
 #include "txmempool.h"
