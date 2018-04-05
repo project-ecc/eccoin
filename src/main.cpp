@@ -1652,9 +1652,9 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
             {
                 LogPrintf("tx with hash %s pays for service transaction with hash %s but none can be found \n", tx->GetHash().GetHex().c_str(), tx->serviceReferenceHash.GetHex().c_str());
                 // we should request this stx
-                LogPrintf("Requesting stx %s\n", stx.GetHash().ToString().c_str());
+                LogPrintf("Requesting stx %s\n", tx->serviceReferenceHash.GetHex().c_str());
                 {
-                    CInv inv(MSG_STX, stx.GetHash());
+                    CInv inv(MSG_STX, tx->serviceReferenceHash);
                     g_connman->ForEachNode([&inv](CNode *pnode) { pnode->AskFor(inv); });
                 }
                 // this will be reprocessed when we get the stx. if the stx is invalid but they paid for it, oh well
