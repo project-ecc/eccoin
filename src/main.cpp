@@ -1648,7 +1648,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
         if(tx->nVersion == 2)
         {
             CServiceTransaction stx;
-            if(g_stxmempool->lookup(tx->serviceReferenceHash, stx))
+            if(!g_stxmempool->lookup(tx->serviceReferenceHash, stx))
             {
                 LogPrintf("tx with hash %s pays for service transaction with hash %s but none can be found \n", tx->GetHash().GetHex().c_str(), tx->serviceReferenceHash.GetHex().c_str());
                 // we should request this stx
