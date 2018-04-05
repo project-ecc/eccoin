@@ -1282,7 +1282,8 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                 pcoinscatcher.reset(new CCoinsViewErrorCatcher(pcoinsdbview.get()));
                 pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.reset(new CCoinsViewCache(pcoinscatcher.get()));
 
-                if (fReindex) {
+                if (fReindex)
+                {
                     pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree->WriteReindexing(true);
                 }
 
@@ -1295,7 +1296,9 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                 // (we're likely using a testnet datadir, or the other way around).
                 if (!pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.empty() &&
                         pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.count(chainparams.GetConsensus().hashGenesisBlock) == 0)
+                {
                     return InitError(_("Incorrect or no genesis block found. Wrong datadir for network?"));
+                }
 
                 // Initialize the block index (no-op if non-empty database was already loaded)
                 if (!pnetMan->getActivePaymentNetwork()->getChainManager()->InitBlockIndex(chainparams))
@@ -1304,6 +1307,14 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                     break;
                 }
 
+                // load the services
+                g_stxmempool.reset();
+                g_stxmempool.reset(new CStxMemPool());
+                pansMain = new CAnsZone();
+                g_ans.reset();
+                g_ans.reset(new CServiceDB("ans", nBlockTreeDBCache, false, false));
+
+                // verify the blocks
                 {
                     uiInterface.InitMessage(_("Verifying blocks..."));
                     LogPrintf("Verifying blocks...");
@@ -1341,15 +1352,6 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                 {
                     boost::filesystem::create_directory(servicesFolder);
                 }
-
-
-                /// once we have loaded the main chain, load the services
-                g_stxmempool.reset();
-                g_stxmempool.reset(new CStxMemPool());
-                pansMain = new CAnsZone();
-                g_ans.reset();
-                g_ans.reset(new CServiceDB("ans", nBlockTreeDBCache, false, false));
-
             }
             catch (const std::exception& e)
             {
