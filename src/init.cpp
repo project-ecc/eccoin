@@ -1307,6 +1307,21 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                     break;
                 }
 
+                /// check for services folder, if does not exist. make it
+                boost::filesystem::path servicesFolder = (GetDataDir() / "services");
+                if (boost::filesystem::exists(servicesFolder))
+                {
+                    if(!boost::filesystem::is_directory(servicesFolder))
+                    {
+                        LogPrintf("services exists but is not a folder, check your ecc data files \n");
+                        assert(false);
+                    }
+                }
+                else
+                {
+                    boost::filesystem::create_directory(servicesFolder);
+                }
+
                 // load the services
                 g_stxmempool.reset();
                 g_stxmempool.reset(new CStxMemPool());
@@ -1336,21 +1351,6 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                         strLoadError = _("Corrupted block database detected");
                         break;
                     }
-                }
-
-                /// check for services folder, if does not exist. make it
-                boost::filesystem::path servicesFolder = (GetDataDir() / "services");
-                if (boost::filesystem::exists(servicesFolder))
-                {
-                    if(!boost::filesystem::is_directory(servicesFolder))
-                    {
-                        LogPrintf("services exists but is not a folder, check your ecc data files \n");
-                        assert(false);
-                    }
-                }
-                else
-                {
-                    boost::filesystem::create_directory(servicesFolder);
                 }
             }
             catch (const std::exception& e)
