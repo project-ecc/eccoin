@@ -1981,7 +1981,8 @@ bool CWallet::SelectCoinsByOwner(const CAmount& nTargetValue, const CRecipient& 
     std::vector<COutput> vCoinsTemp;
     for(iter = vCoins.begin(); iter != vCoins.end(); iter++)
     {
-        if(*it.tx->tx->vout[out.i].scriptPubKey == recipient.scriptPubKey)
+        COutput out = *iter;
+        if(out.tx->tx->vout[out.i].scriptPubKey == recipient.scriptPubKey)
         {
             vCoinsTemp.emplace_back(*iter);
         }
@@ -2532,7 +2533,7 @@ bool CWallet::CreateTransactionForService(const CRecipient& recipient, CWalletTx
                 // Choose coins to use
                 std::set<std::pair<const CWalletTx*,unsigned int> > setCoins;
                 CAmount nValueIn = 0;
-                if (!SelectCoinsByOwner(nValueToSelect, recipient, setCoins, nValueIn, nullptr))
+                if (!SelectCoinsByOwner(nValueToSelect, recipient, setCoins, nValueIn))
                 {
                     strFailReason = _("Insufficient funds");
                     return false;
