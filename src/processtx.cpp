@@ -182,6 +182,13 @@ bool CheckTransactionANS(const CServiceTransaction &stx, const CTransaction& ptx
         return state.DoS(100, false, REJECT_INVALID, "ownership-being-transfered");
     }
 
+    if(stx.nOpCode == 0)
+    {
+        CAnsRecord newRec(username, CalcValidTime(stxNew.nTime, stxNew.paymentReferenceHash), stxNew.paymentReferenceHash, stxNew.GetHash());
+        pansMain->addRecord(A_RECORD, username, newRec);
+    }
+    // else, leave blank for future use
+
     return true;
 }
 

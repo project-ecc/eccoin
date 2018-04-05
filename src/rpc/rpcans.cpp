@@ -184,7 +184,7 @@ static void CreateANStransaction(CServiceTransaction& stxnew, CWalletTx& wtxnew,
     stxnew.nVersion = CServiceTransaction::CURRENT_VERSION;
     stxnew.nServiceId = 0; // 0 is for ANS because pure payment addresses use odd number tx versions
     stxnew.nTime = GetTime();
-    stxnew.nOpCode = 0; // for all ANS tx's this fields is 0;
+    stxnew.nOpCode = 0;
 
     /// TODO : Make a real time calculation, this should suffice for testing though.
     uint32_t lockTime = (60 * 60 * 24 *30); // 30 days
