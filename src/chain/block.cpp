@@ -85,11 +85,17 @@ bool CBlock::SignScryptBlock(const CKeyStore& keystore)
                 CKey key;
 
                 if (!keystore.GetKey(Hash160(vchPubKey), key))
+                {
                     continue;
+                }
                 if (key.GetPubKey() != vchPubKey)
+                {
                     continue;
+                }
                 if(!key.Sign(GetHash(), vchBlockSig))
+                {
                     continue;
+                }
 
                 return true;
             }
@@ -150,19 +156,26 @@ bool CBlock::CheckBlockSignature() const
                 const CTxOut& txout = vtx[0]->vout[i];
 
                 if (!Solver(txout.scriptPubKey, whichType, vSolutions))
+                {
                     return false;
+                }
                 if (whichType == TX_PUBKEY)
                 {
                     // Verify
                     std::vector<unsigned char>& vchPubKey = vSolutions[0];
                     if (vchBlockSig.empty())
+                    {
+                        LogPrintf("sig is empty? \n");
                         continue;
+                    }
                     if(!CPubKey(vchPubKey).Verify(GetHash(), vchBlockSig))
                     {
+                        LogPrintf("probably will see this message \n");
                         continue;
                     }
                     return true;
                 }
+                LogPrintf("got here somehow?");
             }
         }
         LogPrintf("CheckBlockSignature failed \n");

@@ -302,7 +302,9 @@ HEADERS += \
     src/addrdb.h \
     src/threadinterrupt.h \
     src/netaddress.h \
-    src/netmessagemaker.h
+    src/netmessagemaker.h \
+    src/service_leveldb.h \
+    src/stxmempool.h
 
 
 # organize compiles of cpp files by section, this seems to be a logical order where the files lower down generally depend
@@ -416,7 +418,10 @@ SOURCES += \
     src/ans/ansrecord.cpp \
     src/addrdb.cpp \
     src/threadinterrupt.cpp \
-    src/netaddress.cpp
+    src/netaddress.cpp \
+    src/rpc/rpcans.cpp \
+    src/service_leveldb.cpp \
+    src/stxmempool.cpp
 
 
 

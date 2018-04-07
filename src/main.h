@@ -25,8 +25,7 @@
 #include <string>
 #include <utility>
 #include <vector>
-
-#include <boost/unordered_map.hpp>
+#include <unordered_map>
 
 class CBlockIndex;
 class CBlockTreeDB;

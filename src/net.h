@@ -660,6 +660,9 @@ public:
     // Set of transaction ids we still have to announce. They are sorted by the
     // mempool before relay, so the order is not important.
     std::set<uint256> setInventoryTxToSend;
+    // Set of service transaction ids we still have to announce. They are sorted by the
+    // mempool before relay, so the order is not important.
+    std::set<uint256> setInventoryStxToSend;
     // List of block ids we still have announce. There is no final sorting
     // before sending, as they are always sent immediately and in the order
     // requested.
@@ -775,13 +778,22 @@ public:
         filterInventoryKnown.insert(inv.hash);
     }
 
-    void PushInventory(const CInv &inv) {
+    void PushInventory(const CInv &inv) 
+    {
         LOCK(cs_inventory);
-        if (inv.type == MSG_TX) {
-            if (!filterInventoryKnown.contains(inv.hash)) {
+        if (inv.type == MSG_TX) 
+        {
+            if (!filterInventoryKnown.contains(inv.hash)) 
+            {
                 setInventoryTxToSend.insert(inv.hash);
             }
-        } else if (inv.type == MSG_BLOCK) {
+        }
+        else if (inv.type == MSG_STX)
+        {
+            setInventoryStxToSend.insert(inv.hash);
+        }
+        else if (inv.type == MSG_BLOCK) 
+        {
             vInventoryBlockToSend.push_back(inv.hash);
         }
     }

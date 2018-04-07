@@ -60,7 +60,9 @@ void WalletTxToJSON(const CWalletTx& wtx, UniValue& entry)
     int confirms = wtx.GetDepthInMainChain();
     entry.push_back(Pair("confirmations", confirms));
     if (wtx.tx->IsCoinBase() || wtx.tx->IsCoinStake())
+    {
         entry.push_back(Pair("generated", true));
+    }
     if (confirms > 0)
     {
         entry.push_back(Pair("blockhash", wtx.hashBlock.GetHex()));
@@ -1353,17 +1355,23 @@ void ListTransactions(const CWalletTx& wtx, const std::string& strAccount, int n
         {
             UniValue entry(UniValue::VOBJ);
             if(involvesWatchonly || (::IsMine(*pwalletMain, s.destination) & ISMINE_WATCH_ONLY))
+            {
                 entry.push_back(Pair("involvesWatchonly", true));
+            }
             entry.push_back(Pair("account", strSentAccount));
             MaybePushAddress(entry, s.destination);
             entry.push_back(Pair("category", "send"));
             entry.push_back(Pair("amount", ValueFromAmount(-s.amount)));
             if (pwalletMain->mapAddressBook.count(s.destination))
+            {
                 entry.push_back(Pair("label", pwalletMain->mapAddressBook[s.destination].name));
+            }
             entry.push_back(Pair("vout", s.vout));
             entry.push_back(Pair("fee", ValueFromAmount(-nFee)));
             if (fLong)
+            {
                 WalletTxToJSON(wtx, entry);
+            }
             entry.push_back(Pair("abandoned", wtx.isAbandoned()));
             ret.push_back(entry);
         }
@@ -1535,9 +1543,13 @@ UniValue listtransactions(const UniValue& params, bool fHelp)
         }
         CAccountingEntry *const pacentry = (*it).second.second;
         if (pacentry != 0)
+        {
             AcentryToJSON(*pacentry, strAccount, ret);
-
-        if ((int)ret.size() >= (nCount+nFrom)) break;
+        }
+        if ((int)ret.size() >= (nCount+nFrom))
+        {
+            break;
+        }
     }
     // ret is newest to oldest
 

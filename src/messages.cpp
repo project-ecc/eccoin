@@ -4,9 +4,11 @@
 
 #include "messages.h"
 
+#include "ans/ans.h"
 #include "serialize.h"
 #include "sync.h"
 #include "tx/tx.h"
+#include "tx/servicetx.h"
 #include "txmempool.h"
 #include "main.h"
 #include "util/util.h"
@@ -27,6 +29,8 @@
 #include "netmessagemaker.h"
 #include "policy/policy.h"
 #include "policy/fees.h"
+#include "stxmempool.h"
+#include "processtx.h"
 
 #include <algorithm>
 #include <vector>
@@ -823,6 +827,9 @@ bool AlreadyHave(const CInv& inv) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
         }
     case MSG_BLOCK:
         return pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.count(inv.hash);
+    case MSG_STX:
+        return g_stxmempool->exists(inv.hash);
+
     }
     // Don't know what it is, just say we already got one
     return true;
@@ -1023,10 +1030,24 @@ void static ProcessGetData(CNode* pfrom, CConnman &connman, const Consensus::Par
                      vNotFound.push_back(inv);
                  }
              }
-
+             else if (inv.type == MSG_STX)
+             {
+                 // Send stream from relay memory
+                 bool push = false;
+                 int nSendFlags = 0;
+                 CServiceTransaction stx;
+                 if(g_stxmempool->lookup(inv.hash, stx))
+                 {
+                     connman.PushMessage(pfrom, msgMaker.Make(nSendFlags, NetMsgType::STX, stx));
+                     push = true;
+                 }
+                 if (!push)
+                 {
+                     vNotFound.push_back(inv);
+                 }
+             }
              // Track requests for our stuff.
              GetMainSignals().Inventory(inv.hash);
-
              if (inv.type == MSG_BLOCK || inv.type == MSG_FILTERED_BLOCK)
              {
                  break;
@@ -1370,8 +1391,8 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
 
         // Allow whitelisted peers to send data other than blocks in blocks only
         // mode if whitelistrelay is true
-        if (pfrom->fWhitelisted &&
-            gArgs.GetBoolArg("-whitelistrelay", DEFAULT_WHITELISTRELAY)) {
+        if (pfrom->fWhitelisted && gArgs.GetBoolArg("-whitelistrelay", DEFAULT_WHITELISTRELAY)) 
+        {
             fBlocksOnly = false;
         }
 
@@ -1381,7 +1402,8 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
 
         std::vector<CInv> vToFetch;
 
-        for (size_t nInv = 0; nInv < vInv.size(); nInv++) {
+        for (size_t nInv = 0; nInv < vInv.size(); nInv++)
+        {
             CInv &inv = vInv[nInv];
 
             if (interruptMsgProc)
@@ -1393,11 +1415,12 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
             LogPrintf("got inv: %s  %s peer=%d\n", inv.ToString(),
                      fAlreadyHave ? "have" : "new", pfrom->id);
 
-            if (inv.type == MSG_TX) {
+            if (inv.type == MSG_TX || inv.type == MSG_STX)
+            {
                 inv.type |= nFetchFlags;
             }
-
-            if (inv.type == MSG_BLOCK) {
+            if (inv.type == MSG_BLOCK)
+            {
                 UpdateBlockAvailability(pfrom->GetId(), inv.hash);
                 if (!fAlreadyHave && !fImporting && !fReindex &&
                     !mapBlocksInFlight.count(inv.hash)) {
@@ -1419,7 +1442,9 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
                     }
                     LogPrintf("getheaders (%d) %s to peer=%d\n", pnetMan->getActivePaymentNetwork()->getChainManager()->pindexBestHeader->nHeight, inv.hash.ToString(), pfrom->id);
                 }
-            } else {
+            }
+            else
+            {
                 pfrom->AddInventoryKnown(inv);
                 if (fBlocksOnly)
                 {
@@ -1744,7 +1769,9 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
                 // parents so avoid re-requesting it from other peers.
                 recentRejects->insert(tx.GetId());
             }
-        } else {
+        }
+        else
+        {
             if (!state.CorruptionPossible()) {
                 // Do not use rejection cache for witness transactions or
                 // witness-stripped transactions, as they can have been
@@ -1779,7 +1806,6 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
                 }
             }
         }
-
         int nDoS = 0;
         if (state.IsInvalid(nDoS)) {
             LogPrintf("%s from peer=%d was not accepted: %s\n", tx.GetHash().ToString(), pfrom->id, FormatStateMessage(state));
@@ -1795,6 +1821,50 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
             {
                 Misbehaving(pfrom, nDoS, state.GetRejectReason());
             }
+        }
+    }
+
+    else if (strCommand == NetMsgType::STX)
+    {
+        CServiceTransaction pstx;
+        vRecv >> pstx;
+        CTransaction tx;
+        uint256 blockHashOfTx;
+        if(pstx.paymentReferenceHash.IsNull())
+        {
+            return error("invalid service transaction with hash %s recieved", pstx.GetHash().GetHex().c_str());
+        }
+        if (GetTransaction(pstx.paymentReferenceHash, tx, pnetMan->getActivePaymentNetwork()->GetConsensus(), blockHashOfTx))
+        {
+            //if we can get the transaction we have already processed it so it is safe to call CheckTransactionANS here
+            CValidationState state;
+            if(CheckTransactionANS(pstx, tx, state))
+            {
+                g_stxmempool->add(pstx.GetHash(), pstx);
+            }
+            else
+            {
+                int nDoS = 0;
+                if (state.IsInvalid(nDoS))
+                {
+                    LogPrintf("%s from peer=%d was not accepted: %s\n", pstx.GetHash().ToString().c_str(), pfrom->id, FormatStateMessage(state));
+                    // Never send AcceptToMemoryPool's internal codes over P2P.
+                    if (state.GetRejectCode() > 0 && state.GetRejectCode() < REJECT_INTERNAL)
+                    {
+                        connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::REJECT, strCommand,
+                                          uint8_t(state.GetRejectCode()),
+                                          state.GetRejectReason().substr(0, MAX_REJECT_MESSAGE_LENGTH),pstx.GetHash()));
+                    }
+                    if (nDoS > 0)
+                    {
+                        Misbehaving(pfrom, nDoS, state.GetRejectReason());
+                    }
+                }
+            }
+        }
+        else
+        {
+            // do nothing, we dont have the payment tx so we wont accept the service tx for it
         }
     }
 
@@ -2690,7 +2760,8 @@ bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interr
         }
 
         // Determine transactions to relay
-        if (fSendTrickle) {
+        if (fSendTrickle) 
+        {
             // Produce a vector with all candidates for sending
             std::vector<std::set<uint256>::iterator> vInvTx;
             vInvTx.reserve(pto->setInventoryTxToSend.size());
@@ -2765,6 +2836,36 @@ bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interr
                 }
                 pto->filterInventoryKnown.insert(hash);
             }
+        }
+
+        if(!pto->setInventoryStxToSend.empty())
+        {
+            std::vector<std::set<uint256>::iterator> vInvStx;
+            for (std::set<uint256>::iterator it = pto->setInventoryStxToSend.begin(); it != pto->setInventoryStxToSend.end(); it++) 
+            {
+                vInvStx.push_back(it);
+            }
+            uint64_t nRelayedTransactions = 0;
+            while (!vInvStx.empty() && nRelayedTransactions < INVENTORY_BROADCAST_MAX)
+            {
+                std::set<uint256>::iterator it = vInvStx.back();
+                vInvStx.pop_back();
+                uint256 hash = *it;
+                pto->setInventoryStxToSend.erase(it);
+                if (pto->filterInventoryKnown.contains(hash))
+                {
+                    continue;
+                }
+                vInv.push_back(CInv(MSG_STX, hash));
+                nRelayedTransactions++;
+                if (vInv.size() == MAX_INV_SZ)
+                {
+                    connman.PushMessage(pto, msgMaker.Make(NetMsgType::INV, vInv));
+                    vInv.clear();
+                }
+                pto->filterInventoryKnown.insert(hash);
+            }
+
         }
     }
     if (!vInv.empty())
@@ -2847,7 +2948,8 @@ bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interr
                 connman.PushMessage(pto, msgMaker.Make(NetMsgType::GETDATA, vGetData));
                 vGetData.clear();
             }
-        } else
+        }
+        else
         {
             // If we're not going to ask, don't expect a response.
             pto->setAskFor.erase(inv.hash);

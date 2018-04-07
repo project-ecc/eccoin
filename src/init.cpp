@@ -7,6 +7,7 @@
 
 #include "addrman.h"
 #include "amount.h"
+#include "ans/ans.h"
 #include "chain/chain.h"
 #include "networks/networktemplate.h"
 #include "networks/netman.h"
@@ -26,6 +27,7 @@
 #include "script/standard.h"
 #include "script/sigcache.h"
 #include "scheduler.h"
+#include "stxmempool.h"
 #include "txdb.h"
 #include "txmempool.h"
 #include "torcontrol.h"
@@ -245,6 +247,8 @@ void Shutdown()
 
     delete pwalletMain;
     pwalletMain = NULL;
+    g_ans.reset();
+    g_stxmempool.reset();
     globalVerifyHandle.reset();
     ECC_Stop();
     LogPrintf("%s: done\n", __func__);
@@ -1267,7 +1271,6 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
         do {
             try
             {
-                int64_t lastUpdate = nStart;
                 pnetMan->getActivePaymentNetwork()->getChainManager()->UnloadBlockIndex();
                 pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.reset();
                 pcoinsdbview.reset();
@@ -1279,7 +1282,8 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                 pcoinscatcher.reset(new CCoinsViewErrorCatcher(pcoinsdbview.get()));
                 pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.reset(new CCoinsViewCache(pcoinscatcher.get()));
 
-                if (fReindex) {
+                if (fReindex)
+                {
                     pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree->WriteReindexing(true);
                 }
 
@@ -1288,14 +1292,13 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                     strLoadError = _("Error loading block database");
                     break;
                 }
-                lastUpdate = GetTimeMillis() - nStart;
-                LogPrintf("load block index function took %15dms\n", lastUpdate);
-
                 // If the loaded chain has a wrong genesis, bail out immediately
                 // (we're likely using a testnet datadir, or the other way around).
                 if (!pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.empty() &&
                         pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.count(chainparams.GetConsensus().hashGenesisBlock) == 0)
+                {
                     return InitError(_("Incorrect or no genesis block found. Wrong datadir for network?"));
+                }
 
                 // Initialize the block index (no-op if non-empty database was already loaded)
                 if (!pnetMan->getActivePaymentNetwork()->getChainManager()->InitBlockIndex(chainparams))
@@ -1304,7 +1307,29 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                     break;
                 }
 
-                    //removeImpossibleChainTips();
+                /// check for services folder, if does not exist. make it
+                boost::filesystem::path servicesFolder = (GetDataDir() / "services");
+                if (boost::filesystem::exists(servicesFolder))
+                {
+                    if(!boost::filesystem::is_directory(servicesFolder))
+                    {
+                        LogPrintf("services exists but is not a folder, check your ecc data files \n");
+                        assert(false);
+                    }
+                }
+                else
+                {
+                    boost::filesystem::create_directory(servicesFolder);
+                }
+
+                // load the services
+                g_stxmempool.reset();
+                g_stxmempool.reset(new CStxMemPool());
+                pansMain = new CAnsZone();
+                g_ans.reset();
+                g_ans.reset(new CServiceDB("ans", nBlockTreeDBCache, false, false));
+
+                // verify the blocks
                 {
                     uiInterface.InitMessage(_("Verifying blocks..."));
                     LogPrintf("Verifying blocks...");
@@ -1326,8 +1351,6 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                         strLoadError = _("Corrupted block database detected");
                         break;
                     }
-                    LogPrintf("verify db function %15dms\n", GetTimeMillis() - lastUpdate);
-                    lastUpdate = GetTimeMillis();
                 }
             }
             catch (const std::exception& e)

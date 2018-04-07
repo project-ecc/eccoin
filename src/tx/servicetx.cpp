@@ -6,6 +6,7 @@
 #include "crypto/hash.h"
 #include "streams.h"
 #include "timedata.h"
+#include "tinyformat.h"
 
 struct serializeServiceTx
 {
@@ -54,12 +55,14 @@ void CServiceTransaction::UpdateHash() const
     *const_cast<uint256*>(&hash) = SerializeHash(txtohash);
 }
 
-CServiceTransaction::CServiceTransaction() : nVersion(CServiceTransaction::CURRENT_VERSION), nServiceId(0), nTime(GetAdjustedTime()), nOpCode(0), nLockTime(0), vdata(), paymentReferenceHash(), securityHash() {
+CServiceTransaction::CServiceTransaction() : nVersion(CServiceTransaction::CURRENT_VERSION), nServiceId(0), nTime(GetAdjustedTime()),
+        nOpCode(0), nLockTime(0), vdata(), paymentReferenceHash() { //, securityHash() {
     paymentReferenceHash.SetNull();
-    securityHash.SetNull();
+//    securityHash.SetNull();
 }
 
-CServiceTransaction::CServiceTransaction(const CServiceTransaction &tx) : nVersion(tx.nVersion), nServiceId(tx.nServiceId), nTime(tx.nTime), nOpCode(tx.nOpCode), nLockTime(tx.nLockTime), vdata(tx.vdata), paymentReferenceHash(tx.paymentReferenceHash), securityHash(tx.securityHash) {
+CServiceTransaction::CServiceTransaction(const CServiceTransaction &tx) : nVersion(tx.nVersion), nServiceId(tx.nServiceId), nTime(tx.nTime),
+        nOpCode(tx.nOpCode), nLockTime(tx.nLockTime), vdata(tx.vdata), paymentReferenceHash(tx.paymentReferenceHash) { //, securityHash(tx.securityHash) {
     UpdateHash();
 }
 
@@ -71,16 +74,28 @@ CServiceTransaction& CServiceTransaction::operator=(const CServiceTransaction &t
     *const_cast<unsigned int*>(&nLockTime) = tx.nLockTime;
     *const_cast<std::vector<unsigned char>*>(&vdata) = tx.vdata;
     *const_cast<uint256*>(&paymentReferenceHash) = tx.paymentReferenceHash;
-    *const_cast<uint256*>(&securityHash) = tx.securityHash;
+//    *const_cast<uint256*>(&securityHash) = tx.securityHash;
     *const_cast<uint256*>(&hash) = tx.hash;
     return *this;
 }
 
 std::string CServiceTransaction::ToString() const
 {
-    return "";
+    std::string str;
+    std::string datastr(vdata.begin(), vdata.end());
+    str += strprintf("CServiceTransaction(hash=%s, ver=%d, nServiceId=%u, nTime=%u, nOpCode=%u, nLockTime=%u, vdata=%s, paymentReferenceHash=%s)\n",
+        GetHash().ToString().substr(0,10),
+        nVersion,
+        nServiceId,
+        nTime,
+        nOpCode,
+        nLockTime,
+        datastr.c_str(),
+        paymentReferenceHash.GetHex().c_str());
+    return str;
 }
 
+/*
 void CServiceTransaction::setSecurityHash()
 {
     CDataStream ss(SER_GETHASH, 0);
@@ -88,3 +103,4 @@ void CServiceTransaction::setSecurityHash()
     ss << this->GetHash();
     securityHash = Hash(ss.begin(), ss.end());
 }
+*/

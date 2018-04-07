@@ -10,6 +10,7 @@
 #include "net.h"
 #include "streams.h"
 #include "tinyformat.h"
+#include "tx/servicetx.h"
 #include "ui_interface.h"
 #include "util/utilstrencodings.h"
 #include "validationinterface.h"
@@ -218,7 +219,11 @@ public:
      * >=1 : this many blocks deep in the main chain
      */
     int GetDepthInMainChain(const CBlockIndex* &pindexRet) const;
-    int GetDepthInMainChain() const { const CBlockIndex *pindexRet; return GetDepthInMainChain(pindexRet); }
+    int GetDepthInMainChain() const
+    {
+        const CBlockIndex *pindexRet;
+        return GetDepthInMainChain(pindexRet);
+    }
     bool IsInMainChain() const { const CBlockIndex *pindexRet; return GetDepthInMainChain(pindexRet) > 0; }
     int GetBlocksToMaturity() const;
     bool AcceptToMemoryPool(bool fLimitFree=true, bool fRejectAbsurdFee=true);
@@ -408,6 +413,7 @@ public:
     std::set<uint256> GetConflicts() const;
 };
 
+bool RelayServiceTransaction(CConnman *connman, const CServiceTransaction& stx, std::string& username);
 
 
 
@@ -471,6 +477,7 @@ private:
      * all coins from coinControl are selected; Never select unconfirmed coins
      * if they are not ours
      */
+    bool SelectCoinsByOwner(const CAmount& nTargetValue, const CRecipient& recipient, std::set<std::pair<const CWalletTx*,unsigned int> >& setCoinsRet, CAmount& nValueRet) const;
     bool SelectCoins(const CAmount& nTargetValue, std::set<std::pair<const CWalletTx*,unsigned int> >& setCoinsRet, CAmount& nValueRet, const CCoinControl *coinControl = NULL) const;
     bool SelectCoins(CAmount nTargetValue, unsigned int nSpendTime, std::set<std::pair<const CWalletTx*,unsigned int> >& setCoinsRet, int64_t& nValueRet, const CCoinControl *coinControl=NULL) const;
 
@@ -651,7 +658,7 @@ public:
 
     void MarkDirty();
     bool AddToWallet(const CWalletTx& wtxIn, bool fFromLoadWallet, CWalletDB* pwalletdb);
-    void SyncTransaction(const CTransactionRef &ptx, const CBlock* pblock);
+    void SyncTransaction(const CTransactionRef &ptx, const CBlock* pblock = nullptr);
     bool AddToWalletIfInvolvingMe(const CTransactionRef& ptx, const CBlock* pblock, bool fUpdate);
     int ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate = false);
     void ReacceptWalletTransactions();
@@ -679,7 +686,16 @@ public:
      */
     bool CreateTransaction(const std::vector<CRecipient>& vecSend, CWalletTx& wtxNew, CReserveKey& reservekey, CAmount& nFeeRet, int& nChangePosRet,
                            std::string& strFailReason, const CCoinControl *coinControl = NULL, bool sign = true);
+
+    /**
+     * Create a new transaction paying a set amount of coins for a service
+     * There should be no change output. receipient will it itself so that address still owns the service item being paid for
+     */
+    bool CreateTransactionForService(const CRecipient& recipient, CWalletTx& wtxNew, CReserveKey& reservekey, CAmount& nFeeRequired,
+                           CAmount& nFeeRet, std::string& strFailReason, bool sign = true);
+
     bool CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey, CConnman *connman, CValidationState &state);
+    bool CommitTransactionForService(CServiceTransaction& stxNew, std::string& username, CConnman *connman);
 
     bool AddAccountingEntry(const CAccountingEntry&, CWalletDB & pwalletdb);
 
@@ -725,9 +741,17 @@ public:
     void SetBestChain(const CBlockLocator& loc);
 
     DBErrors LoadWallet(bool& fFirstRunRet);
+    void TransactionAddedToMempool(const CTransactionRef &tx) override;
+    void BlockConnected(const std::shared_ptr<const CBlock> &pblock,
+                   const CBlockIndex *pindex,
+                   const std::vector<CTransactionRef> &vtxConflicted) override;
+    void BlockDisconnected(const std::shared_ptr<const CBlock> &pblock) override;
+
     DBErrors ZapWalletTx(std::vector<CWalletTx>& vWtx);
 
     bool SetAddressBook(const CTxDestination& address, const std::string& strName, const std::string& purpose);
+
+    bool AddressIsMine(const CTxDestination& address);
 
     bool DelAddressBook(const CTxDestination& address);
 
