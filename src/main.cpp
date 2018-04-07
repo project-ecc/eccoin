@@ -16,6 +16,7 @@
 #include "crypto/hash.h"
 #include "init.h"
 #include "merkleblock.h"
+#include "messages.h"
 #include "net.h"
 #include "networks/netman.h"
 #include "policy/policy.h"
@@ -41,6 +42,7 @@
 #include "chain/chain.h"
 #include "chain/checkpoints.h"
 #include "processtx.h"
+#include "stxmempool.h"
 
 #include <random>
 #include <sstream>
@@ -167,12 +169,19 @@ int GetHeight()
 bool IsFinalTx(const CTransaction &tx, int nBlockHeight, int64_t nBlockTime)
 {
     if (tx.nLockTime == 0)
+    {
         return true;
+    }
     if ((int64_t)tx.nLockTime < ((int64_t)tx.nLockTime < LOCKTIME_THRESHOLD ? (int64_t)nBlockHeight : nBlockTime))
+    {
         return true;
-    for (auto const& txin: tx.vin) {
+    }
+    for (auto const& txin: tx.vin)
+    {
         if (!(txin.nSequence == CTxIn::SEQUENCE_FINAL))
+        {
             return false;
+        }
     }
     return true;
 }
@@ -445,11 +454,15 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState &state, const C
     }
 
     if (!CheckTransaction(tx, state))
+    {
         return false;
+    }
 
     // Coinbase/Coinstake is only valid in a block, not as a loose transaction
     if (tx.IsCoinBase() || tx.IsCoinStake())
+    {
         return state.DoS(100, false, REJECT_INVALID, "coinbase");
+    }
 
     // Rather not work on nonstandard transactions (unless -testnet/-regtest)
     std::string reason;
@@ -663,8 +676,8 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState &state, const C
 
         if (fRejectAbsurdFee && nFees > ::minRelayTxFee.GetFee(nSize) * 10000)
         {
-            return state.Invalid(false,
-                REJECT_HIGHFEE, "absurdly-high-fee",
+            LogPrintf("Absurdly-high-fee of %d \n", nFees);
+            return state.Invalid(false, REJECT_HIGHFEE, "absurdly-high-fee",
                 strprintf("%d > %d", nFees, ::minRelayTxFee.GetFee(nSize) * 10000));
         }
 
@@ -886,8 +899,11 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransa
     bool res = AcceptToMemoryPoolWorker(pool, state, tx, fLimitFree, pfMissingInputs, fOverrideMempoolLimit, fRejectAbsurdFee, vHashTxToUncache);
     if (!res)
     {
+        LogPrintf("AcceptToMemoryPool(): ERROR, %s \n",state.GetRejectReason().c_str());
         for (auto const& hashTx: vHashTxToUncache)
+        {
             pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip->Uncache(hashTx);
+        }
     }
     return res;
 }
@@ -1029,7 +1045,8 @@ bool CheckTxInputs(const CTransaction& tx, CValidationState& state, const CCoins
             assert(coins);
 
             // If prev is coinbase, check that it's matured
-            if (coins->IsCoinBase()) {
+            if (coins->IsCoinBase() || coins->IsCoinStake())
+            {
                 if (nSpendHeight - coins->nHeight < COINBASE_MATURITY)
                     return state.Invalid(false,
                         REJECT_INVALID, "bad-txns-premature-spend-of-coinbase",
@@ -1544,31 +1561,39 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
     // These are checks that are independent of context.
 
     if (block.fChecked)
+    {
         return true;
+    }
 
     if (block.IsProofOfWork() && fCheckPOW && !CheckProofOfWork(block.GetHash(), block.nBits, pnetMan->getActivePaymentNetwork()->GetConsensus()))
-        return state.DoS(50, error("CheckBlockHeader(): proof of work failed"),
-                         REJECT_INVALID, "high-hash");
+    {
+        return state.DoS(50, error("CheckBlockHeader(): proof of work failed"), REJECT_INVALID, "high-hash");
+    }
 
     // Check that the header is valid (particularly PoW).  This is mostly
     // redundant with the call in AcceptBlockHeader.
     if (!CheckBlockHeader(block, state, fCheckPOW))
+    {
         return false;
+    }
 
     // Check the merkle root.
-    if (fCheckMerkleRoot) {
+    if (fCheckMerkleRoot)
+    {
         bool mutated;
         uint256 hashMerkleRoot2 = BlockMerkleRoot(block, &mutated);
         if (block.hashMerkleRoot != hashMerkleRoot2)
-            return state.DoS(100, error("CheckBlock(): hashMerkleRoot mismatch"),
-                             REJECT_INVALID, "bad-txnmrklroot", true);
+        {
+            return state.DoS(100, error("CheckBlock(): hashMerkleRoot mismatch"), REJECT_INVALID, "bad-txnmrklroot", true);
+        }
 
         // Check for merkle tree malleability (CVE-2012-2459): repeating sequences
         // of transactions in a block without affecting the merkle root of a block,
         // while still invalidating it.
         if (mutated)
-            return state.DoS(100, error("CheckBlock(): duplicate transaction"),
-                             REJECT_INVALID, "bad-txns-duplicate", true);
+        {
+            return state.DoS(100, error("CheckBlock(): duplicate transaction"), REJECT_INVALID, "bad-txns-duplicate", true);
+        }
     }
 
     // All potential-corruption validation must be done before we do any
@@ -1577,23 +1602,28 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
 
     // Size limits
     if (block.vtx.empty() || block.vtx.size() > MAX_BLOCK_SIZE || ::GetSerializeSize(block, SER_NETWORK, PROTOCOL_VERSION) > MAX_BLOCK_SIZE)
-        return state.DoS(100, error("CheckBlock(): size limits failed"),
-                         REJECT_INVALID, "bad-blk-length");
+    {
+        return state.DoS(100, error("CheckBlock(): size limits failed"), REJECT_INVALID, "bad-blk-length");
+    }
 
     // First transaction must be coinbase, the rest must not be
     if (block.vtx.empty() || !block.vtx[0]->IsCoinBase())
-        return state.DoS(100, error("CheckBlock(): first tx is not coinbase"),
-                         REJECT_INVALID, "bad-cb-missing");
+    {
+        return state.DoS(100, error("CheckBlock(): first tx is not coinbase"), REJECT_INVALID, "bad-cb-missing");
+    }
 
     for (unsigned int i = 1; i < block.vtx.size(); i++)
+    {
         if (block.vtx[i]->IsCoinBase())
-            return state.DoS(100, error("CheckBlock(): more than one coinbase"),
-                             REJECT_INVALID, "bad-cb-multiple");
+        {
+            return state.DoS(100, error("CheckBlock(): more than one coinbase"), REJECT_INVALID, "bad-cb-multiple");
+        }
+    }
 
     // PoS: only the second transaction can be the optional coinstake
     for (unsigned int i = 2; i < block.vtx.size(); i++)
     {
-        if ((*block.vtx[i]).IsCoinStake())
+        if (block.vtx[i]->IsCoinStake())
         {
             return state.DoS(100, error("CheckBlock() : coinstake in wrong position"));
         }
@@ -1615,7 +1645,30 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
                 strprintf("Transaction check failed (txid %s) %s",
                           tx->GetId().ToString(), state.GetDebugMessage()));
         }
-
+        if(tx->nVersion == 2)
+        {
+            CServiceTransaction stx;
+            if(!g_stxmempool->lookup(tx->serviceReferenceHash, stx))
+            {
+                LogPrintf("tx with hash %s pays for service transaction with hash %s but none can be found \n", tx->GetHash().GetHex().c_str(), tx->serviceReferenceHash.GetHex().c_str());
+                // we should request this stx
+                LogPrintf("Requesting stx %s\n", tx->serviceReferenceHash.GetHex().c_str());
+                {
+                    CInv inv(MSG_STX, tx->serviceReferenceHash);
+                    g_connman->ForEachNode([&inv](CNode *pnode) { pnode->AskFor(inv); });
+                }
+                // this will be reprocessed when we get the stx. if the stx is invalid but they paid for it, oh well
+            }
+            else
+            {
+                if(!CheckTransactionANS(stx, *tx, state))
+                {
+                    return error("CheckBlock(): CheckTransactionANS of %s failed with %s",
+                        tx->GetHash().ToString(),
+                        FormatStateMessage(state));
+                }
+            }
+        }
         // PoS: check transaction timestamp
         if (block.GetBlockTime() < (int64_t)tx->nTime)
         {

@@ -116,7 +116,7 @@ UniValue getgenerate(const UniValue& params, bool fHelp)
 
 UniValue generate(const UniValue& params, bool fHelp)
 {
-    if (fHelp || params.size() < 1 || params.size() > 1)
+    if (fHelp || params.size() < 1 || params.size() > 2)
     {
         throw std::runtime_error(
             "generate numblocks  address\n"
@@ -126,7 +126,7 @@ UniValue generate(const UniValue& params, bool fHelp)
             "1. numblocks    (numeric, required) How many blocks are generated immediately.\n"
             "\nResult\n"
             "2. address      (string, required) The address to send the newly "
-            "generated bitcoin to.\n"
+            "generated ecc to.\n"
             "[ blockhashes ]     (array) hashes of blocks generated\n"
             "\nExamples:\n"
             "\nGenerate 11 blocks\n"
@@ -151,7 +151,7 @@ UniValue generate(const UniValue& params, bool fHelp)
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY,
                            "Error: Invalid address");
     }
-
+    LogPrintf("we are mining to %s \n", addr.ToString().c_str());
     std::shared_ptr<CReserveScript> coinbaseScript = std::make_shared<CReserveScript>();
     coinbaseScript->reserveScript = GetScriptForDestination(addr.Get());
 
@@ -181,13 +181,19 @@ UniValue generate(const UniValue& params, bool fHelp)
             LOCK(cs_main);
             IncrementExtraNonce(pblock, pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip(), nExtraNonce);
         }
-        while (pblock->IsProofOfWork() && !CheckProofOfWork(pblock->GetHash(), pblock->nBits, pnetMan->getActivePaymentNetwork()->GetConsensus())) {
+        while (pblock->IsProofOfWork() && !CheckProofOfWork(pblock->GetHash(), pblock->nBits, pnetMan->getActivePaymentNetwork()->GetConsensus())) 
+        {
             // Yes, there is a chance every nonce could fail to satisfy the -regtest
             // target -- 1 in 2^(2^32). That ain't gonna happen.
             ++pblock->nNonce;
         }
+        if (!pblock->SignScryptBlock(*pwalletMain))
+        {
+            LogPrintf("signging block in generate RPC call failed \n");
+            continue;
+        }
         CValidationState state;
-        const std::shared_ptr<const CBlock> spblock(pblock);
+        const std::shared_ptr<const CBlock> spblock = std::make_shared<const CBlock>(*pblock);
         if (!ProcessNewBlock(state, pnetMan->getActivePaymentNetwork(), NULL, spblock, true, NULL, GENERATED))
             throw JSONRPCError(RPC_INTERNAL_ERROR, "ProcessNewBlock, block not accepted");
         ++nHeight;

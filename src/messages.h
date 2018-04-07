@@ -8,6 +8,7 @@
 #include "validationinterface.h"
 #include "net.h"
 #include "chain/blockindex.h"
+#include "tx/servicetx.h"
 
 
 /** Average delay between trickled inventory transmissions in seconds.

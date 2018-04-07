@@ -6,19 +6,29 @@
 
 #include <utility>
 
-bool CAnsZone::addRecord(AnsRecordTypes recordType, std::string key, CAnsRecord value)
+std::unique_ptr<CServiceDB> g_ans = nullptr;
+CAnsZone* pansMain = nullptr;
+
+
+static const char A_REC     = 'A';
+static const char PTR_REC   = 'P';
+
+bool CAnsZone::addRecord(AnsRecordTypes recordType, std::string key, CAnsRecord& value)
 {
     switch(recordType)
     {
-        case Arec:
-            A.insert(std::make_pair(key, value));
+        case A_RECORD:
+        {
+            CAnsKey Akey(A_REC,key);
+            g_ans->WriteEntry(Akey, value);
             break;
-        case CNAMErec:
-            CNAME.insert(std::make_pair(key, value));
+        }
+        case PTR_RECORD:
+        {
+            CAnsKey PTRkey(PTR_REC,key);
+            g_ans->WriteEntry(PTRkey, value);
             break;
-        case PTRrec:
-            PTR.insert(std::make_pair(key, value));
-            break;
+        }
         default:
             return false;
     }
@@ -27,85 +37,32 @@ bool CAnsZone::addRecord(AnsRecordTypes recordType, std::string key, CAnsRecord 
 
 CAnsRecord CAnsZone::getRecord(AnsRecordTypes recordType, std::string key)
 {
+    CAnsRecord value;
+    value.setNull();
     switch(recordType)
     {
-        case Arec:
+        case A_RECORD:
         {
-            auto Aresult = A.find(key);
-            if(Aresult != A.end())
-            {
-                return Aresult->second;
-            }
+            CAnsKey Akey(A_REC,key);
+            g_ans->ReadEntry(Akey, value);
             break;
         }
-        case CNAMErec:
+        case PTR_RECORD:
         {
-            auto CNAMEresult = CNAME.find(key);
-            if(CNAMEresult != CNAME.end())
-            {
-                return CNAMEresult->second;
-            }
-            break;
-        }
-        case PTRrec:
-        {
-            auto PTRresult = PTR.find(key);
-            if(PTRresult != PTR.end())
-            {
-                return PTRresult->second;
-            }
+            CAnsKey PTRkey(PTR_REC,key);
+            g_ans->ReadEntry(PTRkey, value);
             break;
         }
         default:
             break;
     }
-    return CAnsRecord();
+    return value;
 }
 
-uint64_t CAnsZone::getRecordSetSize(AnsRecordTypes recordType)
+const uint64_t oneMonth = 2592000; // 30 days in seconds
+
+// TODO : NEEDS ACTUAL TIME CALC METHOD
+uint64_t CalcValidTime(uint64_t nTime, uint256 paymentHash)
 {
-    // we use a declared uint64_t here and return that instead of returning
-    // .size() because .size() is of type size_t
-    uint64_t recordSetSize;
-    switch(recordType)
-    {
-        case Arec:
-        {
-            recordSetSize = A.size();
-            break;
-        }
-        case CNAMErec:
-        {
-            recordSetSize = CNAME.size();
-            break;
-        }
-        case PTRrec:
-        {
-            recordSetSize = PTR.size();
-            break;
-        }
-        default:
-            return 0;
-    }
-    return recordSetSize;
+    return nTime + oneMonth;
 }
-
-void CAnsZone::clearRecordSet(AnsRecordTypes recordType)
-{
-    switch(recordType)
-    {
-        case Arec:
-            A.clear();
-            break;
-        case CNAMErec:
-            CNAME.clear();
-            break;
-        case PTRrec:
-            PTR.clear();
-            break;
-        default:
-            break;
-    }
-}
-
-

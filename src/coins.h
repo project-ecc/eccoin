@@ -14,8 +14,7 @@
 
 #include <assert.h>
 #include <stdint.h>
-
-#include <boost/unordered_map.hpp>
+#include <unordered_map>
 
 /**
  * A UTXO entry.
@@ -137,11 +136,19 @@ public:
     //! as new tx version will probably only be introduced at certain heights
     int nVersion;
 
+    //! whether transaction is a coinstake
+    bool fCoinStake;
+
+    //! transaction timestamp
+    unsigned int nTime;
+
     void FromTx(const CTransaction &tx, int nHeightIn) {
         fCoinBase = tx.IsCoinBase();
         vout = tx.vout;
         nHeight = nHeightIn;
         nVersion = tx.nVersion;
+        fCoinStake = tx.IsCoinStake();
+        nTime = tx.nTime;
         ClearUnspendable();
     }
 
@@ -155,10 +162,12 @@ public:
         std::vector<CTxOut>().swap(vout);
         nHeight = 0;
         nVersion = 0;
+        fCoinStake = false;
+        nTime = 0;
     }
 
     //! empty constructor
-    CCoins() : fCoinBase(false), vout(0), nHeight(0), nVersion(0) { }
+    CCoins() : fCoinBase(false), vout(0), nHeight(0), nVersion(0), fCoinStake(false), nTime(0) { }
 
     //!remove spent outputs at the end of vout
     void Cleanup() {
@@ -181,6 +190,8 @@ public:
         to.vout.swap(vout);
         std::swap(to.nHeight, nHeight);
         std::swap(to.nVersion, nVersion);
+        std::swap(to.fCoinStake, fCoinStake);
+        std::swap(to.nTime, nTime);
     }
 
     //! equality test
@@ -191,7 +202,9 @@ public:
          return a.fCoinBase == b.fCoinBase &&
                 a.nHeight == b.nHeight &&
                 a.nVersion == b.nVersion &&
-                a.vout == b.vout;
+                a.vout == b.vout &&
+                a.fCoinStake == b.fCoinStake &&
+                a.nTime == b.nTime;
     }
     friend bool operator!=(const CCoins &a, const CCoins &b) {
         return !(a == b);
@@ -200,6 +213,10 @@ public:
     void CalcMaskSize(unsigned int &nBytes, unsigned int &nNonzeroBytes) const;
 
     bool IsCoinBase() const {
+        return fCoinBase;
+    }
+
+    bool IsCoinStake() const {
         return fCoinBase;
     }
 
@@ -223,6 +240,11 @@ public:
                 nSize += ::GetSerializeSize(CTxOutCompressor(REF(vout[i])), nType, nVersion);
         // height
         nSize += ::GetSerializeSize(VARINT(nHeight), nType, nVersion);
+        // pos flags
+        unsigned int nFlag = fCoinStake? 1 : 0;
+        nSize += ::GetSerializeSize(VARINT(nFlag), nType, nVersion);
+        // transaction timestamp
+        nSize += ::GetSerializeSize(VARINT(nTime), nType, nVersion);
         return nSize;
     }
 
@@ -253,6 +275,11 @@ public:
         }
         // coinbase height
         ::Serialize(s, VARINT(nHeight));
+        // pos flags
+        unsigned int nFlag = fCoinStake? 1 : 0;
+        ::Serialize(s, VARINT(nFlag));
+        // transaction timestamp
+        ::Serialize(s, VARINT(nTime));
     }
 
     template<typename Stream>
@@ -286,6 +313,12 @@ public:
         }
         // coinbase height
         ::Unserialize(s, VARINT(nHeight));
+        // pos flags
+        unsigned int nFlag = 0;
+        ::Unserialize(s, VARINT(nFlag));
+        fCoinStake = nFlag & 1;
+        // transaction timestamp
+        ::Unserialize(s, VARINT(nTime));
         Cleanup();
     }
 
@@ -322,12 +355,6 @@ private:
 
 public:
     CCoinsKeyHasher();
-
-    /**
-     * This *must* return size_t. With Boost 1.46 on 32-bit systems the
-     * unordered_map will behave unpredictably if the custom hasher returns a
-     * uint64_t, resulting in failures when syncing the chain (#4634).
-     */
     size_t operator()(const uint256& key) const {
         return key.GetHash(salt);
     }
@@ -346,7 +373,7 @@ struct CCoinsCacheEntry
     CCoinsCacheEntry() : coins(), flags(0) {}
 };
 
-typedef boost::unordered_map<uint256, CCoinsCacheEntry, CCoinsKeyHasher> CCoinsMap;
+typedef std::unordered_map<uint256, CCoinsCacheEntry, CCoinsKeyHasher> CCoinsMap;
 
 struct CCoinsStats
 {

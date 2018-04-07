@@ -176,12 +176,12 @@ void CNetworkManager::ConstructTetnet0Template()
     netManTestnetTemplate->consensus.nMajorityEnforceBlockUpgrade = 750;
     netManTestnetTemplate->consensus.nMajorityRejectBlockOutdated = 950;
     netManTestnetTemplate->consensus.nMajorityWindow = 1000;
-    netManTestnetTemplate->consensus.powLimit  = uint256S("00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
-    netManTestnetTemplate->consensus.posLimit  = uint256S("00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+    netManTestnetTemplate->consensus.powLimit  = uint256S("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+    netManTestnetTemplate->consensus.posLimit  = uint256S("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
     netManTestnetTemplate->consensus.nTargetTimespan = 30 * 45;
     netManTestnetTemplate->consensus.nTargetSpacing = 45;
-    netManTestnetTemplate->consensus.fPowAllowMinDifficultyBlocks = false;
-    netManTestnetTemplate->consensus.fPowNoRetargeting = false;
+    netManTestnetTemplate->consensus.fPowAllowMinDifficultyBlocks = true;
+    netManTestnetTemplate->consensus.fPowNoRetargeting = true;
     netManTestnetTemplate->consensus.nRuleChangeActivationThreshold = 1916; // 95% of 2016
     netManTestnetTemplate->consensus.nMinerConfirmationWindow = 2016; // nPowTargetTimespan / nTargetSpacing
     netManTestnetTemplate->consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].bit = 28;
@@ -232,10 +232,10 @@ void CNetworkManager::ConstructTetnet0Template()
     netManTestnetTemplate->base58Prefixes[CNetworkTemplate::EXT_PUBLIC_KEY] = boost::assign::list_of(0x04)(0x88)(0xB2)(0x1E).convert_to_container<std::vector<unsigned char> >();
     netManTestnetTemplate->base58Prefixes[CNetworkTemplate::EXT_SECRET_KEY] = boost::assign::list_of(0x04)(0x88)(0xAD)(0xE4).convert_to_container<std::vector<unsigned char> >();
 
-    netManTestnetTemplate->fMiningRequiresPeers = true;
+    netManTestnetTemplate->fMiningRequiresPeers = false;
     netManTestnetTemplate->fDefaultConsistencyChecks = false;
     netManTestnetTemplate->fRequireStandard = true;
-    netManTestnetTemplate->fMineBlocksOnDemand = false;
+    netManTestnetTemplate->fMineBlocksOnDemand = true;
     netManTestnetTemplate->fTestnetToBeDeprecatedFieldRPC = false;
 
     netManTestnetTemplate->checkpointData = (CCheckpointData){

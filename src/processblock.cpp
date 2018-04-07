@@ -162,8 +162,10 @@ bool AcceptBlock(const std::shared_ptr<const CBlock> pblock, CValidationState& s
         if (fTooFarAhead) return true;      // Block height is too high
     }
 
-    if ((!CheckBlock(*pblock, state)) || !ContextualCheckBlock(*pblock, state, pindex->pprev)) {
-        if (state.IsInvalid() && !state.CorruptionPossible()) {
+    if ((!CheckBlock(*pblock, state)) || !ContextualCheckBlock(*pblock, state, pindex->pprev))
+    {
+        if (state.IsInvalid() && !state.CorruptionPossible())
+        {
             pindex->nStatus |= BLOCK_FAILED_VALID;
             setDirtyBlockIndex.insert(pindex);
         }
@@ -210,7 +212,9 @@ bool ProcessNewBlock(CValidationState& state, const CNetworkTemplate& chainparam
         LOCK(cs_main);
         bool fRequested = MarkBlockAsReceived(pblock->GetHash());
         fRequested |= fForceProcessing;
-        if (!checked) {
+        if (!checked) 
+        {
+            LogPrintf("%s \n", state.GetRejectReason().c_str());
             return error("%s: CheckBlock FAILED", __func__);
         }
 
@@ -626,6 +630,12 @@ bool ActivateBestChain(CValidationState &state, const CNetworkTemplate& chainpar
             pindexNewTip = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
             pindexFork = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.FindFork(pindexOldTip);
             fInitialDownload = pnetMan->getActivePaymentNetwork()->getChainManager()->IsInitialBlockDownload();
+
+            for (const PerBlockConnectTrace &trace : connectTrace.GetBlocksConnected())
+            {
+                assert(trace.pblock && trace.pindex);
+                GetMainSignals().BlockConnected(trace.pblock, trace.pindex, *trace.conflictedTxs);
+            }
         }
         // When we reach this point, we switched to a new tip (stored in pindexNewTip).
 
@@ -1146,7 +1156,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         {
             nValueOut += tx.GetValueOut();
         }
-        if (!tx.IsCoinBase())
+        else
         {
             if (!view.HaveInputs(tx))
             {

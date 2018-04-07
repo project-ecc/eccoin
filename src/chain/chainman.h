@@ -16,7 +16,7 @@ struct BlockHasher
 {
     size_t operator()(const uint256& hash) const { return hash.GetCheapHash(); }
 };
-typedef boost::unordered_map<uint256, CBlockIndex*, BlockHasher> BlockMap;
+typedef std::unordered_map<uint256, CBlockIndex*, BlockHasher> BlockMap;
 
 
 /** Manages the BlockMap and CChain's for a given protocol. */

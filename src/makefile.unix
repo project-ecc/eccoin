@@ -204,6 +204,7 @@ OBJS= \
     build/httprpc.o \
     build/httpserver.o \
     build/rest.o \
+    build/rpc/rpcans.o \
     build/rpc/rpcblockchain.o \
     build/rpc/rpcclient.o \
     build/rpc/rpcdump.o \
@@ -223,7 +224,12 @@ OBJS= \
     build/verifydb.o \
     build/addrdb.o \
     build/threadinterrupt.o \
-    build/netaddress.o
+    build/netaddress.o \
+    build/ans/ansrecord.o \
+    build/ans/ans.o \
+    build/tx/servicetx.o \
+    build/service_leveldb.o \
+    build/stxmempool.o 
 
 
 
