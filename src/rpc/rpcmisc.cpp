@@ -199,7 +199,7 @@ UniValue validateaddress(const UniValue& params, bool fHelp)
             "validateaddress \"ecc address\"\n"
             "\nReturn information about the given ECC address.\n"
             "\nArguments:\n"
-            "1. \"ecc address\"     (string, required) The bitcoin address to validate\n"
+            "1. \"ecc address\"     (string, required) The ecc address to validate\n"
             "\nResult:\n"
             "{\n"
             "  \"isvalid\" : true|false,       (boolean) If the address is valid or not. If not, this is the only property returned.\n"

@@ -42,7 +42,7 @@ UniValue getansrecordset(const UniValue& params, bool fHelp)
             "1. \"record type\"     (string, required) The record set to fetch. recordTypes are A and PTR\n"
             "\nResult:\n"
             "{\n                  (json array of name-address pairs)\n"
-            "  \"name, address\"  (string) a bitcoin address associated with the given account\n"
+            "  \"name, address\"  (string) a ecc address associated with the given account\n"
             "  ,...\n"
             "}\n"
             "\nExamples:\n"
@@ -106,7 +106,7 @@ UniValue getansrecord(const UniValue& params, bool fHelp)
             "2. \"record type\"     (string, optional) Search only this recordset for the provided record name\n"
             "\nResult:\n"
             "{\n                  (json array of name-address pairs)\n"
-            "  \"name, address\"  (string) a bitcoin address associated with the given account\n"
+            "  \"name, address\"  (string) a ecc address associated with the given account\n"
             "  ,...\n"
             "}\n"
             "\nExamples:\n"
@@ -152,7 +152,7 @@ static void SendMoney(const CTxDestination &address, CAmount nValue, CWalletTx& 
     if (nValue > curBalance)
         throw JSONRPCError(RPC_WALLET_INSUFFICIENT_FUNDS, "Insufficient funds");
 
-    // Parse Bitcoin address
+    // Parse ecc address
     CScript scriptPubKey = GetScriptForDestination(address);
 
     // TODO : make an actual fee calculation for services, just use 1 ECC for now for testing purposes
@@ -196,17 +196,17 @@ UniValue getansaddress(const UniValue& params, bool fHelp)
     if (fHelp || params.size() != 2)
     {
         throw std::runtime_error(
-            "getansaddress \"bitcoinaddress\" \"username\" \n"
+            "getansaddress \"eccaddress\" \"username\" \n"
             "\nAssign a username to an owned address.\n"
             + HelpRequiringPassphrase() +
             "\nArguments:\n"
-            "1. \"bitcoinaddress\"  (string, required) The bitcoin address to have a username set to.\n"
+            "1. \"eccaddress\"  (string, required) The ecc address to have a username set to.\n"
             "2. \"username\"  (string, required) The username to be set.\n"
             "\nResult:\n"
             "\"transactionid\"  (string) The transaction id and additional info.\n"
             "\nExamples:\n"
-            + HelpExampleCli("sendtoaddress", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\" \"alice\"")
-            + HelpExampleRpc("sendtoaddress", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\", \"bob\"")
+            + HelpExampleCli("sendtoaddress", "\"EQT4WawJ6BN2JuaTfViuztHFeiqj2KCvTf\" \"alice\"")
+            + HelpExampleRpc("sendtoaddress", "\"EQT4WawJ6BN2JuaTfViuztHFeiqj2KCvTf\", \"bob\"")
         );
     }
 
@@ -218,10 +218,10 @@ UniValue getansaddress(const UniValue& params, bool fHelp)
     {
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Bitcoin address");
     }
-    if(!pwalletMain->AddressIsMine(address.Get()))
+    /*if(!pwalletMain->AddressIsMine(address.Get()))
     {
         throw JSONRPCError(RPC_WALLET_ERROR, "Private key for address " + address.ToString() + " is not known");
-    }
+    }*/
 
     // Amount
     std::string strUsername;
