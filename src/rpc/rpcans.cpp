@@ -30,47 +30,6 @@ AnsRecordTypes resolveRecordType(std::string strRecordType)
     return recordtype;
 }
 
-/// TODO : Revisit this for possibility later. right now it doesnt seem like this is doable with a db dynamic for all services
-/*
-UniValue getansrecordset(const UniValue& params, bool fHelp)
-{
-    if (fHelp || params.size() != 1)
-        throw std::runtime_error(
-            "getansrecordset \"recordType\"\n"
-            "\nReturn the records in the requested record set.\n"
-            "\nArguments:\n"
-            "1. \"record type\"     (string, required) The record set to fetch. recordTypes are A and PTR\n"
-            "\nResult:\n"
-            "{\n                  (json array of name-address pairs)\n"
-            "  \"name, address\"  (string) a ecc address associated with the given account\n"
-            "  ,...\n"
-            "}\n"
-            "\nExamples:\n"
-            + HelpExampleCli("getansrecordset", "\"A\"")
-            + HelpExampleRpc("getansrecordset", "\"PTR\"")
-        );
-    std::string strRecordType = params[0].get_str();
-    AnsRecordTypes recordtype = resolveRecordType(strRecordType);
-    UniValue ret(UniValue::VOBJ);
-    if(recordtype == AnsRecordTypes::UNKNOWN_RECORD)
-    {
-        ret.push_back(Pair("ERROR", "invalid record type requested. Valid record types are: A and PTR"));
-        return ret;
-    }
-    recordSet records = g_ans->getRecordSet(recordtype);
-    if(records.size() == 0)
-    {
-        ret.push_back(Pair("ERROR", "the record set requested contains no records"));
-        return ret;
-    }
-    for ( recordSet::iterator iter = records.begin(); iter != records.end(); ++iter )
-    {
-        ret.push_back(Pair(iter->first, iter->second.getValue()));
-    }
-    return ret;
-}
-*/
-
 /// TODO : consider passing by reference for getRecord instead of returning a value
 CAnsRecord getRecordUnknownType(std::string strRecordName)
 {
@@ -111,7 +70,7 @@ UniValue getansrecord(const UniValue& params, bool fHelp)
             "}\n"
             "\nExamples:\n"
             + HelpExampleCli("getansrecord"," \"name\" \"A\"")
-            + HelpExampleRpc("getansrecord"," \"address\" \"PTR\"")
+            + HelpExampleRpc("getansrecord"," \"EQT4WawJ6BN2JuaTfViuztHFeiqj2KCvTf\" \"PTR\"")
         );
     std::string strRecordName = params[0].get_str();
     AnsRecordTypes recordtype = AnsRecordTypes::UNKNOWN_RECORD;
