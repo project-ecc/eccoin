@@ -19,10 +19,6 @@ AnsRecordTypes resolveRecordType(std::string strRecordType)
     {
         recordtype = AnsRecordTypes::A_RECORD;
     }
-    else if(strRecordType == "CNAME" || strRecordType == "cname")
-    {
-        recordtype = AnsRecordTypes::CNAME_RECORD;
-    }
     else if(strRecordType == "PTR" || strRecordType == "ptr")
     {
         recordtype = AnsRecordTypes::PTR_RECORD;
@@ -43,7 +39,7 @@ UniValue getansrecordset(const UniValue& params, bool fHelp)
             "getansrecordset \"recordType\"\n"
             "\nReturn the records in the requested record set.\n"
             "\nArguments:\n"
-            "1. \"record type\"     (string, required) The record set to fetch. recordTypes are A, CNAME, PTR\n"
+            "1. \"record type\"     (string, required) The record set to fetch. recordTypes are A and PTR\n"
             "\nResult:\n"
             "{\n                  (json array of name-address pairs)\n"
             "  \"name, address\"  (string) a bitcoin address associated with the given account\n"
@@ -51,14 +47,14 @@ UniValue getansrecordset(const UniValue& params, bool fHelp)
             "}\n"
             "\nExamples:\n"
             + HelpExampleCli("getansrecordset", "\"A\"")
-            + HelpExampleRpc("getansrecordset", "\"CNAME\"")
+            + HelpExampleRpc("getansrecordset", "\"PTR\"")
         );
     std::string strRecordType = params[0].get_str();
     AnsRecordTypes recordtype = resolveRecordType(strRecordType);
     UniValue ret(UniValue::VOBJ);
     if(recordtype == AnsRecordTypes::UNKNOWN_RECORD)
     {
-        ret.push_back(Pair("ERROR", "invalid record type requested. Valid record types are: A, CNAME, PTR"));
+        ret.push_back(Pair("ERROR", "invalid record type requested. Valid record types are: A and PTR"));
         return ret;
     }
     recordSet records = g_ans->getRecordSet(recordtype);
@@ -82,12 +78,6 @@ CAnsRecord getRecordUnknownType(std::string strRecordName)
     if(strRecordName.size() <= 25)
     {
         record = pansMain->getRecord(AnsRecordTypes::A_RECORD, strRecordName);
-        if(record != CAnsRecord())
-        {
-           return record;
-        }
-        record.setNull();
-        record = pansMain->getRecord(AnsRecordTypes::CNAME_RECORD, strRecordName);
         if(record != CAnsRecord())
         {
            return record;
@@ -120,8 +110,8 @@ UniValue getansrecord(const UniValue& params, bool fHelp)
             "  ,...\n"
             "}\n"
             "\nExamples:\n"
-            + HelpExampleCli("getansrecordset", "\"A\"")
-            + HelpExampleRpc("getansrecordset", "\"CNAME\"")
+            + HelpExampleCli("getansrecord"," \"name\" \"A\"")
+            + HelpExampleRpc("getansrecord"," \"address\" \"PTR\"")
         );
     std::string strRecordName = params[0].get_str();
     AnsRecordTypes recordtype = AnsRecordTypes::UNKNOWN_RECORD;

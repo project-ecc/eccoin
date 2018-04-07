@@ -11,7 +11,6 @@
 
 enum AnsRecordTypes{
     A_RECORD, // name to address
-    CNAME_RECORD, // name to name
     PTR_RECORD, // address to name
 
     UNKNOWN_RECORD, // ???

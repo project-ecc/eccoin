@@ -11,7 +11,6 @@ CAnsZone* pansMain = nullptr;
 
 
 static const char A_REC     = 'A';
-static const char CNAME_REC = 'C';
 static const char PTR_REC   = 'P';
 
 bool CAnsZone::addRecord(AnsRecordTypes recordType, std::string key, CAnsRecord& value)
@@ -22,12 +21,6 @@ bool CAnsZone::addRecord(AnsRecordTypes recordType, std::string key, CAnsRecord&
         {
             CAnsKey Akey(A_REC,key);
             g_ans->WriteEntry(Akey, value);
-            break;
-        }
-        case CNAME_RECORD:
-        {
-            CAnsKey CNAMEkey(CNAME_REC,key);
-            g_ans->WriteEntry(CNAMEkey, value);
             break;
         }
         case PTR_RECORD:
@@ -52,12 +45,6 @@ CAnsRecord CAnsZone::getRecord(AnsRecordTypes recordType, std::string key)
         {
             CAnsKey Akey(A_REC,key);
             g_ans->ReadEntry(Akey, value);
-            break;
-        }
-        case CNAME_RECORD:
-        {
-            CAnsKey CNAMEkey(CNAME_REC,key);
-            g_ans->ReadEntry(CNAMEkey, value);
             break;
         }
         case PTR_RECORD:
