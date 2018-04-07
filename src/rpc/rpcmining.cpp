@@ -126,7 +126,7 @@ UniValue generate(const UniValue& params, bool fHelp)
             "1. numblocks    (numeric, required) How many blocks are generated immediately.\n"
             "\nResult\n"
             "2. address      (string, required) The address to send the newly "
-            "generated bitcoin to.\n"
+            "generated ecc to.\n"
             "[ blockhashes ]     (array) hashes of blocks generated\n"
             "\nExamples:\n"
             "\nGenerate 11 blocks\n"
