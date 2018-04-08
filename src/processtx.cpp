@@ -187,15 +187,15 @@ bool CheckServiceTransaction(const CServiceTransaction &stx, const CTransaction&
 
 void ProcessANSCommand(const CServiceTransaction &stx)
 {
-    if(stx.nOpCode == 0)
+    if(stx.nOpCode == Opcode_ANS::OP_REGISTER)
     {
         CAnsRecord newRec(stx);
         pansMain->addRecord(A_RECORD, newRec.getName(), newRec);
         pansMain->addRecord(PTR_RECORD, newRec.getAddress(), newRec);
     }
-    else if(stx.nOpCode == 1)
+    else if(stx.nOpCode == Opcode_ANS::OP_RENEW)
     {
-
+        pansMain->addTimeToRecord(stx, stx.nExpireTime);
     }
     // else, leave blank for future use
 }
