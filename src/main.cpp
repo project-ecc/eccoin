@@ -674,12 +674,20 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState &state, const C
             dFreeCount += nSize;
         }
 
-        if (fRejectAbsurdFee && nFees > ::minRelayTxFee.GetFee(nSize) * 10000)
+        if (fRejectAbsurdFee && tx.nVersion == 1 && nFees > ::minRelayTxFee.GetFee(nSize) * 10000)
         {
-            LogPrintf("Absurdly-high-fee of %d \n", nFees);
+            LogPrintf("Absurdly-high-fee of %d for tx with version of 1 \n", nFees);
             return state.Invalid(false, REJECT_HIGHFEE, "absurdly-high-fee",
                 strprintf("%d > %d", nFees, ::minRelayTxFee.GetFee(nSize) * 10000));
         }
+
+        if (fRejectAbsurdFee && tx.nVersion == 2 && nFees > ::minRelayTxFee.GetFee(nSize) * 5000000)
+        {
+            LogPrintf("Absurdly-high-fee of %d for tx with version of 2 \n", nFees);
+            return state.Invalid(false, REJECT_HIGHFEE, "absurdly-high-fee",
+                strprintf("%d > %d", nFees, ::minRelayTxFee.GetFee(nSize) * 5000000));
+        }
+
 
         // Calculate in-mempool ancestors, up to a limit.
         CTxMemPool::setEntries setAncestors;
