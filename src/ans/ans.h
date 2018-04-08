@@ -13,6 +13,11 @@
 #include <unordered_map>
 #include <memory>
 
+enum Opcode_ANS{
+    OP_REGISTER,
+    OP_RENEW,
+};
+
 extern std::unique_ptr<CServiceDB> g_ans;
 
 class CAnsZone
