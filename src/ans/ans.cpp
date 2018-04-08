@@ -57,3 +57,28 @@ bool CAnsZone::getRecord(AnsRecordTypes recordType, std::string key, CAnsRecord&
     }
     return true;
 }
+
+bool CAnsZone::addTimeToRecord(CServiceTransaction stx, uint64_t newExpireTime)
+{
+    CAnsRecord value(stx);
+    std::string name = value.getName();
+    std::string address = value.getAddress();
+    CAnsKey Akey(A_REC, name);
+    if(!g_ans->ReadEntry(Akey, value))
+    {
+        return false;
+    }
+    value.setExpireTime(newExpireTime);
+    g_ans->WriteEntry(Akey, value);
+
+    CAnsKey PTRkey(PTR_REC, address);
+    if(!g_ans->ReadEntry(PTRkey, value))
+    {
+        return false;
+    }
+    value.setExpireTime(newExpireTime);
+    g_ans->WriteEntry(PTRkey, value);
+    return true;
+}
+
+

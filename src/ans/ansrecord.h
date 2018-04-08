@@ -89,7 +89,6 @@ public:
 
     void setExpireTime(uint64_t nTime);
     uint64_t getExpireTime();
-    void addMoreTime(uint64_t newExpireTime);
 
     void setPaymentHash(uint256 hash);
     uint256 getPaymentHash();
