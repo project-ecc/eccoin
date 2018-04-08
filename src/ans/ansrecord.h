@@ -87,14 +87,16 @@ public:
     void setAddress(std::string strAddress);
     std::string getAddress();
 
-    void setExpireTime(uint64_t ntime);
+    void setExpireTime(uint64_t nTime);
     uint64_t getExpireTime();
+    void addMoreTime(uint64_t newExpireTime);
 
     void setPaymentHash(uint256 hash);
     uint256 getPaymentHash();
 
     void setServiceHash(uint256 hash);
     uint256 getServiceHash();
+
 };
 
 class CAnsKey

@@ -36,14 +36,19 @@ std::string CAnsRecord::getAddress()
     return address;
 }
 
-void CAnsRecord::setExpireTime(uint64_t ntime)
+void CAnsRecord::setExpireTime(uint64_t nTime)
 {
-    expireTime = ntime;
+    expireTime = nTime;
 }
 
 uint64_t CAnsRecord::getExpireTime()
 {
     return expireTime;
+}
+
+void CAnsRecord::addMoreTime(uint64_t newExpireTime)
+{
+    expireTime = CalcValidTime(this->expireTime, newExpireTime);
 }
 
 void CAnsRecord::setPaymentHash(uint256 hash)
