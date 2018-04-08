@@ -35,9 +35,8 @@ bool CAnsZone::addRecord(AnsRecordTypes recordType, std::string key, CAnsRecord&
     return true;
 }
 
-CAnsRecord CAnsZone::getRecord(AnsRecordTypes recordType, std::string key)
+bool CAnsZone::getRecord(AnsRecordTypes recordType, std::string key, CAnsRecord& value)
 {
-    CAnsRecord value;
     value.setNull();
     switch(recordType)
     {
@@ -54,7 +53,7 @@ CAnsRecord CAnsZone::getRecord(AnsRecordTypes recordType, std::string key)
             break;
         }
         default:
-            break;
+            return false;
     }
-    return value;
+    return true;
 }

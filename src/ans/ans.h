@@ -24,7 +24,7 @@ class CAnsZone
 {
 public:
     bool addRecord(AnsRecordTypes recordType, std::string key, CAnsRecord& value);
-    CAnsRecord getRecord(AnsRecordTypes recordType, std::string key);
+    bool getRecord(AnsRecordTypes recordType, std::string key, CAnsRecord &value);
 };
 
 extern CAnsZone* pansMain;
