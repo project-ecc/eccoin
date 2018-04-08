@@ -8,6 +8,7 @@
 #include <string>
 #include "uint256.h"
 #include "serialize.h"
+#include "tx/servicetx.h"
 
 enum AnsRecordTypes{
     A_RECORD, // name to address
@@ -19,29 +20,41 @@ enum AnsRecordTypes{
 class CAnsRecord
 {
 private:
-    std::string value;
+    std::string name;
+    std::string address;
     uint64_t expireTime;
     uint256 paymentHash;
     uint256 serviceHash;
+
+    bool getAddrFromPtx(std::string &addr);
+    uint64_t CalcValidTime(uint64_t nTime, uint256 paymentHash);
+
 public:
     CAnsRecord()
     {
         setNull();
     }
 
-    CAnsRecord(std::string _value, uint64_t _expTime, uint256 _paymentHash, uint256 _serviceHash)
+    CAnsRecord(const CServiceTransaction stx)
     {
-        this->value = _value;
-        this->expireTime = _expTime;
-        this->paymentHash = _paymentHash;
-        this->serviceHash = _serviceHash;
+        std::string name(stx.vdata.begin(), stx.vdata.end());
+        this->name = name;
+        std::string addr;
+        if(getAddrFromPtx(addr))
+        {
+            this->address = addr;
+        }
+        this->expireTime = CalcValidTime(stx.nTime, stx.paymentReferenceHash);
+        this->paymentHash = stx.paymentReferenceHash;
+        this->serviceHash = stx.GetHash();
     }
 
     ADD_SERIALIZE_METHODS
 
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) {
-        READWRITE(value);
+        READWRITE(name);
+        READWRITE(address);
         READWRITE(expireTime);
         READWRITE(paymentHash);
         READWRITE(serviceHash);
@@ -50,7 +63,8 @@ public:
 
     friend bool operator==(const CAnsRecord& a, const CAnsRecord& b)
     {
-        return a.value == b.value &&
+        return a.name == b.name &&
+               a.address == b.address &&
                a.expireTime == b.expireTime &&
                a.paymentHash == b.paymentHash &&
                a.serviceHash == b.serviceHash;
@@ -58,7 +72,8 @@ public:
 
     friend bool operator!=(const CAnsRecord& a, const CAnsRecord& b)
     {
-        return a.value != b.value ||
+        return a.name != b.name ||
+               a.address == b.address ||
                a.expireTime != b.expireTime ||
                a.paymentHash != b.paymentHash ||
                a.serviceHash != b.serviceHash;
@@ -66,8 +81,11 @@ public:
 
     void setNull();
 
-    void setValue(std::string strValue);
-    std::string getValue();
+    void setName(std::string strName);
+    std::string getName();
+
+    void setAddress(std::string strAddress);
+    std::string getAddress();
 
     void setExpireTime(uint64_t ntime);
     uint64_t getExpireTime();

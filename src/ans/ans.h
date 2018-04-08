@@ -23,7 +23,4 @@ public:
 };
 
 extern CAnsZone* pansMain;
-
-uint64_t CalcValidTime(uint64_t nTime, uint256 paymentHash);
-
 #endif // ANS_H

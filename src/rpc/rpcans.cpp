@@ -90,11 +90,12 @@ UniValue getansrecord(const UniValue& params, bool fHelp)
         ret.push_back(Pair("ERROR", "there is no record with that record name"));
         return ret;
     }
-    ret.push_back(Pair("Key"        , strRecordName                    ));
-    ret.push_back(Pair("Value"      , record.getValue()                ));
-    ret.push_back(Pair("ExpireTime" , record.getExpireTime()           ));
-    ret.push_back(Pair("paymentHash", record.getPaymentHash().GetHex() ));
-    ret.push_back(Pair("ServiceHash", record.getServiceHash().GetHex() ));
+    ret.push_back(Pair("Key for this record" , strRecordName                    ));
+    ret.push_back(Pair("Name"                , record.getName()                 ));
+    ret.push_back(Pair("Address"             , record.getAddress()              ));
+    ret.push_back(Pair("ExpireTime"          , record.getExpireTime()           ));
+    ret.push_back(Pair("paymentHash"         , record.getPaymentHash().GetHex() ));
+    ret.push_back(Pair("ServiceHash"         , record.getServiceHash().GetHex() ));
     return ret;
 }
 
