@@ -1353,7 +1353,8 @@ bool RelayServiceTransaction(CConnman *connman, const CServiceTransaction& stx, 
 
     CAnsRecord emptyRec;
     emptyRec.setNull();
-    if (pansMain->getRecord(A_RECORD, username) != emptyRec)
+    CAnsRecord record;
+    if (pansMain->getRecord(A_RECORD, username, record))
     {
         LogPrintf("Relaying stx %s\n", stx.GetHash().ToString().c_str());
         {
