@@ -1661,12 +1661,13 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
             }
             else
             {
-                if(!CheckTransactionANS(stx, *tx, state))
+                if(!CheckServiceTransaction(stx, *tx, state))
                 {
                     return error("CheckBlock(): CheckTransactionANS of %s failed with %s",
                         tx->GetHash().ToString(),
                         FormatStateMessage(state));
                 }
+                ProcessServiceCommand(stx, *tx, state);
             }
         }
         // PoS: check transaction timestamp

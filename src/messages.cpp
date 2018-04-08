@@ -1838,9 +1838,10 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
         {
             //if we can get the transaction we have already processed it so it is safe to call CheckTransactionANS here
             CValidationState state;
-            if(CheckTransactionANS(pstx, tx, state))
+            if(CheckServiceTransaction(pstx, tx, state))
             {
                 g_stxmempool->add(pstx.GetHash(), pstx);
+                ProcessServiceCommand(pstx, tx, state);
             }
             else
             {

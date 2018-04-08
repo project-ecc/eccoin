@@ -67,7 +67,7 @@ bool CheckTransaction(const CTransaction& tx, CValidationState &state)
 
 
 /// This should only be run after CheckTransaction is run on the payment transaction
-bool CheckTransactionANS(const CServiceTransaction &stx, const CTransaction& ptx, CValidationState &state)
+bool CheckServiceTransaction(const CServiceTransaction &stx, const CTransaction& ptx, CValidationState &state)
 {
     if(stx.IsNull())
     {
@@ -182,17 +182,31 @@ bool CheckTransactionANS(const CServiceTransaction &stx, const CTransaction& ptx
     {
         return state.DoS(100, false, REJECT_INVALID, "ownership-being-transfered");
     }
-
-    if(stx.nOpCode == 0)
-    {
-        std::string username(stx.vdata.begin(), stx.vdata.end());
-        CAnsRecord newRec(username, CalcValidTime(stx.nTime, stx.paymentReferenceHash), stx.paymentReferenceHash, stx.GetHash());
-        pansMain->addRecord(A_RECORD, username, newRec);
-    }
-    // else, leave blank for future use
-
     return true;
 }
 
+void ProcessANSCommand(const CServiceTransaction &stx)
+{
+    if(stx.nOpCode == 0)
+    {
+        CAnsRecord newRec(stx);
+        pansMain->addRecord(A_RECORD, newRec.getName(), newRec);
+        pansMain->addRecord(PTR_RECORD, newRec.getAddress(), newRec);
+    }
+    else if(stx.nOpCode == 1)
+    {
+
+    }
+    // else, leave blank for future use
+}
+
+void ProcessServiceCommand(const CServiceTransaction &stx, const CTransaction& ptx, CValidationState &state)
+{
+    if(stx.nServiceId == 0)
+    {
+        ProcessANSCommand(stx);
+    }
+    // else, leave blank for future use
+}
 
 
