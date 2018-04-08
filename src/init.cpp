@@ -228,7 +228,7 @@ void Shutdown()
         pcoinsdbview = NULL;
         if(pnetMan)
         {
-            delete pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree;
+            pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree.reset();
             pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree = NULL;
         }
     }
@@ -1275,9 +1275,9 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                 pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.reset();
                 pcoinsdbview.reset();
                 pcoinscatcher.reset();
-                delete pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree;
+                pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree.reset();
 
-                pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree = new CBlockTreeDB(nBlockTreeDBCache, false, fReindex);
+                pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree.reset(new CBlockTreeDB(nBlockTreeDBCache, false, fReindex));
                 pcoinsdbview.reset(new CCoinsViewDB(nCoinDBCache, false, fReset));
                 pcoinscatcher.reset(new CCoinsViewErrorCatcher(pcoinsdbview.get()));
                 pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.reset(new CCoinsViewCache(pcoinscatcher.get()));
