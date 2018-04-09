@@ -20,19 +20,25 @@ bool CAnsZone::addRecord(AnsRecordTypes recordType, std::string key, CAnsRecord&
         case A_RECORD:
         {
             CAnsKey Akey(A_REC,key);
-            g_ans->WriteEntry(Akey, value);
+            if(g_ans->WriteEntry(Akey, value))
+            {
+                return true;
+            }
             break;
         }
         case PTR_RECORD:
         {
             CAnsKey PTRkey(PTR_REC,key);
-            g_ans->WriteEntry(PTRkey, value);
+            if(g_ans->WriteEntry(PTRkey, value))
+            {
+                return true;
+            }
             break;
         }
         default:
             return false;
     }
-    return true;
+    return false;
 }
 
 bool CAnsZone::getRecord(AnsRecordTypes recordType, std::string key, CAnsRecord& value)
@@ -43,19 +49,25 @@ bool CAnsZone::getRecord(AnsRecordTypes recordType, std::string key, CAnsRecord&
         case A_RECORD:
         {
             CAnsKey Akey(A_REC,key);
-            g_ans->ReadEntry(Akey, value);
+            if(g_ans->ReadEntry(Akey, value))
+            {
+                return true;
+            }
             break;
         }
         case PTR_RECORD:
         {
             CAnsKey PTRkey(PTR_REC,key);
-            g_ans->ReadEntry(PTRkey, value);
+            if(g_ans->ReadEntry(PTRkey, value))
+            {
+                return true;
+            }
             break;
         }
         default:
             return false;
     }
-    return true;
+    return false;
 }
 
 bool CAnsZone::addTimeToRecord(CServiceTransaction stx, uint64_t newExpireTime)
