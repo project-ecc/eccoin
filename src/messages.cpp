@@ -2950,12 +2950,15 @@ bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interr
         const CInv &inv = (*pto->mapAskFor.begin()).second;
         if (!AlreadyHave(inv))
         {
-            LogPrint("net", "Requesting %s peer=%d\n", inv.ToString(), pto->id);
-            vGetData.push_back(inv);
-            if (vGetData.size() >= 1000)
+            if(!pto->filterServiceDataKnown.contains(inv.hash))
             {
-                connman.PushMessage(pto, msgMaker.Make(NetMsgType::GETDATA, vGetData));
-                vGetData.clear();
+                LogPrint("net", "Requesting %s peer=%d\n", inv.ToString(), pto->id);
+                vGetData.push_back(inv);
+                if (vGetData.size() >= 1000)
+                {
+                    connman.PushMessage(pto, msgMaker.Make(NetMsgType::GETDATA, vGetData));
+                    vGetData.clear();
+                }
             }
         }
         else

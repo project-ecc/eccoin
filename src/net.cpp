@@ -2908,6 +2908,10 @@ void CNode::AskFor(const CInv &inv)
 
     // Each retry is 2 minutes after the last
     nRequestTime = std::max(nRequestTime + 2 * 60 * 1000000, nNow);
+    if(inv.type == MSG_STX)
+    {
+        nRequestTime = 0;
+    }
     if (it != mapAlreadyAskedFor.end()) 
     {
         mapAlreadyAskedFor.update(it, nRequestTime);
