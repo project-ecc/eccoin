@@ -1046,6 +1046,7 @@ void static ProcessGetData(CNode* pfrom, CConnman &connman, const Consensus::Par
                  if(g_stxmempool->lookup(inv.hash, stx))
                  {
                      connman.PushMessage(pfrom, msgMaker.Make(nSendFlags, NetMsgType::STX, stx));
+                     pfrom->filterServiceDataKnown.insert(inv.hash);
                      push = true;
                  }
                  if (!push)
@@ -2861,7 +2862,7 @@ bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interr
                 vInvStx.pop_back();
                 uint256 hash = *it;
                 pto->setInventoryStxToSend.erase(it);
-                if (pto->filterInventoryKnown.contains(hash))
+                if (pto->filterServiceDataKnown.contains(hash))
                 {
                     continue;
                 }
@@ -2872,7 +2873,6 @@ bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interr
                     connman.PushMessage(pto, msgMaker.Make(NetMsgType::INV, vInv));
                     vInv.clear();
                 }
-                pto->filterInventoryKnown.insert(hash);
             }
 
         }
