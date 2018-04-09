@@ -299,7 +299,12 @@ const CBlockIndex* LastCommonAncestor(const CBlockIndex* pa, const CBlockIndex* 
 // Requires cs_main
 bool CanDirectFetch(const Consensus::Params &consensusParams)
 {
-    return pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->GetBlockTime() > GetAdjustedTime() - consensusParams.nTargetSpacing * 20;
+    int64_t targetSpacing = consensusParams.nTargetSpacing;
+    if(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->GetMedianTimePast() > SERVICE_UPGRADE_HARDFORK)
+    {
+        targetSpacing = 150;
+    }
+    return pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->GetBlockTime() > GetAdjustedTime() - targetSpacing * 20;
 }
 
 static void RelayTransaction(const CTransaction &tx, CConnman &connman) {
@@ -2894,10 +2899,15 @@ bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interr
     // increase our timeout.
     if (state.vBlocksInFlight.size() > 0)
     {
+        int64_t targetSpacing = consensusParams.nTargetSpacing;
+        if(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->GetMedianTimePast() > SERVICE_UPGRADE_HARDFORK)
+        {
+            targetSpacing = 150;
+        }
         QueuedBlock &queuedBlock = state.vBlocksInFlight.front();
         int nOtherPeersWithValidatedDownloads = nPeersWithValidatedDownloads - (state.nBlocksInFlightValidHeaders > 0);
         if (nNow > state.nDownloadingSince +
-                       consensusParams.nTargetSpacing * (BLOCK_DOWNLOAD_TIMEOUT_BASE +
+                       targetSpacing * (BLOCK_DOWNLOAD_TIMEOUT_BASE +
                             BLOCK_DOWNLOAD_TIMEOUT_PER_PEER * nOtherPeersWithValidatedDownloads)) {
             LogPrintf("Timeout downloading block %s from peer=%d, "
                       "disconnecting\n",

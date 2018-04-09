@@ -12,6 +12,11 @@
 
 bool EnsureWalletIsAvailable(bool avoidException);
 
+static bool AreServicesEnabled()
+{
+    return pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->pprev->GetMedianTimePast() >= SERVICE_UPGRADE_HARDFORK;
+}
+
 AnsRecordTypes resolveRecordType(std::string strRecordType)
 {
     AnsRecordTypes recordtype;
@@ -56,6 +61,11 @@ CAnsRecord getRecordUnknownType(std::string strRecordName)
 
 UniValue getansrecord(const UniValue& params, bool fHelp)
 {
+    if(!AreServicesEnabled())
+    {
+        throw JSONRPCError(RPC_MISC_ERROR, "services are not active until May 5th at 00:00:00 UTC ");
+    }
+
     if (fHelp || params.size() < 1 || params.size() > 2)
         throw std::runtime_error(
             "getansrecord \"record name\" \"record type\" \n"
@@ -149,6 +159,11 @@ static void CreateANStransaction(CServiceTransaction& stxnew, CWalletTx& wtxnew,
 
 UniValue getansaddress(const UniValue& params, bool fHelp)
 {
+    if(!AreServicesEnabled())
+    {
+        throw JSONRPCError(RPC_MISC_ERROR, "services are not active until May 5th at 00:00:00 UTC ");
+    }
+
     if (!EnsureWalletIsAvailable(fHelp))
         return NullUniValue;
 

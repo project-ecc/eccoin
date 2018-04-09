@@ -1626,19 +1626,6 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
         return InitError(strNodeError);
     }
 
-    // Monitor the chain, and alert if we get blocks much quicker or slower than expected
-    // The "bad chain alert" scheduler has been disabled because the current system gives far
-    // too many false positives, such that users are starting to ignore them.
-    // This code will be disabled for 0.12.1 while a fix is deliberated in #7568
-    // this was discussed in the IRC meeting on 2016-03-31.
-    //
-    // --- disabled ---
-    //int64_t nTargetSpacing = Params().GetConsensus().nTargetSpacing;
-    //CScheduler::Function f = boost::bind(&PartitionCheck, &IsInitialBlockDownload,
-    //                                     boost::ref(cs_main), boost::cref(pindexBestHeader), nTargetSpacing);
-    //scheduler.scheduleEvery(f, nTargetSpacing);
-    // --- end disabled ---
-
     // Generate coins in the background
     if(gArgs.GetBoolArg("-staking", false))
     {
