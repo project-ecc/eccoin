@@ -5,6 +5,7 @@
 
 #include "pow.h"
 
+#include "networks/netman.h"
 #include "arith_uint256.h"
 #include "chain/chain.h"
 #include "uint256.h"
@@ -69,7 +70,12 @@ int64_t GetBlockProofEquivalentTime(const CBlockIndex& to, const CBlockIndex& fr
         r = from.nChainWork - to.nChainWork;
         sign = -1;
     }
-    r = r * arith_uint256(params.nTargetSpacing) / GetBlockProof(tip);
+    int64_t targetSpacing = params.nTargetSpacing;
+    if(tip.GetMedianTimePast() > SERVICE_UPGRADE_HARDFORK)
+    {
+        targetSpacing = 150;
+    }
+    r = r * arith_uint256(targetSpacing) / GetBlockProof(tip);
     if (r.bits() > 63) {
         return sign * std::numeric_limits<int64_t>::max();
     }
