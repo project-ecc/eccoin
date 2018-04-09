@@ -2733,7 +2733,9 @@ bool CWallet::CommitTransactionForService(CServiceTransaction& stxNew, std::stri
         LogPrintf("CommitServiceTransaction:\n%s", stxNew.ToString());
         {
             CAnsRecord newRec(stxNew);
+            std::string addr = newRec.getAddress();
             pansMain->addRecord(A_RECORD, username, newRec);
+            pansMain->addRecord(PTR_RECORD, addr, newRec);
             g_stxmempool->add(stxNew.GetHash(), stxNew);
         }
 
