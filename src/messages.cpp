@@ -302,8 +302,15 @@ bool CanDirectFetch(const Consensus::Params &consensusParams)
     return pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->GetBlockTime() > GetAdjustedTime() - consensusParams.nTargetSpacing * 20;
 }
 
-static void RelayTransaction(const CTransaction &tx, CConnman &connman) {
+static void RelayTransaction(const CTransaction &tx, CConnman &connman)
+{
     CInv inv(MSG_TX, tx.GetId());
+    connman.ForEachNode([&inv](CNode *pnode) { pnode->PushInventory(inv); });
+}
+
+static void RelayServiceTransaction(const CServiceTransaction &stx, CConnman &connman)
+{
+    CInv inv(MSG_STX, stx.GetHash());
     connman.ForEachNode([&inv](CNode *pnode) { pnode->PushInventory(inv); });
 }
 
@@ -1842,6 +1849,7 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
             {
                 g_stxmempool->add(pstx.GetHash(), pstx);
                 ProcessServiceCommand(pstx, tx, state);
+                RelayServiceTransaction(pstx, connman);
             }
             else
             {

@@ -413,7 +413,7 @@ public:
     std::set<uint256> GetConflicts() const;
 };
 
-bool RelayServiceTransaction(CConnman *connman, const CServiceTransaction& stx, std::string& username);
+bool RelayServiceTransaction(CConnman *connman, const CServiceTransaction& stx);
 
 
 

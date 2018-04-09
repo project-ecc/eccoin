@@ -1347,13 +1347,14 @@ bool CWalletTx::RelayWalletTransaction(CConnman *connman)
     return false;
 }
 
-bool RelayServiceTransaction(CConnman *connman, const CServiceTransaction& stx, std::string& username)
+bool RelayServiceTransaction(CConnman *connman, const CServiceTransaction& stx)
 {
     assert(pwalletMain->GetBroadcastTransactions());
 
     CAnsRecord emptyRec;
     emptyRec.setNull();
     CAnsRecord record;
+    std::string username(stx.vdata.begin(), stx.vdata.end());
     if (pansMain->getRecord(A_RECORD, username, record))
     {
         LogPrintf("Relaying stx %s\n", stx.GetHash().ToString().c_str());
@@ -2741,11 +2742,12 @@ bool CWallet::CommitTransactionForService(CServiceTransaction& stxNew, std::stri
 
         // Track how many getdata requests our transaction gets
         mapRequestCount[stxNew.GetHash()] = 0;
-
+/*
         if (fBroadcastTransactions)
         {
-            RelayServiceTransaction(connman, stxNew, username);
+            RelayServiceTransaction(connman, stxNew);
         }
+*/
     }
     return true;
 }
