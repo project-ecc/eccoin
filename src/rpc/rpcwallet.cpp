@@ -4,6 +4,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "amount.h"
+#include "ans/ans.h"
 #include "base58.h"
 #include "chain/chain.h"
 #include "core_io.h"
@@ -447,9 +448,21 @@ UniValue sendtoaddress(const UniValue& params, bool fHelp)
 
     LOCK2(cs_main, pwalletMain->cs_wallet);
 
-    CBitcoinAddress address(params[0].get_str());
+    std::string sendparam = params[0].get_str();
+    CBitcoinAddress address;
+    CAnsRecord record;
+    if(pansMain->getRecord(AnsRecordTypes::A_RECORD, sendparam, record))
+    {
+       address = CBitcoinAddress(record.getAddress());
+    }
+    else
+    {
+        address = CBitcoinAddress(sendparam);
+    }
     if (!address.IsValid())
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Bitcoin address");
+    {
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Bitcoin address or ans name");
+    }
 
     // Amount
     CAmount nAmount = AmountFromValue(params[1]);
@@ -926,9 +939,23 @@ UniValue sendfrom(const UniValue& params, bool fHelp)
     LOCK2(cs_main, pwalletMain->cs_wallet);
 
     std::string strAccount = AccountFromValue(params[0]);
-    CBitcoinAddress address(params[1].get_str());
+
+    std::string sendparam = params[1].get_str();
+    CBitcoinAddress address;
+    CAnsRecord record;
+    if(pansMain->getRecord(AnsRecordTypes::A_RECORD, sendparam, record))
+    {
+       address = CBitcoinAddress(record.getAddress());
+    }
+    else
+    {
+        address = CBitcoinAddress(sendparam);
+    }
     if (!address.IsValid())
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Bitcoin address");
+    {
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Bitcoin address or ans name");
+    }
+
     CAmount nAmount = AmountFromValue(params[2]);
     if (nAmount <= 0)
         throw JSONRPCError(RPC_TYPE_ERROR, "Invalid amount for send");
@@ -1020,10 +1047,22 @@ UniValue sendmany(const UniValue& params, bool fHelp)
     CAmount totalAmount = 0;
     std::vector<std::string> keys = sendTo.getKeys();
     for (auto const& name_: keys)
-    {
-        CBitcoinAddress address(name_);
+    {   
+        std::string sendparam = name_;
+        CBitcoinAddress address;
+        CAnsRecord record;
+        if(pansMain->getRecord(AnsRecordTypes::A_RECORD, sendparam, record))
+        {
+           address = CBitcoinAddress(record.getAddress());
+        }
+        else
+        {
+            address = CBitcoinAddress(sendparam);
+        }
         if (!address.IsValid())
-            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, std::string("Invalid Bitcoin address: ")+name_);
+        {
+            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, std::string("Invalid Bitcoin address or ans name")+name_);
+        }
 
         if (setAddress.count(address))
             throw JSONRPCError(RPC_INVALID_PARAMETER, std::string("Invalid parameter, duplicated address: ")+name_);
