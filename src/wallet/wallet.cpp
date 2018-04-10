@@ -2727,15 +2727,15 @@ bool CWallet::CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey, CCon
 /**
  * Call after CreateTransaction unless you want to abort
  */
-bool CWallet::CommitTransactionForService(CServiceTransaction& stxNew, std::string& username, CConnman *connman)
+bool CWallet::CommitTransactionForService(CServiceTransaction& stxNew, std::string& addr, CConnman *connman)
 {
     {
         LOCK2(cs_main, cs_wallet);
         LogPrintf("CommitServiceTransaction:\n%s", stxNew.ToString());
         {
-            CAnsRecord newRec(stxNew);
+            CAnsRecord newRec(stxNew, addr);
             std::string addr = newRec.getAddress();
-            pansMain->addRecord(A_RECORD, username, newRec);
+            pansMain->addRecord(A_RECORD, newRec.getName(), newRec);
             pansMain->addRecord(PTR_RECORD, addr, newRec);
             g_stxmempool->add(stxNew.GetHash(), stxNew);
         }

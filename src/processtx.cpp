@@ -185,17 +185,48 @@ bool CheckServiceTransaction(const CServiceTransaction &stx, const CTransaction&
     return true;
 }
 
-void ProcessANSCommand(const CServiceTransaction &stx)
+void ProcessANSCommand(const CServiceTransaction &stx, const CTransaction& ptx)
 {
+    std::string addr = "";
+    std::vector<std::vector<unsigned char> > vSolutionsOut;
+    txnouttype whichTypeOut;
+    CKeyID addressOutID;
+    CBitcoinAddress addrOut;
+    CScript scriptPubKeyOut = ptx.vout[0].scriptPubKey;
+    if (!Solver(scriptPubKeyOut, whichTypeOut, vSolutionsOut))
+    {
+        return;
+    }
+
+    if (whichTypeOut == TX_PUBKEY)
+    {
+        CPubKey pubKey(vSolutionsOut[0]);
+        if (!pubKey.IsValid())
+        {
+           return;
+        }
+        addressOutID = pubKey.GetID();
+    }
+    else if (whichTypeOut == TX_PUBKEYHASH)
+    {
+        addressOutID = CKeyID(uint160(vSolutionsOut[0]));
+    }
+    else
+    {
+        return;
+    }
+    addrOut = CBitcoinAddress(addressOutID);
+    addr = addrOut.ToString();
+
     if(stx.nOpCode == Opcode_ANS::OP_REGISTER)
     {
-        CAnsRecord newRec(stx);
+        CAnsRecord newRec(stx, addr);
         pansMain->addRecord(A_RECORD, newRec.getName(), newRec);
         pansMain->addRecord(PTR_RECORD, newRec.getAddress(), newRec);
     }
     else if(stx.nOpCode == Opcode_ANS::OP_RENEW)
     {
-        pansMain->addTimeToRecord(stx, stx.nExpireTime);
+        pansMain->addTimeToRecord(stx, addr, stx.nExpireTime);
     }
     // else, leave blank for future use
 }
@@ -204,7 +235,7 @@ void ProcessServiceCommand(const CServiceTransaction &stx, const CTransaction& p
 {
     if(stx.nServiceId == 0)
     {
-        ProcessANSCommand(stx);
+        ProcessANSCommand(stx, ptx);
     }
     // else, leave blank for future use
 }

@@ -66,47 +66,6 @@ uint256 CAnsRecord::getServiceHash()
     return serviceHash;
 }
 
-bool CAnsRecord::getAddrFromPtx(std::string& addr)
-{
-    addr = "";
-    CTransaction ptx;
-    uint256 blockHashOfTx;
-    if (!GetTransaction(this->paymentHash, ptx, pnetMan->getActivePaymentNetwork()->GetConsensus(), blockHashOfTx))
-    {
-        return false;
-    }
-    std::vector<std::vector<unsigned char> > vSolutionsOut;
-    txnouttype whichTypeOut;
-    CKeyID addressOutID;
-    CBitcoinAddress addrOut;
-    CScript scriptPubKeyOut = ptx.vout[0].scriptPubKey;
-    if (!Solver(scriptPubKeyOut, whichTypeOut, vSolutionsOut))
-    {
-        return false;
-    }
-
-    if (whichTypeOut == TX_PUBKEY)
-    {
-        CPubKey pubKey(vSolutionsOut[0]);
-        if (!pubKey.IsValid())
-        {
-            return false;
-        }
-        addressOutID = pubKey.GetID();
-    }
-    else if (whichTypeOut == TX_PUBKEYHASH)
-    {
-        addressOutID = CKeyID(uint160(vSolutionsOut[0]));
-    }
-    else
-    {
-        return false;
-    }
-    addrOut = CBitcoinAddress(addressOutID);
-    addr = addrOut.ToString();
-    return true;
-}
-
 const uint64_t oneMonth = 2592000; // 30 days in seconds
 // TODO : NEEDS ACTUAL TIME CALC METHOD
 uint64_t CAnsRecord::CalcValidTime(uint64_t nTime, uint256 paymentHash)

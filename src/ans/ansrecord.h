@@ -26,7 +26,6 @@ private:
     uint256 paymentHash;
     uint256 serviceHash;
 
-    bool getAddrFromPtx(std::string &addr);
     uint64_t CalcValidTime(uint64_t nTime, uint256 paymentHash);
 
 public:
@@ -35,15 +34,11 @@ public:
         setNull();
     }
 
-    CAnsRecord(const CServiceTransaction stx)
+    CAnsRecord(const CServiceTransaction stx, std::string addr)
     {
         std::string name(stx.vdata.begin(), stx.vdata.end());
         this->name = name;
-        std::string addr;
-        if(getAddrFromPtx(addr))
-        {
-            this->address = addr;
-        }
+        this->address = addr;
         this->expireTime = CalcValidTime(stx.nTime, stx.paymentReferenceHash);
         this->paymentHash = stx.paymentReferenceHash;
         this->serviceHash = stx.GetHash();

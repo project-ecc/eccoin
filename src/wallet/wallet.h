@@ -695,7 +695,7 @@ public:
                            CAmount& nFeeRet, std::string& strFailReason, bool sign = true);
 
     bool CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey, CConnman *connman, CValidationState &state);
-    bool CommitTransactionForService(CServiceTransaction& stxNew, std::string& username, CConnman *connman);
+    bool CommitTransactionForService(CServiceTransaction& stxNew, std::string& addr, CConnman *connman);
 
     bool AddAccountingEntry(const CAccountingEntry&, CWalletDB & pwalletdb);
 

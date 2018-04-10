@@ -25,7 +25,7 @@ class CAnsZone
 public:
     bool addRecord(AnsRecordTypes recordType, std::string key, CAnsRecord& value);
     bool getRecord(AnsRecordTypes recordType, std::string key, CAnsRecord &value);
-    bool addTimeToRecord(CServiceTransaction stx, uint64_t newExpireTime);
+    bool addTimeToRecord(CServiceTransaction stx, std::string& addr, uint64_t newExpireTime);
 };
 
 extern CAnsZone* pansMain;

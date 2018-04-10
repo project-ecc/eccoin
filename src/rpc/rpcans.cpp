@@ -98,6 +98,41 @@ static void CreateANStransaction(CServiceTransaction& stxnew, CWalletTx& wtxnew,
     wtxnew.tx->serviceReferenceHash = stxnew.GetHash();
 }
 
+bool getAddrFromPtx(std::string& addr, CTransactionRef ptx)
+{
+    addr = "";
+    std::vector<std::vector<unsigned char> > vSolutionsOut;
+    txnouttype whichTypeOut;
+    CKeyID addressOutID;
+    CBitcoinAddress addrOut;
+    CScript scriptPubKeyOut = ptx->vout[0].scriptPubKey;
+    if (!Solver(scriptPubKeyOut, whichTypeOut, vSolutionsOut))
+    {
+        return false;
+    }
+
+    if (whichTypeOut == TX_PUBKEY)
+    {
+        CPubKey pubKey(vSolutionsOut[0]);
+        if (!pubKey.IsValid())
+        {
+            return false;
+        }
+        addressOutID = pubKey.GetID();
+    }
+    else if (whichTypeOut == TX_PUBKEYHASH)
+    {
+        addressOutID = CKeyID(uint160(vSolutionsOut[0]));
+    }
+    else
+    {
+        return false;
+    }
+    addrOut = CBitcoinAddress(addressOutID);
+    addr = addrOut.ToString();
+    return true;
+}
+
 /*************************************
  *
  * ANS Commands
@@ -254,7 +289,9 @@ UniValue registerans(const UniValue& params, bool fHelp)
     {
         throw JSONRPCError(RPC_WALLET_ERROR, "Error: The transaction was rejected! This might happen if some of the coins in your wallet were already spent, such as if you used a copy of wallet.dat and coins were spent in the copy but not marked as spent here.");
     }
-    if (!pwalletMain->CommitTransactionForService(stx, strUsername, g_connman.get()))
+    std::string addr;
+    getAddrFromPtx(addr, wtx.tx);
+    if (!pwalletMain->CommitTransactionForService(stx, addr, g_connman.get()))
     {
         throw JSONRPCError(RPC_WALLET_ERROR, "Error: The service transaction was rejected! This might happen for a variety of reasons.");
     }
@@ -332,7 +369,9 @@ UniValue renewans(const UniValue& params, bool fHelp)
     {
         throw JSONRPCError(RPC_WALLET_ERROR, "Error: The transaction was rejected! This might happen if some of the coins in your wallet were already spent, such as if you used a copy of wallet.dat and coins were spent in the copy but not marked as spent here.");
     }
-    if (!pwalletMain->CommitTransactionForService(stx, strUsername, g_connman.get()))
+    std::string addr;
+    getAddrFromPtx(addr, wtx.tx);
+    if (!pwalletMain->CommitTransactionForService(stx, addr, g_connman.get()))
     {
         throw JSONRPCError(RPC_WALLET_ERROR, "Error: The service transaction was rejected! This might happen for a variety of reasons.");
     }
