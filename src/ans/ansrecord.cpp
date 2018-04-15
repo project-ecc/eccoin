@@ -14,6 +14,7 @@ void CAnsRecord::setNull()
     expireTime = 0;
     paymentHash.SetNull();
     serviceHash.SetNull();
+    verificationCode.clear();
 }
 
 void CAnsRecord::setName(std::string strName)
@@ -64,6 +65,16 @@ void CAnsRecord::setServiceHash(uint256 hash)
 uint256 CAnsRecord::getServiceHash()
 {
     return serviceHash;
+}
+
+std::string CAnsRecord::getVertificationCode()
+{
+    return verificationCode;
+}
+
+bool CAnsRecord::isValidCode(std::string code)
+{
+    return code == this->verificationCode;
 }
 
 const uint64_t oneMonth = 2592000; // 30 days in seconds

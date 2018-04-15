@@ -25,6 +25,7 @@ private:
     uint64_t expireTime;
     uint256 paymentHash;
     uint256 serviceHash;
+    std::string verificationCode;
 
     uint64_t CalcValidTime(uint64_t nTime, uint256 paymentHash);
 
@@ -34,7 +35,7 @@ public:
         setNull();
     }
 
-    CAnsRecord(const CServiceTransaction stx, std::string addr)
+    CAnsRecord(const CServiceTransaction stx, std::string addr, std::string code = "")
     {
         std::string name(stx.vdata.begin(), stx.vdata.end());
         this->name = name;
@@ -42,6 +43,7 @@ public:
         this->expireTime = CalcValidTime(stx.nTime, stx.paymentReferenceHash);
         this->paymentHash = stx.paymentReferenceHash;
         this->serviceHash = stx.GetHash();
+        this->verificationCode = code;
     }
 
     ADD_SERIALIZE_METHODS
@@ -53,6 +55,7 @@ public:
         READWRITE(expireTime);
         READWRITE(paymentHash);
         READWRITE(serviceHash);
+        READWRITE(verificationCode);
     }
 
 
@@ -62,7 +65,8 @@ public:
                a.address == b.address &&
                a.expireTime == b.expireTime &&
                a.paymentHash == b.paymentHash &&
-               a.serviceHash == b.serviceHash;
+               a.serviceHash == b.serviceHash &&
+               a.verificationCode == b.verificationCode;
     }
 
     friend bool operator!=(const CAnsRecord& a, const CAnsRecord& b)
@@ -71,7 +75,8 @@ public:
                a.address == b.address ||
                a.expireTime != b.expireTime ||
                a.paymentHash != b.paymentHash ||
-               a.serviceHash != b.serviceHash;
+               a.serviceHash != b.serviceHash ||
+               a.verificationCode != b.verificationCode;
     }
 
     void setNull();
@@ -90,6 +95,9 @@ public:
 
     void setServiceHash(uint256 hash);
     uint256 getServiceHash();
+
+    std::string getVertificationCode();
+    bool isValidCode(std::string code);
 
 };
 

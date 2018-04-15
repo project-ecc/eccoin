@@ -185,7 +185,110 @@ bool CheckServiceTransaction(const CServiceTransaction &stx, const CTransaction&
     return true;
 }
 
-void ProcessANSCommand(const CServiceTransaction &stx, const CTransaction& ptx)
+/// TODO : this is a reallyyy hacky shortcut but oh well
+std::string numToHex(int num)
+{
+    num = num % 16;
+    if(num == 0)
+    {
+        return "0";
+    }
+    else if(num == 1)
+    {
+        return "1";
+    }
+    else if(num == 2)
+    {
+        return "2";
+    }
+    else if(num == 3)
+    {
+        return "3";
+    }
+    else if(num == 4)
+    {
+        return "4";
+    }
+    else if(num == 5)
+    {
+        return "5";
+    }
+    else if(num == 6)
+    {
+        return "6";
+    }
+    else if(num == 7)
+    {
+        return "7";
+    }
+    else if(num == 8)
+    {
+        return "8";
+    }
+    else if(num == 9)
+    {
+        return "9";
+    }
+    else if(num == 10)
+    {
+        return "A";
+    }
+    else if(num == 11)
+    {
+        return "B";
+    }
+    else if(num == 12)
+    {
+        return "C";
+    }
+    else if(num == 13)
+    {
+        return "D";
+    }
+    else if(num == 14)
+    {
+        return "E";
+    }
+    else if(num == 15)
+    {
+        return "F";
+    }
+    return "0";
+}
+
+// TODO : should clean this up and do this in a better way
+void CalcVerificationCode(const CServiceTransaction &stx, std::string& code, const CBlock* block)
+{
+    if(block != nullptr)
+    {
+        int height = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->nHeight;
+        int ptxIndex = 0;
+        for(uint32_t i = 0 ; i < block->vtx.size(); i++)
+        {
+            if(block->vtx[i]->GetHash() == stx.paymentReferenceHash)
+            {
+                ptxIndex = i;
+                break;
+            }
+        }
+        std::string tempNum = std::to_string(height);
+        if(tempNum.size() != 8)
+        {
+            tempNum = "0" + tempNum;
+        }
+        std::string firstSet = tempNum[0] + "" + tempNum[1];
+        std::string secondSet = tempNum[2] + "" + tempNum[3];
+        std::string thirdSet = tempNum[4] + "" + tempNum[5];
+        std::string fourthSet = tempNum[6] + "" + tempNum[7];
+        code = code + numToHex(std::stoi(firstSet));
+        code = code + numToHex(std::stoi(secondSet));
+        code = code + numToHex(std::stoi(thirdSet));
+        code = code + numToHex(std::stoi(fourthSet));
+        code = code + "-" + std::to_string(ptxIndex);
+    }
+}
+
+void ProcessANSCommand(const CServiceTransaction &stx, const CTransaction& ptx, const CBlock* block)
 {
     std::string addr = "";
     std::vector<std::vector<unsigned char> > vSolutionsOut;
@@ -218,11 +321,19 @@ void ProcessANSCommand(const CServiceTransaction &stx, const CTransaction& ptx)
     addrOut = CBitcoinAddress(addressOutID);
     addr = addrOut.ToString();
 
+    // process for specific code
     if(stx.nOpCode == Opcode_ANS::OP_REGISTER)
     {
-        CAnsRecord newRec(stx, addr);
-        pansMain->addRecord(A_RECORD, newRec.getName(), newRec);
-        pansMain->addRecord(PTR_RECORD, newRec.getAddress(), newRec);
+        std::string code = "";
+        CalcVerificationCode(stx, code, block);
+        CAnsRecord newRec(stx, addr, code);
+        CAnsRecord emptyRec(stx, addr);
+        // TODO : this is a bit of a hack fix too, should be fixed later
+        if(!pansMain->getRecord(A_RECORD, emptyRec.getName(), emptyRec))
+        {
+            pansMain->addRecord(A_RECORD, newRec.getName(), newRec);
+            pansMain->addRecord(PTR_RECORD, newRec.getAddress(), newRec);
+        }
     }
     else if(stx.nOpCode == Opcode_ANS::OP_RENEW)
     {
@@ -231,11 +342,11 @@ void ProcessANSCommand(const CServiceTransaction &stx, const CTransaction& ptx)
     // else, leave blank for future use
 }
 
-void ProcessServiceCommand(const CServiceTransaction &stx, const CTransaction& ptx, CValidationState &state)
+void ProcessServiceCommand(const CServiceTransaction &stx, const CTransaction& ptx, CValidationState &state, const CBlock* block)
 {
     if(stx.nServiceId == 0)
     {
-        ProcessANSCommand(stx, ptx);
+        ProcessANSCommand(stx, ptx, block);
     }
     // else, leave blank for future use
 }
