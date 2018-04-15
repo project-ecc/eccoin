@@ -1518,7 +1518,7 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
                 a_recent_block = most_recent_block;
             }
             CValidationState dummy;
-            ActivateBestChain(dummy, pnetMan->getActivePaymentNetwork(), RECEIVED, a_recent_block);
+            ActivateBestChain(dummy, pnetMan->getActivePaymentNetwork(), a_recent_block);
         }
 
         LOCK(cs_main);
@@ -2011,7 +2011,7 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
             mapBlockSource.emplace(hash, std::make_pair(pfrom->GetId(), true));
         }
         CValidationState state;
-        ProcessNewBlock(state, chainparams, pfrom, pblock, forceProcessing, NULL, RECEIVED);
+        ProcessNewBlock(state, chainparams, pfrom, pblock, forceProcessing, NULL);
         int nDoS;
         if (state.IsInvalid(nDoS))
         {

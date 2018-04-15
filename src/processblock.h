@@ -17,7 +17,7 @@ extern bool fLargeWorkInvalidChainFound;
 
 CBlockIndex* FindMostWorkChain();
 void CheckBlockIndex(const Consensus::Params& consensusParams);
-bool ProcessNewBlock(CValidationState& state, const CNetworkTemplate& chainparams, const CNode* pfrom, const std::shared_ptr<const CBlock> pblock, bool fForceProcessing, CDiskBlockPos* dbp, BlockOrigin origin);
+bool ProcessNewBlock(CValidationState& state, const CNetworkTemplate& chainparams, const CNode* pfrom, const std::shared_ptr<const CBlock> pblock, bool fForceProcessing, CDiskBlockPos* dbp);
 bool DisconnectTip(CValidationState& state, const Consensus::Params& consensusParams);
 void InvalidChainFound(CBlockIndex* pindexNew);
 void InvalidBlockFound(CBlockIndex *pindex, const CValidationState &state);
@@ -38,7 +38,7 @@ bool DisconnectBlock(const CBlock& block, CValidationState& state, const CBlockI
 void removeImpossibleChainTips();
 
 /** Find the best known block, and make it the tip of the block chain */
-bool ActivateBestChain(CValidationState& state, const CNetworkTemplate& chainparams, BlockOrigin origin, const std::shared_ptr<const CBlock> pblock = std::shared_ptr<const CBlock>());
+bool ActivateBestChain(CValidationState& state, const CNetworkTemplate& chainparams, const std::shared_ptr<const CBlock> pblock = std::shared_ptr<const CBlock>());
 
 
 #endif // PROCESSBLOCK_H

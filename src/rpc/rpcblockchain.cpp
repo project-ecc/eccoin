@@ -863,7 +863,7 @@ UniValue invalidateblock(const UniValue& params, bool fHelp)
     }
 
     if (state.IsValid()) {
-        ActivateBestChain(state, pnetMan->getActivePaymentNetwork(), LOADED);
+        ActivateBestChain(state, pnetMan->getActivePaymentNetwork());
     }
 
     if (!state.IsValid()) {
@@ -902,7 +902,7 @@ UniValue reconsiderblock(const UniValue& params, bool fHelp)
     }
 
     if (state.IsValid()) {
-        ActivateBestChain(state, pnetMan->getActivePaymentNetwork(), LOADED);
+        ActivateBestChain(state, pnetMan->getActivePaymentNetwork());
     }
 
     if (!state.IsValid()) {

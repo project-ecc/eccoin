@@ -142,13 +142,6 @@ extern CFeeRate minRelayTxFee;
 extern bool fAlerts;
 extern bool fEnableReplacement;
 
-
-enum BlockOrigin{
-    LOADED,
-    GENERATED,
-    RECEIVED,
-};
-
 struct COrphanTx {
     CTransaction tx;
     NodeId fromPeer;
