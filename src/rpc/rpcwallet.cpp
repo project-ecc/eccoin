@@ -4,7 +4,6 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "amount.h"
-#include "ans/ans.h"
 #include "base58.h"
 #include "chain/chain.h"
 #include "core_io.h"
@@ -385,7 +384,7 @@ UniValue getaddressesbyaccount(const UniValue& params, bool fHelp)
     return ret;
 }
 
-static void SendMoney(const CTxDestination &address, CAmount nValue, bool fSubtractFeeFromAmount, CWalletTx& wtxNew)
+void SendMoney(const CTxDestination &address, CAmount nValue, bool fSubtractFeeFromAmount, CWalletTx& wtxNew)
 {
     CAmount curBalance = pwalletMain->GetBalance();
 
@@ -448,20 +447,10 @@ UniValue sendtoaddress(const UniValue& params, bool fHelp)
 
     LOCK2(cs_main, pwalletMain->cs_wallet);
 
-    std::string sendparam = params[0].get_str();
-    CBitcoinAddress address;
-    CAnsRecord record;
-    if(pansMain->getRecord(AnsRecordTypes::A_RECORD, sendparam, record))
-    {
-       address = CBitcoinAddress(record.getAddress());
-    }
-    else
-    {
-        address = CBitcoinAddress(sendparam);
-    }
+    CBitcoinAddress address(params[0].get_str());
     if (!address.IsValid())
     {
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Bitcoin address or ans name");
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Bitcoin address");
     }
 
     // Amount
@@ -940,20 +929,10 @@ UniValue sendfrom(const UniValue& params, bool fHelp)
 
     std::string strAccount = AccountFromValue(params[0]);
 
-    std::string sendparam = params[1].get_str();
-    CBitcoinAddress address;
-    CAnsRecord record;
-    if(pansMain->getRecord(AnsRecordTypes::A_RECORD, sendparam, record))
-    {
-       address = CBitcoinAddress(record.getAddress());
-    }
-    else
-    {
-        address = CBitcoinAddress(sendparam);
-    }
+    CBitcoinAddress address(params[1].get_str());
     if (!address.IsValid())
     {
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Bitcoin address or ans name");
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Bitcoin address");
     }
 
     CAmount nAmount = AmountFromValue(params[2]);
@@ -1048,20 +1027,10 @@ UniValue sendmany(const UniValue& params, bool fHelp)
     std::vector<std::string> keys = sendTo.getKeys();
     for (auto const& name_: keys)
     {   
-        std::string sendparam = name_;
-        CBitcoinAddress address;
-        CAnsRecord record;
-        if(pansMain->getRecord(AnsRecordTypes::A_RECORD, sendparam, record))
-        {
-           address = CBitcoinAddress(record.getAddress());
-        }
-        else
-        {
-            address = CBitcoinAddress(sendparam);
-        }
+        CBitcoinAddress address(name_);
         if (!address.IsValid())
         {
-            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, std::string("Invalid Bitcoin address or ans name")+name_);
+            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, std::string("Invalid Bitcoin address: ")+name_);
         }
 
         if (setAddress.count(address))

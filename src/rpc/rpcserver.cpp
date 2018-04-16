@@ -415,6 +415,7 @@ static const CRPCCommand vRPCCommands[] =
     { "ans",                "getansrecord",           &getansrecord,           false },
     { "ans",                "registerans",            &registerans,            false },
     { "ans",                "renewans",               &renewans,               false },
+    { "ans",                "sendtoans",              &sendtoans,              false },
 };
 
 CRPCTable::CRPCTable()

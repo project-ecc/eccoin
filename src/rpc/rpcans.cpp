@@ -11,6 +11,7 @@
 #include "wallet/wallet.h"
 
 bool EnsureWalletIsAvailable(bool avoidException);
+void SendMoney(const CTxDestination &address, CAmount nValue, bool fSubtractFeeFromAmount, CWalletTx& wtxNew);
 
 /*************************************
  *
@@ -379,4 +380,60 @@ UniValue renewans(const UniValue& params, bool fHelp)
         " with PaymentHash = " + wtx.tx->GetHash().GetHex() + " and  ServiceHash = " + stx.GetHash().GetHex();
 
     return responseMessage;
+}
+
+UniValue sendtoans(const UniValue& params, bool fHelp)
+{
+    if (!EnsureWalletIsAvailable(fHelp))
+        return NullUniValue;
+
+    if (fHelp || params.size() != 3)
+        throw std::runtime_error(
+            "sendtoans \"username\" amount \"code\" \n"
+            "\nSend an amount to a given address.\n"
+            + HelpRequiringPassphrase() +
+            "\nArguments:\n"
+            "1. \"username\"  (string, required) The bitcoin address to send to.\n"
+            "2. \"amount\"      (numeric or string, required) The amount in " + CURRENCY_UNIT + " to send. eg 0.1\n"
+            "3. \"code\"     (string, required) The verification code for the ans username supplied in the first param.\n"
+            "\nResult:\n"
+            "\"transactionid\"  (string) The transaction id.\n"
+            "\nExamples:\n"
+            + HelpExampleCli("sendtoaddress", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\" 0.1 \"1AD0-7\"")
+            + HelpExampleRpc("sendtoaddress", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\", 0.1, \"3CD0-12\"")
+        );
+
+    LOCK2(cs_main, pwalletMain->cs_wallet);
+
+    std::string username = params[0].get_str();
+    std::string code = params[2].get_str();
+    CAnsRecord record;
+    CBitcoinAddress address;
+    if(pansMain->getRecord(AnsRecordTypes::A_RECORD, username, record))
+    {
+       if(!record.isValidCode(code))
+       {
+           throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, std::string("Invalid code for ans name: ")+username);
+       }
+       address = CBitcoinAddress(record.getAddress());
+    }
+    else
+    {
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, std::string("No address found for ans name: ")+username);
+    }
+    if (!address.IsValid())
+    {
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Ans name resolved to invalid Bitcoin address");
+    }
+
+    // Amount
+    CAmount nAmount = AmountFromValue(params[1]);
+    if (nAmount <= 0)
+        throw JSONRPCError(RPC_TYPE_ERROR, "Invalid amount for send");
+
+    CWalletTx wtx;
+    EnsureWalletIsUnlocked();
+    SendMoney(address.Get(), nAmount, false, wtx);
+
+    return wtx.tx->GetHash().GetHex();
 }
