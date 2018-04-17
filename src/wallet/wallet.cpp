@@ -2733,21 +2733,11 @@ bool CWallet::CommitTransactionForService(CServiceTransaction& stxNew, std::stri
         LOCK2(cs_main, cs_wallet);
         LogPrintf("CommitServiceTransaction:\n%s", stxNew.ToString());
         {
-            CAnsRecord newRec(stxNew, addr);
-            std::string addr = newRec.getAddress();
-            pansMain->addRecord(A_RECORD, newRec.getName(), newRec);
-            pansMain->addRecord(PTR_RECORD, addr, newRec);
             g_stxmempool->add(stxNew.GetHash(), stxNew);
         }
 
         // Track how many getdata requests our transaction gets
         mapRequestCount[stxNew.GetHash()] = 0;
-/*
-        if (fBroadcastTransactions)
-        {
-            RelayServiceTransaction(connman, stxNew);
-        }
-*/
     }
     return true;
 }
