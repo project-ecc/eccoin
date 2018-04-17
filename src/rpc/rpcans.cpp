@@ -179,6 +179,7 @@ UniValue getansrecord(const UniValue& params, bool fHelp)
     }
     ret.push_back(Pair("Key for this record" , strRecordName                    ));
     ret.push_back(Pair("Name"                , record.getName()                 ));
+    ret.push_back(Pair("Code"                , record.getVertificationCode()    ));
     ret.push_back(Pair("Address"             , record.getAddress()              ));
     ret.push_back(Pair("ExpireTime"          , record.getExpireTime()           ));
     ret.push_back(Pair("paymentHash"         , record.getPaymentHash().GetHex() ));
