@@ -118,4 +118,55 @@ public:
     }
 };
 
+class CAnsRecordSet
+{
+private:
+    std::map<std::string, CAnsRecord> recordSet;
+public:
+    CAnsRecordSet()
+    {
+        recordSet.clear();
+    }
+
+    CAnsRecordSet(std::map<std::string, CAnsRecord> _recordSet)
+    {
+        recordSet = _recordSet;
+    }
+
+    ADD_SERIALIZE_METHODS
+
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITE(recordSet);
+    }
+
+    bool addRecord(std::string code, CAnsRecord rec)
+    {
+        auto ret = recordSet.insert(std::make_pair(code,rec));
+        return ret.second;
+    }
+
+    bool getRecord(std::string code, CAnsRecord& rec)
+    {
+        auto ret = recordSet.find(code);
+        if(ret != recordSet.end())
+        {
+            rec = (*ret).second;
+            return true;
+        }
+        return false;
+    }
+
+    bool removeRecord(std::string code)
+    {
+        auto ret = recordSet.find(code);
+        if(ret != recordSet.end())
+        {
+            recordSet.erase(ret);
+            return true;
+        }
+        return false;
+    }
+};
+
 #endif // ANSRECORD_H
