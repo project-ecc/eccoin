@@ -1675,7 +1675,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
                         tx->GetHash().ToString(),
                         FormatStateMessage(state));
                 }
-                ProcessServiceCommand(stx, *tx, state);
+                ProcessServiceCommand(stx, *tx, state, &block);
             }
         }
         // PoS: check transaction timestamp
