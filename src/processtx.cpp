@@ -276,10 +276,10 @@ void CalcVerificationCode(const CServiceTransaction &stx, std::string& code, con
         {
             tempNum = "0" + tempNum;
         }
-        std::string firstSet = tempNum.at(0) + "" + tempNum.at(1);
-        std::string secondSet = tempNum.at(2) + "" + tempNum.at(3);
-        std::string thirdSet = tempNum.at(4) + "" + tempNum.at(5);
-        std::string fourthSet = tempNum.at(6) + "" + tempNum.at(7);
+        std::string firstSet = tempNum.substr(0,2);
+        std::string secondSet = tempNum.substr(2,2);
+        std::string thirdSet = tempNum.substr(4,2);
+        std::string fourthSet = tempNum.substr(6,2);
         code = code + numToHex(std::stoi(firstSet));
         code = code + numToHex(std::stoi(secondSet));
         code = code + numToHex(std::stoi(thirdSet));
