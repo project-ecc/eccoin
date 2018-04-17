@@ -262,6 +262,7 @@ void CalcVerificationCode(const CServiceTransaction &stx, std::string& code, con
     CTransaction tx;
     uint256 blockHashOfTx;
     CBlock block;
+    int height = 0;
     if(pblock == nullptr)
     {
          if(!GetTransaction(stx.paymentReferenceHash, tx, pnetMan->getActivePaymentNetwork()->GetConsensus(), blockHashOfTx))
@@ -273,12 +274,14 @@ void CalcVerificationCode(const CServiceTransaction &stx, std::string& code, con
          {
              return;
          }
+         height = pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex[block.GetHash()]->nHeight;
     }
     else
     {
+        // if block was passed in this way it means its being processed, so we can use tip + 1
+        height = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->nHeight + 1;
         block = *pblock;
     }
-    int height = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->nHeight;
     int ptxIndex = 0;
     for(uint32_t i = 0 ; i < block.vtx.size(); i++)
     {
@@ -344,12 +347,24 @@ void ProcessANSCommand(const CServiceTransaction &stx, const CTransaction& ptx, 
         std::string code = "";
         CalcVerificationCode(stx, code, block);
         CAnsRecord newRec(stx, addr, code);
-        CAnsRecord emptyRec(stx, addr);
+        CAnsRecord emptyRec;
         // TODO : this is a bit of a hack fix too, should be fixed later
-        if(!pansMain->getRecord(A_RECORD, emptyRec.getName(), emptyRec))
+        if(!pansMain->getRecord(A_RECORD, newRec.getName(), emptyRec))
         {
             pansMain->addRecord(A_RECORD, newRec.getName(), newRec);
             pansMain->addRecord(PTR_RECORD, newRec.getAddress(), newRec);
+        }
+        else
+        {
+            // try to update code if we have the entry but no code
+            if(emptyRec.getVertificationCode() == "" && code != "")
+            {
+                if(emptyRec.getPaymentHash() == newRec.getPaymentHash() && emptyRec.getServiceHash() == emptyRec.getServiceHash())
+                {
+                    pansMain->addRecord(A_RECORD, newRec.getName(), newRec);
+                    pansMain->addRecord(PTR_RECORD, newRec.getAddress(), newRec);
+                }
+            }
         }
     }
     else if(stx.nOpCode == Opcode_ANS::OP_RENEW)
