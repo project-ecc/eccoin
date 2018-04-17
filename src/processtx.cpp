@@ -257,36 +257,52 @@ std::string numToHex(int num)
 }
 
 // TODO : should clean this up and do this in a better way
-void CalcVerificationCode(const CServiceTransaction &stx, std::string& code, const CBlock* block)
+void CalcVerificationCode(const CServiceTransaction &stx, std::string& code, const CBlock* pblock)
 {
-    if(block != nullptr)
+    CTransaction tx;
+    uint256 blockHashOfTx;
+    CBlock block;
+    if(pblock == nullptr)
     {
-        int height = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->nHeight;
-        int ptxIndex = 0;
-        for(uint32_t i = 0 ; i < block->vtx.size(); i++)
-        {
-            if(block->vtx[i]->GetHash() == stx.paymentReferenceHash)
-            {
-                ptxIndex = i;
-                break;
-            }
-        }
-        std::string tempNum = std::to_string(height);
-        if(tempNum.size() % 2 != 0)
-        {
-            tempNum = "0" + tempNum;
-        }
-        std::vector<std::string> subs;
-        for(uint32_t i = 0; i < tempNum.length(); i = i + 2)
-        {
-            subs.push_back(tempNum.substr(i,2));
-        }
-        for(uint32_t j = 0; j < subs.size(); j++ )
-        {
-            code = code + numToHex(std::stoi(subs[j]));
-        }
-        code = code + "-" + std::to_string(ptxIndex);
+         if(!GetTransaction(stx.paymentReferenceHash, tx, pnetMan->getActivePaymentNetwork()->GetConsensus(), blockHashOfTx))
+         {
+             return;
+         }
+         CBlockIndex* index = pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex[blockHashOfTx];
+         if (!ReadBlockFromDisk(block, index, pnetMan->getActivePaymentNetwork()->GetConsensus()))
+         {
+             return;
+         }
     }
+    else
+    {
+        block = *pblock;
+    }
+    int height = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->nHeight;
+    int ptxIndex = 0;
+    for(uint32_t i = 0 ; i < block.vtx.size(); i++)
+    {
+        if(block.vtx[i]->GetHash() == stx.paymentReferenceHash)
+        {
+            ptxIndex = i;
+            break;
+        }
+    }
+    std::string tempNum = std::to_string(height);
+    if(tempNum.size() % 2 != 0)
+    {
+        tempNum = "0" + tempNum;
+    }
+    std::vector<std::string> subs;
+    for(uint32_t i = 0; i < tempNum.length(); i = i + 2)
+    {
+        subs.push_back(tempNum.substr(i,2));
+    }
+    for(uint32_t j = 0; j < subs.size(); j++ )
+    {
+        code = code + numToHex(std::stoi(subs[j]));
+    }
+    code = code + "-" + std::to_string(ptxIndex);
 }
 
 void ProcessANSCommand(const CServiceTransaction &stx, const CTransaction& ptx, const CBlock* block)
