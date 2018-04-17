@@ -272,18 +272,19 @@ void CalcVerificationCode(const CServiceTransaction &stx, std::string& code, con
             }
         }
         std::string tempNum = std::to_string(height);
-        if(tempNum.size() != 8)
+        if(tempNum.size() % 2 != 0)
         {
             tempNum = "0" + tempNum;
         }
-        std::string firstSet = tempNum.substr(0,2);
-        std::string secondSet = tempNum.substr(0,2);
-        std::string thirdSet = tempNum.substr(0,2);
-        std::string fourthSet = tempNum.substr(0,2);
-        code = code + numToHex(std::stoi(firstSet));
-        code = code + numToHex(std::stoi(secondSet));
-        code = code + numToHex(std::stoi(thirdSet));
-        code = code + numToHex(std::stoi(fourthSet));
+        std::vector<std::string> subs;
+        for(uint32_t i = 0; i < tempNum.length(); i = i + 2)
+        {
+            subs.push_back(tempNum.substr(i,2));
+        }
+        for(uint32_t j = 0; j < subs.size(); j++ )
+        {
+            code = code + numToHex(std::stoi(subs[j]));
+        }
         code = code + "-" + std::to_string(ptxIndex);
     }
 }
