@@ -143,7 +143,7 @@ bool getAddrFromPtx(std::string& addr, CTransactionRef ptx)
 
 UniValue getansrecord(const UniValue& params, bool fHelp)
 {
-    if (fHelp || params.size() < 1 || params.size() > 2)
+    if (fHelp || params.size() != 2)
         throw std::runtime_error(
             "getansrecord \"record name\" \"record type\" \n"
             "\nReturn the full record with the record name.\n"
@@ -164,7 +164,6 @@ UniValue getansrecord(const UniValue& params, bool fHelp)
     CAnsRecord record = CAnsRecord();
     CAnsRecordSet recordSet;
     UniValue ret(UniValue::VOBJ);
-    if(params.size() == 2)
     {
         recordtype = resolveRecordType(params[1].get_str());
         if(recordtype == A_RECORD)
@@ -185,6 +184,7 @@ UniValue getansrecord(const UniValue& params, bool fHelp)
                 obj.push_back(Pair("ServiceHash" , rec.getServiceHash().GetHex() ));
                 ret.push_back(obj);
             }
+            return ret;
         }
         else if(recordtype == PTR_RECORD)
         {
@@ -196,6 +196,7 @@ UniValue getansrecord(const UniValue& params, bool fHelp)
             ret.push_back(Pair("ExpireTime"          , record.getExpireTime()           ));
             ret.push_back(Pair("paymentHash"         , record.getPaymentHash().GetHex() ));
             ret.push_back(Pair("ServiceHash"         , record.getServiceHash().GetHex() ));
+            return ret;
         }
         else
         {
