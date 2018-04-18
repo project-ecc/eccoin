@@ -347,25 +347,8 @@ void ProcessANSCommand(const CServiceTransaction &stx, const CTransaction& ptx, 
         std::string code = "";
         CalcVerificationCode(stx, code, block);
         CAnsRecord newRec(stx, addr, code);
-        CAnsRecord emptyRec;
-        // TODO : this is a bit of a hack fix too, should be fixed later
-        if(!pansMain->getRecord(A_RECORD, newRec.getName(), emptyRec))
-        {
-            pansMain->addRecord(A_RECORD, newRec.getName(), newRec);
-            pansMain->addRecord(PTR_RECORD, newRec.getAddress(), newRec);
-        }
-        else
-        {
-            // try to update code if we have the entry but no code
-            if(emptyRec.getVertificationCode() == "" && code != "")
-            {
-                if(emptyRec.getPaymentHash() == newRec.getPaymentHash() && emptyRec.getServiceHash() == emptyRec.getServiceHash())
-                {
-                    pansMain->addRecord(A_RECORD, newRec.getName(), newRec);
-                    pansMain->addRecord(PTR_RECORD, newRec.getAddress(), newRec);
-                }
-            }
-        }
+        pansMain->addRecord(A_RECORD, newRec.getName(), newRec);
+        pansMain->addRecord(PTR_RECORD, newRec.getAddress(), newRec);
     }
     else if(stx.nOpCode == Opcode_ANS::OP_RENEW)
     {

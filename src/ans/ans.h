@@ -23,8 +23,11 @@ extern std::unique_ptr<CServiceDB> g_ans;
 class CAnsZone
 {
 public:
-    bool addRecord(AnsRecordTypes recordType, std::string key, CAnsRecord& value);
-    bool getRecord(AnsRecordTypes recordType, std::string key, CAnsRecord &value);
+    bool existsRecord(CAnsKey key);
+    bool existsRecord(AnsRecordTypes recordType, std::string key);
+    bool addRecord(AnsRecordTypes recordType, std::string key, CAnsRecord &value);
+    bool getRecord(std::string key, CAnsRecordSet &value);
+    bool getRecord(std::string key, CAnsRecord &value);
     bool addTimeToRecord(CServiceTransaction stx, std::string& addr, uint64_t newExpireTime);
 };
 

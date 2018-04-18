@@ -36,7 +36,7 @@ AnsRecordTypes resolveRecordType(std::string strRecordType)
     }
     return recordtype;
 }
-
+/*
 bool getRecordUnknownType(std::string strRecordName, CAnsRecord& record)
 {
     record.setNull();
@@ -56,7 +56,7 @@ bool getRecordUnknownType(std::string strRecordName, CAnsRecord& record)
     }
     return false;
 }
-
+*/
 static CAmount CalcAnsFeeFromMonths(uint8_t months)
 {
     return (months * 50) * COIN;
@@ -162,28 +162,49 @@ UniValue getansrecord(const UniValue& params, bool fHelp)
     std::string strRecordName = params[0].get_str();
     AnsRecordTypes recordtype = AnsRecordTypes::UNKNOWN_RECORD;
     CAnsRecord record = CAnsRecord();
+    CAnsRecordSet recordSet;
     UniValue ret(UniValue::VOBJ);
     if(params.size() == 2)
     {
         recordtype = resolveRecordType(params[1].get_str());
-        pansMain->getRecord(recordtype, strRecordName, record);
+        if(recordtype == A_RECORD)
+        {
+            ret.push_back(Pair("Key for this recordSet" , strRecordName                    ));
+            pansMain->getRecord(strRecordName, recordSet);
+            std::map<std::string, CAnsRecord> records = recordSet.getRecords();
+            std::map<std::string, CAnsRecord>::iterator iter;
+            for(iter = records.begin(); iter != records.end(); iter++)
+            {
+                UniValue obj(UniValue::VOBJ);
+                CAnsRecord rec = (*iter).second;
+                obj.push_back(Pair("Name"        , rec.getName()                 ));
+                obj.push_back(Pair("Code"        , rec.getVertificationCode()    ));
+                obj.push_back(Pair("Address"     , rec.getAddress()              ));
+                obj.push_back(Pair("ExpireTime"  , rec.getExpireTime()           ));
+                obj.push_back(Pair("paymentHash" , rec.getPaymentHash().GetHex() ));
+                obj.push_back(Pair("ServiceHash" , rec.getServiceHash().GetHex() ));
+                ret.push_back(obj);
+            }
+        }
+        else if(recordtype == PTR_RECORD)
+        {
+            pansMain->getRecord(strRecordName, record);
+            ret.push_back(Pair("Key for this record" , strRecordName                    ));
+            ret.push_back(Pair("Name"                , record.getName()                 ));
+            ret.push_back(Pair("Code"                , record.getVertificationCode()    ));
+            ret.push_back(Pair("Address"             , record.getAddress()              ));
+            ret.push_back(Pair("ExpireTime"          , record.getExpireTime()           ));
+            ret.push_back(Pair("paymentHash"         , record.getPaymentHash().GetHex() ));
+            ret.push_back(Pair("ServiceHash"         , record.getServiceHash().GetHex() ));
+        }
+        else
+        {
+            ret.push_back(Pair("ERROR", "unknown record type"));
+            return ret;
+        }
     }
-    else
-    {
-        getRecordUnknownType(strRecordName, record);
-    }
-    if(record == CAnsRecord())
-    {
-        ret.push_back(Pair("ERROR", "there is no record with that record name"));
-        return ret;
-    }
-    ret.push_back(Pair("Key for this record" , strRecordName                    ));
-    ret.push_back(Pair("Name"                , record.getName()                 ));
-    ret.push_back(Pair("Code"                , record.getVertificationCode()    ));
-    ret.push_back(Pair("Address"             , record.getAddress()              ));
-    ret.push_back(Pair("ExpireTime"          , record.getExpireTime()           ));
-    ret.push_back(Pair("paymentHash"         , record.getPaymentHash().GetHex() ));
-    ret.push_back(Pair("ServiceHash"         , record.getServiceHash().GetHex() ));
+    //getRecordUnknownType(strRecordName, record);
+    ret.push_back(Pair("ERROR", "unknown record type"));
     return ret;
 }
 
@@ -231,26 +252,6 @@ UniValue registerans(const UniValue& params, bool fHelp)
         throw JSONRPCError(RPC_INVALID_PARAMS, "Username exceeds maxiumum length of 25");
     }
 
-    // check for banned letters/numbers
-    /** All alphanumeric characters except for "0", "I", "O", and "l" */
-
-    if(strUsername.find("0") != std::string::npos)
-    {
-        throw JSONRPCError(RPC_INVALID_PARAMS, "Username contains invalid charactar. All alphanumeric characters EXCEPT for zero, capital i, capital o, and lowercase L are allowed");
-    }
-    if(strUsername.find("I") != std::string::npos)
-    {
-        throw JSONRPCError(RPC_INVALID_PARAMS, "Username contains invalid charactar. All alphanumeric characters EXCEPT for zero, capital i, capital o, and lowercase L are allowed");
-    }
-    if(strUsername.find("O") != std::string::npos)
-    {
-        throw JSONRPCError(RPC_INVALID_PARAMS, "Username contains invalid charactar. All alphanumeric characters EXCEPT for zero, capital i, capital o, and lowercase L are allowed");
-    }
-    if(strUsername.find("l") != std::string::npos)
-    {
-        throw JSONRPCError(RPC_INVALID_PARAMS, "Username contains invalid charactar. All alphanumeric characters EXCEPT for zero, capital i, capital o, and lowercase L are allowed");
-    }
-
     std::string::size_type i = 0;
     while(i<strUsername.length())
     {
@@ -262,10 +263,8 @@ UniValue registerans(const UniValue& params, bool fHelp)
         i++;
     }
     EnsureWalletIsUnlocked();
-    // check to make sure we dont already have an A record for that name
-    AnsRecordTypes recordtype = AnsRecordTypes::A_RECORD;
-    CAnsRecord record;
-    if(pansMain->getRecord(recordtype, strUsername, record))
+    // check to make sure we dont already have an PTR record for that address, this prevents people from accidently buying a second name when they already have one
+    if(pansMain->existsRecord(AnsRecordTypes::PTR_RECORD, strAddress))
     {
         throw JSONRPCError(RPC_INVALID_PARAMS, "Username already exists for an address");
     }
@@ -309,15 +308,16 @@ UniValue renewans(const UniValue& params, bool fHelp)
     if (!EnsureWalletIsAvailable(fHelp))
         return NullUniValue;
 
-    if (fHelp || params.size() != 2)
+    if (fHelp || params.size() != 3)
     {
         throw std::runtime_error(
-            "renewans \"eccaddress\" \"username\" \n"
+            "renewans \"eccaddress\" \"username\" \"code\" \n"
             "\nAdd more time to an ans username.\n"
             + HelpRequiringPassphrase() +
             "\nArguments:\n"
             "1. \"eccaddress\"  (string, required) The ecc address the username is set to.\n"
             "2. \"username\"    (string, required) The username that is set.\n"
+            "3. \"code\"        (string, required) The verification code for the username.\n"
             "\nResult:\n"
             "\"transactionid\"  (string) The transaction id and additional info.\n"
             "\nExamples:\n"
@@ -338,12 +338,17 @@ UniValue renewans(const UniValue& params, bool fHelp)
         throw JSONRPCError(RPC_WALLET_ERROR, "Private key for address " + address.ToString() + " is not known");
     }
     // Amount
-    std::string strUsername;
-    strUsername = params[1].get_str();
+    std::string strUsername = params[1].get_str();
+    std::string code = params[2].get_str();
+    CAnsRecordSet recordSet;
     CAnsRecord record;
-    if(!pansMain->getRecord(A_RECORD, strUsername, record))
+    if(!pansMain->getRecord(strUsername, recordSet))
     {
         throw JSONRPCError(RPC_WALLET_ERROR, "Error: There is no record for that username");
+    }
+    if(!recordSet.getRecord(code, record))
+    {
+        throw JSONRPCError(RPC_WALLET_ERROR, "Error: There is no record for that username with that verification code");
     }
     if(address.ToString() != record.getAddress())
     {
@@ -408,10 +413,12 @@ UniValue sendtoans(const UniValue& params, bool fHelp)
 
     std::string username = params[0].get_str();
     std::string code = params[2].get_str();
-    CAnsRecord record;
+    CAnsRecordSet recordSet;
     CBitcoinAddress address;
-    if(pansMain->getRecord(AnsRecordTypes::A_RECORD, username, record))
+    if(pansMain->getRecord(username, recordSet))
     {
+       CAnsRecord record;
+       recordSet.getRecord(code, record);
        if(!record.isValidCode(code))
        {
            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, std::string("Invalid code for ans name: ")+username);

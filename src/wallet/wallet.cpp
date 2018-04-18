@@ -1350,12 +1350,6 @@ bool CWalletTx::RelayWalletTransaction(CConnman *connman)
 bool RelayServiceTransaction(CConnman *connman, const CServiceTransaction& stx)
 {
     assert(pwalletMain->GetBroadcastTransactions());
-
-    CAnsRecord emptyRec;
-    emptyRec.setNull();
-    CAnsRecord record;
-    std::string username(stx.vdata.begin(), stx.vdata.end());
-    if (pansMain->getRecord(A_RECORD, username, record))
     {
         LogPrintf("Relaying stx %s\n", stx.GetHash().ToString().c_str());
         {

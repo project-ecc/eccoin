@@ -107,7 +107,10 @@ private:
     const char record;
     const std::string name;
 public:
-    CAnsKey(const char& _record, std::string& _name) : record(_record), name(_name) {}
+    CAnsKey(const char& _record, std::string& _name) : record(_record), name(_name)
+    {
+
+    }
 
     ADD_SERIALIZE_METHODS
 
@@ -155,6 +158,11 @@ public:
             return true;
         }
         return false;
+    }
+
+    std::map<std::string, CAnsRecord> getRecords()
+    {
+        return recordSet;
     }
 
     bool removeRecord(std::string code)
