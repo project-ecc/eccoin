@@ -347,7 +347,10 @@ void ProcessANSCommand(const CServiceTransaction &stx, const CTransaction& ptx, 
         std::string code = "";
         CalcVerificationCode(stx, code, block);
         CAnsRecord newRec(stx, addr, code);
-        pansMain->addRecord(A_RECORD, newRec.getName(), newRec);
+        if(!pansMain->addRecord(A_RECORD, newRec.getName(), newRec))
+        {
+            return;
+        }
         pansMain->addRecord(PTR_RECORD, newRec.getAddress(), newRec);
     }
     else if(stx.nOpCode == Opcode_ANS::OP_RENEW)

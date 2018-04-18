@@ -145,6 +145,10 @@ public:
 
     bool addRecord(std::string code, CAnsRecord rec)
     {
+        if(code == "")
+        {
+            return false;
+        }
         auto ret = recordSet.insert(std::make_pair(code,rec));
         return ret.second;
     }

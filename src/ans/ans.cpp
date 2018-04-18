@@ -35,7 +35,10 @@ bool CAnsZone::addRecord(AnsRecordTypes recordType, std::string key, CAnsRecord&
             // get existing record set if there is one, if not recSet will remain unchanged
             g_ans->ReadEntry(Akey, recSet);
             // add the record to to record set. since its a set if a record with that key already exists, nothing will be changed
-            recSet.addRecord(value.getVertificationCode(), value);
+            if(!recSet.addRecord(value.getVertificationCode(), value))
+            {
+                break;
+            }
             //write the new/updated record set to the DB
             if(g_ans->WriteEntry(Akey, recSet))
             {
