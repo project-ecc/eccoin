@@ -322,6 +322,11 @@ UniValue registerans(const UniValue& params, bool fHelp)
 
 UniValue renewans(const UniValue& params, bool fHelp)
 {
+    if(!AreServicesEnabled())
+    {
+        throw JSONRPCError(RPC_MISC_ERROR, "services are not active until May 5th at 00:00:00 UTC ");
+    }
+
     if (!EnsureWalletIsAvailable(fHelp))
         return NullUniValue;
 
@@ -407,6 +412,11 @@ UniValue renewans(const UniValue& params, bool fHelp)
 
 UniValue sendtoans(const UniValue& params, bool fHelp)
 {
+    if(!AreServicesEnabled())
+    {
+        throw JSONRPCError(RPC_MISC_ERROR, "services are not active until May 5th at 00:00:00 UTC ");
+    }
+
     if (!EnsureWalletIsAvailable(fHelp))
         return NullUniValue;
 
