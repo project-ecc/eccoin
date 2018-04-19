@@ -163,12 +163,11 @@ UniValue getansrecord(const UniValue& params, bool fHelp)
     AnsRecordTypes recordtype = AnsRecordTypes::UNKNOWN_RECORD;
     CAnsRecord record = CAnsRecord();
     CAnsRecordSet recordSet;
-    UniValue ret(UniValue::VOBJ);
+    UniValue ret(UniValue::VARR);
     {
         recordtype = resolveRecordType(params[1].get_str());
         if(recordtype == A_RECORD)
         {
-            ret.push_back(Pair("Key for this recordSet" , strRecordName                    ));
             pansMain->getRecord(strRecordName, recordSet);
             std::map<std::string, CAnsRecord> records = recordSet.getRecords();
             std::map<std::string, CAnsRecord>::iterator iter;
@@ -176,6 +175,7 @@ UniValue getansrecord(const UniValue& params, bool fHelp)
             {
                 UniValue obj(UniValue::VOBJ);
                 CAnsRecord rec = (*iter).second;
+                ret.push_back(Pair("Key for this record" , strRecordName         ));
                 obj.push_back(Pair("Name"        , rec.getName()                 ));
                 obj.push_back(Pair("Code"        , rec.getVertificationCode()    ));
                 obj.push_back(Pair("Address"     , rec.getAddress()              ));
@@ -188,14 +188,16 @@ UniValue getansrecord(const UniValue& params, bool fHelp)
         }
         else if(recordtype == PTR_RECORD)
         {
+            UniValue obj(UniValue::VOBJ);
             pansMain->getRecord(strRecordName, record);
-            ret.push_back(Pair("Key for this record" , strRecordName                    ));
-            ret.push_back(Pair("Name"                , record.getName()                 ));
-            ret.push_back(Pair("Code"                , record.getVertificationCode()    ));
-            ret.push_back(Pair("Address"             , record.getAddress()              ));
-            ret.push_back(Pair("ExpireTime"          , record.getExpireTime()           ));
-            ret.push_back(Pair("paymentHash"         , record.getPaymentHash().GetHex() ));
-            ret.push_back(Pair("ServiceHash"         , record.getServiceHash().GetHex() ));
+            obj.push_back(Pair("Key for this record" , strRecordName                    ));
+            obj.push_back(Pair("Name"                , record.getName()                 ));
+            obj.push_back(Pair("Code"                , record.getVertificationCode()    ));
+            obj.push_back(Pair("Address"             , record.getAddress()              ));
+            obj.push_back(Pair("ExpireTime"          , record.getExpireTime()           ));
+            obj.push_back(Pair("paymentHash"         , record.getPaymentHash().GetHex() ));
+            obj.push_back(Pair("ServiceHash"         , record.getServiceHash().GetHex() ));
+            ret.push_back(obj);
             return ret;
         }
         else
