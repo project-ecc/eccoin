@@ -82,6 +82,7 @@ void WalletTxToJSON(const CWalletTx& wtx, UniValue& entry)
     }
     entry.push_back(Pair("walletconflicts", conflicts));
     entry.push_back(Pair("time", wtx.GetTxTime()));
+    entry.push_back(Pair("locktime", (int64_t)wtx.tx->nLockTime));
     entry.push_back(Pair("timereceived", (int64_t)wtx.nTimeReceived));
 
     // Add opt-in RBF status
