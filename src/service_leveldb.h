@@ -45,6 +45,12 @@ public:
     {
         return Erase(key);
     }
+
+    template <class K>
+    bool ExistsEntry(K key)
+    {
+        return Exists(key);
+    }
 };
 
 #endif // SERVICE_LEVELDB_H

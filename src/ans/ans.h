@@ -13,17 +13,23 @@
 #include <unordered_map>
 #include <memory>
 
+enum Opcode_ANS{
+    OP_REGISTER,
+    OP_RENEW,
+};
+
 extern std::unique_ptr<CServiceDB> g_ans;
 
 class CAnsZone
 {
 public:
-    bool addRecord(AnsRecordTypes recordType, std::string key, CAnsRecord& value);
-    CAnsRecord getRecord(AnsRecordTypes recordType, std::string key);
+    bool existsRecord(CAnsKey key);
+    bool existsRecord(AnsRecordTypes recordType, std::string key);
+    bool addRecord(AnsRecordTypes recordType, std::string key, CAnsRecord &value);
+    bool getRecord(std::string key, CAnsRecordSet &value);
+    bool getRecord(std::string key, CAnsRecord &value);
+    bool addTimeToRecord(CServiceTransaction stx, std::string& addr, uint64_t newExpireTime);
 };
 
 extern CAnsZone* pansMain;
-
-uint64_t CalcValidTime(uint64_t nTime, uint256 paymentHash);
-
 #endif // ANS_H

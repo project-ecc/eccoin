@@ -39,7 +39,7 @@ extern bool bSpendZeroConfChange;
 extern bool fSendFreeTransactions;
 extern bool fWalletUnlockStakingOnly;
 
-static const unsigned int DEFAULT_KEYPOOL_SIZE = 100;
+static const unsigned int DEFAULT_KEYPOOL_SIZE = 1000;
 //! -paytxfee default
 static const CAmount DEFAULT_TRANSACTION_FEE = 1;
 //! -paytxfee will warn if called with a higher fee than this amount (in satoshis) per KB
@@ -413,7 +413,7 @@ public:
     std::set<uint256> GetConflicts() const;
 };
 
-bool RelayServiceTransaction(CConnman *connman, const CServiceTransaction& stx, std::string& username);
+bool RelayServiceTransaction(CConnman *connman, const CServiceTransaction& stx);
 
 
 
@@ -588,6 +588,7 @@ public:
     /**
      * populate vCoins with vector of available COutputs.
      */
+    void AvailableCoinsByOwner(std::vector<COutput>& vCoins, const CRecipient &recipient) const;
     void AvailableCoins(std::vector<COutput>& vCoins, bool fOnlyConfirmed=true, const CCoinControl *coinControl = NULL, bool fIncludeZeroValue=false) const;
 
     /**
@@ -695,7 +696,7 @@ public:
                            CAmount& nFeeRet, std::string& strFailReason, bool sign = true);
 
     bool CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey, CConnman *connman, CValidationState &state);
-    bool CommitTransactionForService(CServiceTransaction& stxNew, std::string& username, CConnman *connman);
+    bool CommitTransactionForService(CServiceTransaction& stxNew, std::string& addr, CConnman *connman);
 
     bool AddAccountingEntry(const CAccountingEntry&, CWalletDB & pwalletdb);
 

@@ -1347,13 +1347,9 @@ bool CWalletTx::RelayWalletTransaction(CConnman *connman)
     return false;
 }
 
-bool RelayServiceTransaction(CConnman *connman, const CServiceTransaction& stx, std::string& username)
+bool RelayServiceTransaction(CConnman *connman, const CServiceTransaction& stx)
 {
     assert(pwalletMain->GetBroadcastTransactions());
-
-    CAnsRecord emptyRec;
-    emptyRec.setNull();
-    if (pansMain->getRecord(A_RECORD, username) != emptyRec)
     {
         LogPrintf("Relaying stx %s\n", stx.GetHash().ToString().c_str());
         {
@@ -1972,22 +1968,54 @@ bool CWallet::SelectCoinsMinConf(const CAmount& nTargetValue, int nConfMine, int
     return true;
 }
 
+void CWallet::AvailableCoinsByOwner(std::vector<COutput>& vCoins, const CRecipient& recipient) const
+{
+    vCoins.clear();
+
+    {
+        LOCK2(cs_main, cs_wallet);
+        for (std::map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it)
+        {
+            const uint256& wtxid = it->first;
+            const CWalletTx* pcoin = &(*it).second;
+
+            if (!CheckFinalTx(*(pcoin->tx)))
+                continue;
+
+            if (!pcoin->IsTrusted())
+                continue;
+
+            if ((pcoin->tx->IsCoinBase() || pcoin->tx->IsCoinStake()) && pcoin->GetBlocksToMaturity() > 0)
+                continue;
+
+            int nDepth = pcoin->GetDepthInMainChain();
+            if (nDepth < 0)
+                continue;
+
+            // We should not consider coins which aren't at least in our mempool
+            // It's possible for these to be conflicted via ancestors which we may never be able to detect
+            if (nDepth == 0 && !pcoin->InMempool())
+                continue;
+
+            for (unsigned int i = 0; i < pcoin->tx->vout.size(); i++)
+            {
+                if(pcoin->tx->vout[i].scriptPubKey == recipient.scriptPubKey)
+                {
+                    isminetype mine = IsMine(pcoin->tx->vout[i]);
+                    if (!(IsSpent(wtxid, i)) && mine != ISMINE_NO && !IsLockedCoin((*it).first, i) && (pcoin->tx->vout[i].nValue > 0))
+                    {
+                        vCoins.push_back(COutput(pcoin, i, nDepth, ((mine & ISMINE_SPENDABLE) != ISMINE_NO) || ((mine & ISMINE_WATCH_SOLVABLE) != ISMINE_NO)));
+                    }
+                }
+            }
+        }
+    }
+}
+
 bool CWallet::SelectCoinsByOwner(const CAmount& nTargetValue, const CRecipient& recipient, std::set<std::pair<const CWalletTx*,unsigned int> >& setCoinsRet, CAmount& nValueRet) const
 {
     std::vector<COutput> vCoins;
-    AvailableCoins(vCoins, true, nullptr);
-
-    std::vector<COutput>::iterator iter;
-    std::vector<COutput> vCoinsTemp;
-    for(iter = vCoins.begin(); iter != vCoins.end(); iter++)
-    {
-        COutput out = *iter;
-        if(out.tx->tx->vout[out.i].scriptPubKey == recipient.scriptPubKey)
-        {
-            vCoinsTemp.emplace_back(*iter);
-        }
-    }
-    vCoins = vCoinsTemp;
+    AvailableCoinsByOwner(vCoins, recipient);
 
     bool res = SelectCoinsMinConf(nTargetValue, 1, 6, vCoins, setCoinsRet, nValueRet) ||
                SelectCoinsMinConf(nTargetValue, 1, 1, vCoins, setCoinsRet, nValueRet) ||
@@ -2725,24 +2753,17 @@ bool CWallet::CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey, CCon
 /**
  * Call after CreateTransaction unless you want to abort
  */
-bool CWallet::CommitTransactionForService(CServiceTransaction& stxNew, std::string& username, CConnman *connman)
+bool CWallet::CommitTransactionForService(CServiceTransaction& stxNew, std::string& addr, CConnman *connman)
 {
     {
         LOCK2(cs_main, cs_wallet);
         LogPrintf("CommitServiceTransaction:\n%s", stxNew.ToString());
         {
-            CAnsRecord newRec(username, CalcValidTime(stxNew.nTime, stxNew.paymentReferenceHash), stxNew.paymentReferenceHash, stxNew.GetHash());
-            pansMain->addRecord(A_RECORD, username, newRec);
             g_stxmempool->add(stxNew.GetHash(), stxNew);
         }
 
         // Track how many getdata requests our transaction gets
         mapRequestCount[stxNew.GetHash()] = 0;
-
-        if (fBroadcastTransactions)
-        {
-            RelayServiceTransaction(connman, stxNew, username);
-        }
     }
     return true;
 }
