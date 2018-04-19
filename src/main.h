@@ -226,9 +226,6 @@ FILE* OpenUndoFile(const CDiskBlockPos &pos, bool fReadOnly = false);
 /** Translation to a filesystem path */
 boost::filesystem::path GetBlockPosFilename(const CDiskBlockPos &pos, const char *prefix);
 
-/** Try to detect Partition (network isolation) attacks against us */
-void PartitionCheck(bool (*initialDownloadCheck)(), CCriticalSection& cs, const CBlockIndex *const &bestHeader, int64_t nTargetSpacing);
-
 /** Format a string that describes several potential problems detected by the core.
  * strFor can have three values:
  * - "rpc": get critical warnings, which should put the client in safe mode if non-empty

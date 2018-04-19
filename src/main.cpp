@@ -1200,67 +1200,6 @@ void static FlushBlockFile(bool fFinalize = false)
     }
 }
 
-//
-// Called periodically asynchronously; alerts if it smells like
-// we're being fed a bad chain (blocks being generated much
-// too slowly or too quickly).
-//
-void PartitionCheck(bool (*initialDownloadCheck)(), CCriticalSection& cs, const CBlockIndex *const &bestHeader,
-                    int64_t nTargetSpacing)
-{
-    if (bestHeader == NULL || initialDownloadCheck()) return;
-
-    static int64_t lastAlertTime = 0;
-    int64_t now = GetAdjustedTime();
-    if (lastAlertTime > now-60*60*24) return; // Alert at most once per day
-
-    const int SPAN_HOURS=4;
-    const int SPAN_SECONDS=SPAN_HOURS*60*60;
-    int BLOCKS_EXPECTED = SPAN_SECONDS / nTargetSpacing;
-
-    boost::math::poisson_distribution<double> poisson(BLOCKS_EXPECTED);
-
-    std::string strWarning;
-    int64_t startTime = GetAdjustedTime()-SPAN_SECONDS;
-
-    LOCK(cs);
-    const CBlockIndex* i = bestHeader;
-    int nBlocks = 0;
-    while (i->GetBlockTime() >= startTime) {
-        ++nBlocks;
-        i = i->pprev;
-        if (i == NULL) return; // Ran out of chain, we must not be fully sync'ed
-    }
-
-    // How likely is it to find that many by chance?
-    double p = boost::math::pdf(poisson, nBlocks);
-
-    LogPrint("partitioncheck", "%s: Found %d blocks in the last %d hours\n", __func__, nBlocks, SPAN_HOURS);
-    LogPrint("partitioncheck", "%s: likelihood: %g\n", __func__, p);
-
-    // Aim for one false-positive about every fifty years of normal running:
-    const int FIFTY_YEARS = 50*365*24*60*60;
-    double alertThreshold = 1.0 / (FIFTY_YEARS / SPAN_SECONDS);
-
-    if (p <= alertThreshold && nBlocks < BLOCKS_EXPECTED)
-    {
-        // Many fewer blocks than expected: alert!
-        strWarning = strprintf(_("WARNING: check your network connection, %d blocks received in the last %d hours (%d expected)"),
-                               nBlocks, SPAN_HOURS, BLOCKS_EXPECTED);
-    }
-    else if (p <= alertThreshold && nBlocks > BLOCKS_EXPECTED)
-    {
-        // Many more blocks than expected: alert!
-        strWarning = strprintf(_("WARNING: abnormally high number of blocks generated, %d blocks received in the last %d hours (%d expected)"),
-                               nBlocks, SPAN_HOURS, BLOCKS_EXPECTED);
-    }
-    if (!strWarning.empty())
-    {
-        strMiscWarning = strWarning;
-        lastAlertTime = now;
-    }
-}
-
 // Protected by cs_main
 VersionBitsCache versionbitscache;
 
@@ -1949,13 +1888,18 @@ unsigned int GetNextTargetRequired(const CBlockIndex* pindexLast, bool fProofOfS
         CBigNum bnNew;
         bnNew.SetCompact(pindexPrev->nBits);
         int64_t spacing;
+        int64_t targetSpacing = pnetMan->getActivePaymentNetwork()->GetConsensus().nTargetSpacing;
+        if(pindexPrev->GetMedianTimePast() > SERVICE_UPGRADE_HARDFORK)
+        {
+            targetSpacing = 150;
+        }
         if (fProofOfStake)
         {
-            spacing = pnetMan->getActivePaymentNetwork()->GetConsensus().nTargetSpacing;
+            spacing = targetSpacing;
         }
         else
         {
-            spacing =  std::min( (3 * (int64_t) pnetMan->getActivePaymentNetwork()->GetConsensus().nTargetSpacing), ((int64_t) pnetMan->getActivePaymentNetwork()->GetConsensus().nTargetSpacing * (1 + pindexLast->nHeight - pindexPrev->nHeight)) );
+            spacing =  std::min( (3 * (int64_t) targetSpacing), ((int64_t) targetSpacing * (1 + pindexLast->nHeight - pindexPrev->nHeight)) );
         }
         int64_t nTargetSpacing = spacing;
         int64_t nInterval = pnetMan->getActivePaymentNetwork()->GetConsensus().nTargetTimespan / nTargetSpacing;

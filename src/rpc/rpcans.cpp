@@ -19,6 +19,11 @@ void SendMoney(const CTxDestination &address, CAmount nValue, bool fSubtractFeeF
  *
  */
 
+static bool AreServicesEnabled()
+{
+    return pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->pprev->GetMedianTimePast() >= SERVICE_UPGRADE_HARDFORK;
+}
+
 AnsRecordTypes resolveRecordType(std::string strRecordType)
 {
     AnsRecordTypes recordtype;
@@ -143,6 +148,10 @@ bool getAddrFromPtx(std::string& addr, CTransactionRef ptx)
 
 UniValue getansrecord(const UniValue& params, bool fHelp)
 {
+    if(!AreServicesEnabled())
+    {
+        throw JSONRPCError(RPC_MISC_ERROR, "services are not active until May 5th at 00:00:00 UTC ");
+    }
     if (fHelp || params.size() != 2)
         throw std::runtime_error(
             "getansrecord \"record name\" \"record type\" \n"
@@ -213,6 +222,11 @@ UniValue getansrecord(const UniValue& params, bool fHelp)
 
 UniValue registerans(const UniValue& params, bool fHelp)
 {
+    if(!AreServicesEnabled())
+    {
+        throw JSONRPCError(RPC_MISC_ERROR, "services are not active until May 5th at 00:00:00 UTC ");
+    }
+
     if (!EnsureWalletIsAvailable(fHelp))
         return NullUniValue;
 
