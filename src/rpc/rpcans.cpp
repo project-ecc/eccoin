@@ -269,7 +269,7 @@ UniValue registerans(const UniValue& params, bool fHelp)
     // check to make sure we dont already have an PTR record for that address, this prevents people from accidently buying a second name when they already have one
     if(pansMain->existsRecord(AnsRecordTypes::PTR_RECORD, strAddress))
     {
-        throw JSONRPCError(RPC_INVALID_PARAMS, "Username already exists for an address");
+        throw JSONRPCError(RPC_INVALID_PARAMS, std::string("Username already exists for address: ")+strAddress);
     }
     uint8_t nMonths = 1;
 
