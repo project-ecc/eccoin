@@ -20,8 +20,17 @@ bool CAnsZone::existsRecord(CAnsKey key)
 
 bool CAnsZone::existsRecord(AnsRecordTypes recordType, std::string key)
 {
-    CAnsKey anskey(recordType, key);
-    return existsRecord(anskey);
+    if(recordType == A_RECORD)
+    {
+        CAnsKey anskey(A_REC, key);
+        return existsRecord(anskey);
+    }
+    else if(recordType == PTR_RECORD)
+    {
+        CAnsKey anskey(PTR_REC, key);
+        return existsRecord(anskey);
+    }
+    return false
 }
 
 bool CAnsZone::addRecord(AnsRecordTypes recordType, std::string key, CAnsRecord& value)
