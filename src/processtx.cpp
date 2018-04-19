@@ -347,6 +347,11 @@ void ProcessANSCommand(const CServiceTransaction &stx, const CTransaction& ptx, 
         std::string code = "";
         CalcVerificationCode(stx, code, block);
         CAnsRecord newRec(stx, addr, code);
+        // check to make sure address does not already have an A record, we can check this by checking for PTR record
+        if(pansMain->existsRecord(AnsRecordTypes::PTR_RECORD,newRec.getAddress()))
+        {
+            return;
+        }
         if(!pansMain->addRecord(A_RECORD, newRec.getName(), newRec))
         {
             return;
