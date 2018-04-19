@@ -203,7 +203,7 @@ bool AcceptBlock(const std::shared_ptr<const CBlock> pblock, CValidationState& s
     return true;
 }
 
-bool ProcessNewBlock(CValidationState& state, const CNetworkTemplate& chainparams, const CNode* pfrom, const std::shared_ptr<const CBlock> pblock, bool fForceProcessing, CDiskBlockPos* dbp, BlockOrigin origin)
+bool ProcessNewBlock(CValidationState& state, const CNetworkTemplate& chainparams, const CNode* pfrom, const std::shared_ptr<const CBlock> pblock, bool fForceProcessing, CDiskBlockPos* dbp)
 {
     // Preliminary checks
     bool checked = CheckBlock(*pblock, state);
@@ -229,13 +229,14 @@ bool ProcessNewBlock(CValidationState& state, const CNetworkTemplate& chainparam
         }
     }
 
-    if (!ActivateBestChain(state, chainparams, origin, pblock))
+    if (!ActivateBestChain(state, chainparams, pblock))
         return error("%s: ActivateBestChain failed", __func__);
 
+    // still in testing.
     /// this is expensive so only run it about once every 12 hours. (960 blocks is ~12 hours with a 45 second block time)
     if( (pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height() % 960 )== 0)
     {
-        removeImpossibleChainTips();
+        // removeImpossibleChainTips();
     }
     return true;
 }
@@ -361,7 +362,7 @@ static int64_t nTimeTotal = 0;
  * Connect a new block to chainActive. pblock is either NULL or a pointer to a CBlock
  * corresponding to pindexNew, to bypass loading it again from disk.
  */
-bool ConnectTip(CValidationState& state, const CNetworkTemplate& chainparams, CBlockIndex* pindexNew, const std::shared_ptr<const CBlock> &pblock, BlockOrigin origin, ConnectTrace &connectTrace)
+bool ConnectTip(CValidationState& state, const CNetworkTemplate& chainparams, CBlockIndex* pindexNew, const std::shared_ptr<const CBlock> &pblock, ConnectTrace &connectTrace)
 {
     assert(pindexNew->pprev == pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip());
     // Read block from disk.
@@ -396,10 +397,6 @@ bool ConnectTip(CValidationState& state, const CNetworkTemplate& chainparams, CB
             if (state.IsInvalid())
             {
                 InvalidBlockFound(pindexNew, state);
-                if(origin == GENERATED)
-                {
-                    pnetMan->getActivePaymentNetwork()->getChainManager()->pindexBestHeader = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
-                }
             }
             return error("ConnectTip(): ConnectBlock %s failed", pindexNew->GetBlockHash().ToString());
         }
@@ -506,20 +503,12 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
  * Try to make some progress towards making pindexMostWork the active block.
  * pblock is either NULL or a pointer to a CBlock corresponding to pindexMostWork.
  */
- bool ActivateBestChainStep(CValidationState& state, const CNetworkTemplate& chainparams, CBlockIndex* pindexMostWork, const std::shared_ptr<const CBlock> &pblock, BlockOrigin origin, ConnectTrace &connectTrace)
+ bool ActivateBestChainStep(CValidationState& state, const CNetworkTemplate& chainparams, CBlockIndex* pindexMostWork, const std::shared_ptr<const CBlock> &pblock, ConnectTrace &connectTrace)
 {
     AssertLockHeld(cs_main);
     bool fInvalidFound = false;
     const CBlockIndex *pindexOldTip = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
     const CBlockIndex *pindexFork = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.FindFork(pindexMostWork);
-
-    /// temporary security measure against large chain attacks, reorging this many blocks should not occur naturally. a real solution should be implemented
-    if(origin != LOADED && pindexOldTip && pindexFork && pindexOldTip->nHeight >= pindexFork->nHeight + COINBASE_MATURITY)
-    {
-        LogPrintf("PREVENTING REORGANIZATION OF A DANGEROUSLY LARGE NUMBER OF BLOCKS, IF YOU SEE THIS MESSAGE REPORT IT TO A DEV \n");
-        return state.DoS(100, error("ActivateBestChainStep(): PREVENTING REORGANIZATION OF A DANGEROUSLY LARGE NUMBER OF BLOCKS, IF YOU SEE THIS MESSAGE REPORT IT TO A DEV "),
-                                 REJECT_INVALID, "DANGEROUS REORG");
-    }
 
     // Disconnect active blocks which are no longer in the best chain.
     bool fBlocksDisconnected = false;
@@ -551,7 +540,7 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
         // Connect new blocks.
         BOOST_REVERSE_FOREACH(CBlockIndex *pindexConnect, vpindexToConnect) 
         {
-            if (!ConnectTip(state, chainparams, pindexConnect, pindexConnect == pindexMostWork ? pblock : NULL, origin, connectTrace))
+            if (!ConnectTip(state, chainparams, pindexConnect, pindexConnect == pindexMostWork ? pblock : NULL, connectTrace))
             {
                 if (state.IsInvalid())
                 {
@@ -600,7 +589,7 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
  * or an activated best chain. pblock is either NULL or a pointer to a block
  * that is already loaded (to avoid loading it again from disk).
  */
-bool ActivateBestChain(CValidationState &state, const CNetworkTemplate& chainparams, BlockOrigin origin, const std::shared_ptr<const CBlock> pblock)
+bool ActivateBestChain(CValidationState &state, const CNetworkTemplate& chainparams, const std::shared_ptr<const CBlock> pblock)
 {
     CBlockIndex *pindexMostWork = NULL;
     do {
@@ -624,7 +613,7 @@ bool ActivateBestChain(CValidationState &state, const CNetworkTemplate& chainpar
             if (pindexMostWork == NULL || pindexMostWork == pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip())
                 return true;
 
-            if (!ActivateBestChainStep(state, chainparams, pindexMostWork, pblock && pblock->GetHash() == pindexMostWork->GetBlockHash() ? pblock : NULL, origin, connectTrace))
+            if (!ActivateBestChainStep(state, chainparams, pindexMostWork, pblock && pblock->GetHash() == pindexMostWork->GetBlockHash() ? pblock : NULL, connectTrace))
                 return false;
 
             pindexNewTip = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();

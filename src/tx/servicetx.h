@@ -37,7 +37,7 @@ public:
     uint16_t nServiceId;
     unsigned int nTime;
     uint16_t nOpCode;
-    uint32_t nLockTime;
+    uint32_t nExpireTime;
     std::vector<unsigned char> vdata;
     uint256 paymentReferenceHash;
     //uint256 securityHash;
@@ -59,7 +59,7 @@ public:
         READWRITE(*const_cast<uint16_t*>(&this->nServiceId));
         READWRITE(*const_cast<uint32_t*>(&this->nTime));
         READWRITE(*const_cast<uint16_t*>(&this->nOpCode));
-        READWRITE(*const_cast<uint32_t*>(&nLockTime));
+        READWRITE(*const_cast<uint32_t*>(&nExpireTime));
         READWRITE(*const_cast<std::vector<unsigned char>*>(&vdata));
         READWRITE(*const_cast<uint256*>(&this->paymentReferenceHash));
         //READWRITE(*const_cast<uint256*>(&this->securityHash));

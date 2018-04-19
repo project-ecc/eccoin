@@ -226,7 +226,8 @@ public:
                bool obfuscate = false);
     ~CDBWrapper();
 
-    template <typename K, typename V> bool Read(const K &key, V &value) const {
+    template <typename K, typename V>
+    bool Read(const K &key, V &value) const {
         CDataStream ssKey(SER_DISK, CLIENT_VERSION);
         ssKey.reserve(DBWRAPPER_PREALLOC_KEY_SIZE);
         ssKey << key;

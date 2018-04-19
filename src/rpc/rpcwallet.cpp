@@ -82,6 +82,7 @@ void WalletTxToJSON(const CWalletTx& wtx, UniValue& entry)
     }
     entry.push_back(Pair("walletconflicts", conflicts));
     entry.push_back(Pair("time", wtx.GetTxTime()));
+    entry.push_back(Pair("locktime", (int64_t)wtx.tx->nLockTime));
     entry.push_back(Pair("timereceived", (int64_t)wtx.nTimeReceived));
 
     // Add opt-in RBF status
@@ -384,7 +385,7 @@ UniValue getaddressesbyaccount(const UniValue& params, bool fHelp)
     return ret;
 }
 
-static void SendMoney(const CTxDestination &address, CAmount nValue, bool fSubtractFeeFromAmount, CWalletTx& wtxNew)
+void SendMoney(const CTxDestination &address, CAmount nValue, bool fSubtractFeeFromAmount, CWalletTx& wtxNew)
 {
     CAmount curBalance = pwalletMain->GetBalance();
 
@@ -449,7 +450,9 @@ UniValue sendtoaddress(const UniValue& params, bool fHelp)
 
     CBitcoinAddress address(params[0].get_str());
     if (!address.IsValid())
+    {
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Bitcoin address");
+    }
 
     // Amount
     CAmount nAmount = AmountFromValue(params[1]);
@@ -926,9 +929,13 @@ UniValue sendfrom(const UniValue& params, bool fHelp)
     LOCK2(cs_main, pwalletMain->cs_wallet);
 
     std::string strAccount = AccountFromValue(params[0]);
+
     CBitcoinAddress address(params[1].get_str());
     if (!address.IsValid())
+    {
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Bitcoin address");
+    }
+
     CAmount nAmount = AmountFromValue(params[2]);
     if (nAmount <= 0)
         throw JSONRPCError(RPC_TYPE_ERROR, "Invalid amount for send");
@@ -1020,10 +1027,12 @@ UniValue sendmany(const UniValue& params, bool fHelp)
     CAmount totalAmount = 0;
     std::vector<std::string> keys = sendTo.getKeys();
     for (auto const& name_: keys)
-    {
+    {   
         CBitcoinAddress address(name_);
         if (!address.IsValid())
+        {
             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, std::string("Invalid Bitcoin address: ")+name_);
+        }
 
         if (setAddress.count(address))
             throw JSONRPCError(RPC_INVALID_PARAMETER, std::string("Invalid parameter, duplicated address: ")+name_);

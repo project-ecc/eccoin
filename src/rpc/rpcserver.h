@@ -266,7 +266,10 @@ extern UniValue invalidateblock(const UniValue& params, bool fHelp);
 extern UniValue reconsiderblock(const UniValue& params, bool fHelp);
 
 extern UniValue getansrecord(const UniValue& params, bool fHelp);
-extern UniValue getansaddress(const UniValue& params, bool fHelp);
+extern UniValue registerans(const UniValue& params, bool fHelp);
+extern UniValue renewans(const UniValue& params, bool fHelp);
+extern UniValue sendtoans(const UniValue& params, bool fHelp);
+
 
 bool StartRPC();
 void InterruptRPC();

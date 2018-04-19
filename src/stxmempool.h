@@ -38,11 +38,16 @@ public:
 class CStxMemPool
 {
 private:
-    CStxDB* stxdb = nullptr;
+    std::unique_ptr<CStxDB> stxdb;
 public:
     CStxMemPool()
     {
-        stxdb = new CStxDB(nDefaultStxCache, false, false);
+        stxdb.reset(new CStxDB(nDefaultStxCache, false, false));
+    }
+    ~CStxMemPool()
+    {
+        stxdb.reset();
+        stxdb = nullptr;
     }
 
     bool exists(uint256 hash) const;

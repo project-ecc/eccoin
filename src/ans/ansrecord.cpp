@@ -3,28 +3,43 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "ansrecord.h"
+#include "tx/tx.h"
+#include "base58.h"
+#include "script/script.h"
 
 void CAnsRecord::setNull()
 {
-    value.clear();
+    name.clear();
+    address.clear();
     expireTime = 0;
     paymentHash.SetNull();
     serviceHash.SetNull();
+    verificationCode.clear();
 }
 
-void CAnsRecord::setValue(std::string strValue)
+void CAnsRecord::setName(std::string strName)
 {
-    value = strValue;
+    name = strName;
 }
 
-std::string CAnsRecord::getValue()
+std::string CAnsRecord::getName()
 {
-    return value;
+    return name;
 }
 
-void CAnsRecord::setExpireTime(uint64_t ntime)
+void CAnsRecord::setAddress(std::string strAddress)
 {
-    expireTime = ntime;
+    address = strAddress;
+}
+
+std::string CAnsRecord::getAddress()
+{
+    return address;
+}
+
+void CAnsRecord::setExpireTime(uint64_t nTime)
+{
+    expireTime = nTime;
 }
 
 uint64_t CAnsRecord::getExpireTime()
@@ -50,4 +65,21 @@ void CAnsRecord::setServiceHash(uint256 hash)
 uint256 CAnsRecord::getServiceHash()
 {
     return serviceHash;
+}
+
+std::string CAnsRecord::getVertificationCode()
+{
+    return verificationCode;
+}
+
+bool CAnsRecord::isValidCode(std::string code)
+{
+    return code == this->verificationCode;
+}
+
+const uint64_t oneMonth = 2592000; // 30 days in seconds
+// TODO : NEEDS ACTUAL TIME CALC METHOD
+uint64_t CAnsRecord::CalcValidTime(uint64_t nTime, uint256 paymentHash)
+{
+    return nTime + oneMonth;
 }

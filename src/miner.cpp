@@ -518,7 +518,7 @@ bool CheckWork(const std::shared_ptr<const CBlock> pblock, CWallet& wallet, CRes
         // Process this block the same as if we had received it from another node
         CValidationState state;
         const CNetworkTemplate& chainparams = pnetMan->getActivePaymentNetwork();
-        if (!ProcessNewBlock(state, chainparams, NULL, pblock, true, NULL, GENERATED))
+        if (!ProcessNewBlock(state, chainparams, NULL, pblock, true, NULL))
             return error("Miner : ProcessBlock, block not accepted");
     }
 

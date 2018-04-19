@@ -307,8 +307,15 @@ bool CanDirectFetch(const Consensus::Params &consensusParams)
     return pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->GetBlockTime() > GetAdjustedTime() - targetSpacing * 20;
 }
 
-static void RelayTransaction(const CTransaction &tx, CConnman &connman) {
+static void RelayTransaction(const CTransaction &tx, CConnman &connman)
+{
     CInv inv(MSG_TX, tx.GetId());
+    connman.ForEachNode([&inv](CNode *pnode) { pnode->PushInventory(inv); });
+}
+
+static void RelayServiceTransaction(const CServiceTransaction &stx, CConnman &connman)
+{
+    CInv inv(MSG_STX, stx.GetHash());
     connman.ForEachNode([&inv](CNode *pnode) { pnode->PushInventory(inv); });
 }
 
@@ -1044,6 +1051,7 @@ void static ProcessGetData(CNode* pfrom, CConnman &connman, const Consensus::Par
                  if(g_stxmempool->lookup(inv.hash, stx))
                  {
                      connman.PushMessage(pfrom, msgMaker.Make(nSendFlags, NetMsgType::STX, stx));
+                     pfrom->filterServiceDataKnown.insert(inv.hash);
                      push = true;
                  }
                  if (!push)
@@ -1515,7 +1523,7 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
                 a_recent_block = most_recent_block;
             }
             CValidationState dummy;
-            ActivateBestChain(dummy, pnetMan->getActivePaymentNetwork(), RECEIVED, a_recent_block);
+            ActivateBestChain(dummy, pnetMan->getActivePaymentNetwork(), a_recent_block);
         }
 
         LOCK(cs_main);
@@ -1843,9 +1851,11 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
         {
             //if we can get the transaction we have already processed it so it is safe to call CheckTransactionANS here
             CValidationState state;
-            if(CheckTransactionANS(pstx, tx, state))
+            if(CheckServiceTransaction(pstx, tx, state))
             {
                 g_stxmempool->add(pstx.GetHash(), pstx);
+                ProcessServiceCommand(pstx, tx, state);
+                RelayServiceTransaction(pstx, connman);
             }
             else
             {
@@ -2006,7 +2016,7 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
             mapBlockSource.emplace(hash, std::make_pair(pfrom->GetId(), true));
         }
         CValidationState state;
-        ProcessNewBlock(state, chainparams, pfrom, pblock, forceProcessing, NULL, RECEIVED);
+        ProcessNewBlock(state, chainparams, pfrom, pblock, forceProcessing, NULL);
         int nDoS;
         if (state.IsInvalid(nDoS))
         {
@@ -2857,7 +2867,7 @@ bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interr
                 vInvStx.pop_back();
                 uint256 hash = *it;
                 pto->setInventoryStxToSend.erase(it);
-                if (pto->filterInventoryKnown.contains(hash))
+                if (pto->filterServiceDataKnown.contains(hash))
                 {
                     continue;
                 }
@@ -2868,7 +2878,6 @@ bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interr
                     connman.PushMessage(pto, msgMaker.Make(NetMsgType::INV, vInv));
                     vInv.clear();
                 }
-                pto->filterInventoryKnown.insert(hash);
             }
 
         }
@@ -2951,12 +2960,15 @@ bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interr
         const CInv &inv = (*pto->mapAskFor.begin()).second;
         if (!AlreadyHave(inv))
         {
-            LogPrint("net", "Requesting %s peer=%d\n", inv.ToString(), pto->id);
-            vGetData.push_back(inv);
-            if (vGetData.size() >= 1000)
+            if(!pto->filterServiceDataKnown.contains(inv.hash))
             {
-                connman.PushMessage(pto, msgMaker.Make(NetMsgType::GETDATA, vGetData));
-                vGetData.clear();
+                LogPrint("net", "Requesting %s peer=%d\n", inv.ToString(), pto->id);
+                vGetData.push_back(inv);
+                if (vGetData.size() >= 1000)
+                {
+                    connman.PushMessage(pto, msgMaker.Make(NetMsgType::GETDATA, vGetData));
+                    vGetData.clear();
+                }
             }
         }
         else
