@@ -276,22 +276,34 @@ clean:
 	-rm -f build/*.o
 	-rm -f build/*.P
 	-rm -f build/build.h
+	-rm -f build/ans/*.o
+	-rm -f build/ans/*.P
+	-rm -f build/chain/*.o
+	-rm -f build/chain/*.P
 	-rm -f build/compat/*.o
 	-rm -f build/compat/*.P
 	-rm -f build/consensus/*.o
 	-rm -f build/consensus/*.P
 	-rm -f build/crypto/*.o
 	-rm -f build/crypto/*.P
+	-rm -f build/networks/*.o
+	-rm -f build/networks/*.P
 	-rm -f build/policy/*.o
 	-rm -f build/policy/*.P
 	-rm -f build/primitives/*.o
 	-rm -f build/primitives/*.P
+	-rm -f build/rpc/*.o
+	-rm -f build/rpc/*.P
 	-rm -f build/script/*.o
 	-rm -f build/script/*.P
 	-rm -f build/support/*.o
 	-rm -f build/support/*.P
+	-rm -f build/tx/*.o
+	-rm -f build/tx/*.P
 	-rm -f build/univalue/*.o
 	-rm -f build/univalue/*.P
+	-rm -f build/util/*.o
+	-rm -f build/util/*.P
 	-rm -f build/wallet/*.o
 	-rm -f build/wallet/*.P
 	cd leveldb && make clean
