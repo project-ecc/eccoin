@@ -210,30 +210,31 @@ bool CBlockTreeDB::ReadFlag(const std::string &name, bool &fValue) {
 bool CBlockTreeDB::LoadBlockIndexGuts()
 {
     boost::scoped_ptr<CDBIterator> pcursor(NewIterator());
-
     pcursor->Seek(std::make_pair(DB_BLOCK_INDEX, uint256()));
-
     // Load mapBlockIndex
-    while (pcursor->Valid()) {
+    while (pcursor->Valid())
+    {
         boost::this_thread::interruption_point();
         std::pair<char, uint256> key;
-        if (pcursor->GetKey(key) && key.first == DB_BLOCK_INDEX) {
+        if (pcursor->GetKey(key) && key.first == DB_BLOCK_INDEX)
+        {
             CDiskBlockIndex diskindex;
-            if (pcursor->GetValue(diskindex)) {
+            if (pcursor->GetValue(diskindex))
+            {
                 // Construct block index object
-                CBlockIndex* pindexNew = pnetMan->getActivePaymentNetwork()->getChainManager()->InsertBlockIndex(diskindex.GetBlockHash());
-                pindexNew->pprev          = pnetMan->getActivePaymentNetwork()->getChainManager()->InsertBlockIndex(diskindex.hashPrev);
-                pindexNew->nHeight        = diskindex.nHeight;
-                pindexNew->nFile          = diskindex.nFile;
-                pindexNew->nDataPos       = diskindex.nDataPos;
-                pindexNew->nUndoPos       = diskindex.nUndoPos;
-                pindexNew->nVersion       = diskindex.nVersion;
-                pindexNew->hashMerkleRoot = diskindex.hashMerkleRoot;
-                pindexNew->nTime          = diskindex.nTime;
-                pindexNew->nBits          = diskindex.nBits;
-                pindexNew->nNonce         = diskindex.nNonce;
-                pindexNew->nStatus        = diskindex.nStatus;
-                pindexNew->nTx            = diskindex.nTx;
+                CBlockIndex* pindexNew      = pnetMan->getActivePaymentNetwork()->getChainManager()->InsertBlockIndex(diskindex.hashBlock);
+                pindexNew->pprev            = pnetMan->getActivePaymentNetwork()->getChainManager()->InsertBlockIndex(diskindex.hashPrev);
+                pindexNew->nHeight          = diskindex.nHeight;
+                pindexNew->nFile            = diskindex.nFile;
+                pindexNew->nDataPos         = diskindex.nDataPos;
+                pindexNew->nUndoPos         = diskindex.nUndoPos;
+                pindexNew->nVersion         = diskindex.nVersion;
+                pindexNew->hashMerkleRoot   = diskindex.hashMerkleRoot;
+                pindexNew->nTime            = diskindex.nTime;
+                pindexNew->nBits            = diskindex.nBits;
+                pindexNew->nNonce           = diskindex.nNonce;
+                pindexNew->nStatus          = diskindex.nStatus;
+                pindexNew->nTx              = diskindex.nTx;
                 pindexNew->nMint            = diskindex.nMint;
                 pindexNew->nMoneySupply     = diskindex.nMoneySupply;
                 pindexNew->nFlags           = diskindex.nFlags;
@@ -242,65 +243,17 @@ bool CBlockTreeDB::LoadBlockIndexGuts()
                 pindexNew->nStakeTime       = diskindex.nStakeTime;
                 pindexNew->hashProofOfStake = diskindex.hashProofOfStake;
                 pcursor->Next();
-            } else {
-                return error("LoadBlockIndex() : failed to read value");
             }
-        } else {
+            else
+            {
+                return error("LoadBlockIndex() : failed to read new value");
+            }
+        }
+        else
+        {
             break;
         }
     }
 
     return true;
 }
-
-/** Upgrade the database from older formats.
- *
- * Currently implemented: from the per-tx utxo model (0.8..0.14.x) to per-txout.
- */
-bool CCoinsViewDB::Upgrade()
-{
-    std::unique_ptr<CDBIterator> pcursor(db.NewIterator());
-     pcursor->Seek(std::make_pair(DB_COINS, uint256()));
-     if (!pcursor->Valid()) {
-         return true;
-     }
-
-     LogPrintf("Upgrading database...\n");
-     size_t batch_size = 1 << 24;
-     CDBBatch batch(db);
-     while (pcursor->Valid()) {
-         boost::this_thread::interruption_point();
-         std::pair<uint8_t, uint256> key;
-         if (!pcursor->GetKey(key) || key.first != DB_COINS) {
-             break;
-         }
-
-         CCoins old_coins;
-         if (!pcursor->GetValue(old_coins)) {
-             return error("%s: cannot parse CCoins record", __func__);
-         }
-
-         COutPoint outpoint(key.second, 0);
-         for (size_t i = 0; i < old_coins.vout.size(); ++i) {
-             if (!old_coins.vout[i].IsNull() &&
-                 !old_coins.vout[i].scriptPubKey.IsUnspendable()) {
-                 Coin newcoin(std::move(old_coins.vout[i]), old_coins.nHeight,
-                              old_coins.fCoinBase);
-                 outpoint.n = i;
-                 CoinEntry entry(&outpoint);
-                 batch.Write(entry, newcoin);
-             }
-         }
-
-         batch.Erase(key);
-         if (batch.SizeEstimate() > batch_size) {
-             db.WriteBatch(batch);
-             batch.Clear();
-         }
-
-         pcursor->Next();
-     }
-
-     db.WriteBatch(batch);
-     return true;
- }

@@ -273,25 +273,40 @@ template <typename Stream> void WriteCompactSize(Stream &os, uint64_t nSize) {
     return;
 }
 
-template <typename Stream> uint64_t ReadCompactSize(Stream &is) {
+template <typename Stream> uint64_t ReadCompactSize(Stream &is)
+{
     uint8_t chSize = ser_readdata8(is);
     uint64_t nSizeRet = 0;
-    if (chSize < 253) {
+    if (chSize < 253)
+    {
         nSizeRet = chSize;
-    } else if (chSize == 253) {
+    }
+    else if (chSize == 253)
+    {
         nSizeRet = ser_readdata16(is);
         if (nSizeRet < 253)
+        {
             throw std::ios_base::failure("non-canonical ReadCompactSize()");
-    } else if (chSize == 254) {
+        }
+    }
+    else if (chSize == 254)
+    {
         nSizeRet = ser_readdata32(is);
         if (nSizeRet < 0x10000u)
+        {
             throw std::ios_base::failure("non-canonical ReadCompactSize()");
-    } else {
+        }
+    }
+    else
+    {
         nSizeRet = ser_readdata64(is);
         if (nSizeRet < 0x100000000ULL)
+        {
             throw std::ios_base::failure("non-canonical ReadCompactSize()");
+        }
     }
-    if (nSizeRet > MAX_SIZE) {
+    if (nSizeRet > MAX_SIZE)
+    {
         throw std::ios_base::failure("ReadCompactSize(): size too large");
     }
     return nSizeRet;
@@ -532,9 +547,11 @@ void Unserialize(Stream &is, std::set<K, Pred, A> &m);
  * shared_ptr
  */
 template <typename Stream, typename T>
-void Serialize(Stream &os, const std::shared_ptr<const T> &p);
+void Serialize(Stream &os, std::shared_ptr<T> &p);
 template <typename Stream, typename T>
-void Unserialize(Stream &os, std::shared_ptr<const T> &p);
+void Serialize(Stream &os, const std::shared_ptr<T> &p);
+template <typename Stream, typename T>
+void Unserialize(Stream &os, std::shared_ptr<T> &p);
 
 /**
  * unique_ptr
@@ -766,13 +783,18 @@ void Unserialize(Stream &is, std::unique_ptr<const T> &p) {
  * shared_ptr
  */
 template <typename Stream, typename T>
-void Serialize(Stream &os, const std::shared_ptr<const T> &p) {
+void Serialize(Stream &os, std::shared_ptr<T> &p) {
     Serialize(os, *p);
 }
 
 template <typename Stream, typename T>
-void Unserialize(Stream &is, std::shared_ptr<const T> &p) {
-    p = std::make_shared<const T>(deserialize, is);
+void Serialize(Stream &os, const std::shared_ptr<T> &p) {
+    Serialize(os, *p);
+}
+
+template <typename Stream, typename T>
+void Unserialize(Stream &is, std::shared_ptr<T> &p) {
+    p = std::make_shared<T>(deserialize, is);
 }
 
 /**

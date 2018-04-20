@@ -54,11 +54,15 @@ CDBWrapper::CDBWrapper(const boost::filesystem::path& path, size_t nCacheSize, b
     syncoptions.sync = true;
     options = GetOptions(nCacheSize);
     options.create_if_missing = true;
-    if (fMemory) {
+    if (fMemory)
+    {
         penv = leveldb::NewMemEnv(leveldb::Env::Default());
         options.env = penv;
-    } else {
-        if (fWipe) {
+    }
+    else
+    {
+        if (fWipe)
+        {
             LogPrintf("Wiping LevelDB in %s\n", path.string());
             leveldb::Status result = leveldb::DestroyDB(path.string(), options);
             HandleError(result);

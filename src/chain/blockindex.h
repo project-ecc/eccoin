@@ -161,9 +161,9 @@ public:
 
     void SetNull()
     {
-        phashBlock = NULL;
-        pprev = NULL;
-        pskip = NULL;
+        phashBlock = nullptr;
+        pprev = nullptr;
+        pskip = nullptr;
         nHeight = 0;
         nFile = 0;
         nDataPos = 0;
@@ -316,6 +316,7 @@ public:
 class CDiskBlockIndex : public CBlockIndex
 {
 public:
+    uint256 hashBlock;
     uint256 hashPrev;
 
     CDiskBlockIndex() {
@@ -323,6 +324,7 @@ public:
     }
 
     explicit CDiskBlockIndex(const CBlockIndex* pindex) : CBlockIndex(*pindex) {
+        hashBlock = pindex->GetBlockHash();
         hashPrev = (pprev ? pprev->GetBlockHash() : uint256());
     }
 
@@ -344,6 +346,8 @@ public:
         if (nStatus & BLOCK_HAVE_UNDO)
             READWRITE(VARINT(nUndoPos));
 
+        // added after db upgrade to reduce loadtime of index
+        READWRITE(hashBlock);
         // block header
         READWRITE(this->nVersion);
         READWRITE(hashPrev);

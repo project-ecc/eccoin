@@ -263,14 +263,20 @@ UniValue gettxoutproof(const UniValue& params, bool fHelp)
 
     CBlock block;
     if(!ReadBlockFromDisk(block, pblockindex, pnetMan->getActivePaymentNetwork()->GetConsensus()))
+    {
         throw JSONRPCError(RPC_INTERNAL_ERROR, "Can't read block from disk");
+    }
 
     unsigned int ntxFound = 0;
     for (auto const& tx: block.vtx)
-        if (setTxids.count(tx.GetHash()))
+        if (setTxids.count(tx->GetHash()))
+        {
             ntxFound++;
+        }
     if (ntxFound != setTxids.size())
+    {
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "(Not all) transactions not found in specified block");
+    }
 
     CDataStream ssMB(SER_NETWORK, PROTOCOL_VERSION);
     CMerkleBlock mb(block, setTxids);
@@ -790,37 +796,54 @@ UniValue sendrawtransaction(const UniValue& params, bool fHelp)
     RPCTypeCheck(params, boost::assign::list_of(UniValue::VSTR)(UniValue::VBOOL));
 
     // parse hex string from parameter
-    CTransaction tx;
-    if (!DecodeHexTx(tx, params[0].get_str()))
+    CTransaction ttx;
+    if (!DecodeHexTx(ttx, params[0].get_str()))
         throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "TX decode failed");
-    uint256 hashTx = tx.GetHash();
+    CTransactionRef tx(MakeTransactionRef(std::move(ttx)));
+
+    const uint256 &txid = tx->GetId();
 
     bool fOverrideFees = false;
     if (params.size() > 1)
         fOverrideFees = params[1].get_bool();
 
     CCoinsViewCache &view = *pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip;
-    const CCoins* existingCoins = view.AccessCoins(hashTx);
-    bool fHaveMempool = mempool.exists(hashTx);
+    const CCoins* existingCoins = view.AccessCoins(txid);
+    bool fHaveMempool = mempool.exists(txid);
     bool fHaveChain = existingCoins && existingCoins->nHeight < 1000000000;
-    if (!fHaveMempool && !fHaveChain) {
+    if (!fHaveMempool && !fHaveChain)
+    {
         // push to local node and sync with wallets
         CValidationState state;
         bool fMissingInputs;
-        if (!AcceptToMemoryPool(mempool, state, tx, false, &fMissingInputs, false, !fOverrideFees)) {
-            if (state.IsInvalid()) {
+        if (!AcceptToMemoryPool(mempool, state, std::move(tx), false, &fMissingInputs, false, !fOverrideFees))
+        {
+            if (state.IsInvalid())
+            {
                 throw JSONRPCError(RPC_TRANSACTION_REJECTED, strprintf("%i: %s", state.GetRejectCode(), state.GetRejectReason()));
-            } else {
-                if (fMissingInputs) {
+            }
+            else
+            {
+                if (fMissingInputs)
+                {
                     throw JSONRPCError(RPC_TRANSACTION_ERROR, "Missing inputs");
                 }
                 throw JSONRPCError(RPC_TRANSACTION_ERROR, state.GetRejectReason());
             }
         }
-    } else if (fHaveChain) {
+    }
+    else if (fHaveChain)
+    {
         throw JSONRPCError(RPC_TRANSACTION_ALREADY_IN_CHAIN, "transaction already in block chain");
     }
-    RelayTransaction(tx);
+    if (!g_connman)
+    {
+        throw JSONRPCError(
+            RPC_CLIENT_P2P_DISABLED,
+            "Error: Peer-to-peer functionality missing or disabled");
+    }
 
-    return hashTx.GetHex();
+    CInv inv(MSG_TX, txid);
+    g_connman->ForEachNode([&inv](CNode *pnode) { pnode->PushInventory(inv); });
+    return txid.GetHex();
 }

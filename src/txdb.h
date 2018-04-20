@@ -20,7 +20,7 @@ struct CDiskTxPos;
 class uint256;
 
 //! -dbcache default (MiB)
-static const int64_t nDefaultDbCache = 100;
+static const int64_t nDefaultDbCache = 512;
 //! max. -dbcache in (MiB)
 static const int64_t nMaxDbCache = sizeof(void*) > 4 ? 16384 : 1024;
 //! min. -dbcache in (MiB)
@@ -39,9 +39,6 @@ public:
     uint256 GetBestBlock() const;
     bool BatchWrite(CCoinsMap &mapCoins, const uint256 &hashBlock);
     bool GetStats(CCoinsStats &stats) const;
-
-    //! Attempt to update from an older database format. Returns whether an error occurred.
-    bool Upgrade();
 };
 
 /** Access to the block database (blocks/index/) */

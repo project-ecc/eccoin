@@ -59,7 +59,7 @@ UniValue reloadconfig (const UniValue& params, bool fHelp)
             obj.push_back(Pair(strKey, "was reloaded"));
             if(strKey == "-staking")
             {
-                ThreadScryptMiner(pwalletMain);
+                ThreadScryptMiner(pwalletMain, false);
             }
             if(strKey == "-rescan")
             {
@@ -133,7 +133,7 @@ UniValue getinfo(const UniValue& params, bool fHelp)
     obj.push_back(Pair("headers",       (int)pnetMan->getActivePaymentNetwork()->getChainManager()->pindexBestHeader->nHeight));
     obj.push_back(Pair("moneysupply",   ValueFromAmount(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->nMoneySupply)));
     obj.push_back(Pair("timeoffset",    GetTimeOffset()));
-    obj.push_back(Pair("connections",   (int)vNodes.size()));
+    obj.push_back(Pair("connections",   (int)g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL)));
     obj.push_back(Pair("proxy",         (proxy.IsValid() ? proxy.proxy.ToStringIPPort() : std::string())));
     obj.push_back(Pair("difficulty",    (double)GetDifficulty()));
     obj.push_back(Pair("testnet",       pnetMan->getActivePaymentNetwork()->TestnetToBeDeprecatedFieldRPC()));
@@ -199,7 +199,7 @@ UniValue validateaddress(const UniValue& params, bool fHelp)
             "validateaddress \"ecc address\"\n"
             "\nReturn information about the given ECC address.\n"
             "\nArguments:\n"
-            "1. \"ecc address\"     (string, required) The bitcoin address to validate\n"
+            "1. \"ecc address\"     (string, required) The ecc address to validate\n"
             "\nResult:\n"
             "{\n"
             "  \"isvalid\" : true|false,       (boolean) If the address is valid or not. If not, this is the only property returned.\n"
@@ -421,15 +421,10 @@ UniValue setmocktime(const UniValue& params, bool fHelp)
     // atomically with the time change to prevent peers from being
     // disconnected because we think we haven't communicated with them
     // in a long time.
-    LOCK2(cs_main, cs_vNodes);
+    LOCK(cs_main);
 
     RPCTypeCheck(params, boost::assign::list_of(UniValue::VNUM));
     SetMockTime(params[0].get_int64());
-
-    uint64_t t = GetTime();
-    for (auto* pnode: vNodes) {
-        pnode->nLastSend = pnode->nLastRecv = t;
-    }
 
     return NullUniValue;
 }

@@ -15,54 +15,54 @@
 #include "uint256.h"
 #include "version.h"
 
+#include <array>
 #include <stdint.h>
 #include <string>
 
-#define MESSAGE_START_SIZE 4
 
-/** Message header.
+/**
+ * Message header.
  * (4) message start.
  * (12) command.
  * (4) size.
  * (4) checksum.
  */
-class CMessageHeader
-{
-public:
-    typedef unsigned char MessageStartChars[MESSAGE_START_SIZE];
-
-    CMessageHeader(const MessageStartChars& pchMessageStartIn);
-    CMessageHeader(const MessageStartChars& pchMessageStartIn, const char* pszCommand, unsigned int nMessageSizeIn);
-
-    std::string GetCommand() const;
-    bool IsValid(const MessageStartChars& messageStart) const;
-
-    ADD_SERIALIZE_METHODS
-
-    template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action)
-    {
-        READWRITE(FLATDATA(pchMessageStart));
-        READWRITE(FLATDATA(pchCommand));
-        READWRITE(nMessageSize);
-        READWRITE(nChecksum);
-    }
-
-    // TODO: make private (improves encapsulation)
+class CMessageHeader {
 public:
     enum {
+        MESSAGE_START_SIZE = 4,
         COMMAND_SIZE = 12,
-        MESSAGE_SIZE_SIZE = sizeof(int),
-        CHECKSUM_SIZE = sizeof(int),
+        MESSAGE_SIZE_SIZE = 4,
+        CHECKSUM_SIZE = 4,
 
         MESSAGE_SIZE_OFFSET = MESSAGE_START_SIZE + COMMAND_SIZE,
         CHECKSUM_OFFSET = MESSAGE_SIZE_OFFSET + MESSAGE_SIZE_SIZE,
-        HEADER_SIZE = MESSAGE_START_SIZE + COMMAND_SIZE + MESSAGE_SIZE_SIZE + CHECKSUM_SIZE
+        HEADER_SIZE = MESSAGE_START_SIZE + COMMAND_SIZE + MESSAGE_SIZE_SIZE +
+                      CHECKSUM_SIZE
     };
-    char pchMessageStart[MESSAGE_START_SIZE];
+    typedef std::array<uint8_t, MESSAGE_START_SIZE> MessageMagic;
+
+    CMessageHeader(const MessageMagic &pchMessageStartIn);
+    CMessageHeader(const MessageMagic &pchMessageStartIn,
+                   const char *pszCommand, unsigned int nMessageSizeIn);
+
+    std::string GetCommand() const;
+    bool IsValid(const MessageMagic &messageStart) const;
+
+    ADD_SERIALIZE_METHODS;
+
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        READWRITE(FLATDATA(pchMessageStart));
+        READWRITE(FLATDATA(pchCommand));
+        READWRITE(nMessageSize);
+        READWRITE(FLATDATA(pchChecksum));
+    }
+
+    MessageMagic pchMessageStart;
     char pchCommand[COMMAND_SIZE];
-    unsigned int nMessageSize;
-    unsigned int nChecksum;
+    uint32_t nMessageSize;
+    uint8_t pchChecksum[CHECKSUM_SIZE];
 };
 
 /**
@@ -125,6 +125,11 @@ extern const char *GETHEADERS;
  * @see https://bitcoin.org/en/developer-reference#tx
  */
 extern const char *TX;
+/**
+ * The tx message transmits a single service transaction.
+ * @see https://bitcoin.org/en/developer-reference#tx
+ */
+extern const char *STX;
 /**
  * The headers message sends one or more block headers to a node which
  * previously requested certain headers with a getheaders message.
@@ -218,6 +223,12 @@ extern const char *REJECT;
  * @see https://bitcoin.org/en/developer-reference#sendheaders
  */
 extern const char *SENDHEADERS;
+/**
+ * The feefilter message tells the receiving peer not to inv us any txs
+ * which do not meet the specified min fee rate.
+ * @since protocol version 70013 as described by BIP133
+ */
+extern const char *FEEFILTER;
 
 };
 
@@ -226,6 +237,8 @@ const std::vector<std::string> &getAllNetMessageTypes();
 
 /** nServices flags */
 enum ServiceFlags : uint64_t {
+    // Nothing
+    NODE_NONE = 0,
     // NODE_NETWORK means that the node is capable of serving the block chain. It is currently
     // set by all Bitcoin Core nodes, and is unset by SPV clients or other peers that just want
     // network services but don't provide them.
@@ -318,6 +331,7 @@ enum {
     // Nodes may always request a MSG_FILTERED_BLOCK in a getdata, however,
     // MSG_FILTERED_BLOCK should not appear in any invs except as a part of getdata.
     MSG_FILTERED_BLOCK,
+    MSG_STX,
 };
 
 #endif // BITCOIN_PROTOCOL_H

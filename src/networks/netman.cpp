@@ -81,7 +81,7 @@ void CNetworkManager::ConstructLegacyNetworkTemplate()
     txNew.vout[0].SetEmpty();
     txNew.vout[0].SetEmpty();
 
-    legacyTemplate->genesis.vtx.push_back(txNew);
+    legacyTemplate->genesis.vtx.push_back(MakeTransactionRef(txNew));
     legacyTemplate->genesis.hashPrevBlock.SetNull();
     legacyTemplate->genesis.nVersion = 1;
     legacyTemplate->genesis.nTime    = 1393744307;
@@ -93,10 +93,10 @@ void CNetworkManager::ConstructLegacyNetworkTemplate()
     assert(legacyTemplate->consensus.hashGenesisBlock == uint256S("0xa60ac43c88dbc44b826cf315352a8a7b373d2af8b6e1c4c4a0638859c5e9ecd1"));
     assert(legacyTemplate->genesis.hashMerkleRoot == uint256S("0x4db82fe8b45f3dae2b7c7b8be5ec4c37e72e25eaf989b9db24ce1d0fd37eed8b"));
 
-    legacyTemplate->vSeeds.push_back(CDNSSeedData("CryptoUnitedSeed", "www.cryptounited.io"));
-    legacyTemplate->vSeeds.push_back(CDNSSeedData("ECC-Seed1", "138.197.100.45"));
-    legacyTemplate->vSeeds.push_back(CDNSSeedData("ECC-Seed2", "159.203.172.212"));
-    legacyTemplate->vSeeds.push_back(CDNSSeedData("ECC-Seed3", "eccnode.altj.com"));
+    legacyTemplate->vSeeds.push_back(CDNSSeedData("CryptoUnitedSeed", "www.cryptounited.io", true));
+    legacyTemplate->vSeeds.push_back(CDNSSeedData("ECC-Seed1", "138.197.100.45", true));
+    legacyTemplate->vSeeds.push_back(CDNSSeedData("ECC-Seed2", "159.203.172.212", true));
+    legacyTemplate->vSeeds.push_back(CDNSSeedData("ECC-Seed3", "eccnode.altj.com", true));
 
     legacyTemplate->base58Prefixes[CNetworkTemplate::PUBKEY_ADDRESS] = std::vector<unsigned char>(1,33);
     legacyTemplate->base58Prefixes[CNetworkTemplate::SCRIPT_ADDRESS] = std::vector<unsigned char>(1,8);
@@ -176,12 +176,12 @@ void CNetworkManager::ConstructTetnet0Template()
     netManTestnetTemplate->consensus.nMajorityEnforceBlockUpgrade = 750;
     netManTestnetTemplate->consensus.nMajorityRejectBlockOutdated = 950;
     netManTestnetTemplate->consensus.nMajorityWindow = 1000;
-    netManTestnetTemplate->consensus.powLimit  = uint256S("00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
-    netManTestnetTemplate->consensus.posLimit  = uint256S("00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+    netManTestnetTemplate->consensus.powLimit  = uint256S("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+    netManTestnetTemplate->consensus.posLimit  = uint256S("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
     netManTestnetTemplate->consensus.nTargetTimespan = 30 * 45;
     netManTestnetTemplate->consensus.nTargetSpacing = 45;
-    netManTestnetTemplate->consensus.fPowAllowMinDifficultyBlocks = false;
-    netManTestnetTemplate->consensus.fPowNoRetargeting = false;
+    netManTestnetTemplate->consensus.fPowAllowMinDifficultyBlocks = true;
+    netManTestnetTemplate->consensus.fPowNoRetargeting = true;
     netManTestnetTemplate->consensus.nRuleChangeActivationThreshold = 1916; // 95% of 2016
     netManTestnetTemplate->consensus.nMinerConfirmationWindow = 2016; // nPowTargetTimespan / nTargetSpacing
     netManTestnetTemplate->consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].bit = 28;
@@ -212,7 +212,7 @@ void CNetworkManager::ConstructTetnet0Template()
     txNew.vout[0].SetEmpty();
     txNew.vout[0].SetEmpty();
 
-    netManTestnetTemplate->genesis.vtx.push_back(txNew);
+    netManTestnetTemplate->genesis.vtx.push_back(MakeTransactionRef(txNew));
     netManTestnetTemplate->genesis.hashPrevBlock.SetNull();
     netManTestnetTemplate->genesis.nVersion = 1;
     netManTestnetTemplate->genesis.nTime    = 1512338805;
@@ -224,7 +224,7 @@ void CNetworkManager::ConstructTetnet0Template()
     assert(netManTestnetTemplate->consensus.hashGenesisBlock == uint256S("0x94e16dc2de0cec9f52c9e8f1b729b4e1d9d47720eac56388c33e9dec30e52124"));
     assert(netManTestnetTemplate->genesis.hashMerkleRoot == uint256S("0xc0e7a1a7812892b4026a3d1a52689180204d742bc968f9d42dddeb338f63cdf0"));
 
-    netManTestnetTemplate->vSeeds.push_back(CDNSSeedData("CryptoUnitedSeed", "www.cryptounited.io"));
+    netManTestnetTemplate->vSeeds.push_back(CDNSSeedData("CryptoUnitedSeed", "www.cryptounited.io", true));
 
     netManTestnetTemplate->base58Prefixes[CNetworkTemplate::PUBKEY_ADDRESS] = std::vector<unsigned char>(1,51);
     netManTestnetTemplate->base58Prefixes[CNetworkTemplate::SCRIPT_ADDRESS] = std::vector<unsigned char>(1,15);
@@ -232,10 +232,10 @@ void CNetworkManager::ConstructTetnet0Template()
     netManTestnetTemplate->base58Prefixes[CNetworkTemplate::EXT_PUBLIC_KEY] = boost::assign::list_of(0x04)(0x88)(0xB2)(0x1E).convert_to_container<std::vector<unsigned char> >();
     netManTestnetTemplate->base58Prefixes[CNetworkTemplate::EXT_SECRET_KEY] = boost::assign::list_of(0x04)(0x88)(0xAD)(0xE4).convert_to_container<std::vector<unsigned char> >();
 
-    netManTestnetTemplate->fMiningRequiresPeers = true;
+    netManTestnetTemplate->fMiningRequiresPeers = false;
     netManTestnetTemplate->fDefaultConsistencyChecks = false;
     netManTestnetTemplate->fRequireStandard = true;
-    netManTestnetTemplate->fMineBlocksOnDemand = false;
+    netManTestnetTemplate->fMineBlocksOnDemand = true;
     netManTestnetTemplate->fTestnetToBeDeprecatedFieldRPC = false;
 
     netManTestnetTemplate->checkpointData = (CCheckpointData){

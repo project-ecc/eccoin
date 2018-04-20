@@ -43,8 +43,10 @@ endif
 .PHONY: FORCE check-symbols check-security
 # bitcoin core #
 BITCOIN_CORE_H = \
+  addrdb.h \
   addrman.h \
   amount.h \
+  ans/ansrecord.h \
   args.h \
   arith_uint256.h \
   base58.h \
@@ -83,7 +85,9 @@ BITCOIN_CORE_H = \
   merkleblock.h \
   miner.h \
   net.h \
+  netaddress.h \
   netbase.h \
+  netmessagemaker.h \
   networks/netman.h \
   networks/network.h \
   networks/networktemplate.h \
@@ -116,13 +120,13 @@ BITCOIN_CORE_H = \
   script/standard.h \
   crypto/scrypt.h \
   serialize.h \
-  signals.h \
   streams.h \
   support/allocators/secure.h \
   support/allocators/zeroafterfree.h \
   support/cleanse.h \
   support/pagelocker.h \
   sync.h \
+  threadinterrupt.h \
   threadsafety.h \
   timedata.h \
   tinyformat.h \
@@ -158,7 +162,9 @@ libbitcoin_util_a-clientversion.$(OBJEXT): build/build.h
 libbitcoin_server_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES) $(MINIUPNPC_CPPFLAGS) $(EVENT_CFLAGS) $(EVENT_PTHREADS_CFLAGS)
 libbitcoin_server_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIC_FLAGS) $(PIE_FLAGS)
 libbitcoin_server_a_SOURCES = \
+  addrdb.cpp \
   addrman.cpp \
+  ans/ansrecord.cpp \
   bloom.cpp \
   chain/chain.cpp \
   chain/checkpoints.cpp \
@@ -171,6 +177,7 @@ libbitcoin_server_a_SOURCES = \
   merkleblock.cpp \
   miner.cpp \
   net.cpp \
+  netaddress.cpp \
   noui.cpp \
   policy/fees.cpp \
   policy/policy.cpp \
@@ -240,7 +247,6 @@ libbitcoin_server_a_SOURCES = \
   util/utilstrencodings.cpp \
   util/utiltime.cpp \
   verifydb.cpp \
-  signals.cpp \
   crypto/chacha20.cpp \
   crypto/chacha20.h \
   crypto/common.h \
@@ -266,6 +272,7 @@ libbitcoin_server_a_SOURCES = \
   wallet/walletdb.cpp \
   policy/rbf.cpp \
   rpc/rpcclient.cpp \
+  threadinterrupt.cpp \
   $(BITCOIN_CORE_H)
 
 if GLIBC_BACK_COMPAT

@@ -10,6 +10,15 @@
 #include "txout.h"
 #include "consensus/params.h"
 
+/**
+ * A TxId is the identifier of a transaction. Currently identical to TxHash but
+ * differentiated for type safety.
+ */
+struct TxId : public uint256 {
+    explicit TxId(const uint256 &b) : uint256(b) {}
+};
+
+
 /** The basic transaction that is broadcasted on the network and contained in
  * blocks.  A transaction can contain multiple inputs and outputs.
  */
@@ -18,7 +27,6 @@ class CTransaction
 private:
     /** Memory only. */
     const uint256 hash;
-    void UpdateHash() const;
 
 public:
     // Default transaction version.
@@ -50,6 +58,7 @@ public:
 
     CTransaction& operator=(const CTransaction& tx);
 
+
     ADD_SERIALIZE_METHODS
 
     template <typename Stream, typename Operation>
@@ -65,13 +74,54 @@ public:
             READWRITE(*const_cast<uint256*>(&this->serviceReferenceHash));
         }
         if (ser_action.ForRead())
+        {
             UpdateHash();
+        }
+    }
+
+
+    /*
+    template <typename Stream> inline void Serialize(Stream &s) const
+    {
+        s << this->nVersion;
+        s << this->nTime;
+        s << vin;
+        s << vout;
+        s << nLockTime;
+        if (this->nVersion == 2)
+        {
+            s << this->serviceReferenceHash;
+        }
+    }
+
+    template <typename Stream> inline void Unserialize(Stream &s)
+    {
+        s >> this->nVersion;
+        this->vin.clear();
+        this->vout.clear();
+        s >> this->nTime;
+        s >> vin;
+        s >> vout;
+        s >> nLockTime;
+        if (this->nVersion == 2)
+        {
+            s >> this->serviceReferenceHash;
+        }
+        UpdateHash();
+    }
+    */
+
+
+    template <typename Stream>
+    CTransaction(deserialize_type, Stream &s)
+    {
+        Unserialize(s);
     }
 
     bool IsNull() const {
         return vin.empty() && vout.empty();
     }
-
+    const TxId GetId() const { return TxId(hash); }
     uint256 GetHash() const;
 
     // Return sum of txouts.
@@ -111,9 +161,22 @@ public:
     int64_t GetMinFee(unsigned int nBlockSize=1, unsigned int nBytes = 0) const;
     bool GetCoinAge(uint64_t& nCoinAge) const;  // ppcoin: get transaction coin age
     uint64_t GetCoinAge(uint64_t nCoinAge, bool byValue) const;
+
+    void UpdateHash() const;
 };
 
 /** Retrieve a transaction (from memory pool, or from disk, if possible) */
 bool GetTransaction(const uint256 &hash, CTransaction &tx, const Consensus::Params& params, uint256 &hashBlock, bool fAllowSlow = false);
+
+typedef std::shared_ptr<CTransaction> CTransactionRef;
+static inline CTransactionRef MakeTransactionRef()
+{
+    return std::make_shared<CTransaction>();
+}
+template <typename Tx>
+static inline CTransactionRef MakeTransactionRef(Tx &&txIn)
+{
+    return std::make_shared<CTransaction>(std::forward<Tx>(txIn));
+}
 
 #endif // BITCOIN_PRIMITIVES_TRANSACTION_H

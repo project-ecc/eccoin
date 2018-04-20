@@ -16,7 +16,7 @@ struct BlockHasher
 {
     size_t operator()(const uint256& hash) const { return hash.GetCheapHash(); }
 };
-typedef boost::unordered_map<uint256, CBlockIndex*, BlockHasher> BlockMap;
+typedef std::unordered_map<uint256, CBlockIndex*, BlockHasher> BlockMap;
 
 
 /** Manages the BlockMap and CChain's for a given protocol. */
@@ -36,7 +36,7 @@ public:
     std::unique_ptr<CCoinsViewCache> pcoinsTip;
 
     /** Global variable that points to the active block tree (protected by cs_main) */
-    CBlockTreeDB *pblocktree;
+    std::unique_ptr<CBlockTreeDB> pblocktree;
 
 private:
     bool LoadBlockIndexDB();
@@ -48,7 +48,7 @@ public:
         chainActive = CChain();
         pindexBestHeader = NULL;
         pcoinsTip.reset();
-        pblocktree = NULL;
+        pblocktree.reset();
     }
 
     ~CChainManager()
@@ -60,7 +60,7 @@ public:
         mapBlockIndex.clear();
         delete pindexBestHeader;
         pcoinsTip.reset();
-        delete pblocktree;
+        pblocktree.reset();
     }
 
     void operator=(const CChainManager& oldMan)
@@ -69,7 +69,7 @@ public:
         chainActive = oldMan.chainActive;
         pindexBestHeader = oldMan.pindexBestHeader;
         pcoinsTip.reset(oldMan.pcoinsTip.get());
-        pblocktree = oldMan.pblocktree;
+        pblocktree.reset(oldMan.pblocktree.get());
     }
 
 

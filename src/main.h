@@ -25,8 +25,7 @@
 #include <string>
 #include <utility>
 #include <vector>
-
-#include <boost/unordered_map.hpp>
+#include <unordered_map>
 
 class CBlockIndex;
 class CBlockTreeDB;
@@ -38,7 +37,6 @@ class CTxMemPool;
 class CValidationInterface;
 class CValidationState;
 
-struct CNodeStateStats;
 struct LockPoints;
 /** Default for returning change from tx back an address we already owned instead of a new one (try to select address with most value in it). */
 static const bool DEFAULT_RETURN_CHANGE = true;
@@ -144,88 +142,6 @@ extern CFeeRate minRelayTxFee;
 extern bool fAlerts;
 extern bool fEnableReplacement;
 
-
-enum BlockOrigin{
-    LOADED,
-    GENERATED,
-    RECEIVED,
-};
-
-struct CBlockReject {
-    unsigned char chRejectCode;
-    std::string strRejectReason;
-    uint256 hashBlock;
-};
-
-
-/** Blocks that are in flight, and that are in the queue to be downloaded. Protected by cs_main. */
-struct QueuedBlock {
-    uint256 hash;
-    CBlockIndex* pindex;     //!< Optional.
-    bool fValidatedHeaders;  //!< Whether this block has validated headers at the time of request.
-};
-
-extern std::map<uint256, std::pair<NodeId, std::list<QueuedBlock>::iterator> > mapBlocksInFlight;
-
-/**
- * Maintain validation-specific state about nodes, protected by cs_main, instead
- * by CNode's own locks. This simplifies asynchronous operation, where
- * processing of incoming data is done after the ProcessMessage call returns,
- * and we're no longer holding the node's locks.
- */
-struct CNodeState {
-    //! The peer's address
-    CService address;
-    //! Whether we have a fully established connection.
-    bool fCurrentlyConnected;
-    //! Accumulated misbehaviour score for this peer.
-    int nMisbehavior;
-    //! Whether this peer should be disconnected and banned (unless whitelisted).
-    bool fShouldBan;
-    //! String name of this peer (debugging/logging purposes).
-    std::string name;
-    //! List of asynchronously-determined block rejections to notify this peer about.
-    std::vector<CBlockReject> rejects;
-    //! The best known block we know this peer has announced.
-    CBlockIndex *pindexBestKnownBlock;
-    //! The hash of the last unknown block this peer has announced.
-    uint256 hashLastUnknownBlock;
-    //! The last full block we both have.
-    CBlockIndex *pindexLastCommonBlock;
-    //! The best header we have sent our peer.
-    CBlockIndex *pindexBestHeaderSent;
-    //! Whether we've started headers synchronization with this peer.
-    bool fSyncStarted;
-    //! Since when we're stalling block download progress (in microseconds), or 0.
-    int64_t nStallingSince;
-    std::list<QueuedBlock> vBlocksInFlight;
-    //! When the first entry in vBlocksInFlight started downloading. Don't care when vBlocksInFlight is empty.
-    int64_t nDownloadingSince;
-    int nBlocksInFlight;
-    int nBlocksInFlightValidHeaders;
-    //! Whether we consider this a preferred download peer.
-    bool fPreferredDownload;
-    //! Whether this peer wants invs or headers (when possible) for block announcements.
-    bool fPreferHeaders;
-
-    CNodeState() {
-        fCurrentlyConnected = false;
-        nMisbehavior = 0;
-        fShouldBan = false;
-        pindexBestKnownBlock = NULL;
-        hashLastUnknownBlock.SetNull();
-        pindexLastCommonBlock = NULL;
-        pindexBestHeaderSent = NULL;
-        fSyncStarted = false;
-        nStallingSince = 0;
-        nDownloadingSince = 0;
-        nBlocksInFlight = 0;
-        nBlocksInFlightValidHeaders = 0;
-        fPreferredDownload = false;
-        fPreferHeaders = false;
-    }
-};
-
 struct COrphanTx {
     CTransaction tx;
     NodeId fromPeer;
@@ -254,7 +170,6 @@ struct CBlockIndexWorkComparator
 
 extern CBlockIndex *pindexBestInvalid;
 extern std::multimap<CBlockIndex*, CBlockIndex*> mapBlocksUnlinked;
-extern std::map<uint256, NodeId> mapBlockSource;
 extern std::map<uint256, COrphanTx> mapOrphanTransactions GUARDED_BY(cs_main);;
 extern std::map<uint256, std::set<uint256> > mapOrphanTransactionsByPrev GUARDED_BY(cs_main);;
 void LimitMempoolSize(CTxMemPool& pool, size_t limit, unsigned long age);
@@ -311,9 +226,6 @@ FILE* OpenUndoFile(const CDiskBlockPos &pos, bool fReadOnly = false);
 /** Translation to a filesystem path */
 boost::filesystem::path GetBlockPosFilename(const CDiskBlockPos &pos, const char *prefix);
 
-/** Try to detect Partition (network isolation) attacks against us */
-void PartitionCheck(bool (*initialDownloadCheck)(), CCriticalSection& cs, const CBlockIndex *const &bestHeader, int64_t nTargetSpacing);
-
 /** Format a string that describes several potential problems detected by the core.
  * strFor can have three values:
  * - "rpc": get critical warnings, which should put the client in safe mode if non-empty
@@ -322,9 +234,6 @@ void PartitionCheck(bool (*initialDownloadCheck)(), CCriticalSection& cs, const 
  * This function only returns the highest priority warning of the set selected by strFor.
  */
 std::string GetWarnings(const std::string& strFor);
-
-/** Find the best known block, and make it the tip of the block chain */
-bool ActivateBestChain(CValidationState& state, const CNetworkTemplate& chainparams, BlockOrigin origin, const CBlock* pblock = NULL);
 
 enum FlushStateMode {
     FLUSH_STATE_NONE,
@@ -338,21 +247,13 @@ extern int nSyncStarted;
 extern int64_t nTimeBestReceived;
 extern int nPeersWithValidatedDownloads;
 
-/** Get statistics from node state */
-bool GetNodeStateStats(NodeId nodeid, CNodeStateStats &stats);
-
-/** Increase a node's misbehavior score. */
-void Misbehaving(NodeId nodeid, int howmuch);
-
 /** Flush all state, indexes and buffers to disk. */
 void FlushStateToDisk();
 
-CNodeState *State(NodeId pnode);
 bool AbortNode(CValidationState& state, const std::string& strMessage, const std::string& userMessage="");
 
-
 /** (try to) add transaction to memory pool **/
-bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransaction &tx, bool fLimitFree,
+bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransactionRef &tx, bool fLimitFree,
                         bool* pfMissingInputs, bool fOverrideMempoolLimit=false, bool fRejectAbsurdFee=false);
 
 /** Convert CValidationState to a human-readable message for logging */
@@ -360,13 +261,6 @@ std::string FormatStateMessage(const CValidationState &state);
 
 /** Get the BIP9 state for a given deployment at the current tip. */
 ThresholdState VersionBitsTipState(const Consensus::Params& params, Consensus::DeploymentPos pos);
-
-struct CNodeStateStats {
-    int nMisbehavior;
-    int nSyncHeight;
-    int nCommonHeight;
-    std::vector<int> vHeightInFlight;
-};
 
 struct CDiskTxPos : public CDiskBlockPos
 {
@@ -498,7 +392,7 @@ public:
 
 
 /** Functions for disk access for blocks */
-bool WriteBlockToDisk(const CBlock& block, CDiskBlockPos& pos, const CMessageHeader::MessageStartChars& messageStart);
+bool WriteBlockToDisk(const CBlock& block, CDiskBlockPos& pos, const CMessageHeader::MessageMagic& messageStart);
 bool ReadBlockFromDisk(CBlock& block, const CDiskBlockPos& pos, const Consensus::Params& consensusParams);
 bool ReadBlockFromDisk(CBlock& block, const CBlockIndex* pindex, const Consensus::Params& consensusParams);
 
@@ -596,7 +490,6 @@ static const unsigned int REJECT_ALREADY_KNOWN = 0x101;
 /** Transaction conflicts with a transaction already known */
 static const unsigned int REJECT_CONFLICT = 0x102;
 
-extern std::map<NodeId, CNodeState> mapNodeState;
 extern int nLastBlockFile;
 extern std::vector<CBlockFileInfo> vinfoBlockFile;
 bool ReceivedBlockTransactions(const CBlock &block, CValidationState& state, CBlockIndex *pindexNew, const CDiskBlockPos& pos);
@@ -608,7 +501,5 @@ extern std::set<int> setDirtyFileInfo;
 extern VersionBitsCache versionbitscache;
 
 extern int GetHeight();
-extern void InitializeNode(NodeId nodeid, const CNode *pnode);
-extern void FinalizeNode(NodeId nodeid);
 
 #endif // BITCOIN_MAIN_H
