@@ -148,11 +148,8 @@ bool getAddrFromPtx(std::string& addr, CTransactionRef ptx)
 
 UniValue getansrecord(const UniValue& params, bool fHelp)
 {
-    if(!AreServicesEnabled())
-    {
-        throw JSONRPCError(RPC_MISC_ERROR, "services are not active until May 5th at 00:00:00 UTC ");
-    }
     if (fHelp || params.size() != 2)
+    {
         throw std::runtime_error(
             "getansrecord \"record name\" \"record type\" \n"
             "\nReturn the full record with the record name.\n"
@@ -168,6 +165,11 @@ UniValue getansrecord(const UniValue& params, bool fHelp)
             + HelpExampleCli("getansrecord"," \"name\" \"A\"")
             + HelpExampleRpc("getansrecord"," \"EQT4WawJ6BN2JuaTfViuztHFeiqj2KCvTf\" \"PTR\"")
         );
+    }
+    if(!AreServicesEnabled())
+    {
+        throw JSONRPCError(RPC_MISC_ERROR, "services are not active until May 5th at 00:00:00 UTC ");
+    }
     std::string strRecordName = params[0].get_str();
     AnsRecordTypes recordtype = AnsRecordTypes::UNKNOWN_RECORD;
     CAnsRecord record = CAnsRecord();
@@ -222,11 +224,6 @@ UniValue getansrecord(const UniValue& params, bool fHelp)
 
 UniValue registerans(const UniValue& params, bool fHelp)
 {
-    if(!AreServicesEnabled())
-    {
-        throw JSONRPCError(RPC_MISC_ERROR, "services are not active until May 5th at 00:00:00 UTC ");
-    }
-
     if (!EnsureWalletIsAvailable(fHelp))
         return NullUniValue;
 
@@ -245,6 +242,11 @@ UniValue registerans(const UniValue& params, bool fHelp)
             + HelpExampleCli("sendtoaddress", "\"EQT4WawJ6BN2JuaTfViuztHFeiqj2KCvTf\" \"alice\"")
             + HelpExampleRpc("sendtoaddress", "\"EQT4WawJ6BN2JuaTfViuztHFeiqj2KCvTf\" \"bob\"")
         );
+    }
+
+    if(!AreServicesEnabled())
+    {
+        throw JSONRPCError(RPC_MISC_ERROR, "services are not active until May 5th at 00:00:00 UTC ");
     }
 
     LOCK2(cs_main, pwalletMain->cs_wallet);
@@ -322,11 +324,6 @@ UniValue registerans(const UniValue& params, bool fHelp)
 
 UniValue renewans(const UniValue& params, bool fHelp)
 {
-    if(!AreServicesEnabled())
-    {
-        throw JSONRPCError(RPC_MISC_ERROR, "services are not active until May 5th at 00:00:00 UTC ");
-    }
-
     if (!EnsureWalletIsAvailable(fHelp))
         return NullUniValue;
 
@@ -347,6 +344,11 @@ UniValue renewans(const UniValue& params, bool fHelp)
             + HelpExampleRpc("sendtoaddress", "\"EQT4WawJ6BN2JuaTfViuztHFeiqj2KCvTf\" \"bob\"")
         );
     }
+    if(!AreServicesEnabled())
+    {
+        throw JSONRPCError(RPC_MISC_ERROR, "services are not active until May 5th at 00:00:00 UTC ");
+    }
+
     LOCK2(cs_main, pwalletMain->cs_wallet);
 
     std::string strAddress = params[0].get_str();
@@ -412,11 +414,6 @@ UniValue renewans(const UniValue& params, bool fHelp)
 
 UniValue sendtoans(const UniValue& params, bool fHelp)
 {
-    if(!AreServicesEnabled())
-    {
-        throw JSONRPCError(RPC_MISC_ERROR, "services are not active until May 5th at 00:00:00 UTC ");
-    }
-
     if (!EnsureWalletIsAvailable(fHelp))
         return NullUniValue;
 
@@ -435,6 +432,11 @@ UniValue sendtoans(const UniValue& params, bool fHelp)
             + HelpExampleCli("sendtoaddress", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\" 0.1 \"1AD0-7\"")
             + HelpExampleRpc("sendtoaddress", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\", 0.1, \"3CD0-12\"")
         );
+
+    if(!AreServicesEnabled())
+    {
+        throw JSONRPCError(RPC_MISC_ERROR, "services are not active until May 5th at 00:00:00 UTC ");
+    }
 
     LOCK2(cs_main, pwalletMain->cs_wallet);
 
