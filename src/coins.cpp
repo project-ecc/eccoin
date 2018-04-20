@@ -44,6 +44,7 @@ bool CCoins::Spend(uint32_t nPos)
 }
 
 bool CCoinsView::GetCoins(const uint256 &txid, CCoins &coins) const { return false; }
+bool CCoinsView::SetCoins(const uint256 &txid, const CCoins &coins) { return false; }
 bool CCoinsView::HaveCoins(const uint256 &txid) const { return false; }
 uint256 CCoinsView::GetBestBlock() const { return uint256(); }
 std::vector<uint256> CCoinsView::GetHeadBlocks() const { return std::vector<uint256>(); }
@@ -53,6 +54,7 @@ bool CCoinsView::GetStats(CCoinsStats &stats) const { return false; }
 
 CCoinsViewBacked::CCoinsViewBacked(CCoinsView *viewIn) : base(viewIn) { }
 bool CCoinsViewBacked::GetCoins(const uint256 &txid, CCoins &coins) const { return base->GetCoins(txid, coins); }
+bool CCoinsViewBacked::SetCoins(const uint256 &txid, const CCoins &coins) { return base->SetCoins(txid, coins); }
 bool CCoinsViewBacked::HaveCoins(const uint256 &txid) const { return base->HaveCoins(txid); }
 uint256 CCoinsViewBacked::GetBestBlock() const { return base->GetBestBlock(); }
 std::vector<uint256> CCoinsViewBacked::GetHeadBlocks() const { return base->GetHeadBlocks(); }
@@ -137,6 +139,14 @@ const CCoins* CCoinsViewCache::AccessCoins(const uint256 &txid) const {
     } else {
         return &it->second.coins;
     }
+}
+
+bool CCoinsViewCache::SetCoins(const uint256 &txid, const CCoins &coins) {
+    std::pair<CCoinsMap::iterator, bool> ret = cacheCoins.insert(std::make_pair(txid, CCoinsCacheEntry()));
+    ret.first->second.coins = coins;
+    ret.first->second.flags = CCoinsCacheEntry::FRESH;
+    ret.first->second.flags |= CCoinsCacheEntry::DIRTY;
+    return true;
 }
 
 bool CCoinsViewCache::HaveCoins(const uint256 &txid) const {
