@@ -161,9 +161,9 @@ public:
 
     void SetNull()
     {
-        phashBlock = NULL;
-        pprev = NULL;
-        pskip = NULL;
+        phashBlock = nullptr;
+        pprev = nullptr;
+        pskip = nullptr;
         nHeight = 0;
         nFile = 0;
         nDataPos = 0;

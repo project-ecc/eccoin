@@ -17,17 +17,18 @@ int static inline GetSkipHeight(int height) {
 CBlockIndex* CBlockIndex::GetAncestor(int height)
 {
     if (height > nHeight || height < 0)
-        return NULL;
+        return nullptr;
 
     CBlockIndex* pindexWalk = this;
     int heightWalk = nHeight;
     while (heightWalk > height) {
         int heightSkip = GetSkipHeight(heightWalk);
         int heightSkipPrev = GetSkipHeight(heightWalk - 1);
-        if (pindexWalk->pskip != NULL &&
+        if (pindexWalk->pskip != nullptr &&
             (heightSkip == height ||
-             (heightSkip > height && !(heightSkipPrev < heightSkip - 2 &&
-                                       heightSkipPrev >= height)))) {
+             (heightSkip > height &&
+              !(heightSkipPrev < heightSkip - 2 &&
+                heightSkipPrev >= height)))) {
             // Only follow pskip if pprev->pskip isn't better than pskip->pprev.
             pindexWalk = pindexWalk->pskip;
             heightWalk = heightSkip;
