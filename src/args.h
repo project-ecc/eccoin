@@ -14,8 +14,6 @@
 #include <string>
 #include <vector>
 
-#include <boost/signals2/signal.hpp>
-
 class CArgsManager
 {
 protected:

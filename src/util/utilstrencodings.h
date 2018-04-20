@@ -51,6 +51,9 @@ std::string EncodeBase32(const unsigned char* pch, size_t len);
 std::string EncodeBase32(const std::string& str);
 std::string ParseJson(const std::string& str);
 
+void SplitHostPort(std::string in, int &portOut, std::string &hostOut);
+
+
 std::string i64tostr(int64_t n);
 std::string itostr(int n);
 int64_t atoi64(const char* psz);

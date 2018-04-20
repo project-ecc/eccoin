@@ -381,7 +381,7 @@ boost::filesystem::path GetDefaultDataDir()
         pathRet = fs::path("/");
     else
         pathRet = fs::path(pszHome);
-#ifdef MAC_OSX
+#ifdef __APPLE__
     // Mac
     pathRet /= "Library/Application Support";
     TryCreateDirectory(pathRet);

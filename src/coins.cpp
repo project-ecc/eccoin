@@ -35,7 +35,9 @@ void CCoins::CalcMaskSize(unsigned int &nBytes, unsigned int &nNonzeroBytes) con
 bool CCoins::Spend(uint32_t nPos) 
 {
     if (nPos >= vout.size() || vout[nPos].IsNull())
+    {
         return false;
+    }
     vout[nPos].SetNull();
     Cleanup();
     return true;

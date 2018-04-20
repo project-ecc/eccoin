@@ -416,35 +416,36 @@ TorController::~TorController()
     }
 }
 
-void TorController::add_onion_cb(TorControlConnection& conn, const TorControlReply& reply)
-{
+void TorController::add_onion_cb(TorControlConnection &_conn,
+                                 const TorControlReply &reply) {
     if (reply.code == 250) {
-        LogPrint("tor", "tor: ADD_ONION succesful\n");
-        for(auto const& s: reply.lines) {
-            std::map<std::string,std::string> m = ParseTorReplyMapping(s);
-            std::map<std::string,std::string>::iterator i;
-            if ((i = m.find("ServiceID")) != m.end())
-                service_id = i->second;
-            if ((i = m.find("PrivateKey")) != m.end())
-                private_key = i->second;
+        LogPrint("tor", "tor: ADD_ONION successful\n");
+        for (const std::string &s : reply.lines) {
+            std::map<std::string, std::string> m = ParseTorReplyMapping(s);
+            std::map<std::string, std::string>::iterator i;
+            if ((i = m.find("ServiceID")) != m.end()) service_id = i->second;
+            if ((i = m.find("PrivateKey")) != m.end()) private_key = i->second;
         }
-
-        service = CService(service_id+".onion", GetListenPort(), false);
-        LogPrintf("tor: Got service ID %s, advertizing service %s\n", service_id, service.ToString());
+        service = LookupNumeric(std::string(service_id + ".onion").c_str(),
+                                GetListenPort());
+        LogPrintf("tor: Got service ID %s, advertising service %s\n",
+                  service_id, service.ToString());
         if (WriteBinaryFile(GetPrivateKeyFile(), private_key)) {
-            LogPrint("tor", "tor: Cached service private key to %s\n", GetPrivateKeyFile());
+            LogPrint("tor", "tor: Cached service private key to %s\n",
+                     GetPrivateKeyFile());
         } else {
-            LogPrintf("tor: Error writing service private key to %s\n", GetPrivateKeyFile());
+            LogPrintf("tor: Error writing service private key to %s\n",
+                      GetPrivateKeyFile());
         }
         AddLocal(service, LOCAL_MANUAL);
         // ... onion requested - keep connection open
     } else if (reply.code == 510) { // 510 Unrecognized command
-        LogPrintf("tor: Add onion failed with unrecognized command (You probably need to upgrade Tor)\n");
+        LogPrintf("tor: Add onion failed with unrecognized command (You "
+                  "probably need to upgrade Tor)\n");
     } else {
         LogPrintf("tor: Add onion failed; error code %d\n", reply.code);
     }
 }
-
 void TorController::auth_cb(TorControlConnection& conn, const TorControlReply& reply)
 {
     if (reply.code == 250) {
@@ -453,9 +454,10 @@ void TorController::auth_cb(TorControlConnection& conn, const TorControlReply& r
         // Now that we know Tor is running setup the proxy for onion addresses
         // if -onion isn't set to something else.
         if (gArgs.GetArg("-onion", "") == "") {
-            proxyType addrOnion = proxyType(CService("127.0.0.1", 9050), true);
+            CService resolved(LookupNumeric("127.0.0.1", 9050));
+            proxyType addrOnion = proxyType(resolved, true);
             SetProxy(NET_TOR, addrOnion);
-            SetReachable(NET_TOR);
+            SetLimited(NET_TOR, false);
         }
 
         // Finally - now create the service

@@ -22,6 +22,7 @@
 #include "util/utilstrencodings.h"
 #include "init.h"
 #include "verifydb.h"
+#include "processblock.h"
 
 #include <stdint.h>
 
@@ -108,11 +109,11 @@ UniValue blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool tx
         if(txDetails)
         {
             UniValue objTx(UniValue::VOBJ);
-            TxToJSON(tx, uint256(), objTx);
+            TxToJSON(*tx, uint256(), objTx);
             txs.push_back(objTx);
         }
         else
-            txs.push_back(tx.GetHash().GetHex());
+            txs.push_back(tx->GetHash().GetHex());
     }
     result.push_back(Pair("tx", txs));
     result.push_back(Pair("time", block.GetBlockTime()));
@@ -494,8 +495,8 @@ UniValue gettxout(const UniValue& params, bool fHelp)
             "     \"hex\" : \"hex\",        (string) \n"
             "     \"reqSigs\" : n,          (numeric) Number of required signatures\n"
             "     \"type\" : \"pubkeyhash\", (string) The type, eg pubkeyhash\n"
-            "     \"addresses\" : [          (array of string) array of bitcoin addresses\n"
-            "        \"bitcoinaddress\"     (string) bitcoin address\n"
+            "     \"addresses\" : [          (array of string) array of ecc addresses\n"
+            "        \"eccaddress\"     (string) ecc address\n"
             "        ,...\n"
             "     ]\n"
             "  },\n"
@@ -862,7 +863,7 @@ UniValue invalidateblock(const UniValue& params, bool fHelp)
     }
 
     if (state.IsValid()) {
-        ActivateBestChain(state, pnetMan->getActivePaymentNetwork(), LOADED);
+        ActivateBestChain(state, pnetMan->getActivePaymentNetwork());
     }
 
     if (!state.IsValid()) {
@@ -901,7 +902,7 @@ UniValue reconsiderblock(const UniValue& params, bool fHelp)
     }
 
     if (state.IsValid()) {
-        ActivateBestChain(state, pnetMan->getActivePaymentNetwork(), LOADED);
+        ActivateBestChain(state, pnetMan->getActivePaymentNetwork());
     }
 
     if (!state.IsValid()) {

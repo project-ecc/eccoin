@@ -20,6 +20,28 @@
 #include "init.h"
 #include "txmempool.h"
 
+
+struct serializeTx
+{
+    int32_t nVersion;
+    unsigned int nTime;
+    std::vector<CTxIn> vin;
+    std::vector<CTxOut> vout;
+    uint32_t nLockTime;
+
+    ADD_SERIALIZE_METHODS
+
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITE(*const_cast<int32_t*>(&this->nVersion));
+        nVersion = this->nVersion;
+        READWRITE(*const_cast<uint32_t*>(&this->nTime));
+        READWRITE(*const_cast<std::vector<CTxIn>*>(&vin));
+        READWRITE(*const_cast<std::vector<CTxOut>*>(&vout));
+        READWRITE(*const_cast<uint32_t*>(&nLockTime));
+    }
+};
+
 std::string COutPoint::ToString() const
 {
     return strprintf("COutPoint(%s, %u)", hash.ToString().substr(0,10), n);
@@ -72,12 +94,35 @@ std::string CTxOut::ToString() const
 
 uint256 CTransaction::GetHash() const
 {
+    if(this->nVersion == 1)
+    {
+        serializeTx txtohash;
+        txtohash.nVersion = this->nVersion;
+        txtohash.nTime = this->nTime;
+        txtohash.vin = this->vin;
+        txtohash.vout = this->vout;
+        txtohash.nLockTime = this->nLockTime;
+        return SerializeHash(txtohash);
+    }
     return SerializeHash(*this);
 }
 
 void CTransaction::UpdateHash() const
 {
-    *const_cast<uint256*>(&hash) = SerializeHash(*this);
+    if(this->nVersion == 1)
+    {
+        serializeTx txtohash;
+        txtohash.nVersion = this->nVersion;
+        txtohash.nTime = this->nTime;
+        txtohash.vin = this->vin;
+        txtohash.vout = this->vout;
+        txtohash.nLockTime = this->nLockTime;
+        *const_cast<uint256*>(&hash) = SerializeHash(txtohash);
+    }
+    else
+    {
+        *const_cast<uint256*>(&hash) = SerializeHash(*this);
+    }
 }
 
 CTransaction::CTransaction() : nVersion(CTransaction::CURRENT_VERSION), nTime(GetAdjustedTime()), vin(), vout(), nLockTime(0), serviceReferenceHash() {
@@ -141,12 +186,14 @@ unsigned int CTransaction::CalculateModifiedSize(unsigned int nTxSize) const
 std::string CTransaction::ToString() const
 {
     std::string str;
-    str += strprintf("CTransaction(hash=%s, ver=%d, vin.size=%u, vout.size=%u, nLockTime=%u)\n",
+    str += strprintf("CTransaction(hash=%s, ver=%d, nTime=%u, vin.size=%u, vout.size=%u, nLockTime=%u, serviceReferenceHash=%s)\n",
         GetHash().ToString().substr(0,10),
         nVersion,
+        nTime,
         vin.size(),
         vout.size(),
-        nLockTime);
+        nLockTime,
+        serviceReferenceHash.GetHex().c_str());
     for (unsigned int i = 0; i < vin.size(); i++)
         str += "    " + vin[i].ToString() + "\n";
     for (unsigned int i = 0; i < vout.size(); i++)
@@ -349,8 +396,9 @@ bool GetTransaction(const uint256 &hash, CTransaction &txOut, const Consensus::P
         CBlock block;
         if (ReadBlockFromDisk(block, pindexSlow, consensusParams)) {
             for (auto const& tx: block.vtx) {
-                if (tx.GetHash() == hash) {
-                    txOut = tx;
+                if (tx->GetHash() == hash)
+                {
+                    txOut = *tx;
                     hashBlock = pindexSlow->GetBlockHash();
                     return true;
                 }

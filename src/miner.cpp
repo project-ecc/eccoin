@@ -23,6 +23,7 @@
 #include "consensus/merkle.h"
 #include "processblock.h"
 #include "networks/netman.h"
+#include "net.h"
 
 #include <boost/thread.hpp>
 #include <openssl/sha.h>
@@ -184,7 +185,7 @@ CBlockTemplate* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
     txNew.vout[0].scriptPubKey << vchPubKey << OP_CHECKSIG;
 
     // Add our coinbase tx as first transaction
-    pblock->vtx.push_back(txNew);
+    pblock->vtx.push_back(MakeTransactionRef(txNew));
     pblocktemplate->vTxFees.push_back(-1); // updated at end
     pblocktemplate->vTxSigOps.push_back(-1); // updated at end
 
@@ -244,9 +245,9 @@ CBlockTemplate* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
                 if (txCoinStake.nTime >= std::max(pindexPrev->GetMedianTimePast()+1, pindexPrev->GetBlockTime() - nMaxClockDrift))
                 {   // make sure coinstake would meet timestamp protocol
                     // as it would be the same as the block timestamp
-                    pblock->vtx[0].vout[0].SetEmpty();
-                    pblock->vtx[0].nTime = txCoinStake.nTime;
-                    pblock->vtx.push_back(txCoinStake);
+                    (*pblock->vtx[0]).vout[0].SetEmpty();
+                    (*pblock->vtx[0]).nTime = txCoinStake.nTime;
+                    pblock->vtx.push_back(MakeTransactionRef(txCoinStake));
                 }
             }
             nLastCoinStakeSearchInterval = nSearchTime - nLastCoinStakeSearchTime;
@@ -362,7 +363,7 @@ CBlockTemplate* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
 
             CAmount nTxFees = iter->GetFee();
             // Added
-            pblock->vtx.push_back(tx);
+            pblock->vtx.push_back(MakeTransactionRef(tx));
             pblocktemplate->vTxFees.push_back(nTxFees);
             pblocktemplate->vTxSigOps.push_back(nTxSigOps);
             nBlockSize += nTxSize;
@@ -399,7 +400,7 @@ CBlockTemplate* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
         pblock->hashPrevBlock  = pindexPrev->GetBlockHash();
         if (pblock->IsProofOfStake())
         {
-            pblock->nTime      = pblock->vtx[1].nTime; //same as coinstake timestamp
+            pblock->nTime      = pblock->vtx[1]->nTime; //same as coinstake timestamp
             pblock->nTime      = std::max(pindexPrev->GetMedianTimePast()+1, pblock->GetMaxTransactionTime());
             pblock->nTime      = std::max(pblock->GetBlockTime(), pindexPrev->GetBlockTime() - nMaxClockDrift);
 
@@ -410,7 +411,11 @@ CBlockTemplate* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
             pblock->nTime          = std::max(pblock->GetBlockTime(), pindexPrev->GetBlockTime() - nMaxClockDrift);
         }
         if (pblock->IsProofOfWork())
+        {
             pblock->UpdateTime();
+            pblock->vtx[0]->vout[0].nValue = GetProofOfWorkReward(nFees, pindexPrev->nHeight+1, pindexPrev->GetBlockHash());
+
+        }
         pblock->nNonce         = 0;
     }
 
@@ -429,8 +434,8 @@ void IncrementExtraNonce(CBlock* pblock, CBlockIndex* pindexPrev, unsigned int& 
     }
     ++nExtraNonce;
     unsigned int nHeight = pindexPrev->nHeight+1; // Height first in coinbase required for block.version=2
-    pblock->vtx[0].vin[0].scriptSig = (CScript() << nHeight << CBigNum(nExtraNonce)) + COINBASE_FLAGS;
-    assert(pblock->vtx[0].vin[0].scriptSig.size() <= 100);
+    pblock->vtx[0]->vin[0].scriptSig = (CScript() << nHeight << CBigNum(nExtraNonce)) + COINBASE_FLAGS;
+    assert(pblock->vtx[0]->vin[0].scriptSig.size() <= 100);
 
     pblock->hashMerkleRoot = BlockMerkleRoot(*pblock);
 }
@@ -482,7 +487,7 @@ void FormatHashBuffers(CBlock* pblock, char* pmidstate, char* pdata, char* phash
 }
 
 
-bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reservekey)
+bool CheckWork(const std::shared_ptr<const CBlock> pblock, CWallet& wallet, CReserveKey& reservekey)
 {
     arith_uint256 hash = UintToArith256(pblock->GetHash());
     arith_uint256 hashTarget = UintToArith256(CBigNum().SetCompact(pblock->nBits).getuint256());
@@ -493,7 +498,7 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reservekey)
     //// debug print
     LogPrintf("Miner:\n");
     LogPrintf("new block found  \n  hash: %s  \ntarget: %s\n", hash.GetHex().c_str(), hashTarget.GetHex().c_str());
-    LogPrintf("generated %s\n", FormatMoney(pblock->vtx[0].vout[0].nValue).c_str());
+    LogPrintf("generated %s\n", FormatMoney(pblock->vtx[0]->vout[0].nValue).c_str());
 
     // Found a solution
     {
@@ -513,14 +518,12 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reservekey)
         // Process this block the same as if we had received it from another node
         CValidationState state;
         const CNetworkTemplate& chainparams = pnetMan->getActivePaymentNetwork();
-        if (!ProcessNewBlock(state, chainparams, NULL, pblock, true, NULL, GENERATED))
+        if (!ProcessNewBlock(state, chainparams, NULL, pblock, true, NULL))
             return error("Miner : ProcessBlock, block not accepted");
     }
 
     return true;
 }
-
-void ThreadBitcoinMiner(void* parg);
 
 void ScryptMiner(CWallet *pwallet)
 {
@@ -540,7 +543,13 @@ void ScryptMiner(CWallet *pwallet)
     {
         if (fShutdown)
             return;
-        while (vNodes.empty() || vNodes.size() < 6 || pnetMan->getActivePaymentNetwork()->getChainManager()->IsInitialBlockDownload())
+        if(!g_connman)
+        {
+            MilliSleep(1000);
+            if (fShutdown)
+                return;
+        }
+        while (g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL) < 6 || pnetMan->getActivePaymentNetwork()->getChainManager()->IsInitialBlockDownload())
         {
             MilliSleep(1000);
             if (fShutdown)
@@ -567,6 +576,7 @@ void ScryptMiner(CWallet *pwallet)
             return;
         }
         CBlock *pblock = &pblocktemplate->block;
+        const std::shared_ptr<const CBlock> spblock(pblock);
 
         IncrementExtraNonce(pblock, pindexPrev, nExtraNonce);
 
@@ -582,7 +592,7 @@ void ScryptMiner(CWallet *pwallet)
                 strMintWarning = "";
                 LogPrintf("CPUMiner : proof-of-stake block found %s\n", pblock->GetHash().ToString().c_str());
                 SetThreadPriority(THREAD_PRIORITY_NORMAL);
-                CheckWork(pblock, *pwalletMain, reservekey);
+                CheckWork(spblock, *pwalletMain, reservekey);
                 SetThreadPriority(THREAD_PRIORITY_LOWEST);
             }
             MilliSleep(1000); // 1 second delay
@@ -645,7 +655,7 @@ void ScryptMiner(CWallet *pwallet)
                     strMintWarning = "";
 
                     SetThreadPriority(THREAD_PRIORITY_NORMAL);
-                    CheckWork(pblock, *pwalletMain, reservekey);
+                    CheckWork(spblock, *pwalletMain, reservekey);
                     SetThreadPriority(THREAD_PRIORITY_LOWEST);
                     break;
                 }
@@ -677,7 +687,7 @@ void ScryptMiner(CWallet *pwallet)
             // Check for stop or if block needs to be rebuilt
             if (fShutdown)
                 return;
-            if (vNodes.empty())
+            if (g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL))
                 break;
             if (nBlockNonce >= 0xffff0000)
                 break;
@@ -692,7 +702,7 @@ void ScryptMiner(CWallet *pwallet)
             pblock->UpdateTime();
             nBlockTime = ByteReverse(pblock->nTime);
 
-            if (pblock->GetBlockTime() >= (int64_t)pblock->vtx[0].nTime + nMaxClockDrift)
+            if (pblock->GetBlockTime() >= (int64_t)pblock->vtx[0]->nTime + nMaxClockDrift)
                 break;  // need to update coinbase timestamp
         }
     }
@@ -700,16 +710,22 @@ void ScryptMiner(CWallet *pwallet)
     scrypt_buffer_free(scratchbuf);
 }
 
-boost::thread_group* minerThreads = NULL;
+boost::thread_group* minerThreads = nullptr;
 
-void ThreadScryptMiner(void* parg)
+void ThreadScryptMiner(void* parg, bool shutdownOnly)
 {
 
-    if (minerThreads != NULL)
+    if (minerThreads != nullptr)
     {
         minerThreads->interrupt_all();
         delete minerThreads;
-        minerThreads = NULL;
+        minerThreads = nullptr;
+        LogPrintf("CPUMiner stopped for proof-of-%s\n", "stake");
+        return;
+    }
+    if(shutdownOnly)
+    {
+        LogPrintf("CPUMiner stopped for proof-of-%s\n", "stake");
         return;
     }
 

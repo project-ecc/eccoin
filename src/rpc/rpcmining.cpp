@@ -4,6 +4,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "amount.h"
+#include "base58.h"
 #include "chain/chain.h"
 #include "networks/netman.h"
 #include "consensus/consensus.h"
@@ -115,30 +116,44 @@ UniValue getgenerate(const UniValue& params, bool fHelp)
 
 UniValue generate(const UniValue& params, bool fHelp)
 {
-    if (fHelp || params.size() < 1 || params.size() > 1)
+    if (fHelp || params.size() < 1 || params.size() > 2)
+    {
         throw std::runtime_error(
-            "generate numblocks\n"
+            "generate numblocks  address\n"
             "\nMine blocks immediately (before the RPC call returns)\n"
             "\nNote: this function can only be used on the regtest network\n"
             "\nArguments:\n"
             "1. numblocks    (numeric, required) How many blocks are generated immediately.\n"
             "\nResult\n"
+            "2. address      (string, required) The address to send the newly "
+            "generated ecc to.\n"
             "[ blockhashes ]     (array) hashes of blocks generated\n"
             "\nExamples:\n"
             "\nGenerate 11 blocks\n"
-            + HelpExampleCli("generate", "11")
+            + HelpExampleCli("generate", "11 \"myaddress\"")
         );
+    }
 
     if (!pnetMan->getActivePaymentNetwork()->MineBlocksOnDemand())
+    {
         throw JSONRPCError(RPC_METHOD_NOT_FOUND, "This method can only be used on regtest");
+    }
 
     int nHeightStart = 0;
     int nHeightEnd = 0;
     int nHeight = 0;
     int nGenerate = params[0].get_int();
 
-    boost::shared_ptr<CReserveScript> coinbaseScript;
-    GetMainSignals().ScriptForMining(coinbaseScript);
+    std::string strAddress = params[1].get_str();
+    CBitcoinAddress addr(strAddress);
+    if (!addr.IsValid())
+    {
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY,
+                           "Error: Invalid address");
+    }
+    LogPrintf("we are mining to %s \n", addr.ToString().c_str());
+    std::shared_ptr<CReserveScript> coinbaseScript = std::make_shared<CReserveScript>();
+    coinbaseScript->reserveScript = GetScriptForDestination(addr.Get());
 
     // If the keypool is exhausted, no script is returned at all.  Catch this.
     if (!coinbaseScript)
@@ -166,13 +181,20 @@ UniValue generate(const UniValue& params, bool fHelp)
             LOCK(cs_main);
             IncrementExtraNonce(pblock, pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip(), nExtraNonce);
         }
-        while (pblock->IsProofOfWork() && !CheckProofOfWork(pblock->GetHash(), pblock->nBits, pnetMan->getActivePaymentNetwork()->GetConsensus())) {
+        while (pblock->IsProofOfWork() && !CheckProofOfWork(pblock->GetHash(), pblock->nBits, pnetMan->getActivePaymentNetwork()->GetConsensus())) 
+        {
             // Yes, there is a chance every nonce could fail to satisfy the -regtest
             // target -- 1 in 2^(2^32). That ain't gonna happen.
             ++pblock->nNonce;
         }
+        if (!pblock->SignScryptBlock(*pwalletMain))
+        {
+            LogPrintf("signging block in generate RPC call failed \n");
+            continue;
+        }
         CValidationState state;
-        if (!ProcessNewBlock(state, pnetMan->getActivePaymentNetwork(), NULL, pblock, true, NULL, GENERATED))
+        const std::shared_ptr<const CBlock> spblock = std::make_shared<const CBlock>(*pblock);
+        if (!ProcessNewBlock(state, pnetMan->getActivePaymentNetwork(), NULL, spblock, true, NULL))
             throw JSONRPCError(RPC_INTERNAL_ERROR, "ProcessNewBlock, block not accepted");
         ++nHeight;
         blockHashes.push_back(pblock->GetHash().GetHex());
@@ -201,7 +223,7 @@ UniValue setgenerate(const UniValue& params, bool fHelp)
     if (pnetMan->getActivePaymentNetwork()->MineBlocksOnDemand())
         throw JSONRPCError(RPC_METHOD_NOT_FOUND, "Use the generate method instead of setgenerate on this network");
 
-    ThreadScryptMiner(pwalletMain);
+    ThreadScryptMiner(pwalletMain, false);
 
     return NullUniValue;
 }
@@ -436,8 +458,10 @@ UniValue getblocktemplate(const UniValue& params, bool fHelp)
     if (strMode != "template")
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid mode");
 
-    if (vNodes.empty())
+    if (g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL) == 0)
+    {
         throw JSONRPCError(RPC_CLIENT_NOT_CONNECTED, "ECC is not connected!");
+    }
 
     if (pnetMan->getActivePaymentNetwork()->getChainManager()->IsInitialBlockDownload())
         throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "ECC is downloading blocks...");
@@ -529,7 +553,9 @@ UniValue getblocktemplate(const UniValue& params, bool fHelp)
     UniValue transactions(UniValue::VARR);
     std::map<uint256, int64_t> setTxIndex;
     int i = 0;
-    for (auto const& tx: pblock->vtx) {
+    for (auto const& ptx: pblock->vtx)
+    {
+        const CTransaction& tx = *ptx;
         uint256 txHash = tx.GetHash();
         setTxIndex[txHash] = i++;
 
@@ -576,7 +602,7 @@ UniValue getblocktemplate(const UniValue& params, bool fHelp)
     result.push_back(Pair("previousblockhash", pblock->hashPrevBlock.GetHex()));
     result.push_back(Pair("transactions", transactions));
     result.push_back(Pair("coinbaseaux", aux));
-    result.push_back(Pair("coinbasevalue", (int64_t)pblock->vtx[0].vout[0].nValue));
+    result.push_back(Pair("coinbasevalue", (int64_t)pblock->vtx[0]->vout[0].nValue));
     result.push_back(Pair("longpollid", pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->GetBlockHash().GetHex() + i64tostr(nTransactionsUpdatedLast)));
     result.push_back(Pair("target", hashTarget.GetHex()));
     result.push_back(Pair("mintime", (int64_t)pindexPrev->GetMedianTimePast()+1));
@@ -653,7 +679,8 @@ UniValue submitblock(const UniValue& params, bool fHelp)
     CValidationState state;
     submitblock_StateCatcher sc(block.GetHash());
     RegisterValidationInterface(&sc);
-    bool fAccepted = ProcessNewBlock(state, pnetMan->getActivePaymentNetwork(), NULL, &block, true, NULL, GENERATED);
+    const std::shared_ptr<const CBlock> spblock(&block);
+    bool fAccepted = ProcessNewBlock(state, pnetMan->getActivePaymentNetwork(), NULL, spblock, true, NULL);
     UnregisterValidationInterface(&sc);
     if (fBlockPresent)
     {

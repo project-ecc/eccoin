@@ -14,11 +14,13 @@
 #include "tinyformat.h"
 #include "util/utiltime.h"
 
+#include <atomic>
 #include <exception>
 #include <map>
 #include <stdint.h>
 #include <string>
 #include <vector>
+#include <memory>
 
 #include <boost/filesystem/path.hpp>
 #include <boost/signals2/signal.hpp>
@@ -211,5 +213,13 @@ inline uint32_t ByteReverse(uint32_t value)
 }
 
 long hex2long(const char* hexString);
+
+//! Substitute for C++14 std::make_unique.
+template <typename T, typename... Args>
+std::unique_ptr<T> MakeUnique(Args&&... args)
+{
+    return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+}
+
 
 #endif // BITCOIN_UTIL_H

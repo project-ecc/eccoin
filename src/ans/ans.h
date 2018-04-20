@@ -7,22 +7,29 @@
 
 #include "ansrecord.h"
 
+#include "service_leveldb.h"
+
 #include <string>
 #include <unordered_map>
+#include <memory>
 
-typedef std::unordered_map<std::string, CAnsRecord> recordSet;
+enum Opcode_ANS{
+    OP_REGISTER,
+    OP_RENEW,
+};
+
+extern std::unique_ptr<CServiceDB> g_ans;
 
 class CAnsZone
 {
-private:
-    recordSet A;
-    recordSet CNAME;
-    recordSet PTR;
 public:
-    bool addRecord(AnsRecordTypes recordType, std::string key, CAnsRecord value);
-    CAnsRecord getRecord(AnsRecordTypes recordType, std::string key);
-    uint64_t getRecordSetSize(AnsRecordTypes recordType);
-    void clearRecordSet(AnsRecordTypes recordType);
+    bool existsRecord(CAnsKey key);
+    bool existsRecord(AnsRecordTypes recordType, std::string key);
+    bool addRecord(AnsRecordTypes recordType, std::string key, CAnsRecord &value);
+    bool getRecord(std::string key, CAnsRecordSet &value);
+    bool getRecord(std::string key, CAnsRecord &value);
+    bool addTimeToRecord(CServiceTransaction stx, std::string& addr, uint64_t newExpireTime);
 };
 
+extern CAnsZone* pansMain;
 #endif // ANS_H

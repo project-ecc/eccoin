@@ -8,7 +8,6 @@
 #include "uint256.h"
 #include "serialize.h"
 
-
 /** The basic transaction that is broadcasted on the network and contained in
  * blocks.  A transaction can contain multiple inputs and outputs.
  */
@@ -38,10 +37,10 @@ public:
     uint16_t nServiceId;
     unsigned int nTime;
     uint16_t nOpCode;
-    uint32_t nLockTime;
+    uint32_t nExpireTime;
     std::vector<unsigned char> vdata;
     uint256 paymentReferenceHash;
-    uint256 securityHash;
+    //uint256 securityHash;
 
     /** Construct a CTransaction that qualifies as IsNull() */
     CServiceTransaction();
@@ -60,10 +59,10 @@ public:
         READWRITE(*const_cast<uint16_t*>(&this->nServiceId));
         READWRITE(*const_cast<uint32_t*>(&this->nTime));
         READWRITE(*const_cast<uint16_t*>(&this->nOpCode));
-        READWRITE(*const_cast<uint32_t*>(&nLockTime));
+        READWRITE(*const_cast<uint32_t*>(&nExpireTime));
         READWRITE(*const_cast<std::vector<unsigned char>*>(&vdata));
         READWRITE(*const_cast<uint256*>(&this->paymentReferenceHash));
-        READWRITE(*const_cast<uint256*>(&this->securityHash));
+        //READWRITE(*const_cast<uint256*>(&this->securityHash));
         if (ser_action.ForRead())
             UpdateHash();
     }
@@ -85,8 +84,9 @@ public:
     {
         return a.hash != b.hash;
     }
+
     std::string ToString() const;
-    void setSecurityHash();
+    //void setSecurityHash();
 };
 
 
