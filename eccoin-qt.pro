@@ -403,8 +403,6 @@ SOURCES += \
     src/util/utilmoneystr.cpp \
     src/util/utilstrencodings.cpp \
     src/util/utiltime.cpp \
-    src/tx/txout.cpp \
-    src/tx/txin.cpp \
     src/tx/tx.cpp \
     src/crypto/hash.cpp \
     src/chain/checkpoints.cpp \
