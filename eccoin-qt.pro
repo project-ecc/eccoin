@@ -244,7 +244,6 @@ HEADERS += \
     src/script/standard.h \
     src/policy/fees.h \
     src/policy/policy.h \
-    src/policy/rbf.h \
     src/crypto/common.h \
     src/crypto/hmac_sha256.h \
     src/crypto/hmac_sha512.h \
@@ -359,7 +358,6 @@ SOURCES += \
     src/script/standard.cpp \
     src/policy/fees.cpp \
     src/policy/policy.cpp \
-    src/policy/rbf.cpp \
     src/crypto/hmac_sha256.cpp \
     src/crypto/hmac_sha512.cpp \
     src/crypto/ripemd160.cpp \
