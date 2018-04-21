@@ -1404,6 +1404,7 @@ bool DisconnectBlock(const CBlock& block, CValidationState& state, const CBlockI
         const CTransaction &tx = *(block.vtx[i]);
         uint256 hash = tx.GetHash();
 
+        /*
         // Check that all outputs are available and match the outputs in the block itself
         // exactly.
         {
@@ -1431,7 +1432,7 @@ bool DisconnectBlock(const CBlock& block, CValidationState& state, const CBlockI
             // remove outputs
             outs.Clear();
         }
-
+        */
         // restore inputs
         if (i > 0) // not coinbases
         {
