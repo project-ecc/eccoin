@@ -1357,6 +1357,8 @@ bool ApplyTxInUndo(const CTxInUndo& undo, CCoinsViewCache& view, const COutPoint
         coins->fCoinBase = undo.fCoinBase;
         coins->nHeight = undo.nHeight;
         coins->nVersion = undo.nVersion;
+        coins->fCoinStake = undo.fCoinStake;
+        coins->nTime = undo.nTime;
     } else {
         if (coins->IsPruned())
             fClean = fClean && error("%s: undo data adding output to missing transaction", __func__);
@@ -1402,11 +1404,17 @@ bool DisconnectBlock(const CBlock& block, CValidationState& state, const CBlockI
         const CTransaction &tx = *(block.vtx[i]);
         uint256 hash = tx.GetHash();
 
+        /*
         // Check that all outputs are available and match the outputs in the block itself
         // exactly.
         {
-            CCoinsModifier outs = view.ModifyCoins(hash);
-            outs->ClearUnspendable();
+            if (!view.HaveCoins(hash))
+            {
+                fClean = fClean && error("DisconnectBlock() : outputs still spent? database corrupted");
+                view.SetCoins(hash, CCoins());
+            }
+            CCoins outs;
+            view.GetCoins(hash, outs);
 
             CCoins outsBlock(tx, pindex->nHeight);
             // The CCoins serialization does not serialize negative numbers.
@@ -1414,17 +1422,17 @@ bool DisconnectBlock(const CBlock& block, CValidationState& state, const CBlockI
             // but it must be corrected before txout nversion ever influences a network rule.
             if (outsBlock.nVersion < 0)
             {
-                outs->nVersion = outsBlock.nVersion;
+                outs.nVersion = outsBlock.nVersion;
             }
-            if (*outs != outsBlock)
+            if (outs != outsBlock)
             {
                 fClean = fClean && error("DisconnectBlock(): added transaction mismatch? database corrupted");
             }
 
             // remove outputs
-            outs->Clear();
+            outs.Clear();
         }
-
+        */
         // restore inputs
         if (i > 0) // not coinbases
         {
@@ -1448,7 +1456,8 @@ bool DisconnectBlock(const CBlock& block, CValidationState& state, const CBlockI
     // move best block pointer to prevout block
     view.SetBestBlock(pindex->pprev->GetBlockHash());
 
-    if (pfClean) {
+    if (pfClean)
+    {
         *pfClean = fClean;
         return true;
     }
