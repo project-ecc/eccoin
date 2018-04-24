@@ -93,7 +93,6 @@ void CNetworkManager::ConstructLegacyNetworkTemplate()
     txNew.vout.resize(1);
     txNew.vin[0].scriptSig =  CScript() << 486604799 << CBigNum(9999) << std::vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
     txNew.vout[0].SetEmpty();
-    txNew.vout[0].SetEmpty();
 
     legacyTemplate->genesis.vtx.push_back(MakeTransactionRef(txNew));
     legacyTemplate->genesis.hashPrevBlock.SetNull();
@@ -223,7 +222,6 @@ void CNetworkManager::ConstructTetnet0Template()
     txNew.vin.resize(1);
     txNew.vout.resize(1);
     txNew.vin[0].scriptSig =  CScript() << 486604799 << CBigNum(9999) << std::vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
-    txNew.vout[0].SetEmpty();
     txNew.vout[0].SetEmpty();
 
     netManTestnetTemplate->genesis.vtx.push_back(MakeTransactionRef(txNew));
