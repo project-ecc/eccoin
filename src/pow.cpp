@@ -54,14 +54,6 @@ bool CheckProofOfWork(uint256 hash, unsigned int nBits, const Consensus::Params&
 
 arith_uint256 GetBlockProof(const CBlockIndex& index)
 {
-    /// if this is true block is PoS and we need to calculate work a different way
-    if(index.IsProofOfStake())
-    {
-        /// for proof of stake blocks, use the hash proof of stake instead of the blocks hash to add to the work as newer blocks actually do a lot of work to get a valid Proof of stake hash
-        /// (by a lot i mean more than they previously had to do)
-        arith_uint256 bnTarget = UintToArith256(index.hashProofOfStake);
-        return (~bnTarget / (bnTarget + 1)) + 1;
-    }
     arith_uint256 bnTarget;
     bool fNegative;
     bool fOverflow;

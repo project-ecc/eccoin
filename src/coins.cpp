@@ -150,9 +150,12 @@ CCoinsModifier CCoinsViewCache::ModifyNewCoins(const uint256 &txid) {
 
 const CCoins* CCoinsViewCache::AccessCoins(const uint256 &txid) const {
     CCoinsMap::const_iterator it = FetchCoins(txid);
-    if (it == cacheCoins.end()) {
-        return NULL;
-    } else {
+    if (it == cacheCoins.end())
+    {
+        return nullptr;
+    }
+    else
+    {
         return &it->second.coins;
     }
 }
