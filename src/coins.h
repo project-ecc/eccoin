@@ -511,6 +511,7 @@ public:
     bool GetCoins(const uint256 &txid, CCoins &coins) const;
     bool SetCoins(const uint256 &txid, const CCoins &coins);
     bool HaveCoins(const uint256 &txid) const;
+    bool HaveCoin(const uint256 &txid, const int npos) const;
     uint256 GetBestBlock() const;
     void SetBestBlock(const uint256 &hashBlock);
     bool BatchWrite(CCoinsMap &mapCoins, const uint256 &hashBlock);
