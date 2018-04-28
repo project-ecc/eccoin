@@ -1388,10 +1388,28 @@ bool ReconsiderBlock(CValidationState& state, CBlockIndex *pindex) {
 
     int nHeight = pindex->nHeight;
 
-    // Remove the invalidity flag from this block and all its descendants.
-    BlockMap::iterator it = pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.begin();
-    while (it != pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.end()) {
-        if (!it->second->IsValid() && it->second->GetAncestor(nHeight) == pindex) {
+    // Remove the invalidity flag from this block
+    if(!pindex->IsValid())
+    {
+        pindex->nStatus &= ~BLOCK_FAILED_MASK;
+        setDirtyBlockIndex.insert(pindex);
+        if (pindex->IsValid(BLOCK_VALID_TRANSACTIONS) && pindex->nChainTx && setBlockIndexCandidates.value_comp()(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip(), pindex))
+        {
+            setBlockIndexCandidates.insert(pindex);
+        }
+        if (pindex == pindexBestInvalid)
+        {
+            // Reset invalid block marker if it was pointing to one of those.
+            pindexBestInvalid = NULL;
+        }
+    }
+
+    // Remove the invalidity flag from all descendants.
+    BlockMap::iterator it = pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.begin();    
+    while (it != pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.end())
+    {
+        if (!it->second->IsValid() && it->second->GetAncestor(nHeight) == pindex)
+        {
             it->second->nStatus &= ~BLOCK_FAILED_MASK;
             setDirtyBlockIndex.insert(it->second);
             if (it->second->IsValid(BLOCK_VALID_TRANSACTIONS) && it->second->nChainTx && setBlockIndexCandidates.value_comp()(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip(), it->second)) {
