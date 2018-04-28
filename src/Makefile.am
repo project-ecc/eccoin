@@ -46,6 +46,7 @@ BITCOIN_CORE_H = \
   addrdb.h \
   addrman.h \
   amount.h \
+  ans/ans.h \
   ans/ansrecord.h \
   args.h \
   arith_uint256.h \
@@ -98,6 +99,7 @@ BITCOIN_CORE_H = \
   pow.h \
   prevector.h \
   chain/block.h \
+  tx/servicetx.h \
   tx/tx.h \
   pbkdf2.h \
   processblock.h \
@@ -120,7 +122,9 @@ BITCOIN_CORE_H = \
   script/standard.h \
   crypto/scrypt.h \
   serialize.h \
+  service_leveldb.h \
   streams.h \
+  stxmempool.h \
   support/allocators/secure.h \
   support/allocators/zeroafterfree.h \
   support/cleanse.h \
@@ -164,6 +168,7 @@ libbitcoin_server_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIC_FLAGS) $(PIE_FLAGS)
 libbitcoin_server_a_SOURCES = \
   addrdb.cpp \
   addrman.cpp \
+  ans/ans.cpp \
   ans/ansrecord.cpp \
   bloom.cpp \
   chain/chain.cpp \
@@ -183,6 +188,7 @@ libbitcoin_server_a_SOURCES = \
   policy/policy.cpp \
   pow.cpp \
   rest.cpp \
+  rpc/rpcans.cpp \
   rpc/rpcblockchain.cpp \
   rpc/rpcmining.cpp \
   rpc/rpcmisc.cpp \
@@ -214,6 +220,7 @@ libbitcoin_server_a_SOURCES = \
   processblock.cpp \
   processheader.cpp \
   processtx.cpp \
+  tx/servicetx.cpp \
   tx/tx.cpp \
   protocol.cpp \
   pubkey.cpp \
@@ -273,6 +280,8 @@ libbitcoin_server_a_SOURCES = \
   policy/rbf.cpp \
   rpc/rpcclient.cpp \
   threadinterrupt.cpp \
+  stxmempool.cpp \
+  service_leveldb.cpp \
   $(BITCOIN_CORE_H)
 
 if GLIBC_BACK_COMPAT

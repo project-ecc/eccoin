@@ -1109,9 +1109,17 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         for(auto const& tx: block.vtx)
         {
             const CCoins* coins = view.AccessCoins(tx->GetHash());
-            if (coins && !coins->IsPruned())
-                return state.DoS(100, error("ConnectBlock(): tried to overwrite transaction"),
-                                 REJECT_INVALID, "bad-txns-BIP30");
+            if (coins)
+            {
+                for (uint64_t i = 0; i < coins->vout.size(); i++)
+                {
+                    if (!view.HaveCoin(tx->GetHash(), i))
+                    {
+                        return state.DoS(100, error("ConnectBlock(): tried to overwrite transaction"),
+                                         REJECT_INVALID, "bad-txns-BIP30");
+                    }
+                }
+            }
         }
     }
 
