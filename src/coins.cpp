@@ -150,9 +150,12 @@ CCoinsModifier CCoinsViewCache::ModifyNewCoins(const uint256 &txid) {
 
 const CCoins* CCoinsViewCache::AccessCoins(const uint256 &txid) const {
     CCoinsMap::const_iterator it = FetchCoins(txid);
-    if (it == cacheCoins.end()) {
-        return NULL;
-    } else {
+    if (it == cacheCoins.end())
+    {
+        return nullptr;
+    }
+    else
+    {
         return &it->second.coins;
     }
 }
@@ -173,6 +176,16 @@ bool CCoinsViewCache::HaveCoins(const uint256 &txid) const {
     // which just cleans individual outputs).
     return (it != cacheCoins.end() && !it->second.coins.vout.empty());
 }
+
+bool CCoinsViewCache::HaveCoin(const uint256 &txid, const int npos) const {
+    CCoinsMap::const_iterator it = FetchCoins(txid);
+    if(it == cacheCoins.end())
+    {
+        return false;
+    }
+    return it->second.coins.IsAvailable(npos);
+}
+
 
 bool CCoinsViewCache::HaveCoinsInCache(const uint256 &txid) const {
     CCoinsMap::const_iterator it = cacheCoins.find(txid);
