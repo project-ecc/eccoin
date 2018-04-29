@@ -571,7 +571,6 @@ void EccMiner(CWallet *pwallet)
             return;
         }
         CBlock *pblock = &pblocktemplate->block;
-        const std::shared_ptr<const CBlock> spblock = std::make_shared<const CBlock>(*pblock);
         IncrementExtraNonce(pblock, pindexPrev, nExtraNonce);
         LogPrintf("Running Miner with %u transactions in block (%u bytes)\n", pblock->vtx.size(),
                ::GetSerializeSize(*pblock, SER_NETWORK, PROTOCOL_VERSION));
@@ -619,6 +618,7 @@ void EccMiner(CWallet *pwallet)
                         break;
                     }
                     SetThreadPriority(THREAD_PRIORITY_NORMAL);
+                    const std::shared_ptr<const CBlock> spblock = std::make_shared<const CBlock>(*pblock);
                     CheckWork(spblock, *pwalletMain, reservekey);
                     SetThreadPriority(THREAD_PRIORITY_LOWEST);
                     break;
@@ -705,7 +705,6 @@ void EccMinter(CWallet *pwallet)
             return;
         }
         CBlock *pblock = &pblocktemplate->block;
-        const std::shared_ptr<const CBlock> spblock = std::make_shared<const CBlock>(*pblock);
         IncrementExtraNonce(pblock, pindexPrev, nExtraNonce);
         // ppcoin: if proof-of-stake block found then process block
         if (pblock->IsProofOfStake())
@@ -716,6 +715,7 @@ void EccMinter(CWallet *pwallet)
             }
             LogPrintf("CPUMiner : proof-of-stake block found %s\n", pblock->GetHash().ToString().c_str());
             SetThreadPriority(THREAD_PRIORITY_NORMAL);
+            const std::shared_ptr<const CBlock> spblock = std::make_shared<const CBlock>(*pblock);
             CheckWork(spblock, *pwalletMain, reservekey);
             SetThreadPriority(THREAD_PRIORITY_LOWEST);
         }
