@@ -30,9 +30,6 @@ static const bool DEFAULT_GENERATE = false;
 static const bool DEFAULT_PRINTPRIORITY = false;
 
 
-/** Check mined proof-of-stake block */
-bool CheckStake(CBlock* pblock, CWallet& wallet);
-
 /** Base sha256 mining transform */
 void SHA256Transform(void* pstate, void* pinput, const void* pinit);
 
@@ -40,7 +37,10 @@ void IncrementExtraNonce(CBlock* pblock, CBlockIndex* pindexPrev, unsigned int& 
 void FormatHashBuffers(CBlock* pblock, char* pmidstate, char* pdata, char* phash1);
 bool CheckWork(const std::shared_ptr<const CBlock> pblock, CWallet& wallet, CReserveKey& reservekey);
 
-void ThreadScryptMiner(void* parg, bool shutdownOnly=false);
+/** Check mined proof-of-stake block */
+bool CheckStake(CBlock* pblock, CWallet& wallet);
+
+void ThreadMiner(void* parg, bool shutdownOnly=false);
 
 struct CBlockTemplate
 {
@@ -49,7 +49,7 @@ struct CBlockTemplate
     std::vector<int64_t> vTxSigOps;
 };
 
-CBlockTemplate* CreateNewBlock(CWallet* pwallet, bool fProofOfStake);
+std::unique_ptr<CBlockTemplate> CreateNewBlock(CWallet* pwallet, bool fProofOfStake);
 
 extern boost::thread_group* minerThreads;
 
