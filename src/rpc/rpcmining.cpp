@@ -188,7 +188,7 @@ UniValue generate(const UniValue& params, bool fHelp)
     UniValue blockHashes(UniValue::VARR);
     while (nHeight < nHeightEnd)
     {
-        std::auto_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(pwalletMain, true));
+        std::unique_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(pwalletMain, true));
         if (!pblocktemplate.get())
             throw JSONRPCError(RPC_INTERNAL_ERROR, "Couldn't create new block");
         CBlock *pblock = &pblocktemplate->block;
@@ -238,7 +238,7 @@ UniValue setgenerate(const UniValue& params, bool fHelp)
     if (pnetMan->getActivePaymentNetwork()->MineBlocksOnDemand())
         throw JSONRPCError(RPC_METHOD_NOT_FOUND, "Use the generate method instead of setgenerate on this network");
 
-    ThreadScryptMiner(pwalletMain, false);
+    ThreadMiner(pwalletMain, false);
 
     return NullUniValue;
 }
@@ -532,7 +532,7 @@ UniValue getblocktemplate(const UniValue& params, bool fHelp)
     // Update block
     static CBlockIndex* pindexPrev;
     static int64_t nStart;
-    static CBlockTemplate* pblocktemplate;
+    static std::unique_ptr<CBlockTemplate> pblocktemplate;
     if (pindexPrev != pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip() ||
         (mempool.GetTransactionsUpdated() != nTransactionsUpdatedLast && GetTime() - nStart > 5))
     {
@@ -547,12 +547,14 @@ UniValue getblocktemplate(const UniValue& params, bool fHelp)
         // Create new block
         if(pblocktemplate)
         {
-            delete pblocktemplate;
-            pblocktemplate = NULL;
+            pblocktemplate.reset();
+            pblocktemplate = nullptr;
         }
-        pblocktemplate = CreateNewBlock(pwalletMain, true);
+        pblocktemplate.reset(CreateNewBlock(pwalletMain, true).get());
         if (!pblocktemplate)
+        {
             throw JSONRPCError(RPC_OUT_OF_MEMORY, "Out of memory");
+        }
 
         // Need to update only after we know CreateNewBlock succeeded
         pindexPrev = pindexPrevNew;
