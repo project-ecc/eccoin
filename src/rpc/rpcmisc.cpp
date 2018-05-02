@@ -41,51 +41,6 @@
 #include <univalue.h>
 
 
-static std::set<std::string> reloadableSettings = {"-staking", "-rescan"};
-
-UniValue reloadconfig (const UniValue& params, bool fHelp)
-{
-    if (fHelp || params.size() != 0)
-    {
-        throw std::runtime_error(
-            "reloadconfig\n"
-            "Returns an object containing the config file arguments that were reloaded.\n"
-            "The only commands supported for reloading right now are: \n"
-            "staking \n"
-            "rescan \n"
-        );
-    }
-    UniValue obj(UniValue::VOBJ);
-
-    boost::filesystem::ifstream streamConfig(gArgs.GetConfigFile());
-    std::set<std::string>::iterator iter;
-    std::set<std::string> processedArgs;
-    std::set<std::string> setOptions;
-    setOptions.insert("*");
-    for (boost::program_options::detail::config_file_iterator it(streamConfig, setOptions), end; it != end; ++it)
-    {
-        // Don't overwrite existing settings so command line settings override eccoin.conf
-        std::string strKey = std::string("-") + it->string_key;
-        std::string strValue = it->value[0];
-        InterpretNegativeSetting(strKey, strValue);
-        iter = reloadableSettings.find(strKey);
-        if(iter != reloadableSettings.end() && strValue == std::string("1") && processedArgs.find(strKey) != processedArgs.end())
-        {
-            obj.push_back(Pair(strKey, "was reloaded"));
-            if(strKey == "-staking")
-            {
-                ThreadScryptMiner(pwalletMain, false);
-            }
-            if(strKey == "-rescan")
-            {
-                pwalletMain->ScanForWalletTransactions(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Genesis(), true);
-            }
-            processedArgs.insert(strKey);
-        }
-    }
-    return obj;
-}
-
 /**
  * @note Do not add or change anything in the information returned by this
  * method. `getinfo` exists for backwards-compatibility only. It combines

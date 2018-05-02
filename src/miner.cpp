@@ -38,6 +38,7 @@
 #include "processblock.h"
 #include "networks/netman.h"
 #include "net.h"
+#include "policy/policy.h"
 
 #include <boost/thread.hpp>
 #include <openssl/sha.h>
@@ -52,10 +53,6 @@ uint64_t nLastBlockSize = 0;
 int64_t nLastCoinStakeSearchInterval = 0;
 double dHashesPerSec;
 int64_t nHPSTimerStart;
-
-static std::string strMintMessage = "Info: Minting suspended due to locked wallet.";
-static std::string strMintWarning;
-
 
 
 //////////////////////////////////////////////////////////////////////////////
@@ -172,21 +169,18 @@ public:
     }
 };
 
-
-/** Used as the flags parameter to sequence and nLocktime checks in non-consensus code. */
-static const unsigned int STANDARD_LOCKTIME_VERIFY_FLAGS = LOCKTIME_VERIFY_SEQUENCE |
-                                                           LOCKTIME_MEDIAN_TIME_PAST;
-
 // CreateNewBlock:
 //   fProofOfStake: try (best effort) to make a proof-of-stake block
-CBlockTemplate* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
+std::unique_ptr<CBlockTemplate> CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
 {
     CReserveKey reservekey(pwallet);
 
     // Create new block
-    std::auto_ptr<CBlockTemplate> pblocktemplate(new CBlockTemplate());
+    std::unique_ptr<CBlockTemplate> pblocktemplate(new CBlockTemplate());
     if(!pblocktemplate.get())
-        return NULL;
+    {
+        return nullptr;
+    }
     CBlock *pblock = &pblocktemplate->block; // pointer for convenience
 
     // Create coinbase tx
@@ -433,7 +427,7 @@ CBlockTemplate* CreateNewBlock(CWallet* pwallet, bool fProofOfStake)
         pblock->nNonce         = 0;
     }
 
-    return pblocktemplate.release();
+    return std::move(pblocktemplate);
 }
 
 
@@ -539,20 +533,16 @@ bool CheckWork(const std::shared_ptr<const CBlock> pblock, CWallet& wallet, CRes
     return true;
 }
 
-void ScryptMiner(CWallet *pwallet)
+void EccMiner(CWallet *pwallet)
 {
     void *scratchbuf = scrypt_buffer_alloc();
-
     LogPrintf("CPUMiner started for proof-of-%s\n", "stake");
     SetThreadPriority(THREAD_PRIORITY_LOWEST);
-
     // Make this thread recognisable as the mining thread
-    RenameThread("bitcoin-miner");
-
+    RenameThread("ecc-miner");
     // Each thread has its own key and counter
     CReserveKey reservekey(pwallet);
     unsigned int nExtraNonce = 0;
-
     while (true)
     {
         if (fShutdown)
@@ -563,82 +553,44 @@ void ScryptMiner(CWallet *pwallet)
             if (fShutdown)
                 return;
         }
-        while (g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL) < 6 || pnetMan->getActivePaymentNetwork()->getChainManager()->IsInitialBlockDownload())
+        while (g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL) < 6 || pnetMan->getActivePaymentNetwork()->getChainManager()->IsInitialBlockDownload() || pwallet->IsLocked())
         {
             MilliSleep(1000);
             if (fShutdown)
                 return;
         }
-
-        while (pwallet->IsLocked())
-        {
-            strMintWarning = strMintMessage;
-            MilliSleep(1000);
-        }
-        strMintWarning = "";
-
         //
         // Create new block
         //
         unsigned int nTransactionsUpdatedLast = mempool.GetTransactionsUpdated();
         CBlockIndex* pindexPrev = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
-
-        std::auto_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(pwallet, true));
+        std::unique_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(pwallet, true));
         if (!pblocktemplate.get())
         {
             LogPrintf("Error in Miner: Keypool ran out, please call keypoolrefill before restarting the mining thread\n");
             return;
         }
         CBlock *pblock = &pblocktemplate->block;
-        const std::shared_ptr<const CBlock> spblock(pblock);
-
         IncrementExtraNonce(pblock, pindexPrev, nExtraNonce);
-
-        {
-            // ppcoin: if proof-of-stake block found then process block
-            if (pblock->IsProofOfStake())
-            {
-                if (!pblock->SignScryptBlock(*pwalletMain))
-                {
-                    strMintWarning = strMintMessage;
-                    continue;
-                }
-                strMintWarning = "";
-                LogPrintf("CPUMiner : proof-of-stake block found %s\n", pblock->GetHash().ToString().c_str());
-                SetThreadPriority(THREAD_PRIORITY_NORMAL);
-                CheckWork(spblock, *pwalletMain, reservekey);
-                SetThreadPriority(THREAD_PRIORITY_LOWEST);
-            }
-            MilliSleep(1000); // 1 second delay
-            continue;
-        }
-
         LogPrintf("Running Miner with %u transactions in block (%u bytes)\n", pblock->vtx.size(),
                ::GetSerializeSize(*pblock, SER_NETWORK, PROTOCOL_VERSION));
-
         //
         // Pre-build hash buffers
         //
         char pmidstatebuf[32+16]; char* pmidstate = alignup<16>(pmidstatebuf);
         char pdatabuf[128+16];    char* pdata     = alignup<16>(pdatabuf);
         char phash1buf[64+16];    char* phash1    = alignup<16>(phash1buf);
-
         FormatHashBuffers(pblock, pmidstate, pdata, phash1);
-
         unsigned int& nBlockTime = *(unsigned int*)(pdata + 64 + 4);
         unsigned int& nBlockNonce = *(unsigned int*)(pdata + 64 + 12);
-
-
         //
         // Search
         //
         int64_t nStart = GetTime();
         arith_uint256 hashTarget = UintToArith256(CBigNum().SetCompact(pblock->nBits).getuint256());
-
         unsigned int max_nonce = 0xffff0000;
         CBlockHeader res_header;
         arith_uint256 result;
-
         while(true)
         {
             unsigned int nHashesDone = 0;
@@ -663,18 +615,15 @@ void ScryptMiner(CWallet *pwallet)
                     assert(result == UintToArith256(pblock->GetHash()));
                     if (!pblock->SignScryptBlock(*pwalletMain))
                     {
-//                        strMintWarning = strMintMessage;
                         break;
                     }
-                    strMintWarning = "";
-
                     SetThreadPriority(THREAD_PRIORITY_NORMAL);
+                    const std::shared_ptr<const CBlock> spblock = std::make_shared<const CBlock>(*pblock);
                     CheckWork(spblock, *pwalletMain, reservekey);
                     SetThreadPriority(THREAD_PRIORITY_LOWEST);
                     break;
                 }
             }
-
             // Meter hashes/sec
             static int64_t nHashCounter;
             if (nHPSTimerStart == 0)
@@ -697,7 +646,6 @@ void ScryptMiner(CWallet *pwallet)
                     }
                 }
             }
-
             // Check for stop or if block needs to be rebuilt
             if (fShutdown)
                 return;
@@ -709,24 +657,79 @@ void ScryptMiner(CWallet *pwallet)
                 break;
             if (pindexPrev != pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip())
                 break;
-
             // Update nTime every few seconds
             pblock->nTime = std::max(pindexPrev->GetMedianTimePast()+1, pblock->GetMaxTransactionTime());
             pblock->nTime = std::max(pblock->GetBlockTime(), pindexPrev->GetBlockTime() - nMaxClockDrift);
             pblock->UpdateTime();
             nBlockTime = ByteReverse(pblock->nTime);
-
             if (pblock->GetBlockTime() >= (int64_t)pblock->vtx[0]->nTime + nMaxClockDrift)
                 break;  // need to update coinbase timestamp
         }
     }
-
     scrypt_buffer_free(scratchbuf);
 }
 
+void EccMinter(CWallet *pwallet)
+{
+    LogPrintf("CPUMiner started for proof-of-%s\n", "stake");
+    SetThreadPriority(THREAD_PRIORITY_LOWEST);
+    // Make this thread recognisable as the mining thread
+    RenameThread("ecc-minter");
+    // Each thread has its own key and counter
+    CReserveKey reservekey(pwallet);
+    unsigned int nExtraNonce = 0;
+    while (true)
+    {
+        if (fShutdown)
+            return;
+        if(!g_connman)
+        {
+            MilliSleep(1000);
+            if (fShutdown)
+                return;
+        }
+        while (g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL) < 6 || pnetMan->getActivePaymentNetwork()->getChainManager()->IsInitialBlockDownload() || pwallet->IsLocked())
+        {
+            MilliSleep(1000);
+            if (fShutdown)
+                return;
+        }
+        //
+        // Create new block
+        //
+        CBlockIndex* pindexPrev = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
+        std::unique_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(pwallet, true));
+        if (!pblocktemplate.get())
+        {
+            LogPrintf("Error in Miner: Keypool ran out, please call keypoolrefill before restarting the mining thread\n");
+            return;
+        }
+        CBlock *pblock = &pblocktemplate->block;
+        IncrementExtraNonce(pblock, pindexPrev, nExtraNonce);
+        // ppcoin: if proof-of-stake block found then process block
+        if (pblock->IsProofOfStake())
+        {
+            if (!pblock->SignScryptBlock(*pwalletMain))
+            {
+                continue;
+            }
+            LogPrintf("CPUMiner : proof-of-stake block found %s\n", pblock->GetHash().ToString().c_str());
+            SetThreadPriority(THREAD_PRIORITY_NORMAL);
+            const std::shared_ptr<const CBlock> spblock = std::make_shared<const CBlock>(*pblock);
+            CheckWork(spblock, *pwalletMain, reservekey);
+            SetThreadPriority(THREAD_PRIORITY_LOWEST);
+        }
+        MilliSleep(1000); // 1 second delay
+        continue;
+    }
+}
+
+
+
+
 boost::thread_group* minerThreads = nullptr;
 
-void ThreadScryptMiner(void* parg, bool shutdownOnly)
+void ThreadMiner(void* parg, bool shutdownOnly)
 {
 
     if (minerThreads != nullptr)
@@ -748,7 +751,7 @@ void ThreadScryptMiner(void* parg, bool shutdownOnly)
     CWallet* pwallet = (CWallet*)parg;
     try
     {
-        minerThreads->create_thread(boost::bind(&ScryptMiner, pwallet));
+        minerThreads->create_thread(boost::bind(&EccMinter, pwallet));
     }
     catch (std::exception& e) {
         PrintException(&e, "ThreadECCMinter()");
