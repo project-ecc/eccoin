@@ -1014,7 +1014,9 @@ void UpdateCoins(const CTransaction& tx, CValidationState &state, CCoinsViewCach
                 CTxInUndo& undo = txundo.vprevout.back();
                 undo.nHeight = coins->nHeight;
                 undo.fCoinBase = coins->fCoinBase;
-                undo.nVersion = coins->nVersion;
+                undo.nVersion = coins->nVersion;                
+                undo.fCoinStake = coins->fCoinStake;
+                undo.nTime = coins->nTime;
             }
         }
         // add outputs

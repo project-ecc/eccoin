@@ -524,31 +524,42 @@ void CTxMemPool::remove(const CTransaction &origTx, std::list<CTransaction>& rem
         LOCK(cs);
         setEntries txToRemove;
         txiter origit = mapTx.find(origTx.GetHash());
-        if (origit != mapTx.end()) {
+        if (origit != mapTx.end())
+        {
             txToRemove.insert(origit);
-        } else if (fRecursive) {
+        }
+        else if (fRecursive)
+        {
             // If recursively removing but origTx isn't in the mempool
             // be sure to remove any children that are in the pool. This can
             // happen during chain re-orgs if origTx isn't re-accepted into
             // the mempool for any reason.
-            for (unsigned int i = 0; i < origTx.vout.size(); i++) {
+            for (unsigned int i = 0; i < origTx.vout.size(); i++)
+            {
                 std::map<COutPoint, CInPoint>::iterator it = mapNextTx.find(COutPoint(origTx.GetHash(), i));
                 if (it == mapNextTx.end())
+                {
                     continue;
+                }
                 txiter nextit = mapTx.find(it->second.ptx->GetHash());
                 assert(nextit != mapTx.end());
                 txToRemove.insert(nextit);
             }
         }
         setEntries setAllRemoves;
-        if (fRecursive) {
-            for (auto it: txToRemove) {
+        if (fRecursive)
+        {
+            for (auto it: txToRemove)
+            {
                 CalculateDescendants(it, setAllRemoves);
             }
-        } else {
+        }
+        else
+        {
             setAllRemoves.swap(txToRemove);
         }
-        for (auto it: setAllRemoves) {
+        for (auto it: setAllRemoves)
+        {
             removed.push_back(it->GetTx());
         }
         RemoveStaged(setAllRemoves, false, reason);
