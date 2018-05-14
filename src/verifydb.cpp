@@ -82,11 +82,15 @@ bool CVerifyDB::VerifyDB(const CNetworkTemplate& chainparams, CCoinsView *coinsv
             if (!DisconnectBlock(block, state, pindex, coins, &fClean))
                 return error("VerifyDB(): *** irrecoverable inconsistency in block data at %d, hash=%s", pindex->nHeight, pindex->GetBlockHash().ToString());
             pindexState = pindex->pprev;
-            if (!fClean) {
+            if (!fClean)
+            {
                 nGoodTransactions = 0;
                 pindexFailure = pindex;
-            } else
+            }
+            else
+            {
                 nGoodTransactions += block.vtx.size();
+            }
         }
         if (ShutdownRequested())
             return true;
