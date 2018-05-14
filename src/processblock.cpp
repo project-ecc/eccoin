@@ -1432,17 +1432,23 @@ bool DisconnectBlock(const CBlock& block, CValidationState& state, const CBlockI
         const CTransaction &tx = *(block.vtx[i]);
         uint256 hash = tx.GetHash();
 
-        /*
         // Check that all outputs are available and match the outputs in the block itself
         // exactly.
         {
-            if (!view.HaveCoins(hash))
+            for(int pos = 0; pos < tx.vout.size(); pos++)
             {
-                fClean = fClean && error("DisconnectBlock() : outputs still spent? database corrupted");
-                view.SetCoins(hash, CCoins());
+
+                if (tx.vout[pos].scriptPubKey.IsUnspendable()) {
+                    continue;
+                }
+                if (!view.HaveCoin(hash, pos))
+                {
+                    fClean = fClean && error("DisconnectBlock() : outputs still spent? database corrupted");
+                }
             }
-            CCoins outs;
-            view.GetCoins(hash, outs);
+
+            CCoinsModifier outs = view.ModifyCoins(hash);
+            outs->ClearUnspendable();
 
             CCoins outsBlock(tx, pindex->nHeight);
             // The CCoins serialization does not serialize negative numbers.
@@ -1450,17 +1456,17 @@ bool DisconnectBlock(const CBlock& block, CValidationState& state, const CBlockI
             // but it must be corrected before txout nversion ever influences a network rule.
             if (outsBlock.nVersion < 0)
             {
-                outs.nVersion = outsBlock.nVersion;
+                outs->nVersion = outsBlock.nVersion;
             }
-            if (outs != outsBlock)
+            if (*outs != outsBlock)
             {
+                LogPrintf("TX IS FAILING %s \n", tx.GetHash().GetHex().c_str());
                 fClean = fClean && error("DisconnectBlock(): added transaction mismatch? database corrupted");
             }
 
             // remove outputs
-            outs.Clear();
+            outs->Clear();
         }
-        */
         // restore inputs
         if (i > 0) // not coinbases
         {

@@ -111,7 +111,8 @@ CCoinsMap::const_iterator CCoinsViewCache::FetchCoins(const uint256 &txid) const
 
 bool CCoinsViewCache::GetCoins(const uint256 &txid, CCoins &coins) const {
     CCoinsMap::const_iterator it = FetchCoins(txid);
-    if (it != cacheCoins.end()) {
+    if (it != cacheCoins.end())
+    {
         coins = it->second.coins;
         return true;
     }

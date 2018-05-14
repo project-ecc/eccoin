@@ -119,7 +119,7 @@ bool CheckServiceTransaction(const CServiceTransaction &stx, const CTransaction&
     {
         return state.DoS(100, false, REJECT_INVALID, "payment-tx-vin-improper-size");
     }
-    if(ptx.vout.size() != 2)
+    if(ptx.vout.size() > 2) // should only be sending to ourself and maybe have a change output
     {
         return state.DoS(100, false, REJECT_INVALID, "payment-tx-vout-improper-size");
     }
