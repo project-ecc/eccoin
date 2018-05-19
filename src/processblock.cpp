@@ -1158,7 +1158,14 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     CDiskTxPos pos(pindex->GetBlockPos(), GetSizeOfCompactSize(block.vtx.size()));
     std::vector<std::pair<uint256, CDiskTxPos> > vPos;
     vPos.reserve(block.vtx.size());
-    blockundo.vtxundo.reserve(block.vtx.size() - 1);
+    if(block.IsProofOfStake())
+    {
+        blockundo.vtxundo.reserve(block.vtx.size());
+    }
+    else
+    {
+        blockundo.vtxundo.reserve(block.vtx.size() - 1);
+    }
     for (unsigned int i = 0; i < block.vtx.size(); i++)
     {
         const CTransaction &tx = *(block.vtx[i]);
@@ -1224,7 +1231,8 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         }
 
         CTxUndo undoDummy;
-        if (i > 0) {
+        if (i > 0 || tx.IsCoinStake())
+        {
             blockundo.vtxundo.push_back(CTxUndo());
         }
         UpdateCoins(tx, state, view, i == 0 ? undoDummy : blockundo.vtxundo.back(), pindex->nHeight);
@@ -1377,24 +1385,35 @@ bool ApplyTxInUndo(const CTxInUndo& undo, CCoinsViewCache& view, const COutPoint
     bool fClean = true;
 
     CCoinsModifier coins = view.ModifyCoins(out.hash);
-    if (undo.nHeight != 0) {
+    if (undo.nHeight != 0)
+    {
         // undo data contains height: this is the last output of the prevout tx being spent
         if (!coins->IsPruned())
+        {
             fClean = fClean && error("%s: undo data overwriting existing transaction", __func__);
+        }
         coins->Clear();
         coins->fCoinBase = undo.fCoinBase;
         coins->nHeight = undo.nHeight;
         coins->nVersion = undo.nVersion;
         coins->fCoinStake = undo.fCoinStake;
         coins->nTime = undo.nTime;
-    } else {
+    }
+    else
+    {
         if (coins->IsPruned())
+        {
             fClean = fClean && error("%s: undo data adding output to missing transaction", __func__);
+        }
     }
     if (coins->IsAvailable(out.n))
+    {
         fClean = fClean && error("%s: undo data overwriting existing output", __func__);
+    }
     if (coins->vout.size() < out.n+1)
+    {
         coins->vout.resize(out.n+1);
+    }
     coins->vout[out.n] = undo.txout;
 
     return fClean;
@@ -1438,7 +1457,8 @@ bool DisconnectBlock(const CBlock& block, CValidationState& state, const CBlockI
             for(int pos = 0; pos < tx.vout.size(); pos++)
             {
 
-                if (tx.vout[pos].scriptPubKey.IsUnspendable()) {
+                if (tx.vout[pos].scriptPubKey.IsUnspendable())
+                {
                     continue;
                 }
                 if (!view.HaveCoin(hash, pos))
@@ -1468,7 +1488,7 @@ bool DisconnectBlock(const CBlock& block, CValidationState& state, const CBlockI
             outs->Clear();
         }
         // restore inputs
-        if (i > 0) // not coinbases
+        if (!tx.IsCoinBase()) // not coinbases
         {
             const CTxUndo &txundo = blockUndo.vtxundo[i-1];
             if (txundo.vprevout.size() != tx.vin.size())

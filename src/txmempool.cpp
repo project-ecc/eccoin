@@ -445,7 +445,8 @@ bool CTxMemPool::addUnchecked(const uint256& hash, const CTxMemPoolEntry &entry,
 
     const CTransaction& tx = newit->GetTx();
     std::set<uint256> setParentTransactions;
-    for (unsigned int i = 0; i < tx.vin.size(); i++) {
+    for (unsigned int i = 0; i < tx.vin.size(); i++)
+    {
         mapNextTx[tx.vin[i].prevout] = CInPoint(&tx, i);
         setParentTransactions.insert(tx.vin[i].prevout.hash);
     }
@@ -497,20 +498,24 @@ void CTxMemPool::removeUnchecked(txiter it, MemPoolRemovalReason reason)
 void CTxMemPool::CalculateDescendants(txiter entryit, setEntries &setDescendants)
 {
     setEntries stage;
-    if (setDescendants.count(entryit) == 0) {
+    if (setDescendants.count(entryit) == 0)
+    {
         stage.insert(entryit);
     }
     // Traverse down the children of entry, only adding children that are not
     // accounted for in setDescendants already (because those children have either
     // already been walked, or will be walked in this iteration).
-    while (!stage.empty()) {
+    while (!stage.empty())
+    {
         txiter it = *stage.begin();
         setDescendants.insert(it);
         stage.erase(it);
 
         const setEntries &setChildren = GetMemPoolChildren(it);
-        for (auto const& childiter: setChildren) {
-            if (!setDescendants.count(childiter)) {
+        for (auto const& childiter: setChildren)
+        {
+            if (!setDescendants.count(childiter))
+            {
                 stage.insert(childiter);
             }
         }
