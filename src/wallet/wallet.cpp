@@ -976,7 +976,8 @@ void CWallet::BlockConnected(
     }
 }
 
-void CWallet::BlockDisconnected(const std::shared_ptr<const CBlock> &pblock) {
+void CWallet::BlockDisconnected(const std::shared_ptr<const CBlock> &pblock)
+{
     LOCK2(cs_main, cs_wallet);
 
     for (const CTransactionRef &ptx : pblock->vtx) {

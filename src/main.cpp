@@ -999,9 +999,11 @@ bool ReadBlockFromDisk(CBlock& block, const CBlockIndex* pindex, const Consensus
 void UpdateCoins(const CTransaction& tx, CValidationState &state, CCoinsViewCache &inputs, CTxUndo &txundo, int nHeight)
 {
     // mark inputs spent
-    if (!tx.IsCoinBase()) {
+    if (!tx.IsCoinBase())
+    {
         txundo.vprevout.reserve(tx.vin.size());
-        for (auto const& txin: tx.vin) {
+        for (auto const& txin: tx.vin)
+        {
             CCoinsModifier coins = inputs.ModifyCoins(txin.prevout.hash);
             unsigned nPos = txin.prevout.n;
 
@@ -1014,7 +1016,9 @@ void UpdateCoins(const CTransaction& tx, CValidationState &state, CCoinsViewCach
                 CTxInUndo& undo = txundo.vprevout.back();
                 undo.nHeight = coins->nHeight;
                 undo.fCoinBase = coins->fCoinBase;
-                undo.nVersion = coins->nVersion;
+                undo.nVersion = coins->nVersion;                
+                undo.fCoinStake = coins->fCoinStake;
+                undo.nTime = coins->nTime;
             }
         }
         // add outputs
@@ -1643,11 +1647,13 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
             {
                 if(!CheckServiceTransaction(stx, *tx, state))
                 {
-                    return error("CheckBlock(): CheckTransactionANS of %s failed with %s",
-                        tx->GetHash().ToString(),
-                        FormatStateMessage(state));
+                    // we dont want the block to fail on an ans error if everything was valid coin wise
+                    LogPrintf("CheckBlock(): CheckTransactionANS of %s failed with %s", tx->GetHash().ToString(), FormatStateMessage(state));
                 }
-                ProcessServiceCommand(stx, *tx, state, &block);
+                else
+                {
+                    ProcessServiceCommand(stx, *tx, state, &block);
+                }
             }
         }
         // PoS: check transaction timestamp
