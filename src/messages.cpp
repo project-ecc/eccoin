@@ -1867,18 +1867,28 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
         {
             return error("invalid service transaction with hash %s recieved", pstx.GetHash().GetHex().c_str());
         }
+        g_stxmempool->add(pstx.GetHash(), pstx);
         if (GetTransaction(pstx.paymentReferenceHash, tx, pnetMan->getActivePaymentNetwork()->GetConsensus(), blockHashOfTx))
         {
             //if we can get the transaction we have already processed it so it is safe to call CheckTransactionANS here
             CValidationState state;
             if(CheckServiceTransaction(pstx, tx, state))
-            {
-                g_stxmempool->add(pstx.GetHash(), pstx);
+            {                
                 ProcessServiceCommand(pstx, tx, state);
                 RelayServiceTransaction(pstx, connman);
             }
             else
             {
+                {
+                    LOCK(cs_pendstx);
+                    // we failed so add to a pending map for now
+                    std::map<uint256, int64_t>::const_iterator it = pendingStx.find(pstx.GetHash());
+                    if (it == pendingStx.end())
+                    {
+                        int64_t nNow = GetTimeMicros();
+                        pendingStx.insert(std::make_pair(pstx.GetHash(), nNow));
+                    }
+                }
                 int nDoS = 0;
                 if (state.IsInvalid(nDoS))
                 {
