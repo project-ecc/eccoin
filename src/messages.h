@@ -53,6 +53,9 @@ static const uint64_t RANDOMIZER_ID_ADDRESS_RELAY = 0x3cac0035b5866b90ULL;
 
 extern std::unique_ptr<CRollingBloomFilter> recentRejects;
 
+extern std::map<uint256, int64_t> pendingStx;
+extern CCriticalSection cs_pendstx;
+
 class PeerLogicValidation : public CValidationInterface {
 private:
     CConnman *connman;
@@ -205,6 +208,9 @@ const CBlockIndex *LastCommonAncestor(const CBlockIndex *pa, const CBlockIndex *
 void RegisterNodeSignals(CNodeSignals& nodeSignals);
 /** Unregister a network node */
 void UnregisterNodeSignals(CNodeSignals& nodeSignals);
+
+extern void RelayServiceTransaction(const CServiceTransaction &stx, CConnman &connman);
+
 
 
 
