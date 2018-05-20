@@ -1158,7 +1158,14 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     CDiskTxPos pos(pindex->GetBlockPos(), GetSizeOfCompactSize(block.vtx.size()));
     std::vector<std::pair<uint256, CDiskTxPos> > vPos;
     vPos.reserve(block.vtx.size());
-    blockundo.vtxundo.reserve(block.vtx.size() - 1);
+    if(block.IsProofOfStake())
+    {
+        blockundo.vtxundo.reserve(block.vtx.size());
+    }
+    else
+    {
+        blockundo.vtxundo.reserve(block.vtx.size() - 1);
+    }
     for (unsigned int i = 0; i < block.vtx.size(); i++)
     {
         const CTransaction &tx = *(block.vtx[i]);
@@ -1224,7 +1231,8 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         }
 
         CTxUndo undoDummy;
-        if (i > 0) {
+        if (i > 0 || tx.IsCoinStake())
+        {
             blockundo.vtxundo.push_back(CTxUndo());
         }
         UpdateCoins(tx, state, view, i == 0 ? undoDummy : blockundo.vtxundo.back(), pindex->nHeight);
@@ -1377,24 +1385,35 @@ bool ApplyTxInUndo(const CTxInUndo& undo, CCoinsViewCache& view, const COutPoint
     bool fClean = true;
 
     CCoinsModifier coins = view.ModifyCoins(out.hash);
-    if (undo.nHeight != 0) {
+    if (undo.nHeight != 0)
+    {
         // undo data contains height: this is the last output of the prevout tx being spent
         if (!coins->IsPruned())
+        {
             fClean = fClean && error("%s: undo data overwriting existing transaction", __func__);
+        }
         coins->Clear();
         coins->fCoinBase = undo.fCoinBase;
         coins->nHeight = undo.nHeight;
         coins->nVersion = undo.nVersion;
         coins->fCoinStake = undo.fCoinStake;
         coins->nTime = undo.nTime;
-    } else {
+    }
+    else
+    {
         if (coins->IsPruned())
+        {
             fClean = fClean && error("%s: undo data adding output to missing transaction", __func__);
+        }
     }
     if (coins->IsAvailable(out.n))
+    {
         fClean = fClean && error("%s: undo data overwriting existing output", __func__);
+    }
     if (coins->vout.size() < out.n+1)
+    {
         coins->vout.resize(out.n+1);
+    }
     coins->vout[out.n] = undo.txout;
 
     return fClean;
@@ -1432,17 +1451,24 @@ bool DisconnectBlock(const CBlock& block, CValidationState& state, const CBlockI
         const CTransaction &tx = *(block.vtx[i]);
         uint256 hash = tx.GetHash();
 
-        /*
         // Check that all outputs are available and match the outputs in the block itself
         // exactly.
         {
-            if (!view.HaveCoins(hash))
+            for(int pos = 0; pos < tx.vout.size(); pos++)
             {
-                fClean = fClean && error("DisconnectBlock() : outputs still spent? database corrupted");
-                view.SetCoins(hash, CCoins());
+
+                if (tx.vout[pos].scriptPubKey.IsUnspendable())
+                {
+                    continue;
+                }
+                if (!view.HaveCoin(hash, pos))
+                {
+                    fClean = fClean && error("DisconnectBlock() : outputs still spent? database corrupted");
+                }
             }
-            CCoins outs;
-            view.GetCoins(hash, outs);
+
+            CCoinsModifier outs = view.ModifyCoins(hash);
+            outs->ClearUnspendable();
 
             CCoins outsBlock(tx, pindex->nHeight);
             // The CCoins serialization does not serialize negative numbers.
@@ -1450,19 +1476,19 @@ bool DisconnectBlock(const CBlock& block, CValidationState& state, const CBlockI
             // but it must be corrected before txout nversion ever influences a network rule.
             if (outsBlock.nVersion < 0)
             {
-                outs.nVersion = outsBlock.nVersion;
+                outs->nVersion = outsBlock.nVersion;
             }
-            if (outs != outsBlock)
+            if (*outs != outsBlock)
             {
+                LogPrintf("TX IS FAILING %s \n", tx.GetHash().GetHex().c_str());
                 fClean = fClean && error("DisconnectBlock(): added transaction mismatch? database corrupted");
             }
 
             // remove outputs
-            outs.Clear();
+            outs->Clear();
         }
-        */
         // restore inputs
-        if (i > 0) // not coinbases
+        if (!tx.IsCoinBase()) // not coinbases
         {
             const CTxUndo &txundo = blockUndo.vtxundo[i-1];
             if (txundo.vprevout.size() != tx.vin.size())
