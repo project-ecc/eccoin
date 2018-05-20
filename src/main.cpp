@@ -1647,11 +1647,13 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
             {
                 if(!CheckServiceTransaction(stx, *tx, state))
                 {
-                    return error("CheckBlock(): CheckTransactionANS of %s failed with %s",
-                        tx->GetHash().ToString(),
-                        FormatStateMessage(state));
+                    // we dont want the block to fail on an ans error if everything was valid coin wise
+                    LogPrintf("CheckBlock(): CheckTransactionANS of %s failed with %s", tx->GetHash().ToString(), FormatStateMessage(state));
                 }
-                ProcessServiceCommand(stx, *tx, state, &block);
+                else
+                {
+                    ProcessServiceCommand(stx, *tx, state, &block);
+                }
             }
         }
         // PoS: check transaction timestamp
