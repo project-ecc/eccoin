@@ -46,6 +46,8 @@
 #include "processheader.h"
 #include "undo.h"
 #include "kernel.h"
+#include "stxmempool.h"
+#include "processtx.h"
 
 
 bool fLargeWorkForkFound = false;
@@ -257,6 +259,52 @@ bool ProcessNewBlock(CValidationState& state, const CNetworkTemplate& chainparam
     if( (pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height() % 960 )== 0)
     {
         // removeImpossibleChainTips();
+    }
+
+    // try to resolve pending stx
+
+    {
+        LOCK(cs_pendstx);
+        int64_t nNow = GetTimeMicros();
+        std::map<uint256, int64_t>::iterator iter;
+        std::map<uint256, int64_t> tempstx;
+        for (iter = pendingStx.begin(); iter != pendingStx.end(); ++iter)
+        {
+            if(nNow > iter->second)
+            {
+                CServiceTransaction pstx;
+                CTransaction tx;
+                uint256 blockHashOfTx;
+                if(!g_stxmempool->lookup(iter->first, pstx))
+                {
+                    // this shouldnt happen but its ok if it does
+                    tempstx.insert(std::make_pair(iter->first, nNow + 2 * 60 * 1000000));
+                }
+                if (GetTransaction(pstx.paymentReferenceHash, tx, pnetMan->getActivePaymentNetwork()->GetConsensus(), blockHashOfTx))
+                {
+                    //if we can get the transaction we have already processed it so it is safe to call CheckTransactionANS here
+                    CValidationState state;
+                    if(CheckServiceTransaction(pstx, tx, state))
+                    {
+                        ProcessServiceCommand(pstx, tx, state);
+                        RelayServiceTransaction(pstx, *g_connman.get());
+                    }
+                    else
+                    {
+                        tempstx.insert(std::make_pair(iter->first, nNow + 2 * 60 * 1000000));
+                    }
+                }
+                else
+                {
+                    tempstx.insert(std::make_pair(iter->first, nNow + 2 * 60 * 1000000));
+                }
+            }
+            else
+            {
+                tempstx.insert(std::make_pair(iter->first, iter->second));
+            }
+        }
+        pendingStx = tempstx;
     }
     return true;
 }
