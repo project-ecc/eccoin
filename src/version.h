@@ -40,8 +40,13 @@ static const int GETHEADERS_VERSION = 60035;
 //! "filter*" commands are disabled without NODE_BLOOM after and including this version
 static const int NO_BLOOM_VERSION = 60034;
 
-//! "feefilter" tells peers to filter invs to you by fee starts with this version
-static const int FEEFILTER_VERSION = 60040;
+/**
+ * Versioning for network services
+ */
 
+// version of the service transaction resolution code
+static const int NETWORK_SERVICE_VERSION = 10003;
+
+static const int ANS_VERSION = 10000;
 
 #endif // BITCOIN_VERSION_H
