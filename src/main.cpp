@@ -1648,7 +1648,7 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
                 if(!CheckServiceTransaction(stx, *tx, state))
                 {
                     // we dont want the block to fail on an ans error if everything was valid coin wise
-                    LogPrintf("CheckBlock(): CheckTransactionANS of %s failed with %s", tx->GetHash().ToString(), FormatStateMessage(state));
+                    LogPrintf("CheckBlock(): CheckServiceTransaction of %s failed with %s. This is a non fatal error\n", tx->GetHash().ToString(), FormatStateMessage(state));
                 }
                 else
                 {
