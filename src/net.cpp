@@ -2857,9 +2857,6 @@ CNode::CNode(NodeId idIn, ServiceFlags nLocalServicesIn,
     nPingUsecTime = 0;
     fPingQueued = false;
     nMinPingUsecTime = std::numeric_limits<int64_t>::max();
-    minFeeFilter = 0;
-    lastSentFeeFilter = 0;
-    nextSendTimeFeeFilter = 0;
     fPauseRecv = false;
     fPauseSend = false;
     nProcessQueueSize = 0;
