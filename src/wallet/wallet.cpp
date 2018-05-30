@@ -1984,6 +1984,39 @@ bool CWallet::SelectCoinsMinConf(const CAmount& nTargetValue, int nConfMine, int
     return true;
 }
 
+bool CWallet::SelectCoinsForService(const CAmount& nTargetValue, int nConfMine, int nConfTheirs, std::vector<COutput> vCoins,
+                                 std::set<std::pair<const CWalletTx*,unsigned int> >& setCoinsRet, CAmount& nValueRet) const
+{
+    setCoinsRet.clear();
+    nValueRet = 0;
+
+    random_shuffle(vCoins.begin(), vCoins.end(), GetRandInt);
+
+    for (auto const& output: vCoins)
+    {
+        if (!output.fSpendable)
+            continue;
+
+        const CWalletTx *pcoin = output.tx;
+
+        if (output.nDepth < (pcoin->IsFromMe(ISMINE_ALL) ? nConfMine : nConfTheirs))
+            continue;
+
+        int i = output.i;
+        CAmount n = pcoin->tx->vout[i].nValue;
+
+        std::pair<CAmount,std::pair<const CWalletTx*,unsigned int> > coin = std::make_pair(n,std::make_pair(pcoin, i));
+
+        if (n >= nTargetValue)
+        {
+            setCoinsRet.insert(coin.second);
+            nValueRet += coin.first;
+            return true;
+        }
+    }
+    return false;
+}
+
 void CWallet::AvailableCoinsByOwner(std::vector<COutput>& vCoins, const CRecipient& recipient) const
 {
     vCoins.clear();
@@ -2033,9 +2066,7 @@ bool CWallet::SelectCoinsByOwner(const CAmount& nTargetValue, const CRecipient& 
     std::vector<COutput> vCoins;
     AvailableCoinsByOwner(vCoins, recipient);
 
-    bool res = SelectCoinsMinConf(nTargetValue, 1, 6, vCoins, setCoinsRet, nValueRet) ||
-               SelectCoinsMinConf(nTargetValue, 1, 1, vCoins, setCoinsRet, nValueRet) ||
-               (bSpendZeroConfChange && SelectCoinsMinConf(nTargetValue, 0, 1, vCoins, setCoinsRet, nValueRet));
+    bool res = SelectCoinsForService(nTargetValue, 10, 10, vCoins, setCoinsRet, nValueRet);
 
     return res;
 }
