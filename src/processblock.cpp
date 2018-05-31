@@ -1504,7 +1504,6 @@ bool DisconnectBlock(const CBlock& block, CValidationState& state, const CBlockI
         {
             for(int pos = 0; pos < tx.vout.size(); pos++)
             {
-
                 if (tx.vout[pos].scriptPubKey.IsUnspendable())
                 {
                     continue;
