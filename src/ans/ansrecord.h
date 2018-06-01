@@ -102,6 +102,7 @@ public:
     std::string getAddress();
 
     void setExpireTime(uint64_t nTime);
+    void addExpireTime(uint64_t nTime);
     uint64_t getExpireTime();
 
     void setPaymentHash(uint256 hash);

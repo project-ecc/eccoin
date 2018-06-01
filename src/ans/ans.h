@@ -43,7 +43,7 @@ public:
     bool addRecord(AnsRecordTypes recordType, std::string key, CAnsRecord &value);
     bool getRecord(std::string key, CAnsRecordSet &value);
     bool getRecord(std::string key, CAnsRecord &value);
-    bool addTimeToRecord(CServiceTransaction stx, std::string& addr, uint64_t newExpireTime);
+    bool addTimeToRecord(CServiceTransaction stx, std::string& addr, uint64_t additionalTime);
 };
 
 extern CAnsZone* pansMain;

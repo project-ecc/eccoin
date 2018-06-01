@@ -99,6 +99,10 @@ static uint256 most_recent_block_hash;
 /** Map maintaining per-node state. Requires cs_main. */
 std::map<NodeId, CNodeState> mapNodeState;
 
+std::map<uint256, int64_t> pendingStx;
+CCriticalSection cs_pendstx;
+
+
 // Requires cs_main.
 CNodeState *State(NodeId pnode) {
     std::map<NodeId, CNodeState>::iterator it = mapNodeState.find(pnode);
@@ -329,7 +333,7 @@ static void RelayTransaction(const CTransaction &tx, CConnman &connman)
     connman.ForEachNode([&inv](CNode *pnode) { pnode->PushInventory(inv); });
 }
 
-static void RelayServiceTransaction(const CServiceTransaction &stx, CConnman &connman)
+void RelayServiceTransaction(const CServiceTransaction &stx, CConnman &connman)
 {
     CInv inv(MSG_STX, stx.GetHash());
     connman.ForEachNode([&inv](CNode *pnode) { pnode->PushInventory(inv); });
@@ -1863,18 +1867,28 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
         {
             return error("invalid service transaction with hash %s recieved", pstx.GetHash().GetHex().c_str());
         }
+        g_stxmempool->add(pstx.GetHash(), pstx);
         if (GetTransaction(pstx.paymentReferenceHash, tx, pnetMan->getActivePaymentNetwork()->GetConsensus(), blockHashOfTx))
         {
             //if we can get the transaction we have already processed it so it is safe to call CheckTransactionANS here
             CValidationState state;
             if(CheckServiceTransaction(pstx, tx, state))
-            {
-                g_stxmempool->add(pstx.GetHash(), pstx);
+            {                
                 ProcessServiceCommand(pstx, tx, state);
                 RelayServiceTransaction(pstx, connman);
             }
             else
             {
+                {
+                    LOCK(cs_pendstx);
+                    // we failed so add to a pending map for now
+                    std::map<uint256, int64_t>::const_iterator it = pendingStx.find(pstx.GetHash());
+                    if (it == pendingStx.end())
+                    {
+                        int64_t nNow = GetTimeMicros();
+                        pendingStx.insert(std::make_pair(pstx.GetHash(), nNow));
+                    }
+                }
                 int nDoS = 0;
                 if (state.IsInvalid(nDoS))
                 {
@@ -2709,7 +2723,7 @@ bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interr
 
     //
     // Message: inventory
-    //
+    //   
     std::vector<CInv> vInv;
     {
         LOCK(pto->cs_inventory);
@@ -2752,11 +2766,6 @@ bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interr
         {
             auto vtxinfo = mempool.infoAll();
             pto->fSendMempool = false;
-            CAmount filterrate = 0;
-            {
-                LOCK(pto->cs_feeFilter);
-                filterrate = pto->minFeeFilter;
-            }
 
             LOCK(pto->cs_filter);
 
@@ -2765,13 +2774,6 @@ bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interr
                 const uint256 &txid = txinfo.tx->GetId();
                 CInv inv(MSG_TX, txid);
                 pto->setInventoryTxToSend.erase(txid);
-                if (filterrate != 0)
-                {
-                    if (txinfo.feeRate.GetFeePerK() < filterrate)
-                    {
-                        continue;
-                    }
-                }
                 if (pto->pfilter)
                 {
                     if (!pto->pfilter->IsRelevantAndUpdate(*txinfo.tx))
@@ -2801,11 +2803,6 @@ bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interr
                  it != pto->setInventoryTxToSend.end(); it++) {
                 vInvTx.push_back(it);
             }
-            CAmount filterrate = 0;
-            {
-                LOCK(pto->cs_feeFilter);
-                filterrate = pto->minFeeFilter;
-            }
             // Topologically and fee-rate sort the inventory we send for privacy
             // and priority reasons. A heap is used so that not all items need
             // sorting if only a few are being sent.
@@ -2833,10 +2830,6 @@ bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interr
                 // Not in the mempool anymore? don't bother sending it.
                 TxMempoolInfo txinfo = mempool.info(hash);
                 if (!txinfo.tx)
-                {
-                    continue;
-                }
-                if (filterrate != 0 && txinfo.feeRate.GetFeePerK() < filterrate)
                 {
                     continue;
                 }
@@ -2997,51 +2990,6 @@ bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interr
     if (!vGetData.empty())
     {
         connman.PushMessage(pto, msgMaker.Make(NetMsgType::GETDATA, vGetData));
-    }
-
-    //
-    // Message: feefilter
-    //
-    // We don't want white listed peers to filter txs to us if we have
-    // -whitelistforcerelay
-    if (pto->nVersion >= FEEFILTER_VERSION &&
-        gArgs.GetBoolArg("-feefilter", DEFAULT_FEEFILTER) &&
-        !(pto->fWhitelisted && gArgs.GetBoolArg("-whitelistforcerelay", DEFAULT_WHITELISTFORCERELAY)))
-    {
-        CAmount currentFilter = mempool.GetMinFee(gArgs.GetArg("-maxmempool", DEFAULT_MAX_MEMPOOL_SIZE) * 1000000).GetFeePerK();
-        int64_t timeNow = GetTimeMicros();
-        if (timeNow > pto->nextSendTimeFeeFilter) {
-            static CFeeRate default_feerate =
-                CFeeRate(DEFAULT_MIN_RELAY_TX_FEE);
-            static FeeFilterRounder filterRounder(default_feerate);
-            CAmount filterToSend = filterRounder.round(currentFilter);
-            // If we don't allow free transactions, then we always have a fee
-            // filter of at least minRelayTxFee
-            if (gArgs.GetArg("-limitfreerelay", DEFAULT_LIMITFREERELAY) <= 0)
-            {
-                filterToSend =
-                    std::max(filterToSend, ::minRelayTxFee.GetFeePerK());
-            }
-
-            if (filterToSend != pto->lastSentFeeFilter)
-            {
-                connman.PushMessage(
-                    pto, msgMaker.Make(NetMsgType::FEEFILTER, filterToSend));
-                pto->lastSentFeeFilter = filterToSend;
-            }
-            pto->nextSendTimeFeeFilter =
-                PoissonNextSend(timeNow, AVG_FEEFILTER_BROADCAST_INTERVAL);
-        }
-        // If the fee filter has changed substantially and it's still more than
-        // MAX_FEEFILTER_CHANGE_DELAY until scheduled broadcast, then move the
-        // broadcast to within MAX_FEEFILTER_CHANGE_DELAY.
-        else if (timeNow + MAX_FEEFILTER_CHANGE_DELAY * 1000000 <
-                     pto->nextSendTimeFeeFilter &&
-                 (currentFilter < 3 * pto->lastSentFeeFilter / 4 ||
-                  currentFilter > 4 * pto->lastSentFeeFilter / 3))
-        {
-            pto->nextSendTimeFeeFilter = timeNow + GetRandInt(MAX_FEEFILTER_CHANGE_DELAY) * 1000000;
-        }
     }
     return true;
 }

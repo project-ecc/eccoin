@@ -46,6 +46,8 @@
 #include "processheader.h"
 #include "undo.h"
 #include "kernel.h"
+#include "stxmempool.h"
+#include "processtx.h"
 
 
 bool fLargeWorkForkFound = false;
@@ -257,6 +259,52 @@ bool ProcessNewBlock(CValidationState& state, const CNetworkTemplate& chainparam
     if( (pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height() % 960 )== 0)
     {
         // removeImpossibleChainTips();
+    }
+
+    // try to resolve pending stx
+
+    {
+        LOCK(cs_pendstx);
+        int64_t nNow = GetTimeMicros();
+        std::map<uint256, int64_t>::iterator iter;
+        std::map<uint256, int64_t> tempstx;
+        for (iter = pendingStx.begin(); iter != pendingStx.end(); ++iter)
+        {
+            if(nNow > iter->second)
+            {
+                CServiceTransaction pstx;
+                CTransaction tx;
+                uint256 blockHashOfTx;
+                if(!g_stxmempool->lookup(iter->first, pstx))
+                {
+                    // this shouldnt happen but its ok if it does
+                    tempstx.insert(std::make_pair(iter->first, nNow + 2 * 60 * 1000000));
+                }
+                if (GetTransaction(pstx.paymentReferenceHash, tx, pnetMan->getActivePaymentNetwork()->GetConsensus(), blockHashOfTx))
+                {
+                    //if we can get the transaction we have already processed it so it is safe to call CheckTransactionANS here
+                    CValidationState state;
+                    if(CheckServiceTransaction(pstx, tx, state))
+                    {
+                        ProcessServiceCommand(pstx, tx, state);
+                        RelayServiceTransaction(pstx, *g_connman.get());
+                    }
+                    else
+                    {
+                        tempstx.insert(std::make_pair(iter->first, nNow + 2 * 60 * 1000000));
+                    }
+                }
+                else
+                {
+                    tempstx.insert(std::make_pair(iter->first, nNow + 2 * 60 * 1000000));
+                }
+            }
+            else
+            {
+                tempstx.insert(std::make_pair(iter->first, iter->second));
+            }
+        }
+        pendingStx = tempstx;
     }
     return true;
 }
@@ -1158,7 +1206,14 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     CDiskTxPos pos(pindex->GetBlockPos(), GetSizeOfCompactSize(block.vtx.size()));
     std::vector<std::pair<uint256, CDiskTxPos> > vPos;
     vPos.reserve(block.vtx.size());
-    blockundo.vtxundo.reserve(block.vtx.size() - 1);
+    if(block.IsProofOfStake())
+    {
+        blockundo.vtxundo.reserve(block.vtx.size());
+    }
+    else
+    {
+        blockundo.vtxundo.reserve(block.vtx.size() - 1);
+    }
     for (unsigned int i = 0; i < block.vtx.size(); i++)
     {
         const CTransaction &tx = *(block.vtx[i]);
@@ -1224,7 +1279,8 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         }
 
         CTxUndo undoDummy;
-        if (i > 0) {
+        if (i > 0 || tx.IsCoinStake())
+        {
             blockundo.vtxundo.push_back(CTxUndo());
         }
         UpdateCoins(tx, state, view, i == 0 ? undoDummy : blockundo.vtxundo.back(), pindex->nHeight);
@@ -1377,24 +1433,35 @@ bool ApplyTxInUndo(const CTxInUndo& undo, CCoinsViewCache& view, const COutPoint
     bool fClean = true;
 
     CCoinsModifier coins = view.ModifyCoins(out.hash);
-    if (undo.nHeight != 0) {
+    if (undo.nHeight != 0)
+    {
         // undo data contains height: this is the last output of the prevout tx being spent
         if (!coins->IsPruned())
+        {
             fClean = fClean && error("%s: undo data overwriting existing transaction", __func__);
+        }
         coins->Clear();
         coins->fCoinBase = undo.fCoinBase;
         coins->nHeight = undo.nHeight;
         coins->nVersion = undo.nVersion;
         coins->fCoinStake = undo.fCoinStake;
         coins->nTime = undo.nTime;
-    } else {
+    }
+    else
+    {
         if (coins->IsPruned())
+        {
             fClean = fClean && error("%s: undo data adding output to missing transaction", __func__);
+        }
     }
     if (coins->IsAvailable(out.n))
+    {
         fClean = fClean && error("%s: undo data overwriting existing output", __func__);
+    }
     if (coins->vout.size() < out.n+1)
+    {
         coins->vout.resize(out.n+1);
+    }
     coins->vout[out.n] = undo.txout;
 
     return fClean;
@@ -1437,8 +1504,8 @@ bool DisconnectBlock(const CBlock& block, CValidationState& state, const CBlockI
         {
             for(int pos = 0; pos < tx.vout.size(); pos++)
             {
-
-                if (tx.vout[pos].scriptPubKey.IsUnspendable()) {
+                if (tx.vout[pos].scriptPubKey.IsUnspendable())
+                {
                     continue;
                 }
                 if (!view.HaveCoin(hash, pos))
@@ -1468,7 +1535,7 @@ bool DisconnectBlock(const CBlock& block, CValidationState& state, const CBlockI
             outs->Clear();
         }
         // restore inputs
-        if (i > 0) // not coinbases
+        if (!tx.IsCoinBase()) // not coinbases
         {
             const CTxUndo &txundo = blockUndo.vtxundo[i-1];
             if (txundo.vprevout.size() != tx.vin.size())
