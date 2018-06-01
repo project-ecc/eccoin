@@ -57,6 +57,11 @@ void CAnsRecord::setExpireTime(uint64_t nTime)
     expireTime = nTime;
 }
 
+void CAnsRecord::addExpireTime(uint64_t nTime)
+{
+    expireTime = expireTime + nTime;
+}
+
 uint64_t CAnsRecord::getExpireTime()
 {
     return expireTime;

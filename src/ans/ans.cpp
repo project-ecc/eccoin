@@ -99,7 +99,7 @@ bool CAnsZone::getRecord(std::string key, CAnsRecord &value)
     return g_ans->ReadEntry(PTRkey, value);
 }
 
-bool CAnsZone::addTimeToRecord(CServiceTransaction stx, std::string& addr, uint64_t newExpireTime)
+bool CAnsZone::addTimeToRecord(CServiceTransaction stx, std::string& addr, uint64_t additionalTime)
 {
     CAnsRecord value(stx, addr);
     std::string name = value.getName();
@@ -109,7 +109,7 @@ bool CAnsZone::addTimeToRecord(CServiceTransaction stx, std::string& addr, uint6
     {
         return false;
     }
-    value.setExpireTime(newExpireTime);
+    value.addExpireTime(additionalTime);
     g_ans->WriteEntry(Akey, value);
 
     CAnsKey PTRkey(PTR_REC, address);
@@ -117,7 +117,7 @@ bool CAnsZone::addTimeToRecord(CServiceTransaction stx, std::string& addr, uint6
     {
         return false;
     }
-    value.setExpireTime(newExpireTime);
+    value.addExpireTime(additionalTime);
     g_ans->WriteEntry(PTRkey, value);
     return true;
 }
