@@ -13,9 +13,10 @@ out collectively by the network.
 
 License
 -------
+[![LICENSE](https://img.shields.io/github/license/project-ecc/eccoin.svg)](https://github.com/project-ecc/eccoin/blob/master/LICENSE)
 
-ECC is released under the terms of the MIT license. See [copying](copying) for more
-information or see https://opensource.org/licenses/MIT.
+All contributions and releases are made under the GNU General Public License v3. See [LICENSE](https://github.com/project-ecc/eccoin/blob/master/LICENSE).
+
 
 Development Process
 -------------------
