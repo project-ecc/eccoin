@@ -848,6 +848,10 @@ public:
     bool AbandonTransaction(const uint256& hashTx);
 
     bool CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int64_t nSearchInterval, CTransaction& txNew);
+
+
+    /* Initializes the wallet, returns a new CWallet instance or a null pointer in case of an error */
+    static bool InitLoadWallet();
 };
 
 /** A key allocated from the key pool. */
