@@ -22,6 +22,8 @@
 #define BITCOIN_WALLET_WALLET_H
 
 #include "amount.h"
+#include "consensus/consensus.h"
+#include "policy/policy.h"
 #include "net.h"
 #include "streams.h"
 #include "tinyformat.h"
@@ -56,28 +58,32 @@ extern bool fWalletUnlockStakingOnly;
 
 static const unsigned int DEFAULT_KEYPOOL_SIZE = 1000;
 //! -paytxfee default
-static const CAmount DEFAULT_TRANSACTION_FEE = 1;
+static const CAmount DEFAULT_TRANSACTION_FEE = 0;
 //! -paytxfee will warn if called with a higher fee than this amount (in satoshis) per KB
 static const CAmount nHighTransactionFeeWarning = 0.01 * COIN;
 //! -fallbackfee default
-static const CAmount DEFAULT_FALLBACK_FEE = 1;
+static const CAmount DEFAULT_FALLBACK_FEE = 20000;
 //! -mintxfee default
-static const CAmount DEFAULT_TRANSACTION_MINFEE = 1;
+static const CAmount DEFAULT_TRANSACTION_MINFEE = 1000;
 //! -maxtxfee default
 static const CAmount DEFAULT_TRANSACTION_MAXFEE = 0.1 * COIN;
+//! Discourage users to set fees higher than this amount (in satoshis) per kB
+static const CAmount HIGH_TX_FEE_PER_KB = 0.01 * COIN;
+//! -maxtxfee will warn if called with a higher fee than this amount (in satoshis)
+static const CAmount HIGH_MAX_TX_FEE = 100 * HIGH_TX_FEE_PER_KB;
 //! minimum change amount
-static const CAmount MIN_CHANGE = 1;
+static const CAmount MIN_CHANGE = CENT;
 //! Default for -spendzeroconfchange
 static const bool DEFAULT_SPEND_ZEROCONF_CHANGE = true;
 //! Default for -sendfreetransactions
-static const bool DEFAULT_SEND_FREE_TRANSACTIONS = false;
+static const bool DEFAULT_SEND_FREE_TRANSACTIONS = true;
 //! -txconfirmtarget default
-static const unsigned int DEFAULT_TX_CONFIRM_TARGET = 15;
-//! -maxtxfee will warn if called with a higher fee than this amount (in satoshis)
-static const CAmount nHighTransactionMaxFeeWarning = 100 * nHighTransactionFeeWarning;
+static const unsigned int DEFAULT_TX_CONFIRM_TARGET = COINBASE_MATURITY;
 //! Largest (in bytes) free transaction we're willing to create
-static const unsigned int MAX_FREE_TRANSACTION_CREATE_SIZE = 1000;
+static const unsigned int MAX_FREE_TRANSACTION_CREATE_SIZE = MAX_STANDARD_TX_SIZE;
 static const bool DEFAULT_WALLETBROADCAST = true;
+
+extern const char *DEFAULT_WALLET_DAT;
 
 class CAccountingEntry;
 class CBlockIndex;

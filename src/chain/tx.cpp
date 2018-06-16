@@ -233,34 +233,6 @@ bool CTransaction::IsFinal(int nBlockHeight, int64_t nBlockTime) const
     return true;
 }
 
-int64_t CTransaction::GetMinFee(unsigned int nBlockSize, unsigned int nBytes) const
-{
-    int64_t nBaseFee = DEFAULT_TRANSACTION_MINFEE;
-
-    unsigned int nNewBlockSize = nBlockSize + nBytes;
-    int64_t nMinFee = (1 + (int64_t)nBytes / 1000) * nBaseFee;
-
-    // To limit dust spam, require MIN_TX_FEE/MIN_RELAY_TX_FEE if any output is less than 0.01
-    if (nMinFee < nBaseFee)
-    {
-        for(const CTxOut& txout: vout)
-            if (txout.nValue < CENT)
-                nMinFee = nBaseFee;
-    }
-
-    // Raise the price as the block approaches full
-    if (nBlockSize != 1 && nNewBlockSize >= MAX_BLOCK_SIZE_GEN/2)
-    {
-        if (nNewBlockSize >= MAX_BLOCK_SIZE_GEN)
-            return MAX_MONEY;
-        nMinFee *= MAX_BLOCK_SIZE_GEN / (MAX_BLOCK_SIZE_GEN - nNewBlockSize);
-    }
-
-    if (!MoneyRange(nMinFee))
-        nMinFee = MAX_MONEY;
-    return nMinFee;
-}
-
 // ppcoin: total coin age spent in transaction, in the unit of coin-days.
 // Only those coins meeting minimum age requirement counts. As those
 // transactions not in main chain are not currently indexed so we

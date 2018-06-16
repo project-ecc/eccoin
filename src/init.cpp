@@ -945,7 +945,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
         std::string maxfee = gArgs.GetArg("-maxtxfee", std::to_string(DEFAULT_TRANSACTION_MINFEE));
         if (!ParseMoney(maxfee, nMaxFee))
             return InitError(strprintf(_("Invalid amount for -maxtxfee=<amount>: '%i'"), gArgs.GetArg("-maxtxfee", DEFAULT_TRANSACTION_MAXFEE)));
-        if (nMaxFee > nHighTransactionMaxFeeWarning)
+        if (nMaxFee > HIGH_MAX_TX_FEE)
             InitWarning(_("-maxtxfee is set very high! Fees this large could be paid on a single transaction."));
         maxTxFee = nMaxFee;
         if (CFeeRate(maxTxFee, 1000) < ::minRelayTxFee)

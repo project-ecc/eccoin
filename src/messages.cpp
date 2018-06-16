@@ -1673,9 +1673,7 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
         pfrom->setAskFor.erase(inv.hash);
         mapAlreadyAskedFor.erase(inv.hash);
 
-        std::list<CTransaction> lRemovedTxn;
-
-        if (!AlreadyHave(inv) && AcceptToMemoryPool(mempool, state, ptx, true, &fMissingInputs, &lRemovedTxn))
+        if (!AlreadyHave(inv) && AcceptToMemoryPool(mempool, state, ptx, true, &fMissingInputs))
         {
             mempool.check(pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.get());
             RelayTransaction(tx, connman);
@@ -1720,7 +1718,7 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
                     if (setMisbehaving.count(fromPeer)) {
                         continue;
                     }
-                    if (AcceptToMemoryPool(mempool, stateDummy, porphanTx, true, &fMissingInputs2, &lRemovedTxn))
+                    if (AcceptToMemoryPool(mempool, stateDummy, porphanTx, true, &fMissingInputs2))
                     {
                         LogPrintf("   accepted orphan tx %s\n", orphanId.ToString());
                         RelayTransaction(orphanTx, connman);

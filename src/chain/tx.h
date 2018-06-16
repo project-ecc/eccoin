@@ -173,7 +173,6 @@ public:
         return a.hash != b.hash;
     }
     std::string ToString() const;
-    int64_t GetMinFee(unsigned int nBlockSize=1, unsigned int nBytes = 0) const;
     bool GetCoinAge(uint64_t& nCoinAge) const;  // ppcoin: get transaction coin age
     uint64_t GetCoinAge(uint64_t nCoinAge, bool byValue) const;
 

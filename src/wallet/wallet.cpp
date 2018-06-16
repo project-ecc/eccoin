@@ -2455,9 +2455,12 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CWalletT
                 unsigned int nBytes = ::GetSerializeSize(txNew, SER_NETWORK, PROTOCOL_VERSION);
 
                 // Remove scriptSigs if we used dummy signatures for fee calculation
-                if (!sign) {
+                if (!sign)
+                {
                     for (auto& vin: txNew.vin)
+                    {
                         vin.scriptSig = CScript();
+                    }
                 }
 
                 // Embed the constructed transaction data in wtxNew.
@@ -2475,11 +2478,11 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CWalletT
                 // Can we complete this as a free transaction?
                 if (fSendFreeTransactions && nBytes <= MAX_FREE_TRANSACTION_CREATE_SIZE)
                 {
-                    // Not enough fee: enough priority?
-                    double dPriorityNeeded = mempool.estimateSmartPriority(nTxConfirmTarget);
                     // Require at least hard-coded AllowFree.
-                    if (dPriority >= dPriorityNeeded && AllowFree(dPriority))
+                    if (AllowFree(dPriority))
+                    {
                         break;
+                    }
                 }
 
                 CAmount nFeeNeeded = GetMinimumFee(nBytes, nTxConfirmTarget, mempool);
@@ -3930,19 +3933,6 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
         unsigned int nBytes = ::GetSerializeSize(txNew, SER_NETWORK, PROTOCOL_VERSION);
         if (nBytes >= MAX_BLOCK_SIZE_GEN/5)
             return error("CreateCoinStake : exceeded coinstake size limit");
-
-        // Check enough fee is paid
-        if (nMinFee < txNew.GetMinFee() - DEFAULT_TRANSACTION_MINFEE)
-        {
-            nMinFee = txNew.GetMinFee() - DEFAULT_TRANSACTION_MINFEE;
-            continue; // try signing again
-        }
-        else
-        {
-            if (fDebug && gArgs.GetBoolArg("-printfee", false))
-                LogPrintf("CreateCoinStake : fee for coinstake %s\n", FormatMoney(nMinFee).c_str());
-            break;
-        }
     }
 
     // Successfully generated coinstake
