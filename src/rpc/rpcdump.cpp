@@ -157,7 +157,7 @@ UniValue importprivkey(const UniValue& params, bool fHelp)
         pwalletMain->nTimeFirstKey = 1; // 0 would be considered 'no value'
 
         if (fRescan) {
-            pwalletMain->ScanForWalletTransactions(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Genesis(), true);
+            pwalletMain->ScanForWalletTransactions(pnetMan->getChainActive()->chainActive.Genesis(), true);
         }
     }
 
@@ -247,7 +247,7 @@ UniValue importaddress(const UniValue& params, bool fHelp)
 
     if (fRescan)
     {
-        pwalletMain->ScanForWalletTransactions(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Genesis(), true);
+        pwalletMain->ScanForWalletTransactions(pnetMan->getChainActive()->chainActive.Genesis(), true);
         pwalletMain->ReacceptWalletTransactions();
     }
 
@@ -301,7 +301,7 @@ UniValue importpubkey(const UniValue& params, bool fHelp)
 
     if (fRescan)
     {
-        pwalletMain->ScanForWalletTransactions(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Genesis(), true);
+        pwalletMain->ScanForWalletTransactions(pnetMan->getChainActive()->chainActive.Genesis(), true);
         pwalletMain->ReacceptWalletTransactions();
     }
 
@@ -338,7 +338,7 @@ UniValue importwallet(const UniValue& params, bool fHelp)
     if (!file.is_open())
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Cannot open wallet dump file");
 
-    int64_t nTimeBegin = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->GetBlockTime();
+    int64_t nTimeBegin = pnetMan->getChainActive()->chainActive.Tip()->GetBlockTime();
 
     bool fGood = true;
 
@@ -396,14 +396,14 @@ UniValue importwallet(const UniValue& params, bool fHelp)
     file.close();
     pwalletMain->ShowProgress("", 100); // hide progress dialog in GUI
 
-    CBlockIndex *pindex = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
+    CBlockIndex *pindex = pnetMan->getChainActive()->chainActive.Tip();
     while (pindex && pindex->pprev && pindex->GetBlockTime() > nTimeBegin - 7200)
         pindex = pindex->pprev;
 
     if (!pwalletMain->nTimeFirstKey || nTimeBegin < pwalletMain->nTimeFirstKey)
         pwalletMain->nTimeFirstKey = nTimeBegin;
 
-    LogPrintf("Rescanning last %i blocks\n", pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height() - pindex->nHeight + 1);
+    LogPrintf("Rescanning last %i blocks\n", pnetMan->getChainActive()->chainActive.Height() - pindex->nHeight + 1);
     pwalletMain->ScanForWalletTransactions(pindex);
     pwalletMain->MarkDirty();
 
@@ -492,8 +492,8 @@ UniValue dumpwallet(const UniValue& params, bool fHelp)
     // produce output
     file << strprintf("# Wallet dump created by ECC %s (%s)\n", CLIENT_BUILD, CLIENT_DATE);
     file << strprintf("# * Created on %s\n", EncodeDumpTime(GetTime()));
-    file << strprintf("# * Best block at time of backup was %i (%s),\n", pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height(), pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->GetBlockHash().ToString());
-    file << strprintf("#   mined on %s\n", EncodeDumpTime(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->GetBlockTime()));
+    file << strprintf("# * Best block at time of backup was %i (%s),\n", pnetMan->getChainActive()->chainActive.Height(), pnetMan->getChainActive()->chainActive.Tip()->GetBlockHash().ToString());
+    file << strprintf("#   mined on %s\n", EncodeDumpTime(pnetMan->getChainActive()->chainActive.Tip()->GetBlockTime()));
     file << "\n";
     for (std::vector<std::pair<int64_t, CKeyID> >::const_iterator it = vKeyBirth.begin(); it != vKeyBirth.end(); it++) {
         const CKeyID &keyid = it->second;

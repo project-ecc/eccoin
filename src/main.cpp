@@ -172,7 +172,7 @@ int nPeersWithValidatedDownloads = 0;
 int GetHeight()
 {
     LOCK(cs_main);
-    return pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height();
+    return pnetMan->getChainActive()->chainActive.Height();
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -218,7 +218,7 @@ bool CheckFinalTx(const CTransaction &tx, int flags)
     // evaluated is what is used. Thus if we want to know if a
     // transaction can be part of the *next* block, we need to call
     // IsFinalTx() with one more than chainActive.Height().
-    const int nBlockHeight = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height() + 1;
+    const int nBlockHeight = pnetMan->getChainActive()->chainActive.Height() + 1;
 
     // BIP113 will require that time-locked transactions have nLockTime set to
     // less than the median time of the previous block they're contained in.
@@ -226,7 +226,7 @@ bool CheckFinalTx(const CTransaction &tx, int flags)
     // chain tip, so we use that to calculate the median time passed to
     // IsFinalTx() if LOCKTIME_MEDIAN_TIME_PAST is set.
     const int64_t nBlockTime = (flags & LOCKTIME_MEDIAN_TIME_PAST)
-                             ? pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->GetMedianTimePast()
+                             ? pnetMan->getChainActive()->chainActive.Tip()->GetMedianTimePast()
                              : GetAdjustedTime();
 
     return IsFinalTx(tx, nBlockHeight, nBlockTime);
@@ -324,7 +324,7 @@ bool TestLockPointValidity(const LockPoints* lp)
     if (lp->maxInputBlock) {
         // Check whether chainActive is an extension of the block at which the LockPoints
         // calculation was valid.  If not LockPoints are no longer valid
-        if (!pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Contains(lp->maxInputBlock)) {
+        if (!pnetMan->getChainActive()->chainActive.Contains(lp->maxInputBlock)) {
             return false;
         }
     }
@@ -338,7 +338,7 @@ bool CheckSequenceLocks(const CTransaction &tx, int flags, LockPoints* lp, bool 
     AssertLockHeld(cs_main);
     AssertLockHeld(mempool.cs);
 
-    CBlockIndex* tip = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
+    CBlockIndex* tip = pnetMan->getChainActive()->chainActive.Tip();
     CBlockIndex index;
     index.pprev = tip;
     // CheckSequenceLocks() uses chainActive.Height()+1 to evaluate
@@ -357,7 +357,7 @@ bool CheckSequenceLocks(const CTransaction &tx, int flags, LockPoints* lp, bool 
     }
     else {
         // pcoinsTip contains the UTXO set for chainActive.Tip()
-        CCoinsViewMemPool viewMemPool(pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.get(), mempool);
+        CCoinsViewMemPool viewMemPool(pnetMan->getChainActive()->pcoinsTip.get(), mempool);
         std::vector<int> prevheights;
         prevheights.resize(tx.vin.size());
         for (size_t txinIndex = 0; txinIndex < tx.vin.size(); txinIndex++) {
@@ -442,7 +442,7 @@ void LimitMempoolSize(CTxMemPool& pool, size_t limit, unsigned long age)
     std::vector<uint256> vNoSpendsRemaining;
     pool.TrimToSize(limit, &vNoSpendsRemaining);
     for(auto const& removed: vNoSpendsRemaining)
-        pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip->Uncache(removed);
+        pnetMan->getChainActive()->pcoinsTip->Uncache(removed);
 }
 
 /** Convert CValidationState to a human-readable message for logging */
@@ -552,11 +552,11 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState &state, const C
         LockPoints lp;
         {
             LOCK(pool.cs);
-            CCoinsViewMemPool viewMemPool(pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.get(), pool);
+            CCoinsViewMemPool viewMemPool(pnetMan->getChainActive()->pcoinsTip.get(), pool);
             view.SetBackend(viewMemPool);
 
             // do we already have it?
-            bool fHadTxInCache = pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip->HaveCoinsInCache(hash);
+            bool fHadTxInCache = pnetMan->getChainActive()->pcoinsTip->HaveCoinsInCache(hash);
             if (view.HaveCoins(hash)) {
                 if (!fHadTxInCache)
                     vHashTxnToUncache.push_back(hash);
@@ -567,7 +567,7 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState &state, const C
             // Note that this does not check for the presence of actual outputs (see the next check for that),
             // and only helps with filling in pfMissingInputs (to determine missing vs spent).
             for (auto const txin: tx.vin) {
-                if (!pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip->HaveCoinsInCache(txin.prevout.hash))
+                if (!pnetMan->getChainActive()->pcoinsTip->HaveCoinsInCache(txin.prevout.hash))
                 {
                     vHashTxnToUncache.push_back(txin.prevout.hash);
                 }
@@ -623,7 +623,7 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState &state, const C
         pool.ApplyDeltas(hash, nPriorityDummy, nModifiedFees);
 
         CAmount inChainInputValue;
-        double dPriority = view.GetPriority(tx, pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height(), inChainInputValue);
+        double dPriority = view.GetPriority(tx, pnetMan->getChainActive()->chainActive.Height(), inChainInputValue);
 
         // Keep track of transactions that spend a coinbase, which we re-scan
         // during reorgs to ensure COINBASE_MATURITY is still met.
@@ -638,7 +638,7 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState &state, const C
             }
         }
 
-        CTxMemPoolEntry entry(ptx, nFees, GetTime(), dPriority, pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height(), pool.HasNoInputsOf(tx), inChainInputValue, fSpendsCoinbase, nSigOps, lp);
+        CTxMemPoolEntry entry(ptx, nFees, GetTime(), dPriority, pnetMan->getChainActive()->chainActive.Height(), pool.HasNoInputsOf(tx), inChainInputValue, fSpendsCoinbase, nSigOps, lp);
         unsigned int nSize = entry.GetTxSize();
 
         // Check that the transaction doesn't have an excessive number of
@@ -659,7 +659,7 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState &state, const C
         }
         else if (gArgs.GetBoolArg("-relaypriority", DEFAULT_RELAYPRIORITY)
                  && nModifiedFees < ::minRelayTxFee.GetFee(nSize)
-                 && !AllowFree(entry.GetPriority(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height() + 1)))
+                 && !AllowFree(entry.GetPriority(pnetMan->getChainActive()->chainActive.Height() + 1)))
         {
             // Require that free transactions have sufficient priority to be mined in the next block.
             return state.DoS(0, false, REJECT_INSUFFICIENTFEE, "insufficient priority");
@@ -898,7 +898,7 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState &state, const C
         }
 
         // Store transaction in memory
-        pool.addUnchecked(hash, entry, setAncestors, !pnetMan->getActivePaymentNetwork()->getChainManager()->IsInitialBlockDownload());
+        pool.addUnchecked(hash, entry, setAncestors, !pnetMan->getChainActive()->IsInitialBlockDownload());
 
         // trim mempool and check if tx was trimmed
         if (!fOverrideMempoolLimit)
@@ -924,7 +924,7 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransa
         LogPrintf("AcceptToMemoryPool(): ERROR, %s \n",state.GetRejectReason().c_str());
         for (auto const& hashTx: vHashTxToUncache)
         {
-            pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip->Uncache(hashTx);
+            pnetMan->getChainActive()->pcoinsTip->Uncache(hashTx);
         }
     }
     return res;
@@ -1050,7 +1050,7 @@ bool CScriptCheck::operator()() {
 int GetSpendHeight(const CCoinsViewCache& inputs)
 {
     LOCK(cs_main);
-    CBlockIndex* pindexPrev = pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.find(inputs.GetBestBlock())->second;
+    CBlockIndex* pindexPrev = pnetMan->getChainActive()->mapBlockIndex.find(inputs.GetBestBlock())->second;
     return pindexPrev->nHeight + 1;
 }
 
@@ -1268,7 +1268,7 @@ bool FlushStateToDisk(CValidationState &state, FlushStateMode mode)
         if (nLastSetChain == 0) {
             nLastSetChain = nNow;
         }
-        size_t cacheSize = pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip->DynamicMemoryUsage();
+        size_t cacheSize = pnetMan->getChainActive()->pcoinsTip->DynamicMemoryUsage();
         // The cache is large and close to the limit, but we have time now (not in the middle of a block processing).
         bool fCacheLarge = mode == FLUSH_STATE_PERIODIC && cacheSize * (10.0/9) > nCoinCacheUsage;
         // The cache is over the limit, we have to write now.
@@ -1300,7 +1300,7 @@ bool FlushStateToDisk(CValidationState &state, FlushStateMode mode)
                     vBlocks.push_back(*it);
                     setDirtyBlockIndex.erase(it++);
                 }
-                if (!pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree->WriteBatchSync(vFiles, nLastBlockFile, vBlocks)) {
+                if (!pnetMan->getChainActive()->pblocktree->WriteBatchSync(vFiles, nLastBlockFile, vBlocks)) {
                     return AbortNode(state, "Files to write to block index database");
                 }
             }
@@ -1313,16 +1313,16 @@ bool FlushStateToDisk(CValidationState &state, FlushStateMode mode)
             // twice (once in the log, and once in the tables). This is already
             // an overestimation, as most will delete an existing entry or
             // overwrite one. Still, use a conservative safety factor of 2.
-            if (!CheckDiskSpace(128 * 2 * 2 * pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip->GetCacheSize()))
+            if (!CheckDiskSpace(128 * 2 * 2 * pnetMan->getChainActive()->pcoinsTip->GetCacheSize()))
                 return state.Error("out of disk space");
             // Flush the chainstate (which may refer to block index entries).
-            if (!pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip->Flush())
+            if (!pnetMan->getChainActive()->pcoinsTip->Flush())
                 return AbortNode(state, "Failed to write to coin database");
             nLastFlush = nNow;
         }
         if (fDoFullFlush || ((mode == FLUSH_STATE_ALWAYS || mode == FLUSH_STATE_PERIODIC) && nNow > nLastSetChain + (int64_t)DATABASE_WRITE_INTERVAL * 1000000)) {
             // Update best block in wallet (so we can detect restored wallets).
-            GetMainSignals().SetBestChain(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.GetLocator());
+            GetMainSignals().SetBestChain(pnetMan->getChainActive()->chainActive.GetLocator());
             nLastSetChain = nNow;
         }
     } catch (const std::runtime_error& e)
@@ -1343,7 +1343,7 @@ void PruneBlockIndexCandidates()
     // Note that we can't delete the current block itself, as we may need to return to it later in case a
     // reorganization to a better block fails.
     std::set<CBlockIndex*, CBlockIndexWorkComparator>::iterator it = setBlockIndexCandidates.begin();
-    while (it != setBlockIndexCandidates.end() && setBlockIndexCandidates.value_comp()(*it, pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip())) {
+    while (it != setBlockIndexCandidates.end() && setBlockIndexCandidates.value_comp()(*it, pnetMan->getChainActive()->chainActive.Tip())) {
         setBlockIndexCandidates.erase(it++);
     }
     // Either the current tip or a successor of it we're working towards is left in setBlockIndexCandidates.
@@ -1360,15 +1360,15 @@ bool InvalidateBlock(CValidationState& state, const Consensus::Params& consensus
     setDirtyBlockIndex.insert(pindex);
     setBlockIndexCandidates.erase(pindex);
 
-    while (pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Contains(pindex)) {
-        CBlockIndex *pindexWalk = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
+    while (pnetMan->getChainActive()->chainActive.Contains(pindex)) {
+        CBlockIndex *pindexWalk = pnetMan->getChainActive()->chainActive.Tip();
         pindexWalk->nStatus |= BLOCK_FAILED_CHILD;
         setDirtyBlockIndex.insert(pindexWalk);
         setBlockIndexCandidates.erase(pindexWalk);
         // ActivateBestChain considers blocks already in chainActive
         // unconditionally valid already, so force disconnect away from it.
         if (!DisconnectTip(state, consensusParams)) {
-            mempool.removeForReorg(pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.get(), pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->nHeight + 1, STANDARD_LOCKTIME_VERIFY_FLAGS);
+            mempool.removeForReorg(pnetMan->getChainActive()->pcoinsTip.get(), pnetMan->getChainActive()->chainActive.Tip()->nHeight + 1, STANDARD_LOCKTIME_VERIFY_FLAGS);
             return false;
         }
     }
@@ -1377,16 +1377,16 @@ bool InvalidateBlock(CValidationState& state, const Consensus::Params& consensus
 
     // The resulting new best tip may not be in setBlockIndexCandidates anymore, so
     // add it again.
-    BlockMap::iterator it = pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.begin();
-    while (it != pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.end()) {
-        if (it->second->IsValid(BLOCK_VALID_TRANSACTIONS) && it->second->nChainTx && !setBlockIndexCandidates.value_comp()(it->second, pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip())) {
+    BlockMap::iterator it = pnetMan->getChainActive()->mapBlockIndex.begin();
+    while (it != pnetMan->getChainActive()->mapBlockIndex.end()) {
+        if (it->second->IsValid(BLOCK_VALID_TRANSACTIONS) && it->second->nChainTx && !setBlockIndexCandidates.value_comp()(it->second, pnetMan->getChainActive()->chainActive.Tip())) {
             setBlockIndexCandidates.insert(it->second);
         }
         it++;
     }
 
     InvalidChainFound(pindex);
-    mempool.removeForReorg(pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.get(), pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->nHeight + 1, STANDARD_LOCKTIME_VERIFY_FLAGS);
+    mempool.removeForReorg(pnetMan->getChainActive()->pcoinsTip.get(), pnetMan->getChainActive()->chainActive.Tip()->nHeight + 1, STANDARD_LOCKTIME_VERIFY_FLAGS);
     return true;
 }
 
@@ -1400,7 +1400,7 @@ bool ReconsiderBlock(CValidationState& state, CBlockIndex *pindex) {
     {
         pindex->nStatus &= ~BLOCK_FAILED_MASK;
         setDirtyBlockIndex.insert(pindex);
-        if (pindex->IsValid(BLOCK_VALID_TRANSACTIONS) && pindex->nChainTx && setBlockIndexCandidates.value_comp()(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip(), pindex))
+        if (pindex->IsValid(BLOCK_VALID_TRANSACTIONS) && pindex->nChainTx && setBlockIndexCandidates.value_comp()(pnetMan->getChainActive()->chainActive.Tip(), pindex))
         {
             setBlockIndexCandidates.insert(pindex);
         }
@@ -1412,14 +1412,14 @@ bool ReconsiderBlock(CValidationState& state, CBlockIndex *pindex) {
     }
 
     // Remove the invalidity flag from all descendants.
-    BlockMap::iterator it = pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.begin();    
-    while (it != pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.end())
+    BlockMap::iterator it = pnetMan->getChainActive()->mapBlockIndex.begin();
+    while (it != pnetMan->getChainActive()->mapBlockIndex.end())
     {
         if (!it->second->IsValid() && it->second->GetAncestor(nHeight) == pindex)
         {
             it->second->nStatus &= ~BLOCK_FAILED_MASK;
             setDirtyBlockIndex.insert(it->second);
-            if (it->second->IsValid(BLOCK_VALID_TRANSACTIONS) && it->second->nChainTx && setBlockIndexCandidates.value_comp()(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip(), it->second)) {
+            if (it->second->IsValid(BLOCK_VALID_TRANSACTIONS) && it->second->nChainTx && setBlockIndexCandidates.value_comp()(pnetMan->getChainActive()->chainActive.Tip(), it->second)) {
                 setBlockIndexCandidates.insert(it->second);
             }
             if (it->second == pindexBestInvalid) {
@@ -1467,7 +1467,7 @@ bool ReceivedBlockTransactions(const CBlock &block, CValidationState& state, CBl
                 LOCK(cs_nBlockSequenceId);
                 pindex->nSequenceId = nBlockSequenceId++;
             }
-            if (pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip() == NULL || !setBlockIndexCandidates.value_comp()(pindex, pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip())) {
+            if (pnetMan->getChainActive()->chainActive.Tip() == NULL || !setBlockIndexCandidates.value_comp()(pindex, pnetMan->getChainActive()->chainActive.Tip())) {
                 setBlockIndexCandidates.insert(pindex);
             }
             std::pair<std::multimap<CBlockIndex*, CBlockIndex*>::iterator, std::multimap<CBlockIndex*, CBlockIndex*>::iterator> range = mapBlocksUnlinked.equal_range(pindex);
@@ -1871,7 +1871,7 @@ std::string CBlockFileInfo::ToString() const {
 ThresholdState VersionBitsTipState(const Consensus::Params& params, Consensus::DeploymentPos pos)
 {
     LOCK(cs_main);
-    return VersionBitsState(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip(), params, pos, versionbitscache);
+    return VersionBitsState(pnetMan->getChainActive()->chainActive.Tip(), params, pos, versionbitscache);
 }
 
 class CMainCleanup
@@ -1999,7 +1999,7 @@ const int YEARLY_BLOCKCOUNT = 700800;
 int64_t GetProofOfStakeReward(int64_t nCoinAge, int nHeight)
 {
     int64_t nRewardCoinYear = 2.5 * MAX_MINT_PROOF_OF_STAKE;
-    int64_t CMS = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->nMoneySupply;
+    int64_t CMS = pnetMan->getChainActive()->chainActive.Tip()->nMoneySupply;
     if(CMS == MAX_MONEY)
     {
         /// if we are already at max money supply limits (25 billion coins, we return 0 as no new coins are to be minted

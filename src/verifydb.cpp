@@ -39,26 +39,26 @@ CVerifyDB::~CVerifyDB()
 bool CVerifyDB::VerifyDB(const CNetworkTemplate& chainparams, CCoinsView *coinsview, int nCheckLevel, int nCheckDepth)
 {
     LOCK(cs_main);
-    if (pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip() == NULL || pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->pprev == NULL)
+    if (pnetMan->getChainActive()->chainActive.Tip() == NULL || pnetMan->getChainActive()->chainActive.Tip()->pprev == NULL)
         return true;
 
     // Verify blocks in the best chain
     if (nCheckDepth <= 0)
         nCheckDepth = 1000000000; // suffices until the year 19000
-    if (nCheckDepth > pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height())
-        nCheckDepth = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height();
+    if (nCheckDepth > pnetMan->getChainActive()->chainActive.Height())
+        nCheckDepth = pnetMan->getChainActive()->chainActive.Height();
     nCheckLevel = std::max(0, std::min(4, nCheckLevel));
     LogPrintf("Verifying last %i blocks at level %i\n", nCheckDepth, nCheckLevel);
     CCoinsViewCache coins(coinsview);
-    CBlockIndex* pindexState = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
+    CBlockIndex* pindexState = pnetMan->getChainActive()->chainActive.Tip();
     CBlockIndex* pindexFailure = NULL;
     int nGoodTransactions = 0;
     CValidationState state;
-    for (CBlockIndex* pindex = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip(); pindex && pindex->pprev; pindex = pindex->pprev)
+    for (CBlockIndex* pindex = pnetMan->getChainActive()->chainActive.Tip(); pindex && pindex->pprev; pindex = pindex->pprev)
     {
         boost::this_thread::interruption_point();
-        uiInterface.ShowProgress(_("Verifying blocks..."), std::max(1, std::min(99, (int)(((double)(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height() - pindex->nHeight)) / (double)nCheckDepth * (nCheckLevel >= 4 ? 50 : 100)))));
-        if (pindex->nHeight < pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height()-nCheckDepth)
+        uiInterface.ShowProgress(_("Verifying blocks..."), std::max(1, std::min(99, (int)(((double)(pnetMan->getChainActive()->chainActive.Height() - pindex->nHeight)) / (double)nCheckDepth * (nCheckLevel >= 4 ? 50 : 100)))));
+        if (pindex->nHeight < pnetMan->getChainActive()->chainActive.Height()-nCheckDepth)
             break;
         CBlock block;
         // check level 0: read from disk
@@ -77,7 +77,7 @@ bool CVerifyDB::VerifyDB(const CNetworkTemplate& chainparams, CCoinsView *coinsv
             }
         }
         // check level 3: check for inconsistencies during memory-only disconnect of tip blocks
-        if (nCheckLevel >= 3 && pindex == pindexState && (coins.DynamicMemoryUsage() + pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip->DynamicMemoryUsage()) <= nCoinCacheUsage) {
+        if (nCheckLevel >= 3 && pindex == pindexState && (coins.DynamicMemoryUsage() + pnetMan->getChainActive()->pcoinsTip->DynamicMemoryUsage()) <= nCoinCacheUsage) {
             bool fClean = true;
             if (!DisconnectBlock(block, state, pindex, coins, &fClean))
                 return error("VerifyDB(): *** irrecoverable inconsistency in block data at %d, hash=%s", pindex->nHeight, pindex->GetBlockHash().ToString());
@@ -96,15 +96,15 @@ bool CVerifyDB::VerifyDB(const CNetworkTemplate& chainparams, CCoinsView *coinsv
             return true;
     }
     if (pindexFailure)
-        return error("VerifyDB(): *** coin database inconsistencies found (last %i blocks, %i good transactions before that)\n", pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height() - pindexFailure->nHeight + 1, nGoodTransactions);
+        return error("VerifyDB(): *** coin database inconsistencies found (last %i blocks, %i good transactions before that)\n", pnetMan->getChainActive()->chainActive.Height() - pindexFailure->nHeight + 1, nGoodTransactions);
 
     // check level 4: try reconnecting blocks
     if (nCheckLevel >= 4) {
         CBlockIndex *pindex = pindexState;
-        while (pindex != pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()) {
+        while (pindex != pnetMan->getChainActive()->chainActive.Tip()) {
             boost::this_thread::interruption_point();
-            uiInterface.ShowProgress(_("Verifying blocks..."), std::max(1, std::min(99, 100 - (int)(((double)(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height() - pindex->nHeight)) / (double)nCheckDepth * 50))));
-            pindex = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Next(pindex);
+            uiInterface.ShowProgress(_("Verifying blocks..."), std::max(1, std::min(99, 100 - (int)(((double)(pnetMan->getChainActive()->chainActive.Height() - pindex->nHeight)) / (double)nCheckDepth * 50))));
+            pindex = pnetMan->getChainActive()->chainActive.Next(pindex);
             CBlock block;
             if (!ReadBlockFromDisk(block, pindex, chainparams.GetConsensus()))
                 return error("VerifyDB(): *** ReadBlockFromDisk failed at %d, hash=%s", pindex->nHeight, pindex->GetBlockHash().ToString());
@@ -113,7 +113,7 @@ bool CVerifyDB::VerifyDB(const CNetworkTemplate& chainparams, CCoinsView *coinsv
         }
     }
 
-    LogPrintf("No coin database inconsistencies in last %i blocks (%i transactions)\n", pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height() - pindexState->nHeight, nGoodTransactions);
+    LogPrintf("No coin database inconsistencies in last %i blocks (%i transactions)\n", pnetMan->getChainActive()->chainActive.Height() - pindexState->nHeight, nGoodTransactions);
 
     return true;
 }

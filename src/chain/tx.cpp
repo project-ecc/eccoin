@@ -222,7 +222,7 @@ bool CTransaction::IsFinal(int nBlockHeight, int64_t nBlockTime) const
     if (nLockTime == 0)
         return true;
     if (nBlockHeight == 0)
-        nBlockHeight = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height();
+        nBlockHeight = pnetMan->getChainActive()->chainActive.Height();
     if (nBlockTime == 0)
         nBlockTime = GetAdjustedTime();
     if ((int64_t)nLockTime < ((int64_t)nLockTime < LOCKTIME_THRESHOLD ? (int64_t)nBlockHeight : nBlockTime))
@@ -253,7 +253,7 @@ uint64_t CTransaction::GetCoinAge(uint64_t nCoinAge, bool byValue) const
     for(const CTxIn& txin: vin)
     {
         CDiskTxPos txindex;
-        if (!pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree->ReadTxIndex(txin.prevout.hash, txindex))
+        if (!pnetMan->getChainActive()->pblocktree->ReadTxIndex(txin.prevout.hash, txindex))
             continue;  // previous transaction not in main chain
 
         // Read block header
@@ -300,7 +300,7 @@ bool CTransaction::GetCoinAge(uint64_t& nCoinAge) const
     for(const CTxIn& txin: vin)
     {
         CDiskTxPos txindex;
-        if (!pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree->ReadTxIndex(txin.prevout.hash, txindex))
+        if (!pnetMan->getChainActive()->pblocktree->ReadTxIndex(txin.prevout.hash, txindex))
             continue;  // previous transaction not in main chain
 
         // Read block header
@@ -349,7 +349,7 @@ bool GetTransaction(const uint256 &hash, CTransaction &txOut, const Consensus::P
     }
 
     CDiskTxPos postx;
-    if (pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree->ReadTxIndex(hash, postx)) {
+    if (pnetMan->getChainActive()->pblocktree->ReadTxIndex(hash, postx)) {
         CAutoFile file(OpenBlockFile(postx, true), SER_DISK, CLIENT_VERSION);
         if (file.IsNull())
             return error("%s: OpenBlockFile failed", __func__);
@@ -370,13 +370,13 @@ bool GetTransaction(const uint256 &hash, CTransaction &txOut, const Consensus::P
     if (fAllowSlow) { // use coin database to locate block that contains transaction, and scan it
         int nHeight = -1;
         {
-            CCoinsViewCache &view = *pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip;
+            CCoinsViewCache &view = *pnetMan->getChainActive()->pcoinsTip;
             const CCoins* coins = view.AccessCoins(hash);
             if (coins)
                 nHeight = coins->nHeight;
         }
         if (nHeight > 0)
-            pindexSlow = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive[nHeight];
+            pindexSlow = pnetMan->getChainActive()->chainActive[nHeight];
     }
 
     if (pindexSlow) {

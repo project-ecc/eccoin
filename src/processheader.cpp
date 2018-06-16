@@ -30,12 +30,12 @@ bool AcceptBlockHeader(const CBlockHeader& block, CValidationState& state, const
     AssertLockHeld(cs_main);
     // Check for duplicate
     uint256 hash = block.GetHash();
-    BlockMap::iterator miSelf = pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.find(hash);
+    BlockMap::iterator miSelf = pnetMan->getChainActive()->mapBlockIndex.find(hash);
     CBlockIndex *pindex = NULL;
     if (hash != chainparams.GetConsensus().hashGenesisBlock)
     {
 
-        if (miSelf != pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.end()) {
+        if (miSelf != pnetMan->getChainActive()->mapBlockIndex.end()) {
             // Block header is already known.
             pindex = miSelf->second;
             if (ppindex)
@@ -50,8 +50,8 @@ bool AcceptBlockHeader(const CBlockHeader& block, CValidationState& state, const
 
         // Get prev block index
         CBlockIndex* pindexPrev = NULL;
-        BlockMap::iterator mi = pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.find(block.hashPrevBlock);
-        if (mi == pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.end())
+        BlockMap::iterator mi = pnetMan->getChainActive()->mapBlockIndex.find(block.hashPrevBlock);
+        if (mi == pnetMan->getChainActive()->mapBlockIndex.end())
             return state.DoS(10, error("%s: prev block not found", __func__), 0, "bad-prevblk");
         pindexPrev = (*mi).second;
         if (pindexPrev->nStatus & BLOCK_FAILED_MASK)
@@ -65,7 +65,7 @@ bool AcceptBlockHeader(const CBlockHeader& block, CValidationState& state, const
             return false;
     }
     if (pindex == NULL)
-        pindex = pnetMan->getActivePaymentNetwork()->getChainManager()->AddToBlockIndex(block);
+        pindex = pnetMan->getChainActive()->AddToBlockIndex(block);
 
     if (ppindex)
         *ppindex = pindex;

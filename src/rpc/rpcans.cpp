@@ -39,7 +39,7 @@ void SendMoney(const CTxDestination &address, CAmount nValue, bool fSubtractFeeF
 
 static bool AreServicesEnabled()
 {
-    return pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->pprev->GetMedianTimePast() >= SERVICE_UPGRADE_HARDFORK;
+    return pnetMan->getChainActive()->chainActive.Tip()->pprev->GetMedianTimePast() >= SERVICE_UPGRADE_HARDFORK;
 }
 
 AnsRecordTypes resolveRecordType(std::string strRecordType)
