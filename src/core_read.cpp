@@ -20,7 +20,7 @@
 #include "core_io.h"
 
 #include "chain/block.h"
-#include "tx/tx.h"
+#include "chain/tx.h"
 #include "script/script.h"
 #include "serialize.h"
 #include "streams.h"

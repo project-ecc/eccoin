@@ -16,7 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "stxmempool.h"
+#include "services/mempool.h"
 
 #include "util/util.h"
 

@@ -27,7 +27,7 @@
 #include "consensus/validation.h"
 #include "main.h"
 #include "policy/policy.h"
-#include "tx/tx.h"
+#include "chain/tx.h"
 #include "rpcserver.h"
 #include "streams.h"
 #include "sync.h"

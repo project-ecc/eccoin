@@ -20,11 +20,11 @@
 #include <univalue.h>
 #include <cctype>
 
-#include "ans/ans.h"
+#include "services/ans.h"
 #include "base58.h"
 #include "main.h"
 #include "rpcserver.h"
-#include "tx/servicetx.h"
+#include "services/servicetx.h"
 #include "util/utilmoneystr.h"
 #include "wallet/wallet.h"
 

@@ -25,7 +25,7 @@
 #include "net.h"
 #include "streams.h"
 #include "tinyformat.h"
-#include "tx/servicetx.h"
+#include "services/servicetx.h"
 #include "ui_interface.h"
 #include "util/utilstrencodings.h"
 #include "validationinterface.h"

@@ -16,7 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "service_leveldb.h"
+#include "servicedb.h"
 
 #include "util/util.h"
 

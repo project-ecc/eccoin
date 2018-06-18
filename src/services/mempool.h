@@ -21,7 +21,7 @@
 
 #include "dbwrapper.h"
 #include "uint256.h"
-#include "tx/servicetx.h"
+#include "services/servicetx.h"
 
 #include <map>
 #include <string>

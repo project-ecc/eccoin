@@ -18,7 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "tx/tx.h"
+#include "chain/tx.h"
 
 #include "crypto/hash.h"
 #include "tinyformat.h"

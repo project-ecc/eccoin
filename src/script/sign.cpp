@@ -23,7 +23,7 @@
 #include "key.h"
 #include "keystore.h"
 #include "policy/policy.h"
-#include "tx/tx.h"
+#include "chain/tx.h"
 #include "script/standard.h"
 #include "uint256.h"
 

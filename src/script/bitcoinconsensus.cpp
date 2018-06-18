@@ -20,7 +20,7 @@
 
 #include "bitcoinconsensus.h"
 
-#include "tx/tx.h"
+#include "chain/tx.h"
 #include "pubkey.h"
 #include "script/interpreter.h"
 #include "version.h"

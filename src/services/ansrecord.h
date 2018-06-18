@@ -22,7 +22,7 @@
 #include <string>
 #include "uint256.h"
 #include "serialize.h"
-#include "tx/servicetx.h"
+#include "services/servicetx.h"
 
 enum AnsRecordTypes{
     A_RECORD, // name to address

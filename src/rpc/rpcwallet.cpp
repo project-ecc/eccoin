@@ -26,7 +26,6 @@
 #include "main.h"
 #include "net.h"
 #include "netbase.h"
-#include "policy/rbf.h"
 #include "rpcserver.h"
 #include "timedata.h"
 #include "util/util.h"
@@ -99,29 +98,6 @@ void WalletTxToJSON(const CWalletTx& wtx, UniValue& entry)
     entry.push_back(Pair("time", wtx.GetTxTime()));
     entry.push_back(Pair("locktime", (int64_t)wtx.tx->nLockTime));
     entry.push_back(Pair("timereceived", (int64_t)wtx.nTimeReceived));
-
-    // Add opt-in RBF status
-    std::string rbfStatus = "no";
-    if (confirms <= 0)
-    {
-        LOCK(mempool.cs);
-        if (!mempool.exists(hash))
-        {
-            if (SignalsOptInRBF(*(wtx.tx)))
-            {
-                rbfStatus = "yes";
-            }
-            else
-            {
-                rbfStatus = "unknown";
-            }
-        }
-        else if (IsRBFOptIn(*mempool.mapTx.find(hash), mempool))
-        {
-            rbfStatus = "yes";
-        }
-    }
-    entry.push_back(Pair("bip125-replaceable", rbfStatus));
 
     for(auto const& item: wtx.mapValue)
     {

@@ -18,7 +18,7 @@
 
 
 #include "ansrecord.h"
-#include "tx/tx.h"
+#include "chain/tx.h"
 #include "base58.h"
 #include "script/script.h"
 

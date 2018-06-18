@@ -29,7 +29,7 @@
 #include "merkleblock.h"
 #include "net.h"
 #include "policy/policy.h"
-#include "tx/tx.h"
+#include "chain/tx.h"
 #include "rpcserver.h"
 #include "script/script.h"
 #include "script/script_error.h"
