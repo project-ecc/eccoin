@@ -396,7 +396,7 @@ bool CWallet::Verify(const std::string& walletFile, std::string& warningString, 
         } catch (const boost::filesystem::filesystem_error&) {
             // failure is ok (well, not really, but it's not worse than what we started with)
         }
-        
+
         // try again
         if (!bitdb.Open(GetDataDir())) {
             // if it still fails, it probably means we can't even create the database env
@@ -405,14 +405,14 @@ bool CWallet::Verify(const std::string& walletFile, std::string& warningString, 
             return true;
         }
     }
-    
+
     if (gArgs.GetBoolArg("-salvagewallet", false))
     {
         // Recover readable keypairs:
         if (!CWalletDB::Recover(bitdb, walletFile, true))
             return false;
     }
-    
+
     if (boost::filesystem::exists(GetDataDir() / walletFile))
     {
         CDBEnv::VerifyResult r = bitdb.Verify(walletFile, CWalletDB::Recover);
@@ -426,7 +426,7 @@ bool CWallet::Verify(const std::string& walletFile, std::string& warningString, 
         if (r == CDBEnv::RECOVER_FAIL)
             errorString += _("wallet.dat corrupt, salvage failed");
     }
-    
+
     return true;
 }
 
@@ -1846,9 +1846,9 @@ static void ApproximateBestSubset(std::vector<std::pair<CAmount, std::pair<const
         }
     }
 
-    //Reduces the approximate best subset by removing any inputs that are smaller than the surplus of nTotal beyond nTargetValue. 
+    //Reduces the approximate best subset by removing any inputs that are smaller than the surplus of nTotal beyond nTargetValue.
     for (unsigned int i = 0; i < vValue.size(); i++)
-    {                        
+    {
         if (vfBest[i] && (nBest - vValue[i].first) >= nTargetValue )
         {
             vfBest[i] = false;
@@ -2971,7 +2971,7 @@ bool CWallet::SetDefaultKey(const CPubKey &vchPubKey)
 
 /**
  * Mark old keypool keys as used,
- * and generate all new keys 
+ * and generate all new keys
  */
 bool CWallet::NewKeyPool()
 {
@@ -3697,7 +3697,7 @@ bool CWallet::SelectCoins(CAmount nTargetValue, unsigned int nSpendTime, std::se
                           int64_t& nValueRet, const CCoinControl* coinControl) const
 {
     std::vector<COutput> vCoins;
-    AvailableCoins(vCoins, true, coinControl); 
+    AvailableCoins(vCoins, true, coinControl);
 
     // coin control -> return all selected outputs (we want all selected to go into the transaction for sure)
     if (coinControl && coinControl->HasSelected() && !coinControl->fAllowOtherInputs)
@@ -3728,7 +3728,7 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
     if(pIndex0->pprev)
         nCombineThreshold = GetProofOfWorkReward(pIndex0->nHeight, DEFAULT_TRANSACTION_MINFEE , pIndex0->pprev->GetBlockHash()) / 3;
 
-    CBigNum bnTargetPerCoinDay;
+    arith_uint256 bnTargetPerCoinDay;
     bnTargetPerCoinDay.SetCompact(nBits);
 
     txNew.vin.clear();

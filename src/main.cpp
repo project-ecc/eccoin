@@ -22,7 +22,6 @@
 
 #include "addrman.h"
 #include "arith_uint256.h"
-#include "bignum.h"
 #include "networks/networktemplate.h"
 #include "checkqueue.h"
 #include "consensus/consensus.h"
@@ -1894,12 +1893,12 @@ const CBlockIndex* GetLastBlockIndex(const CBlockIndex* pindex, bool fProofOfSta
 
 unsigned int GetNextTargetRequired(const CBlockIndex* pindexLast, bool fProofOfStake)
 {
-        CBigNum bnTargetLimit = CBigNum(pnetMan->getActivePaymentNetwork()->GetConsensus().powLimit);
+        arith_uint256 bnTargetLimit = UintToArith256(pnetMan->getActivePaymentNetwork()->GetConsensus().powLimit);
 
         if(fProofOfStake)
         {
             // Proof-of-Stake blocks has own target limit since nVersion=3 supermajority on mainNet and always on testNet
-            bnTargetLimit = CBigNum(pnetMan->getActivePaymentNetwork()->GetConsensus().posLimit);
+            bnTargetLimit = UintToArith256(pnetMan->getActivePaymentNetwork()->GetConsensus().posLimit);
         }
 
         if (pindexLast == NULL)
@@ -1924,7 +1923,7 @@ unsigned int GetNextTargetRequired(const CBlockIndex* pindexLast, bool fProofOfS
 
         // ppcoin: target change every block
         // ppcoin: retarget with exponential moving toward target spacing
-        CBigNum bnNew;
+        arith_uint256 bnNew;
         bnNew.SetCompact(pindexPrev->nBits);
         int64_t spacing;
         int64_t targetSpacing = pnetMan->getActivePaymentNetwork()->GetConsensus().nTargetSpacing;

@@ -23,7 +23,6 @@
 
 #include "crypto/common.h"
 #include "prevector.h"
-#include "bignum.h"
 #include "pubkey.h"
 
 #include <assert.h>
@@ -459,12 +458,6 @@ public:
     {
         std::vector<unsigned char> vchKey = key.Raw();
         return (*this) << vchKey;
-    }
-
-    CScript& operator<<(const CBigNum& b)
-    {
-        *this << b.getvch();
-        return *this;
     }
 
     CScript& operator<<(const std::vector<unsigned char>& b)
