@@ -134,6 +134,12 @@ AC_ARG_ENABLE([extended-rpc-tests],
     [use_extended_rpc_tests=$enableval],
     [use_extended_rpc_tests=no])
 
+AC_ARG_WITH([qrencode],
+  [AS_HELP_STRING([--with-qrencode],
+  [enable QR code support (default is yes if qt is enabled and libqrencode is found)])],
+  [use_qr=$withval],
+  [use_qr=auto])
+
 AC_ARG_ENABLE([hardening],
   [AS_HELP_STRING([--disable-hardening],
   [do not attempt to harden the resulting executables (default is to harden)])],
@@ -1003,6 +1009,8 @@ AM_CONDITIONAL([BUILD_DARWIN], [test x$BUILD_OS = xdarwin])
 AM_CONDITIONAL([TARGET_WINDOWS], [test x$TARGET_OS = xwindows])
 AM_CONDITIONAL([ENABLE_WALLET],[test x$enable_wallet = xyes])
 AM_CONDITIONAL([ENABLE_TESTS],[test x$BUILD_TEST = xyes])
+AM_CONDITIONAL([ENABLE_QT],[test x$bitcoin_enable_qt = xyes])
+AM_CONDITIONAL([ENABLE_QT_TESTS],[test x$BUILD_TEST_QT = xyes])
 AM_CONDITIONAL([ENABLE_BENCH],[test x$use_bench = xyes])
 AM_CONDITIONAL([USE_LCOV],[test x$use_lcov = xyes])
 AM_CONDITIONAL([ENABLE_GPERF],[test x$use_gperf = xyes])
@@ -1131,4 +1139,3 @@ echo "  CXXFLAGS      = $CXXFLAGS"
 echo "  LDFLAGS       = $LDFLAGS"
 echo "  ARFLAGS       = $ARFLAGS"
 echo
-

@@ -5,7 +5,7 @@
 
 #include "compressor.h"
 #include "test/test_bitcoin.h"
-#include "util.h"
+#include "util/util.h"
 
 #include <stdint.h>
 
