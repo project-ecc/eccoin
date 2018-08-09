@@ -20,7 +20,6 @@
 
 #include <boost/assign/list_of.hpp> // for 'map_list_of()'
 #include <boost/date_time/posix_time/posix_time_types.hpp>
-#include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
 #include <boost/test/unit_test.hpp>
 
@@ -46,16 +45,16 @@ size_t GetNumberBanEntries()
     return banmap.size();
 }
 
-bool DoesBanlistFileExist() { return boost::filesystem::exists(boost::filesystem::path(GetDataDir() / "banlist.dat")); }
+bool DoesBanlistFileExist() { return fs::exists(fs::path(GetDataDir() / "banlist.dat")); }
 bool RemoveBanlistFile()
 {
-    boost::filesystem::path path(GetDataDir() / "banlist.dat");
+    fs::path path(GetDataDir() / "banlist.dat");
     try
     {
-        if (boost::filesystem::exists(path))
+        if (fs::exists(path))
         {
             // if the file already exists, remove it
-            boost::filesystem::remove(path);
+            fs::remove(path);
         }
 
         // if we get here, we either successfully deleted the file, or it didn't exist

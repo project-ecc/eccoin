@@ -28,8 +28,6 @@
 #include "util/utilstrencodings.h"
 #include "version.h"
 
-#include <boost/filesystem/path.hpp>
-
 #include <leveldb/db.h>
 #include <leveldb/write_batch.h>
 
@@ -251,11 +249,9 @@ public:
      * false, XOR
      *                        with a zero'd byte array.
      */
-    CDBWrapper(const boost::filesystem::path &path,
-        size_t nCacheSize,
-        bool fMemory = false,
-        bool fWipe = false,
-        bool obfuscate = false);
+    CDBWrapper(const fs::path &path, size_t nCacheSize,
+               bool fMemory = false, bool fWipe = false,
+               bool obfuscate = false);
     ~CDBWrapper();
 
     template <typename K, typename V>

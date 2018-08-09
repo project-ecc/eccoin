@@ -21,7 +21,6 @@
 #include <atomic>
 #include <boost/algorithm/string/join.hpp>
 #include <boost/algorithm/string/replace.hpp>
-#include <boost/filesystem/fstream.hpp>
 #include <boost/foreach.hpp>
 #include <boost/math/distributions/poisson.hpp>
 #include <boost/range/adaptor/reversed.hpp>
@@ -662,7 +661,7 @@ bool ActivateBestChainStep(CValidationState &state,
         nHeight = nTargetHeight;
 
         // Connect new blocks.
-        BOOST_REVERSE_FOREACH (CBlockIndex *pindexConnect, vpindexToConnect)
+        BOOST_REVERSE_FOREACH(CBlockIndex *pindexConnect, vpindexToConnect)
         {
             if (!ConnectTip(
                     state, chainparams, pindexConnect, pindexConnect == pindexMostWork ? pblock : NULL, connectTrace))
@@ -786,8 +785,11 @@ bool ActivateBestChain(CValidationState &state,
                 // Relay inventory, but don't relay old inventory during initial block
                 // download.
                 const int nNewHeight = pindexNewTip->nHeight;
-                g_connman->ForEachNode([nNewHeight, &vHashes](CNode *pnode) {
-                    if (nNewHeight > (pnode->nStartingHeight != -1 ? pnode->nStartingHeight - 2000 : 0))
+                g_connman->ForEachNode([nNewHeight, &vHashes](CNode *pnode)
+                {
+                    if (nNewHeight > (pnode->nStartingHeight != -1
+                                          ? pnode->nStartingHeight - 2000
+                                          : 0))
                     {
                         for (const uint256 &hash : boost::adaptors::reverse(vHashes))
                         {

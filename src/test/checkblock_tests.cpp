@@ -12,8 +12,6 @@
 
 #include <cstdio>
 
-#include <boost/filesystem/operations.hpp>
-#include <boost/filesystem/path.hpp>
 #include <boost/test/unit_test.hpp>
 
 bool read_block(const std::string &filename, CBlock &block)
