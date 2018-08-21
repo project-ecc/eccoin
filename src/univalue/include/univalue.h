@@ -1,27 +1,13 @@
-/*
- * This file is part of the ECC project
- * Copyright (c) 2014 BitPay Inc.
- * Copyright (c) 2015 The Bitcoin Core developers
- * Copyright (c) 2015-2018 The ECC developers
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright 2014 BitPay Inc.
+// Copyright 2015 Bitcoin Core Developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #ifndef __UNIVALUE_H__
 #define __UNIVALUE_H__
 
 #include <stdint.h>
+#include <string.h>
 
 #include <string>
 #include <vector>
@@ -40,8 +26,14 @@ public:
         typ = initialType;
         val = initialStr;
     }
-    UniValue(uint64_t val_) {
-        setInt(val_);
+    UniValue(unsigned int val_) {
+       setInt((uint64_t)val_);
+    }
+    UniValue(unsigned long val_) {
+       setInt((uint64_t)val_);
+    }
+    UniValue(unsigned long long val_) {
+        setInt((uint64_t)val_);
     }
     UniValue(int64_t val_) {
         setInt(val_);
@@ -71,7 +63,7 @@ public:
     bool setNumStr(const std::string& val);
     bool setInt(uint64_t val);
     bool setInt(int64_t val);
-    bool setInt(int val) { return setInt((int64_t)val); }
+    bool setInt(int val_) { return setInt((int64_t)val_); }
     bool setFloat(double val);
     bool setStr(const std::string& val);
     bool setArray();
@@ -84,10 +76,11 @@ public:
     size_t size() const { return values.size(); }
 
     bool getBool() const { return isTrue(); }
-    bool checkObject(const std::map<std::string,UniValue::VType>& memberTypes);
+    void getObjMap(std::map<std::string,UniValue>& kv) const;
+    bool checkObject(const std::map<std::string,UniValue::VType>& memberTypes) const;
     const UniValue& operator[](const std::string& key) const;
-    const UniValue& operator[](unsigned int index) const;
-    bool exists(const std::string& key) const { return (findKey(key) >= 0); }
+    const UniValue& operator[](size_t index) const;
+    bool exists(const std::string& key) const { size_t i; return findKey(key, i); }
 
     bool isNull() const { return (typ == VNULL); }
     bool isTrue() const { return (typ == VBOOL) && (val == "1"); }
@@ -107,31 +100,48 @@ public:
         std::string s(val_);
         return push_back(s);
     }
+    bool push_back(uint64_t val_) {
+        UniValue tmpVal(val_);
+        return push_back(tmpVal);
+    }
+    bool push_back(int64_t val_) {
+        UniValue tmpVal(val_);
+        return push_back(tmpVal);
+    }
+    bool push_back(int val_) {
+        UniValue tmpVal(val_);
+        return push_back(tmpVal);
+    }
+    bool push_back(double val_) {
+        UniValue tmpVal(val_);
+        return push_back(tmpVal);
+    }
     bool push_backV(const std::vector<UniValue>& vec);
 
+    void __pushKV(const std::string& key, const UniValue& val);
     bool pushKV(const std::string& key, const UniValue& val);
-    bool pushKV(const std::string& key, const std::string& val) {
-        UniValue tmpVal(VSTR, val);
+    bool pushKV(const std::string& key, const std::string& val_) {
+        UniValue tmpVal(VSTR, val_);
         return pushKV(key, tmpVal);
     }
     bool pushKV(const std::string& key, const char *val_) {
-        std::string val(val_);
-        return pushKV(key, val);
+        std::string _val(val_);
+        return pushKV(key, _val);
     }
-    bool pushKV(const std::string& key, int64_t val) {
-        UniValue tmpVal(val);
+    bool pushKV(const std::string& key, int64_t val_) {
+        UniValue tmpVal(val_);
         return pushKV(key, tmpVal);
     }
-    bool pushKV(const std::string& key, uint64_t val) {
-        UniValue tmpVal(val);
+    bool pushKV(const std::string& key, uint64_t val_) {
+        UniValue tmpVal(val_);
         return pushKV(key, tmpVal);
     }
-    bool pushKV(const std::string& key, int val) {
-        UniValue tmpVal((int64_t)val);
+    bool pushKV(const std::string& key, int val_) {
+        UniValue tmpVal((int64_t)val_);
         return pushKV(key, tmpVal);
     }
-    bool pushKV(const std::string& key, double val) {
-        UniValue tmpVal(val);
+    bool pushKV(const std::string& key, double val_) {
+        UniValue tmpVal(val_);
         return pushKV(key, tmpVal);
     }
     bool pushKVs(const UniValue& obj);
@@ -139,9 +149,10 @@ public:
     std::string write(unsigned int prettyIndent = 0,
                       unsigned int indentLevel = 0) const;
 
-    bool read(const char *raw);
+    bool read(const char *raw, size_t len);
+    bool read(const char *raw) { return read(raw, strlen(raw)); }
     bool read(const std::string& rawStr) {
-        return read(rawStr.c_str());
+        return read(rawStr.data(), rawStr.size());
     }
 
 private:
@@ -150,17 +161,17 @@ private:
     std::vector<std::string> keys;
     std::vector<UniValue> values;
 
-    int findKey(const std::string& key) const;
+    bool findKey(const std::string& key, size_t& retIdx) const;
     void writeArray(unsigned int prettyIndent, unsigned int indentLevel, std::string& s) const;
     void writeObject(unsigned int prettyIndent, unsigned int indentLevel, std::string& s) const;
 
 public:
     // Strict type-specific getters, these throw std::runtime_error if the
     // value is of unexpected type
-    std::vector<std::string> getKeys() const;
-    std::vector<UniValue> getValues() const;
+    const std::vector<std::string>& getKeys() const;
+    const std::vector<UniValue>& getValues() const;
     bool get_bool() const;
-    std::string get_str() const;
+    const std::string& get_str() const;
     int get_int() const;
     int64_t get_int64() const;
     double get_real() const;
@@ -192,10 +203,17 @@ static inline std::pair<std::string,UniValue> Pair(const char *cKey, std::string
     return std::make_pair(key, uVal);
 }
 
-static inline std::pair<std::string,UniValue> Pair(const char *cKey, uint64_t u64Val)
+static inline std::pair<std::string,UniValue> Pair(const char *cKey, unsigned long ulVal)
 {
     std::string key(cKey);
-    UniValue uVal(u64Val);
+    UniValue uVal(ulVal);
+    return std::make_pair(key, uVal);
+}
+
+static inline std::pair<std::string,UniValue> Pair(const char *cKey, unsigned long long ullVal)
+{
+    std::string key(cKey);
+    UniValue uVal(ullVal);
     return std::make_pair(key, uVal);
 }
 
@@ -255,7 +273,7 @@ enum jtokentype {
 };
 
 extern enum jtokentype getJsonToken(std::string& tokenVal,
-                                    unsigned int& consumed, const char *raw);
+                                    unsigned int& consumed, const char *raw, const char *end);
 extern const char *uvTypeName(UniValue::VType t);
 
 static inline bool jsonTokenIsValue(enum jtokentype jtt)

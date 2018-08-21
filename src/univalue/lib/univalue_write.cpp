@@ -1,20 +1,6 @@
-/*
- * This file is part of the ECC project
- * Copyright (c) 2014 BitPay Inc.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright 2014 BitPay Inc.
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <iomanip>
 #include <sstream>
@@ -22,11 +8,11 @@
 #include "univalue.h"
 #include "univalue_escapes.h"
 
-// TODO: Using UTF8
+using namespace std;
 
-static std::string json_escape(const std::string& inS)
+static string json_escape(const string& inS)
 {
-    std::string outS;
+    string outS;
     outS.reserve(inS.size() * 2);
 
     for (unsigned int i = 0; i < inS.size(); i++) {
@@ -35,24 +21,17 @@ static std::string json_escape(const std::string& inS)
 
         if (escStr)
             outS += escStr;
-
-        else if (ch < 0x80)
+        else
             outS += ch;
-
-        else { // TODO handle UTF-8 properly
-            char tmpesc[16];
-            sprintf(tmpesc, "\\u%04x", ch);
-            outS += tmpesc;
-        }
     }
 
     return outS;
 }
 
-std::string UniValue::write(unsigned int prettyIndent,
+string UniValue::write(unsigned int prettyIndent,
                        unsigned int indentLevel) const
 {
-    std::string s;
+    string s;
     s.reserve(1024);
 
     unsigned int modIndent = indentLevel;
@@ -83,12 +62,12 @@ std::string UniValue::write(unsigned int prettyIndent,
     return s;
 }
 
-static void indentStr(unsigned int prettyIndent, unsigned int indentLevel, std::string& s)
+static void indentStr(unsigned int prettyIndent, unsigned int indentLevel, string& s)
 {
     s.append(prettyIndent * indentLevel, ' ');
 }
 
-void UniValue::writeArray(unsigned int prettyIndent, unsigned int indentLevel, std::string& s) const
+void UniValue::writeArray(unsigned int prettyIndent, unsigned int indentLevel, string& s) const
 {
     s += "[";
     if (prettyIndent)
@@ -100,8 +79,6 @@ void UniValue::writeArray(unsigned int prettyIndent, unsigned int indentLevel, s
         s += values[i].write(prettyIndent, indentLevel + 1);
         if (i != (values.size() - 1)) {
             s += ",";
-            if (prettyIndent)
-                s += " ";
         }
         if (prettyIndent)
             s += "\n";
@@ -112,7 +89,7 @@ void UniValue::writeArray(unsigned int prettyIndent, unsigned int indentLevel, s
     s += "]";
 }
 
-void UniValue::writeObject(unsigned int prettyIndent, unsigned int indentLevel, std::string& s) const
+void UniValue::writeObject(unsigned int prettyIndent, unsigned int indentLevel, string& s) const
 {
     s += "{";
     if (prettyIndent)
