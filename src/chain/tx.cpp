@@ -367,16 +367,13 @@ bool GetTransaction(const uint256 &hash, CTransaction &txOut, const Consensus::P
         return true;
     }
 
-    if (fAllowSlow) { // use coin database to locate block that contains transaction, and scan it
-        int nHeight = -1;
-        {
-            CCoinsViewCache &view = *pnetMan->getChainActive()->pcoinsTip;
-            const CCoins* coins = view.AccessCoins(hash);
-            if (coins)
-                nHeight = coins->nHeight;
-        }
-        if (nHeight > 0)
-            pindexSlow = pnetMan->getChainActive()->chainActive[nHeight];
+    if (fAllowSlow) // use coin database to locate block that contains transaction, and scan it
+    {
+            const Coin &coin = AccessByTxid(*(pnetMan->getChainActive()->pcoinsTip), hash);
+            if (!coin.IsSpent())
+            {
+                pindexSlow = pnetMan->getChainActive()->chainActive[coin.nHeight];
+            }
     }
 
     if (pindexSlow) {

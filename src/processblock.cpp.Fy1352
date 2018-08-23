@@ -46,7 +46,7 @@
 #include "processheader.h"
 #include "undo.h"
 #include "kernel.h"
-#include "services/mempool.h"
+#include "stxmempool.h"
 #include "processtx.h"
 
 
@@ -393,7 +393,7 @@ bool DisconnectTip(CValidationState& state, const Consensus::Params& consensusPa
     {
         const CTransaction &tx = *ptx;
         // ignore validation errors in resurrected transactions
-        std::list<CTransactionRef> removed;
+        std::list<CTransaction> removed;
         CValidationState stateDummy;
         if (tx.IsCoinBase() || tx.IsCoinStake() || !AcceptToMemoryPool(mempool, stateDummy, ptx, false, NULL, true))
         {
@@ -480,7 +480,7 @@ bool ConnectTip(CValidationState& state, const CNetworkTemplate& chainparams, CB
     int64_t nTime5 = GetTimeMicros(); nTimeChainState += nTime5 - nTime4;
     LogPrint("bench", "  - Writing chainstate: %.2fms [%.2fs]\n", (nTime5 - nTime4) * 0.001, nTimeChainState * 0.000001);
     // Remove conflicting transactions from the mempool.
-    std::list<CTransactionRef> txConflicted;
+    std::list<CTransaction> txConflicted;
     mempool.removeForBlock(blockConnecting.vtx, pindexNew->nHeight, txConflicted, !pnetMan->getChainActive()->IsInitialBlockDownload());
     // Update chainActive & related variables.
     UpdateTip(pindexNew);
@@ -1156,11 +1156,16 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     {
         for(auto const& tx: block.vtx)
         {
-            for (size_t o = 0; o < tx->vout.size(); o++)
+            const CCoins* coins = view.AccessCoins(tx->GetHash());
+            if (coins)
             {
-                if (view.HaveCoin(COutPoint(tx->GetHash(), o)))
+                for (uint64_t i = 0; i < coins->vout.size(); i++)
                 {
-                    return state.DoS(100, error("ConnectBlock(): tried to overwrite transaction"), REJECT_INVALID, "bad-txns-BIP30");
+                    if (!view.HaveCoin(tx->GetHash(), i))
+                    {
+                        return state.DoS(100, error("ConnectBlock(): tried to overwrite transaction"),
+                                         REJECT_INVALID, "bad-txns-BIP30");
+                    }
                 }
             }
         }
@@ -1236,7 +1241,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
             // be in ConnectBlock because they require the UTXO set
             prevheights.resize(tx.vin.size());
             for (size_t j = 0; j < tx.vin.size(); j++) {
-                prevheights[j] = view.AccessCoin(tx.vin[j].prevout).nHeight;
+                prevheights[j] = view.AccessCoins(tx.vin[j].prevout.hash)->nHeight;
             }
 
             if (!SequenceLocks(tx, nLockTimeFlags, &prevheights, *pindex)) {
@@ -1418,7 +1423,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 
 /**
  * Apply the undo operation of a CTxInUndo to the given chain state.
- * @param undo The Coin to be restored.
+ * @param undo The undo object.
  * @param view The coins view to which to apply the changes.
  * @param out The out point that corresponds to the tx input.
  * @return True on success.
@@ -1500,7 +1505,7 @@ bool DisconnectBlock(const CBlock& block, CValidationState& state, const CBlockI
         // restore inputs
         if (!tx.IsCoinBase()) // not coinbases
         {
-            CTxUndo &txundo = blockUndo.vtxundo[i-1];
+            const CTxUndo &txundo = blockUndo.vtxundo[i-1];
             if (txundo.vprevout.size() != tx.vin.size())
             {
                 return error("DisconnectBlock(): transaction and undo data inconsistent");

@@ -136,29 +136,37 @@ bool IsStandardTx(const CTransaction& tx, std::string& reason)
 bool AreInputsStandard(const CTransaction& tx, const CCoinsViewCache& mapInputs)
 {
     if (tx.IsCoinBase())
+    {
         return true; // Coinbases don't use vin normally
+    }
 
     for (unsigned int i = 0; i < tx.vin.size(); i++)
     {
-        const CTxOut& prev = mapInputs.GetOutputFor(tx.vin[i]);
-
+        const CTxOut &prev = mapInputs.AccessCoin(tx.vin[i].prevout).out;
         std::vector<std::vector<unsigned char> > vSolutions;
         txnouttype whichType;
         // get the scriptPubKey corresponding to this input:
         const CScript& prevScript = prev.scriptPubKey;
         if (!Solver(prevScript, whichType, vSolutions))
+        {
             return false;
+        }
 
         if (whichType == TX_SCRIPTHASH)
         {
             std::vector<std::vector<unsigned char> > stack;
             // convert the scriptSig into a stack, so we can inspect the redeemScript
             if (!EvalScript(stack, tx.vin[i].scriptSig, SCRIPT_VERIFY_NONE, BaseSignatureChecker(), 0))
+            {
                 return false;
+            }
             if (stack.empty())
+            {
                 return false;
+            }
             CScript subscript(stack.back().begin(), stack.back().end());
-            if (subscript.GetSigOpCount(true) > MAX_P2SH_SIGOPS) {
+            if (subscript.GetSigOpCount(true) > MAX_P2SH_SIGOPS)
+            {
                 return false;
             }
         }
