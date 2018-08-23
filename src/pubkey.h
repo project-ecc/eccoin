@@ -2,6 +2,7 @@
  * This file is part of the ECC project
  * Copyright (c) 2009-2010 Satoshi Nakamoto
  * Copyright (c) 2009-2016 The Bitcoin Core developers
+ * Copyright (c) 2015-2017 The Bitcoin Unlimited developers
  * Copyright (c) 2014-2018 The ECC developers
  *
  * This program is free software: you can redistribute it and/or modify
@@ -169,7 +170,7 @@ public:
 
     /*
      * Check syntactic correctness.
-     * 
+     *
      * Note that this is consensus critical as CheckSig() calls it!
      */
     bool IsValid() const
@@ -191,8 +192,6 @@ public:
      * If this public key is not fully valid, the return value will be false.
      */
     bool Verify(const uint256& hash, const std::vector<unsigned char>& vchSig) const;
-
-    bool VerifyCompact(const uint256 &hash, const std::vector<unsigned char>& vchSig) const;
 
     /**
      * Check whether a signature is normalized (lower-S).
