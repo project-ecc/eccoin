@@ -855,7 +855,8 @@ bool AlreadyHave(const CInv& inv) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
             return recentRejects->contains(inv.hash) ||
                    mempool.exists(inv.hash) ||
                    mapOrphanTransactions.count(inv.hash) ||
-                   pnetMan->getChainActive()->pcoinsTip->HaveCoins(inv.hash);
+                   pnetMan->getChainActive()->pcoinsTip->HaveCoinInCache(COutPoint(inv.hash, 0)) || // Best effort: only try output 0 and 1
+                   pnetMan->getChainActive()->pcoinsTip->HaveCoinInCache(COutPoint(inv.hash, 1));
         }
     case MSG_BLOCK:
         return pnetMan->getChainActive()->mapBlockIndex.count(inv.hash);
@@ -1044,18 +1045,6 @@ void static ProcessGetData(CNode* pfrom, CConnman &connman, const Consensus::Par
                  {
                      connman.PushMessage(pfrom, msgMaker.Make(nSendFlags, NetMsgType::TX, mi->second));
                      push = true;
-                 }
-                 else if (pfrom->timeLastMempoolReq)
-                 {
-                     auto txinfo = mempool.info(inv.hash);
-                     // To protect privacy, do not answer getdata using the
-                     // mempool when that TX couldn't have been INVed in reply to
-                     // a MEMPOOL request.
-                     if (txinfo.tx && (txinfo.nTime <= pfrom->timeLastMempoolReq))
-                     {
-                         connman.PushMessage(pfrom, msgMaker.Make(nSendFlags,NetMsgType::TX, *txinfo.tx));
-                         push = true;
-                     }
                  }
                  if (!push)
                  {
@@ -2098,22 +2087,32 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
 
     else if (strCommand == NetMsgType::MEMPOOL)
     {
-        if (!(pfrom->GetLocalServices() & NODE_BLOOM) && !pfrom->fWhitelisted)
+        std::vector<uint256> vtxid;
+        mempool.queryHashes(vtxid);
+        std::vector<CInv> vInv;
+        BOOST_FOREACH (uint256 &hash, vtxid)
         {
-            LogPrintf("mempool request with bloom filters disabled, disconnect peer=%d\n", pfrom->GetId());
-            pfrom->fDisconnect = true;
-            return true;
+            CInv inv(MSG_TX, hash);
+            if (pfrom->pfilter)
+            {
+                CTxMemPoolEntry txe;
+                bool fInMemPool = mempool.lookup(hash, txe);
+                if (!fInMemPool)
+                    continue; // another thread removed since queryHashes, maybe...
+                if (!pfrom->pfilter->IsRelevantAndUpdate(txe.GetTx()))
+                    continue;
+            }
+            vInv.push_back(inv);
+            if (vInv.size() == MAX_INV_SZ)
+            {
+                connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::INV, vInv));
+                vInv.clear();
+            }
         }
-
-        if (connman.OutboundTargetReached(false) && !pfrom->fWhitelisted)
+        if (vInv.size() > 0)
         {
-            LogPrintf("net", "mempool request with bandwidth limit reached, disconnect peer=%d\n", pfrom->GetId());
-            pfrom->fDisconnect = true;
-            return true;
+            connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::INV, vInv));
         }
-
-        LOCK(pfrom->cs_inventory);
-        pfrom->fSendMempool = true;
     }
 
 
@@ -2443,20 +2442,6 @@ bool ProcessMessages(CNode *pfrom, CConnman &connman, const std::atomic<bool> &i
     return fMoreWork;
 }
 
-class CompareInvMempoolOrder {
-    CTxMemPool *mp;
-
-public:
-    CompareInvMempoolOrder(CTxMemPool *_mempool) { mp = _mempool; }
-
-    bool operator()(std::set<uint256>::iterator a,
-                    std::set<uint256>::iterator b) {
-        /* As std::make_heap produces a max-heap, we want the entries with the
-         * fewest ancestors/highest fee to sort later. */
-        return mp->CompareDepthAndScore(*b, *a);
-    }
-};
-
 bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interruptMsgProc)
 {
     const Consensus::Params &consensusParams = pnetMan->getActivePaymentNetwork()->GetConsensus();
@@ -2759,53 +2744,16 @@ bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interr
             }
         }
 
-        // Respond to BIP35 mempool requests
-        if (fSendTrickle && pto->fSendMempool)
-        {
-            auto vtxinfo = mempool.infoAll();
-            pto->fSendMempool = false;
-
-            LOCK(pto->cs_filter);
-
-            for (const auto &txinfo : vtxinfo)
-            {
-                const uint256 &txid = txinfo.tx->GetId();
-                CInv inv(MSG_TX, txid);
-                pto->setInventoryTxToSend.erase(txid);
-                if (pto->pfilter)
-                {
-                    if (!pto->pfilter->IsRelevantAndUpdate(*txinfo.tx))
-                    {
-                        continue;
-                    }
-                }
-                pto->filterInventoryKnown.insert(txid);
-                vInv.push_back(inv);
-                if (vInv.size() == MAX_INV_SZ) {
-                    connman.PushMessage(pto,
-                                        msgMaker.Make(NetMsgType::INV, vInv));
-                    vInv.clear();
-                }
-            }
-            pto->timeLastMempoolReq = GetTime();
-        }
-
         // Determine transactions to relay
         if (fSendTrickle) 
         {
             // Produce a vector with all candidates for sending
             std::vector<std::set<uint256>::iterator> vInvTx;
             vInvTx.reserve(pto->setInventoryTxToSend.size());
-            for (std::set<uint256>::iterator it =
-                     pto->setInventoryTxToSend.begin();
-                 it != pto->setInventoryTxToSend.end(); it++) {
+            for (std::set<uint256>::iterator it = pto->setInventoryTxToSend.begin(); it != pto->setInventoryTxToSend.end(); it++)
+            {
                 vInvTx.push_back(it);
             }
-            // Topologically and fee-rate sort the inventory we send for privacy
-            // and priority reasons. A heap is used so that not all items need
-            // sorting if only a few are being sent.
-            CompareInvMempoolOrder compareInvMempoolOrder(&mempool);
-            std::make_heap(vInvTx.begin(), vInvTx.end(), compareInvMempoolOrder);
             // No reason to drain out at many times the network's capacity,
             // especially since we have many peers and some will draw much
             // shorter delays.
@@ -2813,8 +2761,6 @@ bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interr
             LOCK(pto->cs_filter);
             while (!vInvTx.empty() && nRelayedTransactions < INVENTORY_BROADCAST_MAX)
             {
-                // Fetch the top element from the heap
-                std::pop_heap(vInvTx.begin(), vInvTx.end(), compareInvMempoolOrder);
                 std::set<uint256>::iterator it = vInvTx.back();
                 vInvTx.pop_back();
                 uint256 hash = *it;
@@ -2826,12 +2772,7 @@ bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interr
                     continue;
                 }
                 // Not in the mempool anymore? don't bother sending it.
-                TxMempoolInfo txinfo = mempool.info(hash);
-                if (!txinfo.tx)
-                {
-                    continue;
-                }
-                if (pto->pfilter && !pto->pfilter->IsRelevantAndUpdate(*txinfo.tx))
+                if (!mempool.exists(hash))
                 {
                     continue;
                 }
@@ -2844,11 +2785,6 @@ bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interr
                     {
                         mapRelay.erase(vRelayExpiration.front().second);
                         vRelayExpiration.pop_front();
-                    }
-                    auto ret = mapRelay.insert(std::make_pair(hash, std::move(*txinfo.tx)));
-                    if (ret.second)
-                    {
-                        vRelayExpiration.push_back(std::make_pair(nNow + 15 * 60 * 1000000, ret.first));
                     }
                 }
                 if (vInv.size() == MAX_INV_SZ)

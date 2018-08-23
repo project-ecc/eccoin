@@ -20,6 +20,7 @@
 
 #include "txdb.h"
 
+#include "args.h"
 #include "coins.h"
 #include "chain/chain.h"
 #include "networks/networktemplate.h"
@@ -71,12 +72,14 @@ CCoinsViewDB::CCoinsViewDB(size_t nCacheSize, bool fMemory, bool fWipe) : db(Get
 {
 }
 
-bool CCoinsViewDB::GetCoins(const uint256 &txid, CCoins &coins) const {
-    return db.Read(std::make_pair(DB_COINS, txid), coins);
+bool CCoinsViewDB::GetCoin(const COutPoint &outpoint, Coin &coin) const
+{
+    return db.Read(CoinEntry(&outpoint), coin);
 }
 
-bool CCoinsViewDB::HaveCoins(const uint256 &txid) const {
-    return db.Exists(std::make_pair(DB_COINS, txid));
+bool CCoinsViewDB::HaveCoin(const COutPoint &outpoint) const
+{
+    return db.Exists(CoinEntry(&outpoint));
 }
 
 uint256 CCoinsViewDB::GetBestBlock() const {
@@ -86,27 +89,56 @@ uint256 CCoinsViewDB::GetBestBlock() const {
     return hashBestChain;
 }
 
-bool CCoinsViewDB::BatchWrite(CCoinsMap &mapCoins, const uint256 &hashBlock) {
+bool CCoinsViewDB::BatchWrite(CCoinsMap &mapCoins, const uint256 &hashBlock, const uint64_t nBestCoinHeight, size_t &nChildCachedCoinsUsage)
+{
+    LOCK(cs_utxo);
     CDBBatch batch(db);
     size_t count = 0;
     size_t changed = 0;
-    for (CCoinsMap::iterator it = mapCoins.begin(); it != mapCoins.end();) {
-        if (it->second.flags & CCoinsCacheEntry::DIRTY) {
-            if (it->second.coins.IsPruned())
-                batch.Erase(std::make_pair(DB_COINS, it->first));
+    size_t nBatchWrites = 0;
+    size_t batch_size = nMaxDBBatchSize;
+
+    for (CCoinsMap::iterator it = mapCoins.begin(); it != mapCoins.end();)
+    {
+        if (it->second.flags & CCoinsCacheEntry::DIRTY)
+        {
+            CoinEntry entry(&it->first);
+            size_t nUsage = it->second.coin.DynamicMemoryUsage();
+            if (it->second.coin.IsSpent())
+            {
+                batch.Erase(entry);
+
+                // Update the usage of the child cache before deleting the entry in the child cache
+                nChildCachedCoinsUsage -= nUsage;
+                it = mapCoins.erase(it);
+            }
             else
-                batch.Write(std::make_pair(DB_COINS, it->first), it->second.coins);
+            {
+                batch.Write(entry, it->second.coin);
+            }
             changed++;
+
+            // In order to prevent the spikes in memory usage that used to happen when we prepared large as
+            // was possible, we instead break up the batches such that the performance gains for writing to
+            // leveldb are still realized but the memory spikes are not seen.
+            if (batch.SizeEstimate() > batch_size)
+            {
+                db.WriteBatch(batch);
+                batch.Clear();
+                nBatchWrites++;
+            }
         }
+        else
+            it++;
         count++;
-        CCoinsMap::iterator itOld = it++;
-        mapCoins.erase(itOld);
     }
     if (!hashBlock.IsNull())
         batch.Write(DB_BEST_BLOCK, hashBlock);
 
-    LogPrint("coindb", "Committing %u changed transactions (out of %u) to coin database...\n", (unsigned int)changed, (unsigned int)count);
-    return db.WriteBatch(batch);
+    bool ret = db.WriteBatch(batch);
+    LogPrint("COINDB", "Committing %u changed transactions (out of %u) to coin database with %u batch writes...\n",
+        (unsigned int)changed, (unsigned int)count, (unsigned int)nBatchWrites);
+    return ret;
 }
 
 CBlockTreeDB::CBlockTreeDB(size_t nCacheSize, bool fMemory, bool fWipe) : CDBWrapper(GetDataDir() / "blocks" / "index", nCacheSize, fMemory, fWipe) {
@@ -130,52 +162,6 @@ bool CBlockTreeDB::ReadReindexing(bool &fReindexing) {
 
 bool CBlockTreeDB::ReadLastBlockFile(int &nFile) {
     return Read(DB_LAST_BLOCK, nFile);
-}
-
-bool CCoinsViewDB::GetStats(CCoinsStats &stats) const {
-    /* It seems that there are no "const iterators" for LevelDB.  Since we
-       only need read operations on it, use a const-cast to get around
-       that restriction.  */
-    boost::scoped_ptr<CDBIterator> pcursor(const_cast<CDBWrapper*>(&db)->NewIterator());
-    pcursor->Seek(DB_COINS);
-
-    CHashWriter ss(SER_GETHASH, PROTOCOL_VERSION);
-    stats.hashBlock = GetBestBlock();
-    ss << stats.hashBlock;
-    CAmount nTotalAmount = 0;
-    while (pcursor->Valid()) {
-        boost::this_thread::interruption_point();
-        std::pair<char, uint256> key;
-        CCoins coins;
-        if (pcursor->GetKey(key) && key.first == DB_COINS) {
-            if (pcursor->GetValue(coins)) {
-                stats.nTransactions++;
-                for (unsigned int i=0; i<coins.vout.size(); i++) {
-                    const CTxOut &out = coins.vout[i];
-                    if (!out.IsNull()) {
-                        stats.nTransactionOutputs++;
-                        ss << VARINT(i+1);
-                        ss << out;
-                        nTotalAmount += out.nValue;
-                    }
-                }
-                stats.nSerializedSize += 32 + pcursor->GetValueSize();
-                ss << VARINT(0);
-            } else {
-                return error("CCoinsViewDB::GetStats() : unable to read value");
-            }
-        } else {
-            break;
-        }
-        pcursor->Next();
-    }
-    {
-        LOCK(cs_main);
-        stats.nHeight = pnetMan->getChainActive()->mapBlockIndex.find(stats.hashBlock)->second->nHeight;
-    }
-    stats.hashSerialized = ss.GetHash();
-    stats.nTotalAmount = nTotalAmount;
-    return true;
 }
 
 bool CBlockTreeDB::WriteBatchSync(const std::vector<std::pair<int, const CBlockFileInfo*> >& fileInfo, int nLastFile, const std::vector<const CBlockIndex*>& blockinfo) {
@@ -271,4 +257,61 @@ bool CBlockTreeDB::LoadBlockIndexGuts()
     }
 
     return true;
+}
+
+namespace
+{
+//! Legacy class to deserialize pre-pertxout database entries without reindex.
+class CCoins
+{
+public:
+    //! whether transaction is a coinbase
+    bool fCoinBase;
+
+    //! unspent transaction outputs; spent outputs are .IsNull(); spent outputs at the end of the array are dropped
+    std::vector<CTxOut> vout;
+
+    //! at which height this transaction was included in the active block chain
+    int nHeight;
+
+    //! empty constructor
+    CCoins() : fCoinBase(false), vout(0), nHeight(0) {}
+    template <typename Stream>
+    void Unserialize(Stream &s)
+    {
+        unsigned int nCode = 0;
+        // version
+        int nVersionDummy;
+        ::Unserialize(s, VARINT(nVersionDummy));
+        // header code
+        ::Unserialize(s, VARINT(nCode));
+        fCoinBase = nCode & 1;
+        std::vector<bool> vAvail(2, false);
+        vAvail[0] = (nCode & 2) != 0;
+        vAvail[1] = (nCode & 4) != 0;
+        unsigned int nMaskCode = (nCode / 8) + ((nCode & 6) != 0 ? 0 : 1);
+        // spentness bitmask
+        while (nMaskCode > 0)
+        {
+            unsigned char chAvail = 0;
+            ::Unserialize(s, chAvail);
+            for (unsigned int p = 0; p < 8; p++)
+            {
+                bool f = (chAvail & (1 << p)) != 0;
+                vAvail.push_back(f);
+            }
+            if (chAvail != 0)
+                nMaskCode--;
+        }
+        // txouts themself
+        vout.assign(vAvail.size(), CTxOut());
+        for (unsigned int i = 0; i < vAvail.size(); i++)
+        {
+            if (vAvail[i])
+                ::Unserialize(s, REF(CTxOutCompressor(vout[i])));
+        }
+        // coinbase height
+        ::Unserialize(s, VARINT(nHeight));
+    }
+};
 }

@@ -55,5 +55,7 @@ std::string HelpMessage();
 std::string LicenseInfo();
 
 extern bool fShutdown;
+extern std::unique_ptr<CCoinsViewDB> pcoinsdbview;
+
 
 #endif // BITCOIN_INIT_H
