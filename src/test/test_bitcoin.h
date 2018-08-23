@@ -1,14 +1,16 @@
 #ifndef BITCOIN_TEST_TEST_BITCOIN_H
 #define BITCOIN_TEST_TEST_BITCOIN_H
 
-#include "chainparamsbase.h"
 #include "fs.h"
 #include "key.h"
+#include "networks/netman.h"
 #include "pubkey.h"
 #include "txdb.h"
 #include "txmempool.h"
 
 #include <boost/thread.hpp>
+
+extern CNetworkManager* pnetman;
 
 /** Basic testing setup.
  * This just configures logging and chain parameters.
@@ -17,7 +19,7 @@ struct BasicTestingSetup
 {
     ECCVerifyHandle globalVerifyHandle;
 
-    BasicTestingSetup(const std::string &chainName = CBaseChainParams::MAIN);
+    BasicTestingSetup(const std::string &chainName = "LEGACY");
     ~BasicTestingSetup();
 };
 
@@ -30,12 +32,11 @@ struct TestingSetup : public BasicTestingSetup
     fs::path pathTemp;
     boost::thread_group threadGroup;
 
-    TestingSetup(const std::string &chainName = CBaseChainParams::MAIN);
+    TestingSetup(const std::string &chainName = "LEGACY");
     ~TestingSetup();
 };
 
 class CBlock;
-struct CMutableTransaction;
 class CScript;
 
 //
@@ -48,11 +49,11 @@ struct TestChain100Setup : public TestingSetup
 
     // Create a new block with just given transactions, coinbase paying to
     // scriptPubKey, and try to add it to the current chain.
-    CBlock CreateAndProcessBlock(const std::vector<CMutableTransaction> &txns, const CScript &scriptPubKey);
+    CBlock CreateAndProcessBlock(const std::vector<CTransactionRef> &txns, const CScript &scriptPubKey);
 
     ~TestChain100Setup();
 
-    std::vector<CTransaction> coinbaseTxns; // For convenience, coinbase transactions
+    std::vector<CTransactionRef> coinbaseTxns; // For convenience, coinbase transactions
     CKey coinbaseKey; // private/public key needed to spend coinbase transactions
 };
 
@@ -76,7 +77,7 @@ struct TestMemPoolEntryHelper
     {
     }
 
-    CTxMemPoolEntry FromTx(CMutableTransaction &tx, CTxMemPool *pool = NULL);
+    CTxMemPoolEntry FromTx(CTransaction &tx, CTxMemPool *pool = NULL);
 
     // Change the default value
     TestMemPoolEntryHelper &Fee(CAmount _fee)

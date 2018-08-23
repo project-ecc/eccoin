@@ -5,7 +5,6 @@
 
 // Unit tests for denial-of-service detection/prevention code
 
-#include "chainparams.h"
 #include "dosman.h"
 #include "keystore.h"
 #include "main.h"
@@ -13,7 +12,7 @@
 #include "pow.h"
 #include "script/sign.h"
 #include "serialize.h"
-#include "util.h"
+#include "util/util.h"
 
 #include "test/test_bitcoin.h"
 

@@ -4,7 +4,7 @@
 
 #include "bench.h"
 #include "main.h"
-#include "utiltime.h"
+#include "util/utiltime.h"
 
 // Sanity test: this should loop ten times, and
 // min/max/average should be close to 100ms.

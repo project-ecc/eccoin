@@ -10,4 +10,4 @@
 
 #include "fs.h"
 
-fs::path GetTempPath() { return fs::temp_directory_path(); }
+fs::path GetTempPathTest() { return fs::temp_directory_path(); }

@@ -9,8 +9,8 @@
 #include "key.h"
 #include "test/test_bitcoin.h"
 #include "uint256.h"
-#include "util.h"
-#include "utilstrencodings.h"
+#include "util/util.h"
+#include "util/utilstrencodings.h"
 
 #include <string>
 #include <vector>
@@ -87,7 +87,7 @@ void RunTest(const TestVector &test)
     CExtPubKey pubkey;
     key.SetMaster(&seed[0], seed.size());
     pubkey = key.Neuter();
-    BOOST_FOREACH (const TestDerivation &derive, test.vDerive)
+    for (const TestDerivation &derive : test.vDerive)
     {
         unsigned char data[74];
         key.Encode(data);

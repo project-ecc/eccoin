@@ -6,9 +6,9 @@
 #include "clientversion.h"
 #include "consensus/validation.h"
 #include "main.h" // For CheckBlock
-#include "primitives/block.h"
+#include "chain/block.h"
 #include "test/test_bitcoin.h"
-#include "utiltime.h"
+#include "util/utiltime.h"
 
 #include <cstdio>
 
@@ -53,15 +53,7 @@ BOOST_AUTO_TEST_CASE(TestBlock)
         uint64_t blockSize = ::GetSerializeSize(testblock, SER_NETWORK, PROTOCOL_VERSION); // 53298 B for test.dat
 
         BOOST_CHECK_MESSAGE(CheckBlock(testblock, state, false, false), "Basic CheckBlock failed");
-        BOOST_CHECK_MESSAGE(!testblock.fExcessive,
-            "Block with size " << blockSize << " ought not to have been excessive when excessiveBlockSize is "
-                               << excessiveBlockSize);
-        excessiveBlockSize = blockSize - 1;
         BOOST_CHECK_MESSAGE(CheckBlock(testblock, state, false, false), "Basic CheckBlock failed");
-        BOOST_CHECK_MESSAGE(testblock.fExcessive,
-            "Block with size " << blockSize << " ought to have been excessive when excessiveBlockSize is "
-                               << excessiveBlockSize);
-        excessiveBlockSize = DEFAULT_EXCESSIVE_BLOCK_SIZE; // set it back to the default that other tests expect
     }
 }
 

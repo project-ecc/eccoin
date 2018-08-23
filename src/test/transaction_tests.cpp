@@ -14,9 +14,11 @@
 #include "keystore.h"
 #include "main.h" // For CheckTransaction
 #include "policy/policy.h"
+#include "processtx.h"
 #include "script/script.h"
 #include "script/script_error.h"
-#include "utilstrencodings.h"
+#include "script/interpreter.h"
+#include "util/utilstrencodings.h"
 
 #include <map>
 #include <string>
@@ -35,18 +37,21 @@ using namespace std;
 extern UniValue read_json(const std::string &jsondata);
 
 static std::map<string, unsigned int> mapFlagNames =
-    boost::assign::map_list_of(string("NONE"), (unsigned int)SCRIPT_VERIFY_NONE)(string("P2SH"),
-        (unsigned int)SCRIPT_VERIFY_P2SH)(string("STRICTENC"), (unsigned int)SCRIPT_VERIFY_STRICTENC)(string("DERSIG"),
-        (unsigned int)SCRIPT_VERIFY_DERSIG)(string("LOW_S"), (unsigned int)SCRIPT_VERIFY_LOW_S)(string("SIGPUSHONLY"),
-        (unsigned int)SCRIPT_VERIFY_SIGPUSHONLY)(string("MINIMALDATA"),
-        (unsigned int)SCRIPT_VERIFY_MINIMALDATA)(string("NULLDUMMY"), (unsigned int)SCRIPT_VERIFY_NULLDUMMY)(
-        string("DISCOURAGE_UPGRADABLE_NOPS"),
-        (unsigned int)SCRIPT_VERIFY_DISCOURAGE_UPGRADABLE_NOPS)(string("CLEANSTACK"),
-        (unsigned int)SCRIPT_VERIFY_CLEANSTACK)(string("NULLFAIL"), (unsigned int)SCRIPT_VERIFY_NULLFAIL)(
-        string("CHECKLOCKTIMEVERIFY"),
-        (unsigned int)SCRIPT_VERIFY_CHECKLOCKTIMEVERIFY)(string("CHECKSEQUENCEVERIFY"),
-        (unsigned int)SCRIPT_VERIFY_CHECKSEQUENCEVERIFY)(std::string("SIGHASH_FORKID"),
-        (unsigned int)SCRIPT_ENABLE_SIGHASH_FORKID);
+    boost::assign::map_list_of(
+        string("NONE"),(unsigned int)SCRIPT_VERIFY_NONE)
+        (string("P2SH"),(unsigned int)SCRIPT_VERIFY_P2SH)
+        (string("STRICTENC"),(unsigned int)SCRIPT_VERIFY_STRICTENC)
+        (string("DERSIG"),(unsigned int)SCRIPT_VERIFY_DERSIG)
+        (string("LOW_S"),(unsigned int)SCRIPT_VERIFY_LOW_S)
+        (string("SIGPUSHONLY"),(unsigned int)SCRIPT_VERIFY_SIGPUSHONLY)
+        (string("MINIMALDATA"),(unsigned int)SCRIPT_VERIFY_MINIMALDATA)
+        (string("NULLDUMMY"),(unsigned int)SCRIPT_VERIFY_NULLDUMMY)
+        (string("DISCOURAGE_UPGRADABLE_NOPS"),(unsigned int)SCRIPT_VERIFY_DISCOURAGE_UPGRADABLE_NOPS)
+        (string("CLEANSTACK"),(unsigned int)SCRIPT_VERIFY_CLEANSTACK)
+        (string("NULLFAIL"),(unsigned int)SCRIPT_VERIFY_NULLDUMMY)
+        (string("CHECKLOCKTIMEVERIFY"),(unsigned int)SCRIPT_VERIFY_CHECKLOCKTIMEVERIFY)
+        (string("CHECKSEQUENCEVERIFY"),(unsigned int)SCRIPT_VERIFY_CHECKSEQUENCEVERIFY)
+    ;
 
 unsigned int ParseScriptFlags(string strFlags)
 {
@@ -170,7 +175,7 @@ BOOST_AUTO_TEST_CASE(tx_valid)
 
                 unsigned int verify_flags = ParseScriptFlags(test[2].get_str());
                 BOOST_CHECK_MESSAGE(VerifyScript(tx.vin[i].scriptSig, mapprevOutScriptPubKeys[tx.vin[i].prevout],
-                                        verify_flags, TransactionSignatureChecker(&tx, i, amount, verify_flags), &err),
+                                        verify_flags, TransactionSignatureChecker(&tx, i), &err),
                     strTest);
                 BOOST_CHECK_MESSAGE(err == SCRIPT_ERR_OK, ScriptErrorString(err));
             }
@@ -259,7 +264,7 @@ BOOST_AUTO_TEST_CASE(tx_invalid)
 
                 unsigned int verify_flags = ParseScriptFlags(test[2].get_str());
                 fValid = VerifyScript(tx.vin[i].scriptSig, mapprevOutScriptPubKeys[tx.vin[i].prevout], verify_flags,
-                    TransactionSignatureChecker(&tx, i, amount, verify_flags), &err);
+                    TransactionSignatureChecker(&tx, i), &err);
             }
             BOOST_CHECK_MESSAGE(!fValid, strTest);
             BOOST_CHECK_MESSAGE(err != SCRIPT_ERR_OK, ScriptErrorString(err));
@@ -287,7 +292,7 @@ BOOST_AUTO_TEST_CASE(basic_transaction_tests)
         0xcc, 0x70, 0x43, 0xf9, 0x88, 0xac, 0x00, 0x00, 0x00, 0x00, 0x00};
     vector<unsigned char> vch(ch, ch + sizeof(ch) - 1);
     CDataStream stream(vch, SER_DISK, CLIENT_VERSION);
-    CMutableTransaction tx;
+    CTransaction tx;
     stream >> tx;
     CValidationState state;
     BOOST_CHECK_MESSAGE(
@@ -305,9 +310,9 @@ BOOST_AUTO_TEST_CASE(basic_transaction_tests)
 // paid to a TX_PUBKEY, the second 21 and 22 CENT outputs
 // paid to a TX_PUBKEYHASH.
 //
-static std::vector<CMutableTransaction> SetupDummyInputs(CBasicKeyStore &keystoreRet, CCoinsViewCache &coinsRet)
+static std::vector<CTransaction> SetupDummyInputs(CBasicKeyStore &keystoreRet, CCoinsViewCache &coinsRet)
 {
-    std::vector<CMutableTransaction> dummyTransactions;
+    std::vector<CTransaction> dummyTransactions;
     dummyTransactions.resize(2);
 
     // Add some keys to the keystore:
@@ -341,9 +346,9 @@ BOOST_AUTO_TEST_CASE(test_Get)
     CBasicKeyStore keystore;
     CCoinsView coinsDummy;
     CCoinsViewCache coins(&coinsDummy);
-    std::vector<CMutableTransaction> dummyTransactions = SetupDummyInputs(keystore, coins);
+    std::vector<CTransaction> dummyTransactions = SetupDummyInputs(keystore, coins);
 
-    CMutableTransaction t1;
+    CTransaction t1;
     t1.vin.resize(3);
     t1.vin[0].prevout.hash = dummyTransactions[0].GetHash();
     t1.vin[0].prevout.n = 1;
@@ -369,9 +374,9 @@ BOOST_AUTO_TEST_CASE(test_IsStandard)
     CBasicKeyStore keystore;
     CCoinsView coinsDummy;
     CCoinsViewCache coins(&coinsDummy);
-    std::vector<CMutableTransaction> dummyTransactions = SetupDummyInputs(keystore, coins);
+    std::vector<CTransaction> dummyTransactions = SetupDummyInputs(keystore, coins);
 
-    CMutableTransaction t;
+    CTransaction t;
     t.vin.resize(1);
     t.vin[0].prevout.hash = dummyTransactions[0].GetHash();
     t.vin[0].prevout.n = 1;
