@@ -20,7 +20,7 @@
 
 #include "stakescript.h"
 #include <vector>
-#include "tx/tx.h"
+#include "chain/tx.h"
 #include "interpreter.h"
 #include <openssl/crypto.h>
 #include "sigcache.h"

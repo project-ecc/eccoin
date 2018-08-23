@@ -20,7 +20,8 @@
 
 #include "wallet/wallet.h"
 
-#include "ans/ans.h"
+#include "args.h"
+#include "services/ans.h"
 #include "base58.h"
 #include "chain/checkpoints.h"
 #include "chain/chain.h"
@@ -35,10 +36,10 @@
 #include "main.h"
 #include "net.h"
 #include "policy/policy.h"
-#include "tx/tx.h"
+#include "chain/tx.h"
 #include "script/script.h"
 #include "script/sign.h"
-#include "stxmempool.h"
+#include "services/mempool.h"
 #include "timedata.h"
 #include "txdb.h"
 #include "txmempool.h"
@@ -51,6 +52,8 @@
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/thread.hpp>
+
+const char* DEFAULT_WALLET_DAT = "wallet.dat";
 
 /** Transaction fee set by the user */
 CFeeRate payTxFee(DEFAULT_TRANSACTION_FEE);

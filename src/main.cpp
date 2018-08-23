@@ -56,7 +56,7 @@
 #include "chain/chain.h"
 #include "chain/checkpoints.h"
 #include "processtx.h"
-#include "stxmempool.h"
+#include "services/mempool.h"
 
 #include <random>
 #include <sstream>

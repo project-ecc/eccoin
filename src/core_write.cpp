@@ -20,7 +20,7 @@
 #include "core_io.h"
 
 #include "base58.h"
-#include "tx/tx.h"
+#include "chain/tx.h"
 #include "script/script.h"
 #include "script/standard.h"
 #include "serialize.h"

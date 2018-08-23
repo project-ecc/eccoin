@@ -19,7 +19,7 @@
 
 #include "bloom.h"
 
-#include "tx/tx.h"
+#include "chain/tx.h"
 #include "crypto/hash.h"
 #include "script/script.h"
 #include "script/standard.h"

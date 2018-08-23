@@ -22,7 +22,7 @@
 #include "policy/policy.h"
 
 #include "amount.h"
-#include "tx/tx.h"
+#include "chain/tx.h"
 #include "streams.h"
 #include "txmempool.h"
 #include "util/util.h"

@@ -7,12 +7,12 @@
 #endif
 
 #include "addrman.h"
-#include "chain.h"
+#include "chain/chain.h"
 #include "coins.h"
 #include "compressor.h"
 #include "consensus/merkle.h"
 #include "net.h"
-#include "primitives/block.h"
+#include "chain/block.h"
 #include "protocol.h"
 #include "pubkey.h"
 #include "script/script.h"

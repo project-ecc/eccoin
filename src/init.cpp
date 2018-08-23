@@ -22,7 +22,7 @@
 
 #include "addrman.h"
 #include "amount.h"
-#include "ans/ans.h"
+#include "services/ans.h"
 #include "chain/chain.h"
 #include "networks/networktemplate.h"
 #include "networks/netman.h"
@@ -42,7 +42,7 @@
 #include "script/standard.h"
 #include "script/sigcache.h"
 #include "scheduler.h"
-#include "stxmempool.h"
+#include "services/mempool.h"
 #include "txdb.h"
 #include "txmempool.h"
 #include "torcontrol.h"

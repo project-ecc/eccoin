@@ -20,7 +20,7 @@
 #ifndef BITCOIN_CORE_MEMUSAGE_H
 #define BITCOIN_CORE_MEMUSAGE_H
 
-#include "tx/tx.h"
+#include "chain/tx.h"
 #include "chain/block.h"
 #include "memusage.h"
 

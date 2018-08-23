@@ -22,7 +22,7 @@
 #define BITCOIN_SCRIPT_INTERPRETER_H
 
 #include "script_error.h"
-#include "tx/tx.h"
+#include "chain/tx.h"
 
 #include <vector>
 #include <stdint.h>

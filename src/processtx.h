@@ -21,8 +21,8 @@
 #ifndef TXVALIDATION_H
 #define TXVALIDATION_H
 
-#include "tx/tx.h"
-#include "tx/servicetx.h"
+#include "chain/tx.h"
+#include "services/servicetx.h"
 #include "validationinterface.h"
 
 /** Context-independent validity checks */
