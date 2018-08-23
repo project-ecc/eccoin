@@ -34,14 +34,15 @@
 #include <openssl/ripemd.h>
 #include <openssl/sha.h>
 #include "policy/policy.h"
+#include "arith_uint256.h"
 
 static const valtype vchFalse(0);
 static const valtype vchZero(0);
 static const valtype vchTrue(1, 1);
-static const CBigNum bnZero(0);
-static const CBigNum bnOne(1);
-static const CBigNum bnFalse(0);
-static const CBigNum bnTrue(1);
+static const arith_uint256 bnZero(0);
+static const arith_uint256 bnOne(1);
+static const arith_uint256 bnFalse(0);
+static const arith_uint256 bnTrue(1);
 static const size_t nMaxNumSize = 4;
 
 
@@ -170,14 +171,6 @@ static inline void popstack(std::vector<std::vector<unsigned char> >& stack)
     if (stack.empty())
         throw std::runtime_error("popstack() : stack empty");
     stack.pop_back();
-}
-
-CBigNum CastToBigNum(const std::vector<unsigned char>& vch)
-{
-    if (vch.size() > nMaxNumSize)
-        throw std::runtime_error("CastToBigNum() : overflow");
-    // Get rid of extra leading zeros
-    return CBigNum(CBigNum(vch).getvch());
 }
 
 bool VerifyScript(const CScript& scriptSig, const CScript& scriptPubKey, const CTransaction& txTo, unsigned int nIn)
