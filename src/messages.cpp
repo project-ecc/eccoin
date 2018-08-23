@@ -20,11 +20,11 @@
 
 #include "messages.h"
 
-#include "ans/ans.h"
+#include "services/ans.h"
 #include "serialize.h"
 #include "sync.h"
-#include "tx/tx.h"
-#include "tx/servicetx.h"
+#include "chain/tx.h"
+#include "services/servicetx.h"
 #include "txmempool.h"
 #include "main.h"
 #include "util/util.h"
@@ -45,7 +45,7 @@
 #include "netmessagemaker.h"
 #include "policy/policy.h"
 #include "policy/fees.h"
-#include "stxmempool.h"
+#include "services/mempool.h"
 #include "processtx.h"
 
 #include <algorithm>

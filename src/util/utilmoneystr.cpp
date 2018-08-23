@@ -20,7 +20,7 @@
 
 #include "util/utilmoneystr.h"
 
-#include "tx/tx.h"
+#include "chain/tx.h"
 #include "tinyformat.h"
 #include "util/utilstrencodings.h"
 

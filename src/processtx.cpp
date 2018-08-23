@@ -18,7 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "ans/ans.h"
+#include "services/ans.h"
 #include "main.h"
 #include "consensus/consensus.h"
 #include "script/standard.h"

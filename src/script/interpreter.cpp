@@ -20,7 +20,7 @@
 
 #include "interpreter.h"
 
-#include "tx/tx.h"
+#include "chain/tx.h"
 #include "crypto/ripemd160.h"
 #include "crypto/sha1.h"
 #include "crypto/sha256.h"

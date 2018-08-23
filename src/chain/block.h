@@ -21,7 +21,7 @@
 #ifndef BITCOIN_PRIMITIVES_BLOCK_H
 #define BITCOIN_PRIMITIVES_BLOCK_H
 
-#include "tx/tx.h"
+#include "chain/tx.h"
 #include "serialize.h"
 #include "uint256.h"
 #include "keystore.h"

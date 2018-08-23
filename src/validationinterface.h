@@ -25,7 +25,7 @@
 #include <boost/shared_ptr.hpp>
 
 #include "consensus/validation.h"
-#include "tx/tx.h"
+#include "chain/tx.h"
 
 class CBlock;
 struct CBlockLocator;

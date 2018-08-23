@@ -24,7 +24,7 @@
 #include "serialize.h"
 #include "uint256.h"
 #include "arith_uint256.h"
-#include "tx/tx.h"
+#include "chain/tx.h"
 #include "block.h"
 #include "tinyformat.h"
 

@@ -283,27 +283,27 @@ HEADERS += \
     src/util/utilmoneystr.h \
     src/util/utilstrencodings.h \
     src/util/utiltime.h \
-    src/tx/txout.h \
-    src/tx/txin.h \
-    src/tx/outpoint.h \
-    src/tx/tx.h \
     src/crypto/hash.h \
     src/chain/checkpoints.h \
     src/chain/chainman.h \
     src/networks/networktemplate.h \
-    src/tx/servicetx.h \
     src/crypto/chacha20.h \
     src/processtx.h \
     src/verifydb.h \
     src/rpc/events.h \
-    src/ans/ans.h \
-    src/ans/ansrecord.h \
     src/addrdb.h \
     src/threadinterrupt.h \
     src/netaddress.h \
     src/netmessagemaker.h \
-    src/service_leveldb.h \
-    src/stxmempool.h
+    src/services/ans.h \
+    src/services/ansrecord.h \
+    src/services/mempool.h \
+    src/services/servicedb.h \
+    src/services/servicetx.h \
+    src/chain/tx.h \
+    src/chain/outpoint.h \
+    src/chain/txin.h \
+    src/chain/txout.h
 
 
 # organize compiles of cpp files by section, this seems to be a logical order where the files lower down generally depend
@@ -401,23 +401,23 @@ SOURCES += \
     src/util/utilmoneystr.cpp \
     src/util/utilstrencodings.cpp \
     src/util/utiltime.cpp \
-    src/tx/tx.cpp \
     src/crypto/hash.cpp \
     src/chain/checkpoints.cpp \
     src/chain/chainman.cpp \
     src/eccoind.cpp \
-    src/tx/servicetx.cpp \
     src/crypto/chacha20.cpp \
     src/processtx.cpp \
     src/verifydb.cpp \
-    src/ans/ans.cpp \
-    src/ans/ansrecord.cpp \
     src/addrdb.cpp \
     src/threadinterrupt.cpp \
     src/netaddress.cpp \
     src/rpc/rpcans.cpp \
-    src/service_leveldb.cpp \
-    src/stxmempool.cpp
+    src/services/ansrecord.cpp \
+    src/services/ans.cpp \
+    src/services/mempool.cpp \
+    src/services/servicedb.cpp \
+    src/services/servicetx.cpp \
+    src/chain/tx.cpp
 
 
 

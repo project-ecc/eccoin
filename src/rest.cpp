@@ -19,10 +19,11 @@
  */
 
 #include "chain/chain.h"
-#include "networks/netman.h"
-#include "tx/tx.h"
-#include "main.h"
 #include "httpserver.h"
+#include "init.h"
+#include "main.h"
+#include "chain/block.h"
+#include "chain/tx.h"
 #include "rpc/rpcserver.h"
 #include "streams.h"
 #include "sync.h"

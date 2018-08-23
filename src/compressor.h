@@ -21,7 +21,7 @@
 #ifndef BITCOIN_COMPRESSOR_H
 #define BITCOIN_COMPRESSOR_H
 
-#include "tx/tx.h"
+#include "chain/tx.h"
 #include "script/script.h"
 #include "serialize.h"
 

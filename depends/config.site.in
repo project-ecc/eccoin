@@ -64,7 +64,6 @@ LDFLAGS="-L$depends_prefix/lib $LDFLAGS"
 CC="@CC@"
 CXX="@CXX@"
 OBJC="${CC}"
-OBJCXX="${CXX}"
 CCACHE=$depends_prefix/native/bin/ccache
 PYTHONPATH=$depends_prefix/native/lib/python/dist-packages:$PYTHONPATH
 
@@ -99,3 +98,4 @@ fi
 if test -n "@LDFLAGS@"; then
   LDFLAGS="@LDFLAGS@ $LDFLAGS"
 fi
+

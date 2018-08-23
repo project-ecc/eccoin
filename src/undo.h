@@ -22,7 +22,7 @@
 #define BITCOIN_UNDO_H
 
 #include "compressor.h" 
-#include "tx/tx.h"
+#include "chain/tx.h"
 #include "serialize.h"
 
 /** Undo information for a CTxIn

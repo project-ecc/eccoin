@@ -27,7 +27,7 @@
 #include "consensus/consensus.h"
 #include "crypto/common.h"
 #include "crypto/hash.h"
-#include "tx/tx.h"
+#include "chain/tx.h"
 #include "scheduler.h"
 #include "ui_interface.h"
 #include "util/utilstrencodings.h"

@@ -20,6 +20,13 @@
 #ifndef BITCOIN_CLIENTVERSION_H
 #define BITCOIN_CLIENTVERSION_H
 
+
+#if defined(HAVE_CONFIG_H)
+#include "config/bitcoin-config.h"
+#else
+
+
+
 /**
  * client versioning and copyright year
  */
@@ -38,6 +45,8 @@
  * Todo: update this when changing our copyright comments in the source
  */
 #define COPYRIGHT_YEAR 2017
+
+#endif // HAVE_CONFIG_H
 
 /**
  * Converts the parameter X to a string after macro replacement on X has been performed.
