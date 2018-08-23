@@ -95,7 +95,6 @@ BITCOIN_CORE_H = \
   noui.h \
   policy/fees.h \
   policy/policy.h \
-  policy/rbf.h \
   pow.h \
   prevector.h \
   chain/block.h \
@@ -160,7 +159,8 @@ build/build.h: FORCE
 	@$(MKDIR_P) $(builddir)/build
 	@$(top_srcdir)/share/genbuild.sh $(abs_top_builddir)/src/build/build.h \
 	  $(abs_top_srcdir)
-libbitcoin_util_a-clientversion.$(OBJEXT): build/build.h
+libbitcoin_server_a-clientversion.$(OBJEXT): build/build.h
+#libbitcoin_util_a-clientversion.$(OBJEXT): build/build.h
 
 # server: shared between bitcoin
 libbitcoin_server_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES) $(MINIUPNPC_CPPFLAGS) $(EVENT_CFLAGS) $(EVENT_PTHREADS_CFLAGS)
@@ -277,7 +277,6 @@ libbitcoin_server_a_SOURCES = \
   wallet/wallet.cpp \
   wallet/wallet_ismine.cpp \
   wallet/walletdb.cpp \
-  policy/rbf.cpp \
   rpc/rpcclient.cpp \
   threadinterrupt.cpp \
   stxmempool.cpp \
