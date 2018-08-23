@@ -89,8 +89,8 @@ namespace Checkpoints {
         BOOST_REVERSE_FOREACH(const MapCheckpoints::value_type& i, checkpoints)
         {
             const uint256& hash = i.second;
-            BlockMap::const_iterator t = pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.find(hash);
-            if (t != pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.end())
+            BlockMap::const_iterator t = pnetMan->getChainActive()->mapBlockIndex.find(hash);
+            if (t != pnetMan->getChainActive()->mapBlockIndex.end())
                 return t->second;
         }
         return NULL;

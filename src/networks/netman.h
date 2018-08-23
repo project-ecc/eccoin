@@ -32,6 +32,18 @@ static const int64_t SERVICE_UPGRADE_HARDFORK = 1525478400; // May 5th at 00:00:
  */
 class CNetworkManager
 {
+private:
+    CNetwork* activePaymentNetwork;
+
+    CNetwork* pnetLegacy;
+    CNetwork* pnetPayment;
+
+    CNetwork* pnetTestnet0;
+
+    CNetworkTemplate* legacyTemplate;
+    CNetworkTemplate* paymentTemplate;
+    CNetworkTemplate* netManTestnetTemplate;
+
 public:
     CNetworkManager()
     {
@@ -44,11 +56,9 @@ public:
         legacyTemplate = NULL;
         paymentTemplate = NULL;
         netManTestnetTemplate = NULL;
-        
         pnetLegacy = NULL;
         pnetPayment = NULL;
         pnetTestnet0 = NULL;
-        
         activePaymentNetwork = NULL;
     }
 
@@ -63,14 +73,16 @@ public:
     }
 
     void ConstructLegacyNetworkTemplate();
-
     void ConstructTetnet0Template();
-
     void ConstructNetworks();
 
     CNetwork* getActivePaymentNetwork()
     {
         return activePaymentNetwork;
+    }
+    CChainManager* getChainActive()
+    {
+        return activePaymentNetwork->getChainManager();
     }
 
     void SetParams(const std::string& network)
@@ -89,19 +101,6 @@ public:
         }
         return;
     }
-private:
-    CNetwork* activePaymentNetwork;
-
-    CNetwork* pnetLegacy;
-    CNetwork* pnetPayment;
-
-    CNetwork* pnetTestnet0;
-
-    CNetworkTemplate* legacyTemplate;
-    CNetworkTemplate* paymentTemplate;
-    CNetworkTemplate* netManTestnetTemplate;
-
-
 };
 
 /// TODO : Fix this workaround that is used for RPC on command line. shuould either construct pnetMan earlier or find another way to get this value

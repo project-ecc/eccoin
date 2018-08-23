@@ -285,17 +285,17 @@ void CalcVerificationCode(const CServiceTransaction &stx, std::string& code, con
          {
              return;
          }
-         CBlockIndex* index = pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex[blockHashOfTx];
+         CBlockIndex* index = pnetMan->getChainActive()->mapBlockIndex[blockHashOfTx];
          if (!ReadBlockFromDisk(block, index, pnetMan->getActivePaymentNetwork()->GetConsensus()))
          {
              return;
          }
-         height = pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex[block.GetHash()]->nHeight;
+         height = pnetMan->getChainActive()->mapBlockIndex[block.GetHash()]->nHeight;
     }
     else
     {
         // if block was passed in this way it means its being processed, so we can use tip + 1
-        height = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->nHeight + 1;
+        height = pnetMan->getChainActive()->chainActive.Tip()->nHeight + 1;
         block = *pblock;
     }
     int ptxIndex = 0;

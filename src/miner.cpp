@@ -217,7 +217,7 @@ std::unique_ptr<CBlockTemplate> CreateNewBlock(CWallet* pwallet, bool fProofOfSt
 
     // ppcoin: if coinstake available add coinstake tx
     static int64_t nLastCoinStakeSearchTime = GetAdjustedTime();  // only initialized at startup
-    CBlockIndex* pindexPrev = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
+    CBlockIndex* pindexPrev = pnetMan->getChainActive()->chainActive.Tip();
 
 
     // This vector will be sorted into a priority queue:
@@ -268,7 +268,7 @@ std::unique_ptr<CBlockTemplate> CreateNewBlock(CWallet* pwallet, bool fProofOfSt
     // Collect memory pool transactions into the block
     {
         LOCK2(cs_main, mempool.cs);
-        CBlockIndex* pindexPrev = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
+        CBlockIndex* pindexPrev = pnetMan->getChainActive()->chainActive.Tip();
         const int nHeight = pindexPrev->nHeight + 1;
         pblock->nTime = GetAdjustedTime();
         const int64_t nMedianTimePast = pindexPrev->GetMedianTimePast();
@@ -510,7 +510,7 @@ bool CheckWork(const std::shared_ptr<const CBlock> pblock, CWallet& wallet, CRes
     // Found a solution
     {
         LOCK(cs_main);
-        if (pblock->hashPrevBlock != pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->GetBlockHash())
+        if (pblock->hashPrevBlock != pnetMan->getChainActive()->chainActive.Tip()->GetBlockHash())
             return error("BMiner : generated block is stale");
 
         // Remove key from key pool
@@ -552,7 +552,7 @@ void EccMiner(CWallet *pwallet)
             if (fShutdown)
                 return;
         }
-        while (g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL) < 6 || pnetMan->getActivePaymentNetwork()->getChainManager()->IsInitialBlockDownload() || pwallet->IsLocked())
+        while (g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL) < 6 || pnetMan->getChainActive()->IsInitialBlockDownload() || pwallet->IsLocked())
         {
             MilliSleep(1000);
             if (fShutdown)
@@ -562,7 +562,7 @@ void EccMiner(CWallet *pwallet)
         // Create new block
         //
         unsigned int nTransactionsUpdatedLast = mempool.GetTransactionsUpdated();
-        CBlockIndex* pindexPrev = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
+        CBlockIndex* pindexPrev = pnetMan->getChainActive()->chainActive.Tip();
         std::unique_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(pwallet, true));
         if (!pblocktemplate.get())
         {
@@ -654,7 +654,7 @@ void EccMiner(CWallet *pwallet)
                 break;
             if (mempool.GetTransactionsUpdated() != nTransactionsUpdatedLast && GetTime() - nStart > 60)
                 break;
-            if (pindexPrev != pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip())
+            if (pindexPrev != pnetMan->getChainActive()->chainActive.Tip())
                 break;
             // Update nTime every few seconds
             pblock->nTime = std::max(pindexPrev->GetMedianTimePast()+1, pblock->GetMaxTransactionTime());
@@ -687,7 +687,7 @@ void EccMinter(CWallet *pwallet)
             if (fShutdown)
                 return;
         }
-        while (g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL) < 6 || pnetMan->getActivePaymentNetwork()->getChainManager()->IsInitialBlockDownload() || pwallet->IsLocked())
+        while (g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL) < 6 || pnetMan->getChainActive()->IsInitialBlockDownload() || pwallet->IsLocked())
         {
             MilliSleep(1000);
             if (fShutdown)
@@ -696,7 +696,7 @@ void EccMinter(CWallet *pwallet)
         //
         // Create new block
         //
-        CBlockIndex* pindexPrev = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
+        CBlockIndex* pindexPrev = pnetMan->getChainActive()->chainActive.Tip();
         std::unique_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(pwallet, true));
         if (!pblocktemplate.get())
         {
