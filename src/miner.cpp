@@ -30,7 +30,6 @@
 #include "txmempool.h"
 #include "util/utilmoneystr.h"
 #include "timedata.h"
-#include "bignum.h"
 #include "coins.h"
 #include "networks/networktemplate.h"
 #include "consensus/validation.h"
@@ -442,7 +441,7 @@ void IncrementExtraNonce(CBlock* pblock, CBlockIndex* pindexPrev, unsigned int& 
     }
     ++nExtraNonce;
     unsigned int nHeight = pindexPrev->nHeight+1; // Height first in coinbase required for block.version=2
-    pblock->vtx[0]->vin[0].scriptSig = (CScript() << nHeight << CBigNum(nExtraNonce)) + COINBASE_FLAGS;
+    pblock->vtx[0]->vin[0].scriptSig = (CScript() << nHeight << CScriptNum(nExtraNonce)) + COINBASE_FLAGS;
     assert(pblock->vtx[0]->vin[0].scriptSig.size() <= 100);
 
     pblock->hashMerkleRoot = BlockMerkleRoot(*pblock);
@@ -498,7 +497,7 @@ void FormatHashBuffers(CBlock* pblock, char* pmidstate, char* pdata, char* phash
 bool CheckWork(const std::shared_ptr<const CBlock> pblock, CWallet& wallet, CReserveKey& reservekey)
 {
     arith_uint256 hash = UintToArith256(pblock->GetHash());
-    arith_uint256 hashTarget = UintToArith256(CBigNum().SetCompact(pblock->nBits).getuint256());
+    arith_uint256 hashTarget = arith_uint256(pblock->nBits);
 
     if (hash > hashTarget && pblock->IsProofOfWork())
         return error("Miner : proof-of-work not meeting target");
@@ -587,7 +586,7 @@ void EccMiner(CWallet *pwallet)
         // Search
         //
         int64_t nStart = GetTime();
-        arith_uint256 hashTarget = UintToArith256(CBigNum().SetCompact(pblock->nBits).getuint256());
+        arith_uint256 hashTarget = arith_uint256(pblock->nBits);
         unsigned int max_nonce = 0xffff0000;
         CBlockHeader res_header;
         arith_uint256 result;

@@ -219,11 +219,11 @@ bool CheckStakeKernelHash(int nHeight, const CBlock& blockFrom, unsigned int nTx
         /// this should lead to older and older coins needing to be selected as the difficulty rises due to fast block minting. larger inputs will also help this
         /// but not nearly as much as older coins will because seconds in age are easier to earn compared to coin amount. RNG with the result of the hash is also always a factor
 
-        // nTimeWeight is the number of seconds old the coins are past the min stake age 
+        // nTimeWeight is the number of seconds old the coins are past the min stake age
         // nValueIn is the number of satoshis being staked so we divide by COIN to get the number of coins
 
         // This basically works out to: amount of satoshi * seconds old
-        arith_uint256 reduction = UintToArith256(CBigNum(CBigNum(nTimeWeight) * (CBigNum(nValueIn))).getuint256());
+        arith_uint256 reduction = arith_uint256(nTimeWeight) * arith_uint256(nValueIn);
         arith_uint256 hashTarget;
         bool fNegative;
         bool fOverflow;

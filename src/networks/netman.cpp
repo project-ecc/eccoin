@@ -91,7 +91,7 @@ void CNetworkManager::ConstructLegacyNetworkTemplate()
     txNew.nTime = 1393744287;
     txNew.vin.resize(1);
     txNew.vout.resize(1);
-    txNew.vin[0].scriptSig =  CScript() << 486604799 << CBigNum(9999) << std::vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
+    txNew.vin[0].scriptSig =  CScript() << 486604799 << CScriptNum(9999) << std::vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
     txNew.vout[0].SetEmpty();
 
     legacyTemplate->genesis.vtx.push_back(MakeTransactionRef(txNew));
@@ -221,7 +221,7 @@ void CNetworkManager::ConstructTetnet0Template()
     txNew.nTime = 1512338805;
     txNew.vin.resize(1);
     txNew.vout.resize(1);
-    txNew.vin[0].scriptSig =  CScript() << 486604799 << CBigNum(9999) << std::vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
+    txNew.vin[0].scriptSig =  CScript() << 486604799 << CScriptNum(9999) << std::vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
     txNew.vout[0].SetEmpty();
 
     netManTestnetTemplate->genesis.vtx.push_back(MakeTransactionRef(txNew));
@@ -288,5 +288,3 @@ void CheckParams(const std::string& network)
     }
     return;
 }
-
-
