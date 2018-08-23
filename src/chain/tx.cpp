@@ -222,7 +222,7 @@ bool CTransaction::IsFinal(int nBlockHeight, int64_t nBlockTime) const
     if (nLockTime == 0)
         return true;
     if (nBlockHeight == 0)
-        nBlockHeight = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height();
+        nBlockHeight = pnetMan->getChainActive()->chainActive.Height();
     if (nBlockTime == 0)
         nBlockTime = GetAdjustedTime();
     if ((int64_t)nLockTime < ((int64_t)nLockTime < LOCKTIME_THRESHOLD ? (int64_t)nBlockHeight : nBlockTime))
@@ -231,34 +231,6 @@ bool CTransaction::IsFinal(int nBlockHeight, int64_t nBlockTime) const
         if (!txin.IsFinal())
             return false;
     return true;
-}
-
-int64_t CTransaction::GetMinFee(unsigned int nBlockSize, unsigned int nBytes) const
-{
-    int64_t nBaseFee = DEFAULT_TRANSACTION_MINFEE;
-
-    unsigned int nNewBlockSize = nBlockSize + nBytes;
-    int64_t nMinFee = (1 + (int64_t)nBytes / 1000) * nBaseFee;
-
-    // To limit dust spam, require MIN_TX_FEE/MIN_RELAY_TX_FEE if any output is less than 0.01
-    if (nMinFee < nBaseFee)
-    {
-        for(const CTxOut& txout: vout)
-            if (txout.nValue < CENT)
-                nMinFee = nBaseFee;
-    }
-
-    // Raise the price as the block approaches full
-    if (nBlockSize != 1 && nNewBlockSize >= MAX_BLOCK_SIZE_GEN/2)
-    {
-        if (nNewBlockSize >= MAX_BLOCK_SIZE_GEN)
-            return MAX_MONEY;
-        nMinFee *= MAX_BLOCK_SIZE_GEN / (MAX_BLOCK_SIZE_GEN - nNewBlockSize);
-    }
-
-    if (!MoneyRange(nMinFee))
-        nMinFee = MAX_MONEY;
-    return nMinFee;
 }
 
 // ppcoin: total coin age spent in transaction, in the unit of coin-days.
@@ -281,7 +253,7 @@ uint64_t CTransaction::GetCoinAge(uint64_t nCoinAge, bool byValue) const
     for(const CTxIn& txin: vin)
     {
         CDiskTxPos txindex;
-        if (!pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree->ReadTxIndex(txin.prevout.hash, txindex))
+        if (!pnetMan->getChainActive()->pblocktree->ReadTxIndex(txin.prevout.hash, txindex))
             continue;  // previous transaction not in main chain
 
         // Read block header
@@ -328,7 +300,7 @@ bool CTransaction::GetCoinAge(uint64_t& nCoinAge) const
     for(const CTxIn& txin: vin)
     {
         CDiskTxPos txindex;
-        if (!pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree->ReadTxIndex(txin.prevout.hash, txindex))
+        if (!pnetMan->getChainActive()->pblocktree->ReadTxIndex(txin.prevout.hash, txindex))
             continue;  // previous transaction not in main chain
 
         // Read block header
@@ -377,7 +349,7 @@ bool GetTransaction(const uint256 &hash, CTransaction &txOut, const Consensus::P
     }
 
     CDiskTxPos postx;
-    if (pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree->ReadTxIndex(hash, postx)) {
+    if (pnetMan->getChainActive()->pblocktree->ReadTxIndex(hash, postx)) {
         CAutoFile file(OpenBlockFile(postx, true), SER_DISK, CLIENT_VERSION);
         if (file.IsNull())
             return error("%s: OpenBlockFile failed", __func__);
@@ -398,13 +370,13 @@ bool GetTransaction(const uint256 &hash, CTransaction &txOut, const Consensus::P
     if (fAllowSlow) { // use coin database to locate block that contains transaction, and scan it
         int nHeight = -1;
         {
-            CCoinsViewCache &view = *pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip;
+            CCoinsViewCache &view = *pnetMan->getChainActive()->pcoinsTip;
             const CCoins* coins = view.AccessCoins(hash);
             if (coins)
                 nHeight = coins->nHeight;
         }
         if (nHeight > 0)
-            pindexSlow = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive[nHeight];
+            pindexSlow = pnetMan->getChainActive()->chainActive[nHeight];
     }
 
     if (pindexSlow) {

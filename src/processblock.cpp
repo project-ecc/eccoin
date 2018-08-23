@@ -167,13 +167,13 @@ bool AcceptBlock(const std::shared_ptr<const CBlock> pblock, CValidationState& s
     // process an unrequested block if it's new and has enough work to
     // advance our tip, and isn't too many blocks ahead.
     bool fAlreadyHave = pindex->nStatus & BLOCK_HAVE_DATA;
-    bool fHasMoreWork = (pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip() ? pindex->nChainWork > pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->nChainWork : true);
+    bool fHasMoreWork = (pnetMan->getChainActive()->chainActive.Tip() ? pindex->nChainWork > pnetMan->getChainActive()->chainActive.Tip()->nChainWork : true);
     // Blocks that are too out-of-order needlessly limit the effectiveness of
     // pruning, because pruning will not delete block files that contain any
     // blocks which are too close in height to the tip.  Apply this test
     // regardless of whether pruning is enabled; it should generally be safe to
     // not process unrequested blocks.
-    bool fTooFarAhead = (pindex->nHeight > int(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height() + MIN_BLOCKS_TO_KEEP));
+    bool fTooFarAhead = (pindex->nHeight > int(pnetMan->getChainActive()->chainActive.Height() + MIN_BLOCKS_TO_KEEP));
 
     // TODO: deal better with return value and error conditions for duplicate
     // and unrequested blocks.
@@ -197,7 +197,7 @@ bool AcceptBlock(const std::shared_ptr<const CBlock> pblock, CValidationState& s
     // Header is valid/has work, merkle tree and segwit merkle tree are
     // good...RELAY NOW (but if it does not build on our best tip, let the
     // SendMessages loop relay it)
-    if (!pnetMan->getActivePaymentNetwork()->getChainManager()->IsInitialBlockDownload() && pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip() == pindex->pprev)
+    if (!pnetMan->getChainActive()->IsInitialBlockDownload() && pnetMan->getChainActive()->chainActive.Tip() == pindex->pprev)
     {
         GetMainSignals().NewPoWValidBlock(pindex, pblock);
     }
@@ -256,7 +256,7 @@ bool ProcessNewBlock(CValidationState& state, const CNetworkTemplate& chainparam
 
     // still in testing.
     /// this is expensive so only run it about once every 12 hours. (960 blocks is ~12 hours with a 45 second block time)
-    if( (pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height() % 960 )== 0)
+    if( (pnetMan->getChainActive()->chainActive.Height() % 960 )== 0)
     {
         // removeImpossibleChainTips();
     }
@@ -312,25 +312,25 @@ bool ProcessNewBlock(CValidationState& state, const CNetworkTemplate& chainparam
 /** Update chainActive and related internal data structures. */
 void UpdateTip(CBlockIndex *pindexNew) {
     const CNetworkTemplate& chainParams = pnetMan->getActivePaymentNetwork();
-    pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.SetTip(pindexNew);
+    pnetMan->getChainActive()->chainActive.SetTip(pindexNew);
 
     // New best block
     nTimeBestReceived = GetTime();
     mempool.AddTransactionsUpdated(1);
 
     LogPrintf("%s: new best=%s  height=%d  log2_work=%.8g  tx=%lu  date=%s progress=%f  cache=%.1fMiB(%utx)\n", __func__,
-      pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->GetBlockHash().ToString(), pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height(), log(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->nChainWork.getdouble())/log(2.0), (unsigned long)(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->nChainTx),
-      DateTimeStrFormat("%Y-%m-%d %H:%M:%S", pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->GetBlockTime()),
-      Checkpoints::GuessVerificationProgress(chainParams.Checkpoints(), pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()), pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip->DynamicMemoryUsage() * (1.0 / (1<<20)), pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip->GetCacheSize());
+      pnetMan->getChainActive()->chainActive.Tip()->GetBlockHash().ToString(), pnetMan->getChainActive()->chainActive.Height(), log(pnetMan->getChainActive()->chainActive.Tip()->nChainWork.getdouble())/log(2.0), (unsigned long)(pnetMan->getChainActive()->chainActive.Tip()->nChainTx),
+      DateTimeStrFormat("%Y-%m-%d %H:%M:%S", pnetMan->getChainActive()->chainActive.Tip()->GetBlockTime()),
+      Checkpoints::GuessVerificationProgress(chainParams.Checkpoints(), pnetMan->getChainActive()->chainActive.Tip()), pnetMan->getChainActive()->pcoinsTip->DynamicMemoryUsage() * (1.0 / (1<<20)), pnetMan->getChainActive()->pcoinsTip->GetCacheSize());
 
     cvBlockChange.notify_all();
 
     // Check the version of the last 100 blocks to see if we need to upgrade:
     static bool fWarned = false;
-    if (!pnetMan->getActivePaymentNetwork()->getChainManager()->IsInitialBlockDownload())
+    if (!pnetMan->getChainActive()->IsInitialBlockDownload())
     {
         int nUpgraded = 0;
-        const CBlockIndex* pindex = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
+        const CBlockIndex* pindex = pnetMan->getChainActive()->chainActive.Tip();
         for (int bit = 0; bit < VERSIONBITS_NUM_BITS; bit++) {
             WarningBitsConditionChecker checker(bit);
             ThresholdState state = checker.GetStateFor(pindex, chainParams.GetConsensus(), warningcache[bit]);
@@ -368,7 +368,7 @@ void UpdateTip(CBlockIndex *pindexNew) {
 /** Disconnect chainActive's tip. You probably want to call mempool.removeForReorg and manually re-limit mempool size after this, with cs_main held. */
 bool DisconnectTip(CValidationState& state, const Consensus::Params& consensusParams)
 {
-    CBlockIndex *pindexDelete = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
+    CBlockIndex *pindexDelete = pnetMan->getChainActive()->chainActive.Tip();
     assert(pindexDelete);
     // Read block from disk.
     std::shared_ptr<CBlock> pblock = std::make_shared<CBlock>();
@@ -378,7 +378,7 @@ bool DisconnectTip(CValidationState& state, const Consensus::Params& consensusPa
     // Apply the block atomically to the chain state.
     int64_t nStart = GetTimeMicros();
     {
-        CCoinsViewCache view(pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.get());
+        CCoinsViewCache view(pnetMan->getChainActive()->pcoinsTip.get());
         if (!DisconnectBlock(block, state, pindexDelete, view))
             return error("DisconnectTip(): DisconnectBlock %s failed", pindexDelete->GetBlockHash().ToString());
         assert(view.Flush());
@@ -432,7 +432,7 @@ static int64_t nTimeTotal = 0;
  */
 bool ConnectTip(CValidationState& state, const CNetworkTemplate& chainparams, CBlockIndex* pindexNew, const std::shared_ptr<const CBlock> &pblock, ConnectTrace &connectTrace)
 {
-    assert(pindexNew->pprev == pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip());
+    assert(pindexNew->pprev == pnetMan->getChainActive()->chainActive.Tip());
     // Read block from disk.
     int64_t nTime1 = GetTimeMicros();
 
@@ -457,7 +457,7 @@ bool ConnectTip(CValidationState& state, const CNetworkTemplate& chainparams, CB
     int64_t nTime3;
     LogPrint("bench", "  - Load block from disk: %.2fms [%.2fs]\n", (nTime2 - nTime1) * 0.001, nTimeReadFromDisk * 0.000001);
     {
-        CCoinsViewCache view(pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.get());
+        CCoinsViewCache view(pnetMan->getChainActive()->pcoinsTip.get());
         bool rv = ConnectBlock(blockConnecting, state, pindexNew, view);
         GetMainSignals().BlockChecked(blockConnecting, state);
         if (!rv)
@@ -481,7 +481,7 @@ bool ConnectTip(CValidationState& state, const CNetworkTemplate& chainparams, CB
     LogPrint("bench", "  - Writing chainstate: %.2fms [%.2fs]\n", (nTime5 - nTime4) * 0.001, nTimeChainState * 0.000001);
     // Remove conflicting transactions from the mempool.
     std::list<CTransaction> txConflicted;
-    mempool.removeForBlock(blockConnecting.vtx, pindexNew->nHeight, txConflicted, !pnetMan->getActivePaymentNetwork()->getChainManager()->IsInitialBlockDownload());
+    mempool.removeForBlock(blockConnecting.vtx, pindexNew->nHeight, txConflicted, !pnetMan->getChainActive()->IsInitialBlockDownload());
     // Update chainActive & related variables.
     UpdateTip(pindexNew);
 
@@ -499,15 +499,15 @@ void CheckForkWarningConditions()
     AssertLockHeld(cs_main);
     // Before we get past initial download, we cannot reliably alert about forks
     // (we assume we don't get stuck on a fork before the last checkpoint)
-    if (pnetMan->getActivePaymentNetwork()->getChainManager()->IsInitialBlockDownload())
+    if (pnetMan->getChainActive()->IsInitialBlockDownload())
         return;
 
     // If our best fork is no longer within 72 blocks (+/- 12 hours if no one mines it)
     // of our head, drop it
-    if (pindexBestForkTip && pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height() - pindexBestForkTip->nHeight >= 72)
+    if (pindexBestForkTip && pnetMan->getChainActive()->chainActive.Height() - pindexBestForkTip->nHeight >= 72)
         pindexBestForkTip = NULL;
 
-    if (pindexBestForkTip || (pindexBestInvalid && pindexBestInvalid->nChainWork > pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->nChainWork + (GetBlockProof(*pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()) * 6)))
+    if (pindexBestForkTip || (pindexBestInvalid && pindexBestInvalid->nChainWork > pnetMan->getChainActive()->chainActive.Tip()->nChainWork + (GetBlockProof(*pnetMan->getChainActive()->chainActive.Tip()) * 6)))
     {
         if (!fLargeWorkForkFound && pindexBestForkBase)
         {
@@ -539,7 +539,7 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
     AssertLockHeld(cs_main);
     // If we are on a fork that is sufficiently large, set a warning flag
     CBlockIndex* pfork = pindexNewForkTip;
-    CBlockIndex* plonger = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
+    CBlockIndex* plonger = pnetMan->getChainActive()->chainActive.Tip();
     while (pfork && pfork != plonger)
     {
         while (plonger && plonger->nHeight > pfork->nHeight)
@@ -558,7 +558,7 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
     // the 7-block condition and from this always have the most-likely-to-cause-warning fork
     if (pfork && (!pindexBestForkTip || (pindexBestForkTip && pindexNewForkTip->nHeight > pindexBestForkTip->nHeight)) &&
             pindexNewForkTip->nChainWork - pfork->nChainWork > (GetBlockProof(*pfork) * 7) &&
-            pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height() - pindexNewForkTip->nHeight < 72)
+            pnetMan->getChainActive()->chainActive.Height() - pindexNewForkTip->nHeight < 72)
     {
         pindexBestForkTip = pindexNewForkTip;
         pindexBestForkBase = pfork;
@@ -575,12 +575,12 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
 {
     AssertLockHeld(cs_main);
     bool fInvalidFound = false;
-    const CBlockIndex *pindexOldTip = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
-    const CBlockIndex *pindexFork = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.FindFork(pindexMostWork);
+    const CBlockIndex *pindexOldTip = pnetMan->getChainActive()->chainActive.Tip();
+    const CBlockIndex *pindexFork = pnetMan->getChainActive()->chainActive.FindFork(pindexMostWork);
 
     // Disconnect active blocks which are no longer in the best chain.
     bool fBlocksDisconnected = false;
-    while (pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip() && pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip() != pindexFork) {
+    while (pnetMan->getChainActive()->chainActive.Tip() && pnetMan->getChainActive()->chainActive.Tip() != pindexFork) {
         if (!DisconnectTip(state, chainparams.GetConsensus()))
             return false;
         fBlocksDisconnected = true;
@@ -629,7 +629,7 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
             else
             {
                 PruneBlockIndexCandidates();
-                if (!pindexOldTip || pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->nChainWork > pindexOldTip->nChainWork) {
+                if (!pindexOldTip || pnetMan->getChainActive()->chainActive.Tip()->nChainWork > pindexOldTip->nChainWork) {
                     // We're in a better position than we were. Return temporarily to release the lock.
                     fContinue = false;
                     break;
@@ -640,10 +640,10 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex* pindexNewForkTip)
 
     if (fBlocksDisconnected) 
     {
-        mempool.removeForReorg(pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.get(), pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->nHeight + 1, STANDARD_LOCKTIME_VERIFY_FLAGS);
+        mempool.removeForReorg(pnetMan->getChainActive()->pcoinsTip.get(), pnetMan->getChainActive()->chainActive.Tip()->nHeight + 1, STANDARD_LOCKTIME_VERIFY_FLAGS);
         LimitMempoolSize(mempool, gArgs.GetArg("-maxmempool", DEFAULT_MAX_MEMPOOL_SIZE) * 1000000, gArgs.GetArg("-mempoolexpiry", DEFAULT_MEMPOOL_EXPIRY) * 60 * 60);
     }
-    mempool.check(pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.get());
+    mempool.check(pnetMan->getChainActive()->pcoinsTip.get());
     // Callbacks/notifications for a new best chain.
     if (fInvalidFound)
         CheckForkWarningConditionsOnNewFork(vpindexToConnect.back());
@@ -674,19 +674,19 @@ bool ActivateBestChain(CValidationState &state, const CNetworkTemplate& chainpar
             // Destructed before cs_main is unlocked.
             ConnectTrace connectTrace(mempool);
 
-            CBlockIndex *pindexOldTip = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
+            CBlockIndex *pindexOldTip = pnetMan->getChainActive()->chainActive.Tip();
             pindexMostWork = FindMostWorkChain();
 
             // Whether we have anything to do at all.
-            if (pindexMostWork == NULL || pindexMostWork == pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip())
+            if (pindexMostWork == NULL || pindexMostWork == pnetMan->getChainActive()->chainActive.Tip())
                 return true;
 
             if (!ActivateBestChainStep(state, chainparams, pindexMostWork, pblock && pblock->GetHash() == pindexMostWork->GetBlockHash() ? pblock : NULL, connectTrace))
                 return false;
 
-            pindexNewTip = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
-            pindexFork = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.FindFork(pindexOldTip);
-            fInitialDownload = pnetMan->getActivePaymentNetwork()->getChainManager()->IsInitialBlockDownload();
+            pindexNewTip = pnetMan->getChainActive()->chainActive.Tip();
+            pindexFork = pnetMan->getChainActive()->chainActive.FindFork(pindexOldTip);
+            fInitialDownload = pnetMan->getChainActive()->IsInitialBlockDownload();
 
             for (const PerBlockConnectTrace &trace : connectTrace.GetBlocksConnected())
             {
@@ -741,7 +741,7 @@ bool ActivateBestChain(CValidationState &state, const CNetworkTemplate& chainpar
                 }
             }
         }
-    } while(pindexMostWork != pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip());
+    } while(pindexMostWork != pnetMan->getChainActive()->chainActive.Tip());
     CheckBlockIndex(chainparams.GetConsensus());
 
     // Write changes periodically to disk, after relay.
@@ -763,18 +763,18 @@ void CheckBlockIndex(const Consensus::Params& consensusParams)
     // During a reindex, we read the genesis block and call CheckBlockIndex before ActivateBestChain,
     // so we have the genesis block in mapBlockIndex but no active chain.  (A few of the tests when
     // iterating the block tree require that chainActive has been initialized.)
-    if (pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height() < 0) {
-        assert(pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.size() <= 1);
+    if (pnetMan->getChainActive()->chainActive.Height() < 0) {
+        assert(pnetMan->getChainActive()->mapBlockIndex.size() <= 1);
         return;
     }
 
     // Build forward-pointing map of the entire block tree.
     std::multimap<CBlockIndex*,CBlockIndex*> forward;
-    for (BlockMap::iterator it = pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.begin(); it != pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.end(); it++) {
+    for (BlockMap::iterator it = pnetMan->getChainActive()->mapBlockIndex.begin(); it != pnetMan->getChainActive()->mapBlockIndex.end(); it++) {
         forward.insert(std::make_pair(it->second->pprev, it->second));
     }
 
-    assert(forward.size() == pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.size());
+    assert(forward.size() == pnetMan->getChainActive()->mapBlockIndex.size());
 
     std::pair<std::multimap<CBlockIndex*,CBlockIndex*>::iterator,std::multimap<CBlockIndex*,CBlockIndex*>::iterator> rangeGenesis = forward.equal_range(NULL);
     CBlockIndex *pindex = rangeGenesis.first->second;
@@ -807,7 +807,7 @@ void CheckBlockIndex(const Consensus::Params& consensusParams)
         if (pindex->pprev == NULL) {
             // Genesis block checks.
             assert(pindex->GetBlockHash() == consensusParams.hashGenesisBlock); // Genesis block's hash must match.
-            assert(pindex == pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Genesis()); // The current active chain's genesis block must be this block.
+            assert(pindex == pnetMan->getChainActive()->chainActive.Genesis()); // The current active chain's genesis block must be this block.
         }
         if (pindex->nChainTx == 0) assert(pindex->nSequenceId == 0);  // nSequenceId can't be set for blocks that aren't linked
         // VALID_TRANSACTIONS is equivalent to nTx > 0 for all nodes (whether or not pruning has occurred).
@@ -833,13 +833,13 @@ void CheckBlockIndex(const Consensus::Params& consensusParams)
             // Checks for not-invalid blocks.
             assert((pindex->nStatus & BLOCK_FAILED_MASK) == 0); // The failed mask cannot be set for blocks without invalid parents.
         }
-        if (!CBlockIndexWorkComparator()(pindex, pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()) && pindexFirstNeverProcessed == NULL) {
+        if (!CBlockIndexWorkComparator()(pindex, pnetMan->getChainActive()->chainActive.Tip()) && pindexFirstNeverProcessed == NULL) {
             if (pindexFirstInvalid == NULL) {
                 // If this block sorts at least as good as the current tip and
                 // is valid and we have all data for its parents, it must be in
                 // setBlockIndexCandidates.  chainActive.Tip() must also be there
                 // even if some data has been pruned.
-                if (pindexFirstMissing == NULL || pindex == pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()) {
+                if (pindexFirstMissing == NULL || pindex == pnetMan->getChainActive()->chainActive.Tip()) {
                     assert(setBlockIndexCandidates.count(pindex));
                 }
                 // If some parent is missing, then it could be that this block was in
@@ -943,7 +943,7 @@ CBlockIndex* FindMostWorkChain()
         // Just going until the active chain is an optimization, as we know all blocks in it are valid already.
         CBlockIndex *pindexTest = pindexNew;
         bool fInvalidAncestor = false;
-        while (pindexTest && !pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Contains(pindexTest)) {
+        while (pindexTest && !pnetMan->getChainActive()->chainActive.Contains(pindexTest)) {
             assert(pindexTest->nChainTx || pindexTest->nHeight == 0);
 
             // Pruned nodes may have entries in setBlockIndexCandidates for
@@ -996,10 +996,10 @@ void InvalidChainFound(CBlockIndex* pindexNew)
       pindexNew->GetBlockHash().ToString(), pindexNew->nHeight,
       log(pindexNew->nChainWork.getdouble())/log(2.0), DateTimeStrFormat("%Y-%m-%d %H:%M:%S",
       pindexNew->GetBlockTime()));
-    CBlockIndex *tip = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
+    CBlockIndex *tip = pnetMan->getChainActive()->chainActive.Tip();
     assert (tip);
     LogPrintf("%s:  current best=%s  height=%d  log2_work=%.8g  date=%s\n", __func__,
-      tip->GetBlockHash().ToString(), pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height(), log(tip->nChainWork.getdouble())/log(2.0),
+      tip->GetBlockHash().ToString(), pnetMan->getChainActive()->chainActive.Height(), log(tip->nChainWork.getdouble())/log(2.0),
       DateTimeStrFormat("%Y-%m-%d %H:%M:%S", tip->GetBlockTime()));
     CheckForkWarningConditions();
 }
@@ -1405,7 +1405,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         setDirtyBlockIndex.insert(pindex);
     }
 
-    if (!pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree->WriteTxIndex(vPos))
+    if (!pnetMan->getChainActive()->pblocktree->WriteTxIndex(vPos))
     {
         return AbortNode(state, "Failed to write transaction index");
     }
@@ -1586,24 +1586,24 @@ void removeImpossibleChainTips()
     LOCK(cs_main);
     int deletionCount = 0;
     std::set<CBlockIndex*, CompareBlocksByHeight> setTips;
-    for (auto& item: pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex)
+    for (auto& item: pnetMan->getChainActive()->mapBlockIndex)
         setTips.insert(item.second);
-    for (auto& item: pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex)
+    for (auto& item: pnetMan->getChainActive()->mapBlockIndex)
     {
         CBlockIndex* pprev = item.second->pprev;
         if (pprev)
             setTips.erase(pprev);
     }
 
-    setTips.insert(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip());
+    setTips.insert(pnetMan->getChainActive()->chainActive.Tip());
 
-    const int currentHeight = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height();
+    const int currentHeight = pnetMan->getChainActive()->chainActive.Height();
     for (CBlockIndex* block : setTips)
     {
-        const int forkHeight = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.FindFork(block)->nHeight;
+        const int forkHeight = pnetMan->getChainActive()->chainActive.FindFork(block)->nHeight;
         const int branchLen = block->nHeight - forkHeight;
         std::string status = "";
-        if (pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Contains(block))
+        if (pnetMan->getChainActive()->chainActive.Contains(block))
         {
             // This block is part of the currently active chain.
             status = "active";
@@ -1638,8 +1638,8 @@ void removeImpossibleChainTips()
             CBlockIndex* curBlock = block;
             while(curBlock->nHeight > forkHeight)
             {
-                pnetMan->getActivePaymentNetwork()->getChainManager()->pblocktree->EraseBlockIndex(curBlock->GetBlockHash());
-                pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.erase(curBlock->GetBlockHash());
+                pnetMan->getChainActive()->pblocktree->EraseBlockIndex(curBlock->GetBlockHash());
+                pnetMan->getChainActive()->mapBlockIndex.erase(curBlock->GetBlockHash());
                 LogPrintf("cleaning up index %s \n", curBlock->GetBlockHash().ToString().c_str());
                 deletionCount++;
                 curBlock = curBlock->pprev;
