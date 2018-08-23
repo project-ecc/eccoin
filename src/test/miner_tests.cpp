@@ -4,7 +4,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "miner.h"
-#include "chainparams.h"
+
 #include "coins.h"
 #include "consensus/consensus.h"
 #include "consensus/merkle.h"
@@ -14,8 +14,8 @@
 #include "script/standard.h"
 #include "txmempool.h"
 #include "uint256.h"
-#include "util.h"
-#include "utilstrencodings.h"
+#include "util/util.h"
+#include "util/utilstrencodings.h"
 
 #include "test/test_bitcoin.h"
 

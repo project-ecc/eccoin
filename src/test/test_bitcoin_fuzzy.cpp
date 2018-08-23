@@ -12,7 +12,6 @@
 #include "compressor.h"
 #include "consensus/merkle.h"
 #include "net.h"
-#include "chain/block.h"
 #include "protocol.h"
 #include "pubkey.h"
 #include "script/script.h"
@@ -80,7 +79,7 @@ int main(int argc, char **argv)
     if (test_id >= TEST_ID_END)
         return 0;
 
-    CDataStream ds(buffer, SER_NETWORK, INIT_PROTO_VERSION);
+    CDataStream ds(buffer, SER_NETWORK, MIN_PROTO_VERSION);
     try
     {
         int nVersion;
@@ -254,7 +253,7 @@ int main(int argc, char **argv)
     }
     case CMESSAGEHEADER_DESERIALIZE:
     {
-        CMessageHeader::MessageStartChars pchMessageStart = {0x00, 0x00, 0x00, 0x00};
+        CMessageHeader::MessageMagic pchMessageStart = {0x00, 0x00, 0x00, 0x00};
         try
         {
             CMessageHeader mh(pchMessageStart);
