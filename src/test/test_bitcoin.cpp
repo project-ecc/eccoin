@@ -33,7 +33,7 @@
 
 extern bool fPrintToConsole;
 extern void noui_connect();
-CNetworkManager* pnetman = nullptr;
+CNetworkManager* testnetman = nullptr;
 CWallet* pwallet = nullptr;
 
 
@@ -44,9 +44,9 @@ BasicTestingSetup::BasicTestingSetup(const std::string &chainName)
     SetupNetworking();
     fPrintToDebugLog = false; // don't want to write to debug.log file
     fCheckBlockIndex = true;
-    CNetworkManager* pnetman = new CNetworkManager();
+    testnetman = new CNetworkManager();
     pwallet =  new CWallet("walletFile");
-    pnetman->SetParams(chainName);
+    testnetman->SetParams(chainName);
     noui_connect();
 }
 
@@ -55,15 +55,15 @@ TestingSetup::TestingSetup(const std::string &chainName) : BasicTestingSetup(cha
 {
     // Ideally we'd move all the RPC tests to the functional testing framework
     // instead of unit tests, but for now we need these here.
-    const CNetworkTemplate& chainparams = pnetman->getActivePaymentNetwork();
+    const CNetworkTemplate& chainparams = testnetman->getActivePaymentNetwork();
     //RegisterAllCoreRPCCommands(tableRPC);
     ClearDatadirCache();
     pathTemp = GetTempPathTest() / strprintf("test_bitcoin_%lu_%i", (unsigned long)GetTime(), (int)(GetRand(100000)));
     fs::create_directories(pathTemp);
-    pnetman->getChainActive()->pblocktree.reset(new CBlockTreeDB(1 << 20, true));
+    testnetman->getChainActive()->pblocktree.reset(new CBlockTreeDB(1 << 20, true));
     pcoinsdbview = new CCoinsViewDB(1 << 23, true);
-    pnetman->getChainActive()->pcoinsTip.reset(new CCoinsViewCache(pcoinsdbview));
-    bool worked = pnetman->getChainActive()->InitBlockIndex(chainparams);
+    testnetman->getChainActive()->pcoinsTip.reset(new CCoinsViewCache(pcoinsdbview));
+    bool worked = testnetman->getChainActive()->InitBlockIndex(chainparams);
     assert(worked);
     RegisterNodeSignals(GetNodeSignals());
 }
@@ -73,10 +73,10 @@ TestingSetup::~TestingSetup()
     UnregisterNodeSignals(GetNodeSignals());
     threadGroup.interrupt_all();
     threadGroup.join_all();
-    pnetman->getChainActive()->UnloadBlockIndex();
-    pnetman->getChainActive()->pcoinsTip.reset();
+    testnetman->getChainActive()->UnloadBlockIndex();
+    testnetman->getChainActive()->pcoinsTip.reset();
     pcoinsdbview = nullptr;
-    pnetman->getChainActive()->pblocktree.reset();
+    testnetman->getChainActive()->pblocktree.reset();
     fs::remove_all(pathTemp);
 }
 
@@ -110,13 +110,13 @@ CBlock TestChain100Setup::CreateAndProcessBlock(const std::vector<CTransactionRe
         pblock->vtx.push_back(tx);
     // IncrementExtraNonce creates a valid coinbase and merkleRoot
     unsigned int extraNonce = 0;
-    IncrementExtraNonce(pblock.get(), pnetman->getChainActive()->chainActive.Tip(), extraNonce);
+    IncrementExtraNonce(pblock.get(), testnetman->getChainActive()->chainActive.Tip(), extraNonce);
 
-    while (!CheckProofOfWork(pblock->GetHash(), pblock->nBits, pnetman->getActivePaymentNetwork()->GetConsensus()))
+    while (!CheckProofOfWork(pblock->GetHash(), pblock->nBits, testnetman->getActivePaymentNetwork()->GetConsensus()))
         ++pblock->nNonce;
 
     CValidationState state;
-    ProcessNewBlock(state, pnetman->getActivePaymentNetwork(), NULL, pblock, true, NULL);
+    ProcessNewBlock(state, testnetman->getActivePaymentNetwork(), NULL, pblock, true, NULL);
 
     CBlock result = *pblock;
     pblocktemplate.reset();
