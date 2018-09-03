@@ -18,25 +18,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "crypto/hash.h"
-#include "tinyformat.h"
-#include "util/utilstrencodings.h"
-#include "crypto/common.h"
-#include "main.h"
-#include "util/util.h"
 #include "chain/chain.h"
-#include "timedata.h"
+#include "crypto/common.h"
+#include "crypto/hash.h"
 #include "crypto/scrypt.h"
-#include "networks/networktemplate.h"
-#include "networks/netman.h"
 #include "init.h"
+#include "main.h"
+#include "networks/netman.h"
+#include "networks/networktemplate.h"
+#include "timedata.h"
+#include "tinyformat.h"
+#include "util/util.h"
+#include "util/utilstrencodings.h"
 
 uint256 CBlockHeader::GetHash() const
 {
     uint256 thash;
-    void * scratchbuff = scrypt_buffer_alloc();
+    void *scratchbuff = scrypt_buffer_alloc();
 
-    scrypt_hash_mine(((const void*)&(nVersion)), sizeof(CBlockHeader), ((uint32_t*)&(thash)), scratchbuff);
+    scrypt_hash_mine(((const void *)&(nVersion)), sizeof(CBlockHeader), ((uint32_t *)&(thash)), scratchbuff);
 
     scrypt_buffer_free(scratchbuff);
 
@@ -46,12 +46,9 @@ uint256 CBlockHeader::GetHash() const
 std::string CBlock::ToString() const
 {
     std::stringstream s;
-    s << strprintf("CBlock(hash=%s, ver=%d, hashPrevBlock=%s, hashMerkleRoot=%s, nTime=%u, nBits=%08x, nNonce=%u, vtx=%u)\n",
-        GetHash().ToString(),
-        nVersion,
-        hashPrevBlock.ToString(),
-        hashMerkleRoot.ToString(),
-        nTime, nBits, nNonce,
+    s << strprintf(
+        "CBlock(hash=%s, ver=%d, hashPrevBlock=%s, hashMerkleRoot=%s, nTime=%u, nBits=%08x, nNonce=%u, vtx=%u)\n",
+        GetHash().ToString(), nVersion, hashPrevBlock.ToString(), hashMerkleRoot.ToString(), nTime, nBits, nNonce,
         vtx.size());
     for (unsigned int i = 0; i < vtx.size(); i++)
     {
@@ -62,33 +59,27 @@ std::string CBlock::ToString() const
 
 
 // ppcoin: two types of block: proof-of-work or proof-of-stake
-bool CBlock::IsProofOfStake() const
-{
-    return (vtx.size() > 1 && vtx[1]->IsCoinStake());
-}
-
-bool CBlock::IsProofOfWork() const
-{
-    return !IsProofOfStake();
-}
-
+bool CBlock::IsProofOfStake() const { return (vtx.size() > 1 && vtx[1]->IsCoinStake()); }
+bool CBlock::IsProofOfWork() const { return !IsProofOfStake(); }
 std::pair<COutPoint, unsigned int> CBlock::GetProofOfStake() const
 {
-    //return IsProofOfStake()? std::make_pair(vtx[1].vin[0].prevout, vtx[1].nTime) : std::make_pair(COutPoint(), (unsigned int)0);
-    return IsProofOfStake()? std::make_pair(vtx[1]->vin[0].prevout, this->nTime) : std::make_pair(COutPoint(), (unsigned int)0);
+    // return IsProofOfStake()? std::make_pair(vtx[1].vin[0].prevout, vtx[1].nTime) : std::make_pair(COutPoint(),
+    // (unsigned int)0);
+    return IsProofOfStake() ? std::make_pair(vtx[1]->vin[0].prevout, this->nTime) :
+                              std::make_pair(COutPoint(), (unsigned int)0);
 }
 
 
-bool CBlock::SignScryptBlock(const CKeyStore& keystore)
+bool CBlock::SignScryptBlock(const CKeyStore &keystore)
 {
     std::vector<std::vector<unsigned char> > vSolutions;
     txnouttype whichType;
 
-    if(!IsProofOfStake())
+    if (!IsProofOfStake())
     {
-        for(unsigned int i = 0; i < vtx[0]->vout.size(); i++)
+        for (unsigned int i = 0; i < vtx[0]->vout.size(); i++)
         {
-            const CTxOut& txout = vtx[0]->vout[i];
+            const CTxOut &txout = vtx[0]->vout[i];
 
             if (!Solver(txout.scriptPubKey, whichType, vSolutions))
                 continue;
@@ -96,7 +87,7 @@ bool CBlock::SignScryptBlock(const CKeyStore& keystore)
             if (whichType == TX_PUBKEY)
             {
                 // Sign
-                std::vector<unsigned char>& vchPubKey = vSolutions[0];
+                std::vector<unsigned char> &vchPubKey = vSolutions[0];
                 CKey key;
 
                 if (!keystore.GetKey(Hash160(vchPubKey), key))
@@ -107,7 +98,7 @@ bool CBlock::SignScryptBlock(const CKeyStore& keystore)
                 {
                     continue;
                 }
-                if(!key.Sign(GetHash(), vchBlockSig))
+                if (!key.Sign(GetHash(), vchBlockSig))
                 {
                     continue;
                 }
@@ -118,7 +109,7 @@ bool CBlock::SignScryptBlock(const CKeyStore& keystore)
     }
     else
     {
-        const CTxOut& txout = vtx[1]->vout[1];
+        const CTxOut &txout = vtx[1]->vout[1];
 
         if (!Solver(txout.scriptPubKey, whichType, vSolutions))
             return false;
@@ -126,7 +117,7 @@ bool CBlock::SignScryptBlock(const CKeyStore& keystore)
         if (whichType == TX_PUBKEY)
         {
             // Sign
-            std::vector<unsigned char>& vchPubKey = vSolutions[0];
+            std::vector<unsigned char> &vchPubKey = vSolutions[0];
             CKey key;
 
             if (!keystore.GetKey(Hash160(vchPubKey), key))
@@ -144,69 +135,65 @@ bool CBlock::SignScryptBlock(const CKeyStore& keystore)
 
 bool CBlock::CheckBlockSignature() const
 {
-        if (GetHash() == pnetMan->getActivePaymentNetwork()->GetConsensus().hashGenesisBlock)
-            return vchBlockSig.empty();
+    if (GetHash() == pnetMan->getActivePaymentNetwork()->GetConsensus().hashGenesisBlock)
+        return vchBlockSig.empty();
 
-        std::vector<std::vector<unsigned char> > vSolutions;
-        txnouttype whichType;
+    std::vector<std::vector<unsigned char> > vSolutions;
+    txnouttype whichType;
 
-        if(IsProofOfStake())
+    if (IsProofOfStake())
+    {
+        const CTxOut &txout = vtx[1]->vout[1];
+
+        if (!Solver(txout.scriptPubKey, whichType, vSolutions))
+            return false;
+        if (whichType == TX_PUBKEY)
         {
-            const CTxOut& txout = vtx[1]->vout[1];
+            std::vector<unsigned char> &vchPubKey = vSolutions[0];
+            if (vchBlockSig.empty())
+                return false;
+            return CPubKey(vchPubKey).Verify(GetHash(), vchBlockSig);
+        }
+    }
+    else
+    {
+        for (unsigned int i = 0; i < vtx[0]->vout.size(); i++)
+        {
+            const CTxOut &txout = vtx[0]->vout[i];
 
             if (!Solver(txout.scriptPubKey, whichType, vSolutions))
+            {
                 return false;
+            }
             if (whichType == TX_PUBKEY)
             {
-                std::vector<unsigned char>& vchPubKey = vSolutions[0];
+                // Verify
+                std::vector<unsigned char> &vchPubKey = vSolutions[0];
                 if (vchBlockSig.empty())
-                    return false;
-                return CPubKey(vchPubKey).Verify(GetHash(), vchBlockSig);
-            }
-        }
-        else
-        {
-            for(unsigned int i = 0; i < vtx[0]->vout.size(); i++)
-            {
-                const CTxOut& txout = vtx[0]->vout[i];
-
-                if (!Solver(txout.scriptPubKey, whichType, vSolutions))
                 {
-                    return false;
+                    LogPrintf("sig is empty? \n");
+                    continue;
                 }
-                if (whichType == TX_PUBKEY)
+                if (!CPubKey(vchPubKey).Verify(GetHash(), vchBlockSig))
                 {
-                    // Verify
-                    std::vector<unsigned char>& vchPubKey = vSolutions[0];
-                    if (vchBlockSig.empty())
-                    {
-                        LogPrintf("sig is empty? \n");
-                        continue;
-                    }
-                    if(!CPubKey(vchPubKey).Verify(GetHash(), vchBlockSig))
-                    {
-                        LogPrintf("probably will see this message \n");
-                        continue;
-                    }
-                    return true;
+                    LogPrintf("probably will see this message \n");
+                    continue;
                 }
-                LogPrintf("got here somehow?");
+                return true;
             }
+            LogPrintf("got here somehow?");
         }
-        LogPrintf("CheckBlockSignature failed \n");
-        return false;
+    }
+    LogPrintf("CheckBlockSignature failed \n");
+    return false;
 }
 
-void CBlock::UpdateTime()
-{
-    nTime = std::max(GetBlockTime(), GetAdjustedTime());
-}
-
+void CBlock::UpdateTime() { nTime = std::max(GetBlockTime(), GetAdjustedTime()); }
 // ppcoin: get max transaction timestamp
 int64_t CBlock::GetMaxTransactionTime() const
 {
     int64_t maxTransactionTime = 0;
-    for (auto const& tx: vtx)
+    for (auto const &tx : vtx)
         maxTransactionTime = std::max(maxTransactionTime, (int64_t)tx->nTime);
     return maxTransactionTime;
 }

@@ -5,8 +5,8 @@
 
 #include "util/util.h"
 
-#include "clientversion.h"
 #include "chain/tx.h"
+#include "clientversion.h"
 #include "random.h"
 #include "sync.h"
 #include "test/test_bitcoin.h"

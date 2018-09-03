@@ -106,16 +106,14 @@ BOOST_AUTO_TEST_CASE(multisig_verify)
     {
         keys.assign(1, key[i]);
         s = sign_multisig(a_and_b, keys, txTo[0], 0);
-        BOOST_CHECK_MESSAGE(
-            !VerifyScript(s, a_and_b, flags, TransactionSignatureChecker(&txTo[0], 0, amount), &err),
+        BOOST_CHECK_MESSAGE(!VerifyScript(s, a_and_b, flags, TransactionSignatureChecker(&txTo[0], 0, amount), &err),
             strprintf("a&b 1: %d", i));
         BOOST_CHECK_MESSAGE(err == SCRIPT_ERR_INVALID_STACK_OPERATION, ScriptErrorString(err));
 
         keys.assign(1, key[1]);
         keys.push_back(key[i]);
         s = sign_multisig(a_and_b, keys, txTo[0], 0);
-        BOOST_CHECK_MESSAGE(
-            !VerifyScript(s, a_and_b, flags, TransactionSignatureChecker(&txTo[0], 0, amount), &err),
+        BOOST_CHECK_MESSAGE(!VerifyScript(s, a_and_b, flags, TransactionSignatureChecker(&txTo[0], 0, amount), &err),
             strprintf("a&b 2: %d", i));
         BOOST_CHECK_MESSAGE(err == SCRIPT_ERR_EVAL_FALSE, ScriptErrorString(err));
     }
@@ -127,15 +125,13 @@ BOOST_AUTO_TEST_CASE(multisig_verify)
         s = sign_multisig(a_or_b, keys, txTo[1], 0);
         if (i == 0 || i == 1)
         {
-            BOOST_CHECK_MESSAGE(
-                VerifyScript(s, a_or_b, flags, TransactionSignatureChecker(&txTo[1], 0, amount), &err),
+            BOOST_CHECK_MESSAGE(VerifyScript(s, a_or_b, flags, TransactionSignatureChecker(&txTo[1], 0, amount), &err),
                 strprintf("a|b: %d", i));
             BOOST_CHECK_MESSAGE(err == SCRIPT_ERR_OK, ScriptErrorString(err));
         }
         else
         {
-            BOOST_CHECK_MESSAGE(
-                !VerifyScript(s, a_or_b, flags, TransactionSignatureChecker(&txTo[1], 0, amount), &err),
+            BOOST_CHECK_MESSAGE(!VerifyScript(s, a_or_b, flags, TransactionSignatureChecker(&txTo[1], 0, amount), &err),
                 strprintf("a|b: %d", i));
             BOOST_CHECK_MESSAGE(err == SCRIPT_ERR_EVAL_FALSE, ScriptErrorString(err));
         }

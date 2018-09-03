@@ -21,8 +21,8 @@
 #ifndef BITCOIN_UNDO_H
 #define BITCOIN_UNDO_H
 
-#include "compressor.h" 
 #include "chain/tx.h"
+#include "compressor.h"
 #include "serialize.h"
 
 /** Undo information for a CTxIn
@@ -79,7 +79,8 @@ public:
 };
 
 
-static const size_t MAX_INPUTS_PER_BLOCK = std::numeric_limits<long long>::max() / ::GetSerializeSize(CTxIn(), SER_NETWORK, PROTOCOL_VERSION);
+static const size_t MAX_INPUTS_PER_BLOCK =
+    std::numeric_limits<long long>::max() / ::GetSerializeSize(CTxIn(), SER_NETWORK, PROTOCOL_VERSION);
 
 /** Undo information for a CTransaction */
 class CTxUndo
@@ -127,13 +128,14 @@ public:
     ADD_SERIALIZE_METHODS
 
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action)
+    inline void SerializationOp(Stream &s, Operation ser_action)
     {
         READWRITE(vtxundo);
     }
 };
 
-enum DisconnectResult {
+enum DisconnectResult
+{
     // All good.
     DISCONNECT_OK,
     // Rolled back, but UTXO set was inconsistent with block.

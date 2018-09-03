@@ -19,43 +19,43 @@
 
 #include <algorithm>
 
-#include "chain/chain.h"
-#include "networks/networktemplate.h"
-#include "networks/netman.h"
-#include "consensus/consensus.h"
-#include "main.h"
-#include "kernel.h"
-#include "txdb.h"
-#include "net.h"
-#include "crypto/scrypt.h"
-#include "util/utiltime.h"
-#include "timedata.h"
 #include "args.h"
-#include "script/stakescript.h"
+#include "chain/chain.h"
+#include "consensus/consensus.h"
+#include "crypto/scrypt.h"
 #include "init.h"
+#include "kernel.h"
+#include "main.h"
+#include "net.h"
+#include "networks/netman.h"
+#include "networks/networktemplate.h"
+#include "script/stakescript.h"
+#include "timedata.h"
+#include "txdb.h"
+#include "util/utiltime.h"
 
 // The stake modifier used to hash for a stake kernel is chosen as the stake
 // modifier about a selection interval later than the coin generating the kernel
-static bool GetKernelStakeModifier(uint256 hashBlockFrom, uint256& nStakeModifier)
+static bool GetKernelStakeModifier(uint256 hashBlockFrom, uint256 &nStakeModifier)
 {
     nStakeModifier.SetNull();
     if (!pnetMan->getChainActive()->mapBlockIndex.count(hashBlockFrom))
         return error("GetKernelStakeModifier() : block not indexed");
-    const CBlockIndex* pindex = pnetMan->getChainActive()->mapBlockIndex[hashBlockFrom];
+    const CBlockIndex *pindex = pnetMan->getChainActive()->mapBlockIndex[hashBlockFrom];
 
     int blocksToGo = 5;
     if (pnetMan->getChainActive()->chainActive.Tip()->nHeight >= 1504350)
     {
         blocksToGo = 180;
     }
-    while(pnetMan->getChainActive()->chainActive.Next(pindex) && blocksToGo > 0)
+    while (pnetMan->getChainActive()->chainActive.Next(pindex) && blocksToGo > 0)
     {
         pindex = pnetMan->getChainActive()->chainActive.Next(pindex);
         blocksToGo = blocksToGo - 1;
     }
-    if(blocksToGo > 0)
+    if (blocksToGo > 0)
     {
-        if(fDebug)
+        if (fDebug)
         {
             LogPrintf("blocks to go was %i and it should be 0 but we ran out of indexes \n", blocksToGo);
         }
@@ -87,21 +87,21 @@ static bool GetKernelStakeModifier(uint256 hashBlockFrom, uint256& nStakeModifie
 // block. This is to make it difficult for an attacker to gain control of
 // additional bits in the stake modifier, even after generating a chain of
 // blocks.
-bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, const CTransaction& tx, uint256& nStakeModifier)
+bool ComputeNextStakeModifier(const CBlockIndex *pindexPrev, const CTransaction &tx, uint256 &nStakeModifier)
 {
     nStakeModifier.SetNull();
     if (tx.IsNull())
     {
-        if(!pindexPrev)
+        if (!pindexPrev)
         {
-            return true;  // genesis block's modifier is 0
+            return true; // genesis block's modifier is 0
         }
         return false;
     }
-    if(tx.IsCoinBase())
+    if (tx.IsCoinBase())
     {
         /// if it isnt one of first 3 blocks run this calc then return. otherwise just return
-        if(pindexPrev->pprev && pindexPrev->pprev->pprev)
+        if (pindexPrev->pprev && pindexPrev->pprev->pprev)
         {
             CDataStream ss(SER_GETHASH, 0);
             ss << pindexPrev->nStakeModifier;
@@ -117,24 +117,26 @@ bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, const CTransaction&
     }
 
     // Kernel (input 0) must match the stake hash target per coin age (nBits)
-    const CTxIn& txin = tx.vin[0];
+    const CTxIn &txin = tx.vin[0];
 
     // First try finding the previous transaction in database
     CTransaction txPrev;
     uint256 blockHashOfTx;
     if (!GetTransaction(txin.prevout.hash, txPrev, pnetMan->getActivePaymentNetwork()->GetConsensus(), blockHashOfTx))
-        return error("ComputeNextStakeModifier() : INFO: read txPrev failed");  // previous transaction not in main chain, may occur during initial download
+        // previous transaction not in main chain, may occur during initial download
+        return error("ComputeNextStakeModifier() : INFO: read txPrev failed");
 
     // Read block header
     CBlock block;
-    CBlockIndex* index = pnetMan->getChainActive()->mapBlockIndex[blockHashOfTx];
+    CBlockIndex *index = pnetMan->getChainActive()->mapBlockIndex[blockHashOfTx];
 
     if (!ReadBlockFromDisk(block, index, pnetMan->getActivePaymentNetwork()->GetConsensus()))
-        return fDebug? error("ComputeNextStakeModifier() : read block failed") : false; // unable to read block of previous transaction
+        // unable to read block of previous transaction
+        return fDebug ? error("ComputeNextStakeModifier() : read block failed") : false;
 
     if (!GetKernelStakeModifier(block.GetHash(), nStakeModifier))
     {
-        if(fDebug)
+        if (fDebug)
         {
             LogPrintf("ComputeNextStakeModifier(): GetKernelStakeModifier return false\n");
         }
@@ -146,7 +148,8 @@ bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, const CTransaction&
 // ppcoin kernel protocol
 // coinstake must meet hash target according to the protocol:
 // kernel (input 0) must meet the formula
-//     hash(nStakeModifier + txPrev.block.nTime + txPrev.offset + txPrev.nTime + txPrev.vout.n + nTime) < bnTarget * nCoinDayWeight
+//     hash(nStakeModifier + txPrev.block.nTime + txPrev.offset + txPrev.nTime + txPrev.vout.n + nTime) < bnTarget *
+//     nCoinDayWeight
 // this ensures that the chance of getting a coinstake is proportional to the
 // amount of coin age one owns.
 // The reason this hash is chosen is the following:
@@ -166,9 +169,15 @@ bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, const CTransaction&
 //   quantities so as to generate blocks faster, degrading the system back into
 //   a proof-of-work situation.
 //
-bool CheckStakeKernelHash(int nHeight, const CBlock& blockFrom, unsigned int nTxPrevOffset, const CTransaction& txPrev, const COutPoint& prevout, unsigned int nTimeTx, uint256& hashProofOfStake)
+bool CheckStakeKernelHash(int nHeight,
+    const CBlock &blockFrom,
+    unsigned int nTxPrevOffset,
+    const CTransaction &txPrev,
+    const COutPoint &prevout,
+    unsigned int nTimeTx,
+    uint256 &hashProofOfStake)
 {
-    if (nTimeTx < txPrev.nTime)  // Transaction timestamp violation
+    if (nTimeTx < txPrev.nTime) // Transaction timestamp violation
         return error("CheckStakeKernelHash() : nTime violation");
 
     unsigned int nTimeBlockFrom = blockFrom.GetBlockTime();
@@ -182,9 +191,9 @@ bool CheckStakeKernelHash(int nHeight, const CBlock& blockFrom, unsigned int nTx
     // to secure the network when proof-of-stake difficulty is low
     int64_t nTimeWeight = ((int64_t)nTimeTx - txPrev.nTime) - pnetMan->getActivePaymentNetwork()->getStakeMinAge();
 
-    if(nTimeWeight <= 0)
+    if (nTimeWeight <= 0)
     {
-        if(fDebug)
+        if (fDebug)
         {
             LogPrintf("CheckStakeKernelHash(): ERROR: time weight was somehow <= 0 \n");
         }
@@ -199,7 +208,7 @@ bool CheckStakeKernelHash(int nHeight, const CBlock& blockFrom, unsigned int nTx
 
     if (!GetKernelStakeModifier(blockFrom.GetHash(), nStakeModifier))
     {
-        if(fDebug)
+        if (fDebug)
         {
             LogPrintf(">>> CheckStakeKernelHash: GetKernelStakeModifier return false\n");
         }
@@ -211,14 +220,16 @@ bool CheckStakeKernelHash(int nHeight, const CBlock& blockFrom, unsigned int nTx
     ss << nTimeBlockFrom << nTxPrevOffset << txPrev.nTime << prevout.n << nTimeTx;
     hashProofOfStake = Hash(ss.begin(), ss.end());
 
-    if(nHeight > 1504350)
+    if (nHeight > 1504350)
     {
         arith_uint256 arith_hashProofOfStake = UintToArith256(hashProofOfStake);
 
-        /// the older the coins are, the higher the day weight. this means with a higher dayWeight you get a bigger reduction in your hashProofOfStake
-        /// this should lead to older and older coins needing to be selected as the difficulty rises due to fast block minting. larger inputs will also help this
-        /// but not nearly as much as older coins will because seconds in age are easier to earn compared to coin amount. RNG with the result of the hash is also always a factor
-
+        // the older the coins are, the higher the day weight. this means with a higher dayWeight you get a bigger
+        // reduction in your hashProofOfStake
+        // this should lead to older and older coins needing to be selected as the difficulty rises due to fast
+        // block minting. larger inputs will also help this
+        // but not nearly as much as older coins will because seconds in age are easier to earn compared to coin
+        // amount. RNG with the result of the hash is also always a factor
         // nTimeWeight is the number of seconds old the coins are past the min stake age
         // nValueIn is the number of satoshis being staked so we divide by COIN to get the number of coins
 
@@ -227,41 +238,46 @@ bool CheckStakeKernelHash(int nHeight, const CBlock& blockFrom, unsigned int nTx
         arith_uint256 hashTarget;
         bool fNegative;
         bool fOverflow;
-        hashTarget.SetCompact(GetNextTargetRequired(pnetMan->getChainActive()->chainActive.Tip(), true), &fNegative, &fOverflow);
-        if (fNegative || hashTarget == 0 || fOverflow || hashTarget > UintToArith256(pnetMan->getActivePaymentNetwork()->GetConsensus().posLimit))
+        hashTarget.SetCompact(
+            GetNextTargetRequired(pnetMan->getChainActive()->chainActive.Tip(), true), &fNegative, &fOverflow);
+        if (fNegative || hashTarget == 0 || fOverflow ||
+            hashTarget > UintToArith256(pnetMan->getActivePaymentNetwork()->GetConsensus().posLimit))
             return error("CheckStakeKernelHash(): nBits below minimum work for proof of stake");
 
         std::string reductionHex = reduction.GetHex();
         unsigned int n = std::count(reductionHex.begin(), reductionHex.end(), '0');
         unsigned int redux = 64 - n; // 64 is max 0's in a 256 bit hex string
-        if(fDebug)
+        if (fDebug)
         {
             LogPrintf("reduction = %u \n", redux);
             LogPrintf("pre reduction hashProofOfStake = %s \n", arith_hashProofOfStake.GetHex().c_str());
         }
-        /// before we apply reduction, we want to shift the hash 20 bits to the right. the PoS limit is lead by 20 0's so we want our reduction to apply to a hashproofofstake that is also lead by 20 0's
+        // before we apply reduction, we want to shift the hash 20 bits to the right. the PoS limit is lead by 20 0's so
+        // we want our reduction to apply to a hashproofofstake that is also lead by 20 0's
         arith_hashProofOfStake = arith_hashProofOfStake >> 20;
-        if(fDebug)
+        if (fDebug)
         {
             LogPrintf("mid reduction hashProofOfStake = %s \n", arith_hashProofOfStake.GetHex().c_str());
         }
         arith_hashProofOfStake = arith_hashProofOfStake >> redux;
-        if(fDebug)
+        if (fDebug)
         {
             LogPrintf("post reduction hashProofOfStake = %s \n", arith_hashProofOfStake.GetHex().c_str());
         }
         // Now check if proof-of-stake hash meets target protocol
-        if(arith_hashProofOfStake > hashTarget)
+        if (arith_hashProofOfStake > hashTarget)
         {
-            if(fDebug)
+            if (fDebug)
             {
-                LogPrintf("CheckStakeKernelHash(): ERROR: hashProofOfStake %s > %s hashTarget\n", arith_hashProofOfStake.GetHex().c_str(), hashTarget.GetHex().c_str());
+                LogPrintf("CheckStakeKernelHash(): ERROR: hashProofOfStake %s > %s hashTarget\n",
+                    arith_hashProofOfStake.GetHex().c_str(), hashTarget.GetHex().c_str());
             }
             return false;
         }
-        if(fDebug)
+        if (fDebug)
         {
-            LogPrintf("CheckStakeKernelHash(): SUCCESS: hashProofOfStake %s < %s hashTarget\n", arith_hashProofOfStake.GetHex().c_str(), hashTarget.GetHex().c_str());
+            LogPrintf("CheckStakeKernelHash(): SUCCESS: hashProofOfStake %s < %s hashTarget\n",
+                arith_hashProofOfStake.GetHex().c_str(), hashTarget.GetHex().c_str());
         }
     }
 
@@ -269,44 +285,51 @@ bool CheckStakeKernelHash(int nHeight, const CBlock& blockFrom, unsigned int nTx
 }
 
 // Check kernel hash target and coinstake signature
-bool CheckProofOfStake(int nHeight, const CTransaction& tx, uint256& hashProofOfStake)
+bool CheckProofOfStake(int nHeight, const CTransaction &tx, uint256 &hashProofOfStake)
 {
     if (!tx.IsCoinStake())
         return error("CheckProofOfStake() : called on non-coinstake %s", tx.GetHash().ToString().c_str());
 
     // Kernel (input 0) must match the stake hash target per coin age (nBits)
-    const CTxIn& txin = tx.vin[0];
+    const CTxIn &txin = tx.vin[0];
 
     // First try finding the previous transaction in database
     CTransaction txPrev;
     uint256 blockHashOfTx;
     if (!GetTransaction(txin.prevout.hash, txPrev, pnetMan->getActivePaymentNetwork()->GetConsensus(), blockHashOfTx))
-        return error("CheckProofOfStake() : INFO: read txPrev failed");  // previous transaction not in main chain, may occur during initial download
+        // previous transaction not in main chain, may occur during initial download
+        return error("CheckProofOfStake() : INFO: read txPrev failed");
     // Verify signature
     if (!VerifySignature(txPrev, tx, 0, true))
         return error("CheckProofOfStake() : VerifySignature failed on coinstake %s", tx.GetHash().ToString().c_str());
 
     // Read block header
     CBlock block;
-    CBlockIndex* index = pnetMan->getChainActive()->mapBlockIndex[blockHashOfTx];
+    CBlockIndex *index = pnetMan->getChainActive()->mapBlockIndex[blockHashOfTx];
 
     if (!ReadBlockFromDisk(block, index, pnetMan->getActivePaymentNetwork()->GetConsensus()))
-        return fDebug? error("CheckProofOfStake() : read block failed") : false; // unable to read block of previous transaction
+        // unable to read block of previous transaction
+        return fDebug ? error("CheckProofOfStake() : read block failed") : false;
 
     CDiskTxPos txindex;
     pnetMan->getChainActive()->pblocktree->ReadTxIndex(txPrev.GetHash(), txindex);
-    if(nHeight < 1505775)
+    if (nHeight < 1505775)
     {
-        if (!CheckStakeKernelHash(nHeight, block, txindex.nTxOffset + 80, txPrev, txin.prevout, tx.nTime, hashProofOfStake))
+        if (!CheckStakeKernelHash(
+                nHeight, block, txindex.nTxOffset + 80, txPrev, txin.prevout, tx.nTime, hashProofOfStake))
         {
-            return error("CheckProofOfStake() : INFO: check kernel failed on coinstake %s, hashProof=%s", tx.GetHash().ToString().c_str(), hashProofOfStake.ToString().c_str()); // may occur during initial download or if behind on block chain sync
+            // may occur during initial download or if behind on block chain sync
+            return error("CheckProofOfStake() : INFO: check kernel failed on coinstake %s, hashProof=%s",
+                tx.GetHash().ToString().c_str(), hashProofOfStake.ToString().c_str());
         }
     }
     else
     {
         if (!CheckStakeKernelHash(nHeight, block, txindex.nTxOffset, txPrev, txin.prevout, tx.nTime, hashProofOfStake))
         {
-            return error("CheckProofOfStake() : INFO: check kernel failed on coinstake %s, hashProof=%s", tx.GetHash().ToString().c_str(), hashProofOfStake.ToString().c_str()); // may occur during initial download or if behind on block chain sync
+            // may occur during initial download or if behind on block chain sync
+            return error("CheckProofOfStake() : INFO: check kernel failed on coinstake %s, hashProof=%s",
+                tx.GetHash().ToString().c_str(), hashProofOfStake.ToString().c_str());
         }
     }
     return true;

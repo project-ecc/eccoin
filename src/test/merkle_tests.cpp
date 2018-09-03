@@ -101,7 +101,8 @@ BOOST_AUTO_TEST_CASE(merkle_test)
             {
                 CTransaction mtx;
                 mtx.nLockTime = j;
-                block.vtx[j] = MakeTransactionRef(std::move(mtx));;
+                block.vtx[j] = MakeTransactionRef(std::move(mtx));
+                ;
             }
             // Compute the root of the block before mutating it.
             bool unmutatedMutated = false;

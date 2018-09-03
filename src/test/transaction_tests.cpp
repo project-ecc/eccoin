@@ -15,9 +15,9 @@
 #include "main.h" // For CheckTransaction
 #include "policy/policy.h"
 #include "processtx.h"
+#include "script/interpreter.h"
 #include "script/script.h"
 #include "script/script_error.h"
-#include "script/interpreter.h"
 #include "util/utilstrencodings.h"
 
 #include <map>
@@ -37,21 +37,17 @@ using namespace std;
 extern UniValue read_json(const std::string &jsondata);
 
 static std::map<string, unsigned int> mapFlagNames =
-    boost::assign::map_list_of(
-        string("NONE"),(unsigned int)SCRIPT_VERIFY_NONE)
-        (string("P2SH"),(unsigned int)SCRIPT_VERIFY_P2SH)
-        (string("STRICTENC"),(unsigned int)SCRIPT_VERIFY_STRICTENC)
-        (string("DERSIG"),(unsigned int)SCRIPT_VERIFY_DERSIG)
-        (string("LOW_S"),(unsigned int)SCRIPT_VERIFY_LOW_S)
-        (string("SIGPUSHONLY"),(unsigned int)SCRIPT_VERIFY_SIGPUSHONLY)
-        (string("MINIMALDATA"),(unsigned int)SCRIPT_VERIFY_MINIMALDATA)
-        (string("NULLDUMMY"),(unsigned int)SCRIPT_VERIFY_NULLDUMMY)
-        (string("DISCOURAGE_UPGRADABLE_NOPS"),(unsigned int)SCRIPT_VERIFY_DISCOURAGE_UPGRADABLE_NOPS)
-        (string("CLEANSTACK"),(unsigned int)SCRIPT_VERIFY_CLEANSTACK)
-        (string("NULLFAIL"),(unsigned int)SCRIPT_VERIFY_NULLDUMMY)
-        (string("CHECKLOCKTIMEVERIFY"),(unsigned int)SCRIPT_VERIFY_CHECKLOCKTIMEVERIFY)
-        (string("CHECKSEQUENCEVERIFY"),(unsigned int)SCRIPT_VERIFY_CHECKSEQUENCEVERIFY)
-    ;
+    boost::assign::map_list_of(string("NONE"), (unsigned int)SCRIPT_VERIFY_NONE)(string("P2SH"),
+        (unsigned int)SCRIPT_VERIFY_P2SH)(string("STRICTENC"), (unsigned int)SCRIPT_VERIFY_STRICTENC)(string("DERSIG"),
+        (unsigned int)SCRIPT_VERIFY_DERSIG)(string("LOW_S"), (unsigned int)SCRIPT_VERIFY_LOW_S)(string("SIGPUSHONLY"),
+        (unsigned int)SCRIPT_VERIFY_SIGPUSHONLY)(string("MINIMALDATA"),
+        (unsigned int)SCRIPT_VERIFY_MINIMALDATA)(string("NULLDUMMY"), (unsigned int)SCRIPT_VERIFY_NULLDUMMY)(
+        string("DISCOURAGE_UPGRADABLE_NOPS"),
+        (unsigned int)SCRIPT_VERIFY_DISCOURAGE_UPGRADABLE_NOPS)(string("CLEANSTACK"),
+        (unsigned int)SCRIPT_VERIFY_CLEANSTACK)(string("NULLFAIL"), (unsigned int)SCRIPT_VERIFY_NULLDUMMY)(
+        string("CHECKLOCKTIMEVERIFY"),
+        (unsigned int)SCRIPT_VERIFY_CHECKLOCKTIMEVERIFY)(string("CHECKSEQUENCEVERIFY"),
+        (unsigned int)SCRIPT_VERIFY_CHECKSEQUENCEVERIFY);
 
 unsigned int ParseScriptFlags(string strFlags)
 {

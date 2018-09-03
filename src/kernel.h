@@ -23,13 +23,19 @@
 #include "main.h"
 
 // Compute the hash modifier for proof-of-stake
-bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, const CTransaction& tx, uint256 &nStakeModifier);
+bool ComputeNextStakeModifier(const CBlockIndex *pindexPrev, const CTransaction &tx, uint256 &nStakeModifier);
 
 // Check whether stake kernel meets hash target
 // Sets hashProofOfStake on success return
-bool CheckStakeKernelHash(int nHeight, const CBlock& blockFrom, unsigned int nTxPrevOffset, const CTransaction& txPrev, const COutPoint& prevout, unsigned int nTimeTx, uint256& hashProofOfStake);
+bool CheckStakeKernelHash(int nHeight,
+    const CBlock &blockFrom,
+    unsigned int nTxPrevOffset,
+    const CTransaction &txPrev,
+    const COutPoint &prevout,
+    unsigned int nTimeTx,
+    uint256 &hashProofOfStake);
 
 // Check kernel hash target and coinstake signature
 // Sets hashProofOfStake on success return
-bool CheckProofOfStake(int nHeight, const CTransaction& tx, uint256& hashProofOfStake);
+bool CheckProofOfStake(int nHeight, const CTransaction &tx, uint256 &hashProofOfStake);
 #endif // PPCOIN_KERNEL_H

@@ -31,11 +31,9 @@
 
 #include <boost/filesystem.hpp>
 
-CBanDB::CBanDB() {
-    pathBanlist = GetDataDir() / "banlist.dat";
-}
-
-bool CBanDB::Write(const banmap_t &banSet) {
+CBanDB::CBanDB() { pathBanlist = GetDataDir() / "banlist.dat"; }
+bool CBanDB::Write(const banmap_t &banSet)
+{
     // Generate random temporary filename
     unsigned short randv = 0;
     GetRandBytes((uint8_t *)&randv, sizeof(randv));
@@ -56,9 +54,12 @@ bool CBanDB::Write(const banmap_t &banSet) {
         return error("%s: Failed to open file %s", __func__, pathTmp.string());
 
     // Write and commit header, data
-    try {
+    try
+    {
         fileout << ssBanlist;
-    } catch (const std::exception &e) {
+    }
+    catch (const std::exception &e)
+    {
         return error("%s: Serialize or I/O error - %s", __func__, e.what());
     }
     FileCommit(fileout.Get());
@@ -71,28 +72,32 @@ bool CBanDB::Write(const banmap_t &banSet) {
     return true;
 }
 
-bool CBanDB::Read(banmap_t &banSet) {
+bool CBanDB::Read(banmap_t &banSet)
+{
     // open input file, and associate with CAutoFile
     FILE *file = fopen(pathBanlist.string().c_str(), "rb");
     CAutoFile filein(file, SER_DISK, CLIENT_VERSION);
     if (filein.IsNull())
-        return error("%s: Failed to open file %s", __func__,
-                     pathBanlist.string());
+        return error("%s: Failed to open file %s", __func__, pathBanlist.string());
 
     // use file size to size memory buffer
     uint64_t fileSize = fs::file_size(pathBanlist);
     uint64_t dataSize = 0;
     // Don't try to resize to a negative number if file is small
-    if (fileSize >= sizeof(uint256)) dataSize = fileSize - sizeof(uint256);
+    if (fileSize >= sizeof(uint256))
+        dataSize = fileSize - sizeof(uint256);
     std::vector<uint8_t> vchData;
     vchData.resize(dataSize);
     uint256 hashIn;
 
     // read data and checksum from file
-    try {
+    try
+    {
         filein.read((char *)&vchData[0], dataSize);
         filein >> hashIn;
-    } catch (const std::exception &e) {
+    }
+    catch (const std::exception &e)
+    {
         return error("%s: Deserialize or I/O error - %s", __func__, e.what());
     }
     filein.fclose();
@@ -105,30 +110,31 @@ bool CBanDB::Read(banmap_t &banSet) {
         return error("%s: Checksum mismatch, data corrupted", __func__);
 
     uint8_t pchMsgTmp[4];
-    try {
+    try
+    {
         // de-serialize file header (network specific magic number) and ..
         ssBanlist >> FLATDATA(pchMsgTmp);
 
         // ... verify the network matches ours
-        if (memcmp(pchMsgTmp, std::begin(pnetMan->getActivePaymentNetwork()->MessageStart()),
-                   sizeof(pchMsgTmp))) {
+        if (memcmp(pchMsgTmp, std::begin(pnetMan->getActivePaymentNetwork()->MessageStart()), sizeof(pchMsgTmp)))
+        {
             return error("%s: Invalid network magic number", __func__);
         }
 
         // de-serialize ban data
         ssBanlist >> banSet;
-    } catch (const std::exception &e) {
+    }
+    catch (const std::exception &e)
+    {
         return error("%s: Deserialize or I/O error - %s", __func__, e.what());
     }
 
     return true;
 }
 
-CAddrDB::CAddrDB() {
-    pathAddr = GetDataDir() / "peers.dat";
-}
-
-bool CAddrDB::Write(const CAddrMan &addr) {
+CAddrDB::CAddrDB() { pathAddr = GetDataDir() / "peers.dat"; }
+bool CAddrDB::Write(const CAddrMan &addr)
+{
     // Generate random temporary filename
     unsigned short randv = 0;
     GetRandBytes((uint8_t *)&randv, sizeof(randv));
@@ -149,9 +155,12 @@ bool CAddrDB::Write(const CAddrMan &addr) {
         return error("%s: Failed to open file %s", __func__, pathTmp.string());
 
     // Write and commit header, data
-    try {
+    try
+    {
         fileout << ssPeers;
-    } catch (const std::exception &e) {
+    }
+    catch (const std::exception &e)
+    {
         return error("%s: Serialize or I/O error - %s", __func__, e.what());
     }
     FileCommit(fileout.Get());
@@ -164,7 +173,8 @@ bool CAddrDB::Write(const CAddrMan &addr) {
     return true;
 }
 
-bool CAddrDB::Read(CAddrMan &addr) {
+bool CAddrDB::Read(CAddrMan &addr)
+{
     // open input file, and associate with CAutoFile
     FILE *file = fopen(pathAddr.string().c_str(), "rb");
     CAutoFile filein(file, SER_DISK, CLIENT_VERSION);
@@ -175,16 +185,20 @@ bool CAddrDB::Read(CAddrMan &addr) {
     uint64_t fileSize = fs::file_size(pathAddr);
     uint64_t dataSize = 0;
     // Don't try to resize to a negative number if file is small
-    if (fileSize >= sizeof(uint256)) dataSize = fileSize - sizeof(uint256);
+    if (fileSize >= sizeof(uint256))
+        dataSize = fileSize - sizeof(uint256);
     std::vector<uint8_t> vchData;
     vchData.resize(dataSize);
     uint256 hashIn;
 
     // read data and checksum from file
-    try {
+    try
+    {
         filein.read((char *)&vchData[0], dataSize);
         filein >> hashIn;
-    } catch (const std::exception &e) {
+    }
+    catch (const std::exception &e)
+    {
         return error("%s: Deserialize or I/O error - %s", __func__, e.what());
     }
     filein.fclose();
@@ -199,21 +213,25 @@ bool CAddrDB::Read(CAddrMan &addr) {
     return Read(addr, ssPeers);
 }
 
-bool CAddrDB::Read(CAddrMan &addr, CDataStream &ssPeers) {
+bool CAddrDB::Read(CAddrMan &addr, CDataStream &ssPeers)
+{
     uint8_t pchMsgTmp[4];
-    try {
+    try
+    {
         // de-serialize file header (network specific magic number) and ..
         ssPeers >> FLATDATA(pchMsgTmp);
 
         // ... verify the network matches ours
-        if (memcmp(pchMsgTmp, std::begin(pnetMan->getActivePaymentNetwork()->MessageStart()),
-                   sizeof(pchMsgTmp))) {
+        if (memcmp(pchMsgTmp, std::begin(pnetMan->getActivePaymentNetwork()->MessageStart()), sizeof(pchMsgTmp)))
+        {
             return error("%s: Invalid network magic number", __func__);
         }
 
         // de-serialize address data into one CAddrMan object
         ssPeers >> addr;
-    } catch (const std::exception &e) {
+    }
+    catch (const std::exception &e)
+    {
         // de-serialization has failed, ensure addrman is left in a clean state
         addr.Clear();
         return error("%s: Deserialize or I/O error - %s", __func__, e.what());

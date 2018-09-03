@@ -4,12 +4,12 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include "chain/block.h"
 #include "chain/chain.h"
+#include "chain/tx.h"
 #include "httpserver.h"
 #include "init.h"
 #include "main.h"
-#include "chain/block.h"
-#include "chain/tx.h"
 #include "rpc/rpcserver.h"
 #include "streams.h"
 #include "sync.h"
@@ -576,7 +576,8 @@ static bool rest_getutxos(HTTPRequest *req, const std::string &strURIPart)
         // serialize data
         // use exact same output as mentioned in Bip64
         CDataStream ssGetUTXOResponse(SER_NETWORK, PROTOCOL_VERSION);
-        ssGetUTXOResponse << pnetMan->getChainActive()->chainActive.Height() << pnetMan->getChainActive()->chainActive.Tip()->GetBlockHash() << bitmap << outs;
+        ssGetUTXOResponse << pnetMan->getChainActive()->chainActive.Height()
+                          << pnetMan->getChainActive()->chainActive.Tip()->GetBlockHash() << bitmap << outs;
         string ssGetUTXOResponseString = ssGetUTXOResponse.str();
 
         req->WriteHeader("Content-Type", "application/octet-stream");
@@ -587,7 +588,8 @@ static bool rest_getutxos(HTTPRequest *req, const std::string &strURIPart)
     case RF_HEX:
     {
         CDataStream ssGetUTXOResponse(SER_NETWORK, PROTOCOL_VERSION);
-        ssGetUTXOResponse << pnetMan->getChainActive()->chainActive.Height() << pnetMan->getChainActive()->chainActive.Tip()->GetBlockHash() << bitmap << outs;
+        ssGetUTXOResponse << pnetMan->getChainActive()->chainActive.Height()
+                          << pnetMan->getChainActive()->chainActive.Tip()->GetBlockHash() << bitmap << outs;
         string strHex = HexStr(ssGetUTXOResponse.begin(), ssGetUTXOResponse.end()) + "\n";
 
         req->WriteHeader("Content-Type", "text/plain");
@@ -602,7 +604,8 @@ static bool rest_getutxos(HTTPRequest *req, const std::string &strURIPart)
         // pack in some essentials
         // use more or less the same output as mentioned in Bip64
         objGetUTXOResponse.push_back(Pair("chainHeight", pnetMan->getChainActive()->chainActive.Height()));
-        objGetUTXOResponse.push_back(Pair("chaintipHash", pnetMan->getChainActive()->chainActive.Tip()->GetBlockHash().GetHex()));
+        objGetUTXOResponse.push_back(
+            Pair("chaintipHash", pnetMan->getChainActive()->chainActive.Tip()->GetBlockHash().GetHex()));
         objGetUTXOResponse.push_back(Pair("bitmap", bitmapStringRepresentation));
 
         UniValue utxos(UniValue::VARR);

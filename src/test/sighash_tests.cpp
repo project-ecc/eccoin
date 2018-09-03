@@ -4,8 +4,8 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "consensus/validation.h"
-#include "data/sighash.json.h"
 #include "crypto/hash.h"
+#include "data/sighash.json.h"
 #include "main.h" // For CheckTransaction
 #include "processtx.h"
 #include "random.h"

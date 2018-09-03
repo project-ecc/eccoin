@@ -44,29 +44,19 @@ public:
 static CNetAddr ResolveIP(const char *ip)
 {
     CNetAddr addr;
-    BOOST_CHECK_MESSAGE(LookupHost(ip, addr, false),
-                        strprintf("failed to resolve: %s", ip));
+    BOOST_CHECK_MESSAGE(LookupHost(ip, addr, false), strprintf("failed to resolve: %s", ip));
     return addr;
 }
 
-static CNetAddr ResolveIP(std::string ip)
-{
-    return ResolveIP(ip.c_str());
-}
-
+static CNetAddr ResolveIP(std::string ip) { return ResolveIP(ip.c_str()); }
 static CService ResolveService(const char *ip, int port = 0)
 {
     CService serv;
-    BOOST_CHECK_MESSAGE(Lookup(ip, serv, port, false),
-                        strprintf("failed to resolve: %s:%i", ip, port));
+    BOOST_CHECK_MESSAGE(Lookup(ip, serv, port, false), strprintf("failed to resolve: %s:%i", ip, port));
     return serv;
 }
 
-static CService ResolveService(std::string ip, int port = 0)
-{
-    return ResolveService(ip.c_str(), port);
-}
-
+static CService ResolveService(std::string ip, int port = 0) { return ResolveService(ip.c_str(), port); }
 BOOST_FIXTURE_TEST_SUITE(addrman_tests, BasicTestingSetup)
 
 BOOST_AUTO_TEST_CASE(addrman_simple)
@@ -196,17 +186,17 @@ BOOST_AUTO_TEST_CASE(addrman_select)
     // Test 11: 6 addrs + 1 addr from last test = 7.
     BOOST_CHECK(addrman.size() == 7);
     // this test works but the order comes out random so it doesnt pass
-/*
-    // Test 12: Select pulls from new and tried regardless of port number.
-    printf("%s\n",addrman.Select().ToString().c_str());
-    BOOST_CHECK(addrman.Select().ToString() == "250.4.6.6:8333");
-    printf("%s\n",addrman.Select().ToString().c_str());
-    BOOST_CHECK(addrman.Select().ToString() == "250.3.2.2:9999");
-    printf("%s\n",addrman.Select().ToString().c_str());
-    BOOST_CHECK(addrman.Select().ToString() == "250.3.3.3:9999");
-    printf("%s\n",addrman.Select().ToString().c_str());
-    BOOST_CHECK(addrman.Select().ToString() == "250.4.4.4:8333");
-*/
+    /*
+        // Test 12: Select pulls from new and tried regardless of port number.
+        printf("%s\n",addrman.Select().ToString().c_str());
+        BOOST_CHECK(addrman.Select().ToString() == "250.4.6.6:8333");
+        printf("%s\n",addrman.Select().ToString().c_str());
+        BOOST_CHECK(addrman.Select().ToString() == "250.3.2.2:9999");
+        printf("%s\n",addrman.Select().ToString().c_str());
+        BOOST_CHECK(addrman.Select().ToString() == "250.3.3.3:9999");
+        printf("%s\n",addrman.Select().ToString().c_str());
+        BOOST_CHECK(addrman.Select().ToString() == "250.4.4.4:8333");
+    */
 }
 
 BOOST_AUTO_TEST_CASE(addrman_new_collisions)
@@ -458,8 +448,8 @@ BOOST_AUTO_TEST_CASE(caddrinfo_get_tried_bucket)
     set<int> buckets;
     for (int i = 0; i < 255; i++)
     {
-        CAddrInfo infoi =
-            CAddrInfo(CAddress(ResolveService("250.1.1." + boost::to_string(i))), ResolveIP("250.1.1." + boost::to_string(i)));
+        CAddrInfo infoi = CAddrInfo(
+            CAddress(ResolveService("250.1.1." + boost::to_string(i))), ResolveIP("250.1.1." + boost::to_string(i)));
         int bucket = infoi.GetTriedBucket(nKey1);
         buckets.insert(bucket);
     }
@@ -470,8 +460,8 @@ BOOST_AUTO_TEST_CASE(caddrinfo_get_tried_bucket)
     buckets.clear();
     for (int j = 0; j < 255; j++)
     {
-        CAddrInfo infoj = CAddrInfo(
-            CAddress(ResolveService("250." + boost::to_string(j) + ".1.1")), ResolveIP("250." + boost::to_string(j) + ".1.1"));
+        CAddrInfo infoj = CAddrInfo(CAddress(ResolveService("250." + boost::to_string(j) + ".1.1")),
+            ResolveIP("250." + boost::to_string(j) + ".1.1"));
         int bucket = infoj.GetTriedBucket(nKey1);
         buckets.insert(bucket);
     }
@@ -511,8 +501,8 @@ BOOST_AUTO_TEST_CASE(caddrinfo_get_new_bucket)
     set<int> buckets;
     for (int i = 0; i < 255; i++)
     {
-        CAddrInfo infoi =
-            CAddrInfo(CAddress(ResolveService("250.1.1." + boost::to_string(i))), ResolveIP("250.1.1." + boost::to_string(i)));
+        CAddrInfo infoi = CAddrInfo(
+            CAddress(ResolveService("250.1.1." + boost::to_string(i))), ResolveIP("250.1.1." + boost::to_string(i)));
         int bucket = infoi.GetNewBucket(nKey1);
         buckets.insert(bucket);
     }
@@ -523,9 +513,9 @@ BOOST_AUTO_TEST_CASE(caddrinfo_get_new_bucket)
     buckets.clear();
     for (int j = 0; j < 4 * 255; j++)
     {
-        CAddrInfo infoj =
-            CAddrInfo(CAddress(ResolveService(boost::to_string(250 + (j / 255)) + "." + boost::to_string(j % 256) + ".1.1")),
-                ResolveIP("251.4.1.1"));
+        CAddrInfo infoj = CAddrInfo(
+            CAddress(ResolveService(boost::to_string(250 + (j / 255)) + "." + boost::to_string(j % 256) + ".1.1")),
+            ResolveIP("251.4.1.1"));
         int bucket = infoj.GetNewBucket(nKey1);
         buckets.insert(bucket);
     }
@@ -536,7 +526,8 @@ BOOST_AUTO_TEST_CASE(caddrinfo_get_new_bucket)
     buckets.clear();
     for (int p = 0; p < 255; p++)
     {
-        CAddrInfo infoj = CAddrInfo(CAddress(ResolveService("250.1.1.1")), ResolveIP("250." + boost::to_string(p) + ".1.1"));
+        CAddrInfo infoj =
+            CAddrInfo(CAddress(ResolveService("250.1.1.1")), ResolveIP("250." + boost::to_string(p) + ".1.1"));
         int bucket = infoj.GetNewBucket(nKey1);
         buckets.insert(bucket);
     }

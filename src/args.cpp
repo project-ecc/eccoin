@@ -54,10 +54,10 @@
 #else
 
 #ifdef _MSC_VER
-#pragma warning(disable:4786)
-#pragma warning(disable:4804)
-#pragma warning(disable:4805)
-#pragma warning(disable:4717)
+#pragma warning(disable : 4786)
+#pragma warning(disable : 4804)
+#pragma warning(disable : 4805)
+#pragma warning(disable : 4717)
 #endif
 
 #ifdef _WIN32_WINNT
@@ -91,14 +91,14 @@
 #include <boost/algorithm/string/predicate.hpp> // for startswith() and endswith()
 #include <boost/program_options/detail/config_file.hpp>
 #include <boost/thread.hpp>
+#include <openssl/conf.h>
 #include <openssl/crypto.h>
 #include <openssl/rand.h>
-#include <openssl/conf.h>
 
 CArgsManager gArgs;
 
 /** Interpret string as boolean, for argument parsing */
-bool InterpretBool(const std::string& strValue)
+bool InterpretBool(const std::string &strValue)
 {
     if (strValue.empty())
         return true;
@@ -106,16 +106,16 @@ bool InterpretBool(const std::string& strValue)
 }
 
 /** Turn -noX into -X=0 */
-void InterpretNegativeSetting(std::string& strKey, std::string& strValue)
+void InterpretNegativeSetting(std::string &strKey, std::string &strValue)
 {
-    if (strKey.length()>3 && strKey[0]=='-' && strKey[1]=='n' && strKey[2]=='o')
+    if (strKey.length() > 3 && strKey[0] == '-' && strKey[1] == 'n' && strKey[2] == 'o')
     {
         strKey = "-" + strKey.substr(3);
         strValue = InterpretBool(strValue) ? "0" : "1";
     }
 }
 
-void CArgsManager::ParseParameters(int argc, const char* const argv[])
+void CArgsManager::ParseParameters(int argc, const char *const argv[])
 {
     LOCK(cs_args);
     mapArgs.clear();
@@ -128,7 +128,7 @@ void CArgsManager::ParseParameters(int argc, const char* const argv[])
         size_t is_index = str.find('=');
         if (is_index != std::string::npos)
         {
-            strValue = str.substr(is_index+1);
+            strValue = str.substr(is_index + 1);
             str = str.substr(0, is_index);
         }
 #ifdef WIN32
@@ -151,7 +151,7 @@ void CArgsManager::ParseParameters(int argc, const char* const argv[])
     }
 }
 
-std::vector<std::string> CArgsManager::GetArgs(const std::string& strArg)
+std::vector<std::string> CArgsManager::GetArgs(const std::string &strArg)
 {
     LOCK(cs_args);
     if (IsArgSet(strArg))
@@ -159,13 +159,13 @@ std::vector<std::string> CArgsManager::GetArgs(const std::string& strArg)
     return {};
 }
 
-bool CArgsManager::IsArgSet(const std::string& strArg)
+bool CArgsManager::IsArgSet(const std::string &strArg)
 {
     LOCK(cs_args);
     return mapArgs.count(strArg);
 }
 
-std::string CArgsManager::GetArg(const std::string& strArg, const std::string& strDefault)
+std::string CArgsManager::GetArg(const std::string &strArg, const std::string &strDefault)
 {
     LOCK(cs_args);
     if (mapArgs.count(strArg))
@@ -173,7 +173,7 @@ std::string CArgsManager::GetArg(const std::string& strArg, const std::string& s
     return strDefault;
 }
 
-int64_t CArgsManager::GetArg(const std::string& strArg, int64_t nDefault)
+int64_t CArgsManager::GetArg(const std::string &strArg, int64_t nDefault)
 {
     LOCK(cs_args);
     if (mapArgs.count(strArg))
@@ -181,7 +181,7 @@ int64_t CArgsManager::GetArg(const std::string& strArg, int64_t nDefault)
     return nDefault;
 }
 
-bool CArgsManager::GetBoolArg(const std::string& strArg, bool fDefault)
+bool CArgsManager::GetBoolArg(const std::string &strArg, bool fDefault)
 {
     LOCK(cs_args);
     if (mapArgs.count(strArg))
@@ -189,7 +189,7 @@ bool CArgsManager::GetBoolArg(const std::string& strArg, bool fDefault)
     return fDefault;
 }
 
-bool CArgsManager::SoftSetArg(const std::string& strArg, const std::string& strValue)
+bool CArgsManager::SoftSetArg(const std::string &strArg, const std::string &strValue)
 {
     LOCK(cs_args);
     if (mapArgs.count(strArg))
@@ -198,7 +198,7 @@ bool CArgsManager::SoftSetArg(const std::string& strArg, const std::string& strV
     return true;
 }
 
-bool CArgsManager::SoftSetBoolArg(const std::string& strArg, bool fValue)
+bool CArgsManager::SoftSetBoolArg(const std::string &strArg, bool fValue)
 {
     if (fValue)
         return SoftSetArg(strArg, std::string("1"));
@@ -206,7 +206,7 @@ bool CArgsManager::SoftSetBoolArg(const std::string& strArg, bool fValue)
         return SoftSetArg(strArg, std::string("0"));
 }
 
-void CArgsManager::ForceSetArg(const std::string& strArg, const std::string& strValue)
+void CArgsManager::ForceSetArg(const std::string &strArg, const std::string &strValue)
 {
     LOCK(cs_args);
     mapArgs[strArg] = strValue;
@@ -229,12 +229,12 @@ boost::filesystem::path CArgsManager::GetConfigFile()
 
 void CArgsManager::ReadConfigFile()
 {
-    init:
+init:
     boost::filesystem::ifstream streamConfig(GetConfigFile());
     if (!streamConfig.good())
     {
         boost::filesystem::path ConfPath = GetDefaultDataDir() / "eccoin.conf";
-        FILE* ConfFile = fopen(ConfPath.string().c_str(), "w");
+        FILE *ConfFile = fopen(ConfPath.string().c_str(), "w");
         fprintf(ConfFile, "maxconnections=100\n");
         fprintf(ConfFile, "rpcuser=yourusername\n");
         fprintf(ConfFile, "rpcpassword=yourpassword\n");

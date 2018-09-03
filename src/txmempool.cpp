@@ -72,11 +72,7 @@ CTxMemPoolEntry::CTxMemPoolEntry(const CTransactionRef &_tx,
     feeDelta = 0;
 }
 
-CTxMemPoolEntry::CTxMemPoolEntry(const CTxMemPoolEntry &other)
-{
-    *this = other;
-}
-
+CTxMemPoolEntry::CTxMemPoolEntry(const CTxMemPoolEntry &other) { *this = other; }
 double CTxMemPoolEntry::GetPriority(unsigned int currentHeight) const
 {
     double deltaPriority = ((double)(currentHeight - entryHeight) * inChainInputValue) / nModSize;
@@ -1359,7 +1355,8 @@ void CTxMemPool::TrimToSize(size_t sizelimit, std::vector<COutPoint> *pvNoSpends
     }
 
     if (maxFeeRateRemoved > CFeeRate(0))
-        LogPrintf("MEMPOOL", "Removed %u txn, rolling minimum fee bumped to %s\n", nTxnRemoved, maxFeeRateRemoved.ToString());
+        LogPrintf(
+            "MEMPOOL", "Removed %u txn, rolling minimum fee bumped to %s\n", nTxnRemoved, maxFeeRateRemoved.ToString());
 }
 
 void CTxMemPool::UpdateTransactionsPerSecond()

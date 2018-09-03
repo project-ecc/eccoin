@@ -17,7 +17,6 @@
  */
 
 
-
 /**
  * Functionality for communicating with Tor.
  */
@@ -29,7 +28,7 @@
 extern const std::string DEFAULT_TOR_CONTROL;
 static const bool DEFAULT_LISTEN_ONION = true;
 
-void StartTorControl(boost::thread_group& threadGroup, CScheduler& scheduler);
+void StartTorControl(boost::thread_group &threadGroup, CScheduler &scheduler);
 void InterruptTorControl();
 void StopTorControl();
 

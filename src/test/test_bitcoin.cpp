@@ -33,8 +33,8 @@
 
 extern bool fPrintToConsole;
 extern void noui_connect();
-CNetworkManager* testnetman = nullptr;
-CWallet* pwallet = nullptr;
+CNetworkManager *testnetman = nullptr;
+CWallet *pwallet = nullptr;
 
 
 BasicTestingSetup::BasicTestingSetup(const std::string &chainName)
@@ -45,7 +45,7 @@ BasicTestingSetup::BasicTestingSetup(const std::string &chainName)
     fPrintToDebugLog = false; // don't want to write to debug.log file
     fCheckBlockIndex = true;
     testnetman = new CNetworkManager();
-    pwallet =  new CWallet("walletFile");
+    pwallet = new CWallet("walletFile");
     testnetman->SetParams(chainName);
     noui_connect();
 }
@@ -55,8 +55,8 @@ TestingSetup::TestingSetup(const std::string &chainName) : BasicTestingSetup(cha
 {
     // Ideally we'd move all the RPC tests to the functional testing framework
     // instead of unit tests, but for now we need these here.
-    const CNetworkTemplate& chainparams = testnetman->getActivePaymentNetwork();
-    //RegisterAllCoreRPCCommands(tableRPC);
+    const CNetworkTemplate &chainparams = testnetman->getActivePaymentNetwork();
+    // RegisterAllCoreRPCCommands(tableRPC);
     ClearDatadirCache();
     pathTemp = GetTempPathTest() / strprintf("test_bitcoin_%lu_%i", (unsigned long)GetTime(), (int)(GetRand(100000)));
     fs::create_directories(pathTemp);
@@ -97,8 +97,7 @@ TestChain100Setup::TestChain100Setup() : TestingSetup("TESTNET0-TEMPORARY")
 // Create a new block with just given transactions, coinbase paying to
 // scriptPubKey, and try to add it to the current chain.
 //
-CBlock TestChain100Setup::CreateAndProcessBlock(const std::vector<CTransactionRef> &txns,
-    const CScript &scriptPubKey)
+CBlock TestChain100Setup::CreateAndProcessBlock(const std::vector<CTransactionRef> &txns, const CScript &scriptPubKey)
 {
     std::unique_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(pwallet, false));
     std::shared_ptr<CBlock> pblock = std::make_shared<CBlock>();
@@ -131,8 +130,8 @@ CTxMemPoolEntry TestMemPoolEntryHelper::FromTx(CTransaction &tx, CTxMemPool *poo
     // Hack to assume either its completely dependent on other mempool txs or not at all
     CAmount inChainValue = hasNoDependencies ? txn.GetValueOut() : 0;
 
-    return CTxMemPoolEntry(
-        MakeTransactionRef(std::move(txn)), nFee, nTime, dPriority, nHeight, hasNoDependencies, inChainValue, spendsCoinbase, sigOpCount, lp);
+    return CTxMemPoolEntry(MakeTransactionRef(std::move(txn)), nFee, nTime, dPriority, nHeight, hasNoDependencies,
+        inChainValue, spendsCoinbase, sigOpCount, lp);
 }
 
 void ShutdownTest(void *parg) { exit(0); }

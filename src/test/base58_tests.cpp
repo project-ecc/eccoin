@@ -23,7 +23,7 @@
 #include <univalue.h>
 
 extern UniValue read_json(const std::string &jsondata);
-extern CNetworkManager* testnetman;
+extern CNetworkManager *testnetman;
 BOOST_FIXTURE_TEST_SUITE(base58_tests, BasicTestingSetup)
 
 // Goal: test low-level base58 encoding functionality
