@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-# Copyright (c) 2015-2017 The Bitcoin Unlimited developers
+# Copyright (c) 2015-2018 The Bitcoin Unlimited developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
-
+import test_framework.loginit
 # This is a template to make creating new QA tests easy.
 # You can also use this template to quickly start and connect a few regtest nodes.
 
@@ -11,7 +11,6 @@ import sys
 if sys.version_info[0] < 3:
     raise "Use Python 3"
 import logging
-logging.basicConfig(format='%(asctime)s.%(levelname)s: %(message)s', level=logging.INFO,stream=sys.stdout)
 
 from test_framework.test_framework import BitcoinTestFramework
 from test_framework.util import *
@@ -20,6 +19,9 @@ class MyTest (BitcoinTestFramework):
 
     def setup_chain(self,bitcoinConfDict=None, wallets=None):
         print("Initializing test directory "+self.options.tmpdir)
+        # pick this one to start from the cached 4 node 100 blocks mined configuration
+        # initialize_chain(self.options.tmpdir)
+        # pick this one to start at 0 mined blocks
         initialize_chain_clean(self.options.tmpdir, 4, bitcoinConfDict, wallets)
         # Number of nodes to initialize ----------> ^
 
@@ -80,7 +82,27 @@ def Test():
         "blockprioritysize": 2000000  # we don't want any transactions rejected due to insufficient fees...
     }
 
+
+    flags = []
     # you may want these additional flags:
-    # "--srcdir=<out-of-source-build-dir>/debug/src"
-    # "--tmpdir=/ramdisk/test"
-    t.main(["--nocleanup", "--noshutdown"], bitcoinConf, None)
+    # flags.append("--nocleanup")
+    # flags.append("--noshutdown")
+
+    # Execution is much faster if a ramdisk is used, so use it if one exists in a typical location
+    if os.path.isdir("/ramdisk/test"):
+        flags.append("--tmppfx=/ramdisk/test")
+
+    # Out-of-source builds are awkward to start because they need an additional flag
+    # automatically add this flag during testing for common out-of-source locations
+    here = os.path.dirname(os.path.abspath(__file__))
+    if not os.path.exists(os.path.abspath(here + "/../../src/eccoind")):
+        dbg = os.path.abspath(here + "/../../debug/src/eccoind")
+        rel = os.path.abspath(here + "/../../release/src/eccoind")
+        if os.path.exists(dbg):
+            print("Running from the debug directory (%s)" % dbg)
+            flags.append("--srcdir=%s" % os.path.dirname(dbg))
+        elif os.path.exists(rel):
+            print("Running from the release directory (%s)" % rel)
+            flags.append("--srcdir=%s" % os.path.dirname(rel))
+
+    t.main(flags, bitcoinConf, None)
