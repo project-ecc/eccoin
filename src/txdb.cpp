@@ -107,7 +107,6 @@ bool CCoinsViewDB::BatchWrite(CCoinsMap &mapCoins,
             if (it->second.coin.IsSpent())
             {
                 batch.Erase(entry);
-
                 // Update the usage of the child cache before deleting the entry in the child cache
                 nChildCachedCoinsUsage -= nUsage;
                 it = mapCoins.erase(it);
@@ -115,6 +114,8 @@ bool CCoinsViewDB::BatchWrite(CCoinsMap &mapCoins,
             else
             {
                 batch.Write(entry, it->second.coin);
+                it->second.flags = 0;
+                it++;
             }
             changed++;
 

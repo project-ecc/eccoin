@@ -971,14 +971,6 @@ bool CheckTxInputs(const CTransaction &tx, CValidationState &state, const CCoins
         const Coin &coin = inputs.AccessCoin(prevout);
         assert(!coin.IsSpent());
 
-        CTransaction temptx;
-        uint256 hashblock;
-        if (!GetTransaction(prevout.hash, temptx, pnetMan->getActivePaymentNetwork()->GetConsensus(), hashblock, true))
-        {
-            return state.Invalid(
-                false, REJECT_INVALID, "bad-txns-could-not-find-tx", "tried to spend coin we could not find");
-        }
-
         // If prev is coinbase or coinstake, check that it's matured
         if (coin.IsCoinBase() || tx.IsCoinStake())
         {
@@ -1800,7 +1792,7 @@ FILE *OpenDiskFile(const CDiskBlockPos &pos, const char *prefix, bool fReadOnly)
         return NULL;
     fs::path path = GetBlockPosFilename(pos, prefix);
     fs::create_directories(path.parent_path());
-    FILE* file = fopen(path.string().c_str(), fReadOnly ? "rb": "rb+");
+    FILE *file = fopen(path.string().c_str(), fReadOnly ? "rb" : "rb+");
     if (!file && !fReadOnly)
         file = fopen(path.string().c_str(), "wb+");
     if (!file)
@@ -1820,14 +1812,8 @@ FILE *OpenDiskFile(const CDiskBlockPos &pos, const char *prefix, bool fReadOnly)
     return file;
 }
 
-FILE* OpenBlockFile(const CDiskBlockPos &pos, bool fReadOnly) {
-    return OpenDiskFile(pos, "blk", fReadOnly);
-}
-
-FILE* OpenUndoFile(const CDiskBlockPos &pos, bool fReadOnly) {
-    return OpenDiskFile(pos, "rev", fReadOnly);
-}
-
+FILE *OpenBlockFile(const CDiskBlockPos &pos, bool fReadOnly) { return OpenDiskFile(pos, "blk", fReadOnly); }
+FILE *OpenUndoFile(const CDiskBlockPos &pos, bool fReadOnly) { return OpenDiskFile(pos, "rev", fReadOnly); }
 fs::path GetBlockPosFilename(const CDiskBlockPos &pos, const char *prefix)
 {
     return GetDataDir() / "blocks" / strprintf("%s%05u.dat", prefix, pos.nFile);

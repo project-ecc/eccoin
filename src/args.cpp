@@ -229,12 +229,12 @@ fs::path CArgsManager::GetConfigFile()
 
 void CArgsManager::ReadConfigFile()
 {
-    init:
+init:
     fs::ifstream streamConfig(GetConfigFile());
     if (!streamConfig.good())
     {
         fs::path ConfPath = GetDataDir(false) / "eccoin.conf";
-        FILE* ConfFile = fopen(ConfPath.string().c_str(), "w");
+        FILE *ConfFile = fopen(ConfPath.string().c_str(), "w");
         fprintf(ConfFile, "maxconnections=100\n");
         fprintf(ConfFile, "rpcuser=yourusername\n");
         fprintf(ConfFile, "rpcpassword=yourpassword\n");

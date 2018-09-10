@@ -250,9 +250,12 @@ void Shutdown()
         pwalletMain->Flush(true);
 
 #ifndef WIN32
-    try {
+    try
+    {
         fs::remove(GetPidFile());
-    } catch (const fs::filesystem_error& e) {
+    }
+    catch (const fs::filesystem_error &e)
+    {
         LogPrintf("%s: Unable to remove pidfile: %s\n", __func__, e.what());
     }
 #endif
@@ -710,7 +713,8 @@ void ThreadImport(std::vector<fs::path> vImportFiles)
 
     // hardcoded $DATADIR/bootstrap.dat
     fs::path pathBootstrap = GetDataDir() / "bootstrap.dat";
-    if (fs::exists(pathBootstrap)) {
+    if (fs::exists(pathBootstrap))
+    {
         FILE *file = fopen(pathBootstrap.string().c_str(), "rb");
         if (file)
         {
@@ -1170,8 +1174,9 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
         return InitError(strprintf(_("Wallet %s resides outside data directory %s"), strWalletFile, strDataDir));
     // Make sure only a single Bitcoin process is using the data directory.
     fs::path pathLockFile = GetDataDir() / ".lock";
-    FILE* file = fopen(pathLockFile.string().c_str(), "a"); // empty lock file; created if it doesn't exist.
-    if (file) fclose(file);
+    FILE *file = fopen(pathLockFile.string().c_str(), "a"); // empty lock file; created if it doesn't exist.
+    if (file)
+        fclose(file);
 
     try
     {
@@ -1436,15 +1441,20 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
     {
         fs::create_directories(blocksDir);
         bool linked = false;
-        for (unsigned int i = 1; i < 10000; i++) {
+        for (unsigned int i = 1; i < 10000; i++)
+        {
             fs::path source = GetDataDir() / strprintf("blk%04u.dat", i);
-            if (!fs::exists(source)) break;
-            fs::path dest = blocksDir / strprintf("blk%05u.dat", i-1);
-            try {
+            if (!fs::exists(source))
+                break;
+            fs::path dest = blocksDir / strprintf("blk%05u.dat", i - 1);
+            try
+            {
                 fs::create_hard_link(source, dest);
                 LogPrintf("Hardlinked %s -> %s\n", source.string(), dest.string());
                 linked = true;
-            } catch (const fs::filesystem_error& e) {
+            }
+            catch (const fs::filesystem_error &e)
+            {
                 // Note: hardlink creation failing is not a disaster, it just means
                 // blocks will get re-downloaded from peers.
                 LogPrintf("Error hardlinking blk%04u.dat: %s\n", i, e.what());
@@ -1527,7 +1537,7 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
                 fs::path servicesFolder = (GetDataDir() / "services");
                 if (fs::exists(servicesFolder))
                 {
-                    if(!fs::is_directory(servicesFolder))
+                    if (!fs::is_directory(servicesFolder))
                     {
                         LogPrintf("services exists but is not a folder, check your ecc data files \n");
                         assert(false);

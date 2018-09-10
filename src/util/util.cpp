@@ -325,7 +325,7 @@ int LogPrintStr(const std::string &str)
             {
                 fReopenDebugLog = false;
                 fs::path pathDebug = GetDataDir() / "debug.log";
-                if (freopen(pathDebug.string().c_str(),"a",fileout) != NULL)
+                if (freopen(pathDebug.string().c_str(), "a", fileout) != NULL)
                     setbuf(fileout, NULL); // unbuffered
             }
 
@@ -457,7 +457,8 @@ void ClearDatadirCache()
 fs::path GetPidFile()
 {
     fs::path pathPidFile(gArgs.GetArg("-pid", PID_FILENAME));
-    if (!pathPidFile.is_complete()) pathPidFile = GetDataDir() / pathPidFile;
+    if (!pathPidFile.is_complete())
+        pathPidFile = GetDataDir() / pathPidFile;
     return pathPidFile;
 }
 
@@ -487,12 +488,14 @@ bool RenameOver(fs::path src, fs::path dest)
  * Specifically handles case where path p exists, but it wasn't possible for the user to
  * write to the parent directory.
  */
-bool TryCreateDirectory(const fs::path& p)
+bool TryCreateDirectory(const fs::path &p)
 {
     try
     {
         return fs::create_directory(p);
-    } catch (const fs::filesystem_error&) {
+    }
+    catch (const fs::filesystem_error &)
+    {
         if (!fs::exists(p) || !fs::is_directory(p))
             throw;
     }
@@ -606,7 +609,7 @@ void ShrinkDebugFile()
 {
     // Scroll debug.log if it's getting too big
     fs::path pathLog = GetDataDir() / "debug.log";
-    FILE* file = fopen(pathLog.string().c_str(), "r");
+    FILE *file = fopen(pathLog.string().c_str(), "r");
     if (file && fs::file_size(pathLog) > 20000)
     {
         // Restart the file with some of the end
@@ -643,7 +646,8 @@ fs::path GetSpecialFolderPath(int nFolder, bool fCreate)
 }
 #endif
 
-fs::path GetTempPath() {
+fs::path GetTempPath()
+{
 #if BOOST_FILESYSTEM_VERSION == 3
     return fs::temp_directory_path();
 #else
@@ -657,7 +661,8 @@ fs::path GetTempPath() {
 #else
     path = fs::path("/tmp");
 #endif
-    if (path.empty() || !fs::is_directory(path)) {
+    if (path.empty() || !fs::is_directory(path))
+    {
         LogPrintf("GetTempPath(): failed to find temp path\n");
         return fs::path("");
     }

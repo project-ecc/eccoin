@@ -661,7 +661,7 @@ bool ActivateBestChainStep(CValidationState &state,
         nHeight = nTargetHeight;
 
         // Connect new blocks.
-        BOOST_REVERSE_FOREACH(CBlockIndex *pindexConnect, vpindexToConnect)
+        BOOST_REVERSE_FOREACH (CBlockIndex *pindexConnect, vpindexToConnect)
         {
             if (!ConnectTip(
                     state, chainparams, pindexConnect, pindexConnect == pindexMostWork ? pblock : NULL, connectTrace))
@@ -785,11 +785,8 @@ bool ActivateBestChain(CValidationState &state,
                 // Relay inventory, but don't relay old inventory during initial block
                 // download.
                 const int nNewHeight = pindexNewTip->nHeight;
-                g_connman->ForEachNode([nNewHeight, &vHashes](CNode *pnode)
-                {
-                    if (nNewHeight > (pnode->nStartingHeight != -1
-                                          ? pnode->nStartingHeight - 2000
-                                          : 0))
+                g_connman->ForEachNode([nNewHeight, &vHashes](CNode *pnode) {
+                    if (nNewHeight > (pnode->nStartingHeight != -1 ? pnode->nStartingHeight - 2000 : 0))
                     {
                         for (const uint256 &hash : boost::adaptors::reverse(vHashes))
                         {
