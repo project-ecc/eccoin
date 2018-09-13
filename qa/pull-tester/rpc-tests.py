@@ -63,8 +63,8 @@ if 'ENABLE_BITCOIND' not in vars():
     ENABLE_BITCOIND=0
 if 'ENABLE_UTILS' not in vars():
     ENABLE_UTILS=0
-if 'ENABLE_ZMQ' not in vars():
-    ENABLE_ZMQ=0
+#if 'ENABLE_ZMQ' not in vars():
+ENABLE_ZMQ=0
 
 ENABLE_COVERAGE=0
 
@@ -180,69 +180,71 @@ if ENABLE_ZMQ:
 
 #Tests
 testScripts = [ RpcTest(t) for t in [
-    Disabled('miningtest', "TEMPORARY"),
-    Disabled('notify', "TEMPORARY"),
-    Disabled('bip68-112-113-p2p', "TEMPORARY"),
-    Disabled('validateblocktemplate', "TEMPORARY"),
-    'wallet',
-    Disabled('wallet-hd', "TEMPORARY"),
-    Disabled('wallet-dump', "TEMPORARY"),
-    Disabled('listtransactions', "TEMPORARY"),
-    Disabled('receivedby', "TEMPORARY"),
-    Disabled('mempool_resurrect_test', "TEMPORARY"),
-    Disabled('txn_doublespend --mineblock', "TEMPORARY"),
-    Disabled('txn_clone', "TEMPORARY"),
-    Disabled('getchaintips', "TEMPORARY"),
-    Disabled('rawtransactions', "TEMPORARY"),
-    Disabled('rest', "TEMPORARY"),
-    Disabled('mempool_spendcoinbase', "TEMPORARY"),
-    Disabled('mempool_reorg', "TEMPORARY"),
-    Disabled('mempool_limit', "TEMPORARY"),
-    Disabled('httpbasics', "TEMPORARY"),
-    Disabled('multi_rpc', "TEMPORARY"),
-    Disabled('zapwallettxes', "TEMPORARY"),
-    Disabled('proxy_test', "TEMPORARY"),
-    Disabled('merkle_blocks', "TEMPORARY"),
-    Disabled('fundrawtransaction', "TEMPORARY"),
-    Disabled('signrawtransactions', "TEMPORARY"),
-    Disabled('walletbackup', "TEMPORARY"),
-    Disabled('nodehandling', "TEMPORARY"),
-    Disabled('reindex', "TEMPORARY"),
-    Disabled('decodescript', "TEMPORARY"),
-    Disabled('p2p-fullblocktest', "TODO"),
-    Disabled('blockchain', "TEMPORARY"),
-    Disabled('disablewallet', "TEMPORARY"),
-    Disabled('sendheaders', "TEMPORARY"),
-    Disabled('keypool', "TEMPORARY"),
+    #'rawtransactions', ???
+    #'rest', ???
+    # 'multi_rpc', ???
+    # 'fundrawtransaction', ???
+    # 'reindex', ???
+    'httpbasics',
+    'nodehandling',
+    'proxy_test',
+    #
+    Disabled('abandonconflict', "FAILS"),
+    Disabled('bip68-112-113-p2p', "FAILS"),
+    Disabled('decodescript', "FAILS"),
+    Disabled('invalidtxrequest', "FAILS"),
+    Disabled('keypool', "FAILS"),
+    Disabled('mempool_limit', "FAILS"),
+    Disabled('mempool_reorg', "FAILS"),
+    Disabled('mempool_spendcoinbase', "FAILS"),
+    Disabled('merkle_blocks', "FAILS"),
+    Disabled('miningtest', "FAILS"),
+    Disabled('p2p-versionbits-warning', "FAILS"),
+    Disabled('zapwallettxes', "FAILS"),
+    Disabled('wallet', "FAILS"),
+    Disabled('sendheaders', "FAILS"),
+    Disabled('signrawtransactions', "FAILS"),
+    Disabled('walletbackup', "FAILS"),
+    #
+    Disabled('wallet-dump', "TIMEOUT"),
+    Disabled('listtransactions', "TIMEOUT"),
+    Disabled('receivedby', "TIMEOUT"),
+    Disabled('mempool_resurrect_test', "TIMEOUT"),
+    Disabled('txn_doublespend --mineblock', "TIMEOUT"),
+    Disabled('txn_clone', "TIMEOUT"),
+    Disabled('getchaintips', "TIMEOUT"),
+    Disabled('notify', "TIMEOUT"),
+    Disabled('validateblocktemplate', "TIMEOUT"),
+    Disabled('blockchain', "TIMEOUT"),
+    #
     Disabled('prioritise_transaction', "TODO"),
     Disabled('invalidblockrequest', "TODO"),
-    Disabled('invalidtxrequest', "TEMPORARY"),
-    Disabled('abandonconflict', "TEMPORARY"),
-    Disabled('p2p-versionbits-warning', "TEMPORARY"),
-    Disabled('importprunedfunds', "TEMPORARY"),
+    Disabled('p2p-fullblocktest', "TODO"),
+    Disabled('wallet-hd', "TODO"),
+
 ] ]
 
 testScriptsExt = [ RpcTest(t) for t in [
-    Disabled('limits', "TEMPORARY"),
-    Disabled('weirdtx', "TEMPORARY"),
-    Disabled('txPerf', "TEMPORARY"),
-    Disabled('bip9-softforks', "TEMPORARY"),
-    Disabled('bip65-cltv', "TEMPORARY"),
-    Disabled('bip68-sequence', "TEMPORARY"),
+    'limits',
+    'weirdtx',
+    'txPerf',
+    'bip9-softforks',
+    'bip65-cltv',
+    'bip68-sequence',
     Disabled('bipdersig-p2p', "keep as an example of testing fork activation"),
-    Disabled('bipdersig', "TEMPORARY"),
-    Disabled('getblocktemplate_longpoll', "TEMPORARY"),
-    Disabled('getblocktemplate_proposals', "TEMPORARY"),
-    Disabled('txn_doublespend', "TEMPORARY"),
-    Disabled('txn_clone --mineblock', "TEMPORARY"),
+    'bipdersig',
+    'getblocktemplate_longpoll',
+    'getblocktemplate_proposals',
+    'txn_doublespend',
+    'txn_clone --mineblock',
     Disabled('pruning', "too much disk"),
-    Disabled('invalidateblock', "TEMPORARY"),
+    'invalidateblock',
     Disabled('rpcbind_test', "temporary, bug in libevent, see #6655"),
-    Disabled('smartfees', "TEMPORARY"),
-    Disabled('maxblocksinflight', "TEMPORARY"),
-    Disabled('p2p-acceptblock', "TEMPORARY"),
-    Disabled('mempool_packages', "TEMPORARY"),
-    Disabled('maxuploadtarget', "TEMPORARY"),
+    'smartfees',
+    'maxblocksinflight',
+    'p2p-acceptblock',
+    'mempool_packages',
+    'maxuploadtarget',
 ] ]
 
 #Enable ZMQ tests
