@@ -500,7 +500,7 @@ bool ConnectTip(CValidationState &state,
             {
                 InvalidBlockFound(pindexNew, state);
             }
-            return error("ConnectTip(): ConnectBlock %s failed", pindexNew->GetBlockHash().ToString());
+            return error("ConnectTip(): ConnectBlock %s failed", pindexNew->GetBlockHash().ToString().c_str());
         }
         nTime3 = GetTimeMicros();
         nTimeConnectTotal += nTime3 - nTime2;
