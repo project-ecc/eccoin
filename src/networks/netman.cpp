@@ -303,12 +303,12 @@ void CNetworkManager::ConstructRegTestTemplate()
     regTestTemplate->genesis.hashPrevBlock.SetNull();
     regTestTemplate->genesis.nVersion = 1;
     regTestTemplate->genesis.nTime    = 1536781520;
-    regTestTemplate->genesis.nBits    = 0x1e0fffff;
+    regTestTemplate->genesis.nBits    = 0x207fffff;
     regTestTemplate->genesis.nNonce   = 12799721;
     regTestTemplate->genesis.hashMerkleRoot = BlockMerkleRoot(regTestTemplate->genesis);
 
     regTestTemplate->consensus.hashGenesisBlock = regTestTemplate->genesis.GetHash();
-    assert(regTestTemplate->consensus.hashGenesisBlock == uint256S("0x72c20073208935ae5d8f1ae1615db7a2cd5523e85379c93df79c40cc9b8df17c"));
+    assert(regTestTemplate->consensus.hashGenesisBlock == uint256S("0x296d58ef241b0dde2372fbc7b09ec4aacf7b4dad88561f02469f3f4695c4fbb1"));
     assert(regTestTemplate->genesis.hashMerkleRoot == uint256S("0x3565e20605dbdfe7a63ec4b9f5b9d2d25b69fcc13d6bfd7cc42615fcd41a323c"));
 
     regTestTemplate->base58Prefixes[CNetworkTemplate::PUBKEY_ADDRESS] = std::vector<unsigned char>(1,51);
@@ -318,14 +318,14 @@ void CNetworkManager::ConstructRegTestTemplate()
     regTestTemplate->base58Prefixes[CNetworkTemplate::EXT_SECRET_KEY] = boost::assign::list_of(0x04)(0x88)(0xAD)(0xE4).convert_to_container<std::vector<unsigned char> >();
 
     regTestTemplate->fMiningRequiresPeers = false;
-    regTestTemplate->fDefaultConsistencyChecks = false;
+    regTestTemplate->fDefaultConsistencyChecks = true;
     regTestTemplate->fRequireStandard = false;
     regTestTemplate->fMineBlocksOnDemand = true;
-    regTestTemplate->fTestnetToBeDeprecatedFieldRPC = true;
+    regTestTemplate->fTestnetToBeDeprecatedFieldRPC = false;
 
     regTestTemplate->checkpointData = (CCheckpointData){
         boost::assign::map_list_of
-        (     0, uint256S("0x72c20073208935ae5d8f1ae1615db7a2cd5523e85379c93df79c40cc9b8df17c"))
+        (     0, uint256S("0x296d58ef241b0dde2372fbc7b09ec4aacf7b4dad88561f02469f3f4695c4fbb1"))
     };
 }
 

@@ -1920,6 +1920,13 @@ unsigned int GetNextTargetRequired(const CBlockIndex *pindexLast, bool fProofOfS
         return bnTargetLimit.GetCompact(); // genesis block
 
     const CBlockIndex *pindexPrev = GetLastBlockIndex(pindexLast, fProofOfStake);
+
+    // Special rule for regtest: we never retarget.
+    if (pnetMan->getActivePaymentNetwork()->GetConsensus().fPowNoRetargeting)
+    {
+        return pindexPrev->nBits;
+    }
+
     if (pindexPrev->pprev == NULL)
         return bnTargetLimit.GetCompact(); // first block
     const CBlockIndex *pindexPrevPrev = GetLastBlockIndex(pindexPrev->pprev, fProofOfStake);
