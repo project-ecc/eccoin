@@ -37,6 +37,8 @@ void IncrementExtraNonce(CBlock *pblock, CBlockIndex *pindexPrev, unsigned int &
 void FormatHashBuffers(CBlock *pblock, char *pmidstate, char *pdata, char *phash1);
 bool CheckWork(const std::shared_ptr<const CBlock> pblock, CWallet &wallet, CReserveKey &reservekey);
 
+int64_t UpdateTime(CBlockHeader *pblock, const Consensus::Params &consensusParams, const CBlockIndex *pindexPrev);
+
 /** Check mined proof-of-stake block */
 bool CheckStake(CBlock *pblock, CWallet &wallet);
 

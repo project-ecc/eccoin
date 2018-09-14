@@ -188,7 +188,6 @@ bool CBlock::CheckBlockSignature() const
     return false;
 }
 
-void CBlock::UpdateTime() { nTime = std::max(GetBlockTime(), GetAdjustedTime()); }
 // ppcoin: get max transaction timestamp
 int64_t CBlock::GetMaxTransactionTime() const
 {

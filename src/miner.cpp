@@ -167,6 +167,21 @@ public:
     }
 };
 
+int64_t UpdateTime(CBlockHeader *pblock, const Consensus::Params &consensusParams, const CBlockIndex *pindexPrev)
+{
+    int64_t nOldTime = pblock->nTime;
+    int64_t nNewTime = std::max(pindexPrev->GetMedianTimePast() + 1, GetAdjustedTime());
+
+    if (nOldTime < nNewTime)
+        pblock->nTime = nNewTime;
+
+    // Updating time can change work required on testnet:
+    if (consensusParams.fPowAllowMinDifficultyBlocks)
+        pblock->nBits = GetNextTargetRequired(pindexPrev, false);
+
+    return nNewTime - nOldTime;
+}
+
 // CreateNewBlock:
 //   fProofOfStake: try (best effort) to make a proof-of-stake block
 std::unique_ptr<CBlockTemplate> CreateNewBlock(CWallet *pwallet, bool fProofOfStake)
@@ -433,7 +448,7 @@ std::unique_ptr<CBlockTemplate> CreateNewBlock(CWallet *pwallet, bool fProofOfSt
         }
         if (pblock->IsProofOfWork())
         {
-            pblock->UpdateTime();
+            UpdateTime(pblock, pnetMan->getActivePaymentNetwork()->GetConsensus(), pindexPrev);
             pblock->vtx[0]->vout[0].nValue =
                 GetProofOfWorkReward(nFees, pindexPrev->nHeight + 1, pindexPrev->GetBlockHash());
         }
@@ -670,7 +685,7 @@ void EccMiner(CWallet *pwallet)
             // Update nTime every few seconds
             pblock->nTime = std::max(pindexPrev->GetMedianTimePast() + 1, pblock->GetMaxTransactionTime());
             pblock->nTime = std::max(pblock->GetBlockTime(), pindexPrev->GetBlockTime() - nMaxClockDrift);
-            pblock->UpdateTime();
+            UpdateTime(pblock, pnetMan->getActivePaymentNetwork()->GetConsensus(), pindexPrev);
             nBlockTime = ByteReverse(pblock->nTime);
             if (pblock->GetBlockTime() >= (int64_t)pblock->vtx[0]->nTime + nMaxClockDrift)
                 break; // need to update coinbase timestamp

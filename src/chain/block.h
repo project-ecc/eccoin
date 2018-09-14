@@ -139,7 +139,6 @@ public:
     std::pair<COutPoint, unsigned int> GetProofOfStake() const;
     bool SignScryptBlock(const CKeyStore &keystore);
     bool CheckBlockSignature() const;
-    void UpdateTime();
     int64_t GetMaxTransactionTime() const;
 };
 
