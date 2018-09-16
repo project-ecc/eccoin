@@ -107,7 +107,9 @@ CScript ParseScript(const std::string &s)
 bool DecodeHexTx(CTransaction &tx, const std::string &strHexTx)
 {
     if (!IsHex(strHexTx))
+    {
         return false;
+    }
 
     std::vector<unsigned char> txData(ParseHex(strHexTx));
     CDataStream ssData(txData, SER_NETWORK, PROTOCOL_VERSION);
@@ -115,8 +117,9 @@ bool DecodeHexTx(CTransaction &tx, const std::string &strHexTx)
     {
         ssData >> tx;
     }
-    catch (const std::exception &)
+    catch (const std::exception &e)
     {
+        LogPrintf("%s\n", e.what());
         return false;
     }
 

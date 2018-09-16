@@ -49,7 +49,6 @@ GENERATED_TEST_FILES = $(JSON_TEST_FILES:.json=.json.h) $(RAW_TEST_FILES:.raw=.r
 # test/net_tests.cpp #
 # test/prevector_tests.cpp #
 # test/policyestimator_tests.cpp #
-# test/rpc_tests.cpp #
 # test/script_P2SH_tests.cpp #
 # test/sighash_tests.cpp #
 # test/transaction_tests.cpp #
@@ -81,6 +80,7 @@ BITCOIN_TESTS =\
   test/netbase_tests.cpp \
   test/pmt_tests.cpp \
   test/reverselock_tests.cpp \
+  test/rpc_tests.cpp \
   test/sanity_tests.cpp \
   test/scheduler_tests.cpp \
   test/scriptnum_tests.cpp \
