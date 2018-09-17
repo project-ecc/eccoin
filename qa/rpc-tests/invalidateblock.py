@@ -3,7 +3,7 @@
 # Copyright (c) 2015-2017 The Bitcoin Unlimited developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
-
+import test_framework.loginit
 #
 # Test InvalidateBlock code
 #
@@ -145,4 +145,4 @@ def Test():
     "debug":["net","blk","thin","mempool","req","bench","evict"], # "lck"
     "blockprioritysize":2000000  # we don't want any transactions rejected due to insufficient fees...
      }
-    t.main(["--nocleanup","--noshutdown", "--tmpdir=/ramdisk/test"],bitcoinConf,None)
+    t.main(["--nocleanup","--noshutdown", "--tmppfx=/ramdisk/test"],bitcoinConf,None)

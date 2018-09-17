@@ -3,7 +3,7 @@
 # Copyright (c) 2014-2016 The Bitcoin Core developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
-
+import test_framework.loginit
 # wait for py3.6: from enum import Enum,Flag
 
 from test_framework.mininode import *
@@ -376,4 +376,4 @@ def Test():
         "debug": ["net", "blk", "thin", "mempool", "req", "bench", "evict"],  # "lck"
         "blockprioritysize": 2000000  # we don't want any transactions rejected due to insufficient fees...
     }
-    t.main(["--tmpdir=/ramdisk/test", "--nocleanup", "--noshutdown"], bitcoinConf, None)  # , "--tracerpc"])
+    t.main(["--tmppfx=/ramdisk/test", "--nocleanup", "--noshutdown"], bitcoinConf, None)  # , "--tracerpc"])

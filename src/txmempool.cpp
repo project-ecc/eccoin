@@ -72,11 +72,7 @@ CTxMemPoolEntry::CTxMemPoolEntry(const CTransactionRef &_tx,
     feeDelta = 0;
 }
 
-CTxMemPoolEntry::CTxMemPoolEntry(const CTxMemPoolEntry &other)
-{
-    *this = other;
-}
-
+CTxMemPoolEntry::CTxMemPoolEntry(const CTxMemPoolEntry &other) { *this = other; }
 double CTxMemPoolEntry::GetPriority(unsigned int currentHeight) const
 {
     double deltaPriority = ((double)(currentHeight - entryHeight) * inChainInputValue) / nModSize;
@@ -847,8 +843,8 @@ void CTxMemPool::check(const CCoinsViewCache *pcoins) const
     uint64_t innerUsage = 0;
 
     LOCK(cs);
-    LogPrintf("MEMPOOL", "Checking mempool with %u transactions and %u inputs\n", (unsigned int)mapTx.size(),
-        (unsigned int)mapNextTx.size());
+    // LogPrintf("MEMPOOL", "Checking mempool with %u transactions and %u inputs\n", (unsigned int)mapTx.size(),
+    //    (unsigned int)mapNextTx.size());
 
     CCoinsViewCache mempoolDuplicate(const_cast<CCoinsViewCache *>(pcoins));
 
@@ -1359,7 +1355,8 @@ void CTxMemPool::TrimToSize(size_t sizelimit, std::vector<COutPoint> *pvNoSpends
     }
 
     if (maxFeeRateRemoved > CFeeRate(0))
-        LogPrintf("MEMPOOL", "Removed %u txn, rolling minimum fee bumped to %s\n", nTxnRemoved, maxFeeRateRemoved.ToString());
+        LogPrintf(
+            "MEMPOOL", "Removed %u txn, rolling minimum fee bumped to %s\n", nTxnRemoved, maxFeeRateRemoved.ToString());
 }
 
 void CTxMemPool::UpdateTransactionsPerSecond()

@@ -26,8 +26,8 @@
 #include <set>
 
 #include "amount.h"
-#include "coins.h"
 #include "chain/tx.h"
+#include "coins.h"
 #include "random.h"
 #include "sync.h"
 

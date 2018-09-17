@@ -17,16 +17,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "networks/netman.h"
+#include "args.h"
 #include "clientversion.h"
-#include "rpc/rpcserver.h"
+#include "httprpc.h"
+#include "httpserver.h"
 #include "init.h"
+#include "networks/netman.h"
 #include "noui.h"
+#include "rpc/rpcserver.h"
 #include "scheduler.h"
 #include "util/util.h"
-#include "args.h"
-#include "httpserver.h"
-#include "httprpc.h"
 
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem.hpp>
@@ -40,18 +40,21 @@
  *
  * \section intro_sec Introduction
  *
- * This is the developer documentation of the reference client for an experimental new digital currency called Bitcoin (https://www.bitcoin.org/),
+ //www.bitcoin.org/),
+ * This is the developer documentation of the reference client for an experimental new digital currency called Bitcoin
+ (https:
  * which enables instant payments to anyone, anywhere in the world. Bitcoin uses peer-to-peer technology to operate
  * with no central authority: managing transactions and issuing money are carried out collectively by the network.
  *
  * The software is a community-driven open source project, released under the MIT license.
  *
  * \section Navigation
- * Use the buttons <code>Namespaces</code>, <code>Classes</code> or <code>Files</code> at the top of the page to start navigating the code.
+ * Use the buttons <code>Namespaces</code>, <code>Classes</code> or <code>Files</code> at the top of the page to start
+ navigating the code.
  */
 
 
-void WaitForShutdown(boost::thread_group* threadGroup)
+void WaitForShutdown(boost::thread_group *threadGroup)
 {
     bool fShutdown = ShutdownRequested();
     // Tell the main threads to shutdown.
@@ -71,7 +74,7 @@ void WaitForShutdown(boost::thread_group* threadGroup)
 //
 // Start
 //
-bool AppInit(int argc, char* argv[])
+bool AppInit(int argc, char *argv[])
 {
     boost::thread_group threadGroup;
     CScheduler scheduler;
@@ -85,7 +88,7 @@ bool AppInit(int argc, char* argv[])
     gArgs.ParseParameters(argc, argv);
 
     // Process help and version before taking care about datadir
-    if (gArgs.IsArgSet("-?") || gArgs.IsArgSet("-h") ||  gArgs.IsArgSet("-help") || gArgs.IsArgSet("-version"))
+    if (gArgs.IsArgSet("-?") || gArgs.IsArgSet("-h") || gArgs.IsArgSet("-help") || gArgs.IsArgSet("-version"))
     {
         std::string strUsage = _("ECC Daemon") + " " + _("version") + " " + FormatFullVersion() + "\n";
 
@@ -95,8 +98,8 @@ bool AppInit(int argc, char* argv[])
         }
         else
         {
-            strUsage += "\n" + _("Usage:") + "\n" +
-                  "  eccoind [options]                     " + _("Start ECC Daemon") + "\n";
+            strUsage +=
+                "\n" + _("Usage:") + "\n" + "  eccoind [options]                     " + _("Start ECC Daemon") + "\n";
 
             strUsage += "\n" + HelpMessage();
         }
@@ -107,24 +110,28 @@ bool AppInit(int argc, char* argv[])
 
     try
     {
-        if (!boost::filesystem::is_directory(GetDataDir(false)))
+        if (!fs::is_directory(GetDataDir(false)))
         {
-            fprintf(stderr, "Error: Specified data directory \"%s\" does not exist.\n", gArgs.GetArg("-datadir", "").c_str());
+            fprintf(stderr, "Error: Specified data directory \"%s\" does not exist.\n",
+                gArgs.GetArg("-datadir", "").c_str());
             return false;
         }
         try
         {
             gArgs.ReadConfigFile();
         }
-        catch (const std::exception& e)
+        catch (const std::exception &e)
         {
-            fprintf(stderr,"Error reading configuration file: %s\n", e.what());
+            fprintf(stderr, "Error reading configuration file: %s\n", e.what());
             return false;
         }
         // Check for -testnet or -regtest parameter (Params() calls are only valid after this clause)
-        try {
+        try
+        {
             CheckParams(ChainNameFromCommandLine());
-        } catch (const std::exception& e) {
+        }
+        catch (const std::exception &e)
+        {
             fprintf(stderr, "Error: %s\n", e.what());
             return false;
         }
@@ -173,10 +180,10 @@ bool AppInit(int argc, char* argv[])
         GenerateNetworkTemplates();
         fRet = AppInit2(threadGroup, scheduler);
     }
-    catch (const std::exception& e)
+    catch (const std::exception &e)
     {
         PrintExceptionContinue(&e, "AppInit()");
-    } 
+    }
     catch (...)
     {
         PrintExceptionContinue(NULL, "AppInit()");
@@ -188,7 +195,9 @@ bool AppInit(int argc, char* argv[])
         // threadGroup.join_all(); was left out intentionally here, because we didn't re-test all of
         // the startup-failure cases to make sure they don't result in a hang due to some
         // thread-blocking-waiting-for-another-thread-during-startup case
-    } else {
+    }
+    else
+    {
         WaitForShutdown(&threadGroup);
     }
     Shutdown();
@@ -196,7 +205,7 @@ bool AppInit(int argc, char* argv[])
     return fRet;
 }
 
-int main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
     SetupEnvironment();
 

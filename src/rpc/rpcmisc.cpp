@@ -23,7 +23,7 @@
 #include "clientversion.h"
 #include "init.h"
 #include "main.h"
-#include "miner.h"
+#include "blockgeneration/blockgeneration.h"
 #include "net.h"
 #include "netbase.h"
 #include "rpcserver.h"

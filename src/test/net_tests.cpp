@@ -1,9 +1,9 @@
 // Copyright (c) 2012-2016 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
+#include "net.h"
 #include "addrman.h"
 #include "crypto/hash.h"
-#include "net.h"
 #include "netbase.h"
 #include "serialize.h"
 #include "streams.h"
@@ -13,25 +13,30 @@
 
 #include <boost/test/unit_test.hpp>
 
-class CAddrManSerializationMock : public CAddrMan {
+class CAddrManSerializationMock : public CAddrMan
+{
 public:
     virtual void Serialize(CDataStream &s) const = 0;
 
     //! Ensure that bucket placement is always the same for testing purposes.
-    void MakeDeterministic() {
+    void MakeDeterministic()
+    {
         nKey.SetNull();
         insecure_rand = FastRandomContext(true);
     }
 };
 
-class CAddrManUncorrupted : public CAddrManSerializationMock {
+class CAddrManUncorrupted : public CAddrManSerializationMock
+{
 public:
     void Serialize(CDataStream &s) const override { CAddrMan::Serialize(s); }
 };
 
-class CAddrManCorrupted : public CAddrManSerializationMock {
+class CAddrManCorrupted : public CAddrManSerializationMock
+{
 public:
-    void Serialize(CDataStream &s) const override {
+    void Serialize(CDataStream &s) const override
+    {
         // Produces corrupt output that claims addrman has 20 addrs when it only
         // has one addr.
         uint8_t nVersion = 1;
@@ -54,7 +59,8 @@ public:
     }
 };
 
-CDataStream AddrmanToStream(CAddrManSerializationMock &_addrman) {
+CDataStream AddrmanToStream(CAddrManSerializationMock &_addrman)
+{
     CDataStream ssPeersIn(SER_DISK, CLIENT_VERSION);
     ssPeersIn << FLATDATA(Params().DiskMagic());
     ssPeersIn << _addrman;
@@ -65,7 +71,8 @@ CDataStream AddrmanToStream(CAddrManSerializationMock &_addrman) {
 
 BOOST_FIXTURE_TEST_SUITE(net_tests, BasicTestingSetup)
 
-BOOST_AUTO_TEST_CASE(caddrdb_read) {
+BOOST_AUTO_TEST_CASE(caddrdb_read)
+{
     CAddrManUncorrupted addrmanUncorrupted;
     addrmanUncorrupted.MakeDeterministic();
 
@@ -87,11 +94,14 @@ BOOST_AUTO_TEST_CASE(caddrdb_read) {
     CAddrMan addrman1;
 
     BOOST_CHECK(addrman1.size() == 0);
-    try {
+    try
+    {
         uint8_t pchMsgTmp[4];
         ssPeers1 >> FLATDATA(pchMsgTmp);
         ssPeers1 >> addrman1;
-    } catch (const std::exception &e) {
+    }
+    catch (const std::exception &e)
+    {
         exceptionThrown = true;
     }
 
@@ -109,7 +119,8 @@ BOOST_AUTO_TEST_CASE(caddrdb_read) {
     BOOST_CHECK(addrman2.size() == 3);
 }
 
-BOOST_AUTO_TEST_CASE(caddrdb_read_corrupted) {
+BOOST_AUTO_TEST_CASE(caddrdb_read_corrupted)
+{
     CAddrManCorrupted addrmanCorrupted;
     addrmanCorrupted.MakeDeterministic();
 
@@ -118,11 +129,14 @@ BOOST_AUTO_TEST_CASE(caddrdb_read_corrupted) {
     bool exceptionThrown = false;
     CAddrMan addrman1;
     BOOST_CHECK(addrman1.size() == 0);
-    try {
+    try
+    {
         uint8_t pchMsgTmp[4];
         ssPeers1 >> FLATDATA(pchMsgTmp);
         ssPeers1 >> addrman1;
-    } catch (const std::exception &e) {
+    }
+    catch (const std::exception &e)
+    {
         exceptionThrown = true;
     }
     // Even through de-serialization failed addrman is not left in a clean
@@ -141,7 +155,8 @@ BOOST_AUTO_TEST_CASE(caddrdb_read_corrupted) {
     BOOST_CHECK(addrman2.size() == 0);
 }
 
-BOOST_AUTO_TEST_CASE(cnode_simple_test) {
+BOOST_AUTO_TEST_CASE(cnode_simple_test)
+{
     SOCKET hSocket = INVALID_SOCKET;
     NodeId id = 0;
     int height = 0;
@@ -154,19 +169,18 @@ BOOST_AUTO_TEST_CASE(cnode_simple_test) {
     bool fInboundIn = false;
 
     // Test that fFeeler is false by default.
-    std::unique_ptr<CNode> pnode1(new CNode(id++, NODE_NETWORK, height, hSocket,
-                                            addr, 0, 0, pszDest, fInboundIn));
+    std::unique_ptr<CNode> pnode1(new CNode(id++, NODE_NETWORK, height, hSocket, addr, 0, 0, pszDest, fInboundIn));
     BOOST_CHECK(pnode1->fInbound == false);
     BOOST_CHECK(pnode1->fFeeler == false);
 
     fInboundIn = true;
-    std::unique_ptr<CNode> pnode2(new CNode(id++, NODE_NETWORK, height, hSocket,
-                                            addr, 1, 1, pszDest, fInboundIn));
+    std::unique_ptr<CNode> pnode2(new CNode(id++, NODE_NETWORK, height, hSocket, addr, 1, 1, pszDest, fInboundIn));
     BOOST_CHECK(pnode2->fInbound == true);
     BOOST_CHECK(pnode2->fFeeler == false);
 }
 
-BOOST_AUTO_TEST_CASE(test_getSubVersionEB) {
+BOOST_AUTO_TEST_CASE(test_getSubVersionEB)
+{
     BOOST_CHECK_EQUAL(getSubVersionEB(13800000000), "13800.0");
     BOOST_CHECK_EQUAL(getSubVersionEB(3800000000), "3800.0");
     BOOST_CHECK_EQUAL(getSubVersionEB(14000000), "14.0");
@@ -177,7 +191,8 @@ BOOST_AUTO_TEST_CASE(test_getSubVersionEB) {
     BOOST_CHECK_EQUAL(getSubVersionEB(0), "0.0");
 }
 
-BOOST_AUTO_TEST_CASE(test_userAgentLength) {
+BOOST_AUTO_TEST_CASE(test_userAgentLength)
+{
     GlobalConfig config;
 
     config.SetMaxBlockSize(8000000);
@@ -192,12 +207,11 @@ BOOST_AUTO_TEST_CASE(test_userAgentLength) {
     gArgs.ForceSetMultiArg("-uacomment", long_uacomment);
 
     BOOST_CHECK_EQUAL(userAgent(config).size(), MAX_SUBVERSION_LENGTH);
-    BOOST_CHECK_EQUAL(userAgent(config),
-                      "/Bitcoin ABC:0.17.3(EB8.0; very very very very very "
-                      "very very very very very very very very very very very "
-                      "very very very very very very very very very very very "
-                      "very very very very very very very very very very very "
-                      "very very very very very very very ve)/");
+    BOOST_CHECK_EQUAL(userAgent(config), "/Bitcoin ABC:0.17.3(EB8.0; very very very very very "
+                                         "very very very very very very very very very very very "
+                                         "very very very very very very very very very very very "
+                                         "very very very very very very very very very very very "
+                                         "very very very very very very very ve)/");
 }
 
 BOOST_AUTO_TEST_SUITE_END()

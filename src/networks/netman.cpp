@@ -38,17 +38,21 @@ void AppendParamsHelpMessages(std::string& strUsage, bool debugHelp)
 
 void CNetworkManager::ConstructNetworks()
 {
-    if(legacyTemplate != NULL)
+    if(legacyTemplate != nullptr)
     {
         pnetLegacy = new CNetwork(legacyTemplate);
     }
-    if(paymentTemplate != NULL)
+    if(paymentTemplate != nullptr)
     {
         pnetPayment = new CNetwork(paymentTemplate);
     }
-    if(netManTestnetTemplate != NULL)
+    if(testnet0Template != nullptr)
     {
-        pnetTestnet0 = new CNetwork(netManTestnetTemplate);
+        pnetTestnet0 = new CNetwork(testnet0Template);
+    }
+    if(regTestTemplate != nullptr)
+    {
+        pnetRegTest = new CNetwork(regTestTemplate);
     }
 }
 
@@ -108,7 +112,6 @@ void CNetworkManager::ConstructLegacyNetworkTemplate()
 
     legacyTemplate->vSeeds.push_back(CDNSSeedData("CryptoUnitedSeed", "www.cryptounited.io", true));
     legacyTemplate->vSeeds.push_back(CDNSSeedData("ECC-Seed1", "138.197.100.45", true));
-    legacyTemplate->vSeeds.push_back(CDNSSeedData("ECC-Seed2", "159.203.172.212", true));
     legacyTemplate->vSeeds.push_back(CDNSSeedData("ECC-Seed3", "eccnode.altj.com", true));
 
     legacyTemplate->base58Prefixes[CNetworkTemplate::PUBKEY_ADDRESS] = std::vector<unsigned char>(1,33);
@@ -184,75 +187,145 @@ void CNetworkManager::ConstructLegacyNetworkTemplate()
 
 void CNetworkManager::ConstructTetnet0Template()
 {
-    netManTestnetTemplate->strNetworkID = "TESTNET0-TEMPORARY";
-    netManTestnetTemplate->strNetworkDataDir = "testnet0-temporary";
-    netManTestnetTemplate->consensus.nMajorityEnforceBlockUpgrade = 750;
-    netManTestnetTemplate->consensus.nMajorityRejectBlockOutdated = 950;
-    netManTestnetTemplate->consensus.nMajorityWindow = 1000;
-    netManTestnetTemplate->consensus.powLimit  = uint256S("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
-    netManTestnetTemplate->consensus.posLimit  = uint256S("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
-    netManTestnetTemplate->consensus.nTargetTimespan = 30 * 45;
-    netManTestnetTemplate->consensus.nTargetSpacing = 45;
-    netManTestnetTemplate->consensus.fPowAllowMinDifficultyBlocks = true;
-    netManTestnetTemplate->consensus.fPowNoRetargeting = true;
-    netManTestnetTemplate->consensus.nRuleChangeActivationThreshold = 1916; // 95% of 2016
-    netManTestnetTemplate->consensus.nMinerConfirmationWindow = 2016; // nPowTargetTimespan / nTargetSpacing
-    netManTestnetTemplate->consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].bit = 28;
-    netManTestnetTemplate->consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nStartTime = 1199145601; // January 1, 2008
-    netManTestnetTemplate->consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nTimeout = 1230767999; // December 31, 2008
+    testnet0Template->strNetworkID = "TESTNET0";
+    testnet0Template->strNetworkDataDir = "testnet0";
+    testnet0Template->consensus.nMajorityEnforceBlockUpgrade = 750;
+    testnet0Template->consensus.nMajorityRejectBlockOutdated = 950;
+    testnet0Template->consensus.nMajorityWindow = 1000;
+    testnet0Template->consensus.powLimit  = uint256S("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+    testnet0Template->consensus.posLimit  = uint256S("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+    testnet0Template->consensus.nTargetTimespan = 30 * 45;
+    testnet0Template->consensus.nTargetSpacing = 45;
+    testnet0Template->consensus.fPowAllowMinDifficultyBlocks = true;
+    testnet0Template->consensus.fPowNoRetargeting = true;
+    testnet0Template->consensus.nRuleChangeActivationThreshold = 1916; // 95% of 2016
+    testnet0Template->consensus.nMinerConfirmationWindow = 2016; // nPowTargetTimespan / nTargetSpacing
+    testnet0Template->consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].bit = 28;
+    testnet0Template->consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nStartTime = 1199145601; // January 1, 2008
+    testnet0Template->consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nTimeout = 1230767999; // December 31, 2008
 
     /**
      * The message start string is designed to be unlikely to occur in normal data.
      * The characters are rarely used upper ASCII, not valid as UTF-8, and produce
      * a large 32-bit integer with any alignment.
      */
-    netManTestnetTemplate->pchMessageStart[0] = 0xee;
-    netManTestnetTemplate->pchMessageStart[1] = 0xff;
-    netManTestnetTemplate->pchMessageStart[2] = 0xaa;
-    netManTestnetTemplate->pchMessageStart[3] = 0xbb;
-    netManTestnetTemplate->nDefaultPort = 30000;
-    netManTestnetTemplate->nRPCPort = 30001;
-    netManTestnetTemplate->nMaxTipAge = 24 * 60 * 60;
-    netManTestnetTemplate->nStakeMaxAge = 60*60*24*84; //84 days
-    netManTestnetTemplate->nStakeMinAge = 60*2; // 2 minutes
+    testnet0Template->pchMessageStart[0] = 0xee;
+    testnet0Template->pchMessageStart[1] = 0xff;
+    testnet0Template->pchMessageStart[2] = 0xaa;
+    testnet0Template->pchMessageStart[3] = 0xbb;
+    testnet0Template->nDefaultPort = 30000;
+    testnet0Template->nRPCPort = 30001;
+    testnet0Template->nMaxTipAge = 24 * 60 * 60;
+    testnet0Template->nStakeMaxAge = 60*60*24*84; //84 days
+    testnet0Template->nStakeMinAge = 60*2; // 2 minutes
 
-    const char* pszTimestamp = "AP | Dec 3, 2017, Testing of new network manager begins";
+    const char* pszTimestamp = "AP | Sep 12, 2018, Testing0 begins";
     CTransaction txNew;
-    txNew.nTime = 1512338805;
+    txNew.nTime = 1536781520;
     txNew.vin.resize(1);
     txNew.vout.resize(1);
     txNew.vin[0].scriptSig =  CScript() << 486604799 << CScriptNum(9999) << std::vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
     txNew.vout[0].SetEmpty();
 
-    netManTestnetTemplate->genesis.vtx.push_back(MakeTransactionRef(txNew));
-    netManTestnetTemplate->genesis.hashPrevBlock.SetNull();
-    netManTestnetTemplate->genesis.nVersion = 1;
-    netManTestnetTemplate->genesis.nTime    = 1512338805;
-    netManTestnetTemplate->genesis.nBits    = 0x1e0fffff;
-    netManTestnetTemplate->genesis.nNonce   = 12799721;
-    netManTestnetTemplate->genesis.hashMerkleRoot = BlockMerkleRoot(netManTestnetTemplate->genesis);
+    testnet0Template->genesis.vtx.push_back(MakeTransactionRef(txNew));
+    testnet0Template->genesis.hashPrevBlock.SetNull();
+    testnet0Template->genesis.nVersion = 1;
+    testnet0Template->genesis.nTime    = 1536781520;
+    testnet0Template->genesis.nBits    = 0x1e0fffff;
+    testnet0Template->genesis.nNonce   = 12799721;
+    testnet0Template->genesis.hashMerkleRoot = BlockMerkleRoot(testnet0Template->genesis);
 
-    netManTestnetTemplate->consensus.hashGenesisBlock = netManTestnetTemplate->genesis.GetHash();
-    assert(netManTestnetTemplate->consensus.hashGenesisBlock == uint256S("0x94e16dc2de0cec9f52c9e8f1b729b4e1d9d47720eac56388c33e9dec30e52124"));
-    assert(netManTestnetTemplate->genesis.hashMerkleRoot == uint256S("0xc0e7a1a7812892b4026a3d1a52689180204d742bc968f9d42dddeb338f63cdf0"));
+    testnet0Template->consensus.hashGenesisBlock = testnet0Template->genesis.GetHash();
+    assert(testnet0Template->consensus.hashGenesisBlock == uint256S("0xcdf2b68d2fc9afdf991df5e321f59198189926ee757bf5efcf5c8c1a07b7c90e"));
+    assert(testnet0Template->genesis.hashMerkleRoot == uint256S("0x68d635c49ffdd2bf5edf78149d0e2ea7dff97901d4596e865b87919853085311"));
 
-    netManTestnetTemplate->vSeeds.push_back(CDNSSeedData("CryptoUnitedSeed", "www.cryptounited.io", true));
+    testnet0Template->base58Prefixes[CNetworkTemplate::PUBKEY_ADDRESS] = std::vector<unsigned char>(1,51);
+    testnet0Template->base58Prefixes[CNetworkTemplate::SCRIPT_ADDRESS] = std::vector<unsigned char>(1,15);
+    testnet0Template->base58Prefixes[CNetworkTemplate::SECRET_KEY] =     std::vector<unsigned char>(1,159);
+    testnet0Template->base58Prefixes[CNetworkTemplate::EXT_PUBLIC_KEY] = boost::assign::list_of(0x04)(0x88)(0xB2)(0x1E).convert_to_container<std::vector<unsigned char> >();
+    testnet0Template->base58Prefixes[CNetworkTemplate::EXT_SECRET_KEY] = boost::assign::list_of(0x04)(0x88)(0xAD)(0xE4).convert_to_container<std::vector<unsigned char> >();
 
-    netManTestnetTemplate->base58Prefixes[CNetworkTemplate::PUBKEY_ADDRESS] = std::vector<unsigned char>(1,51);
-    netManTestnetTemplate->base58Prefixes[CNetworkTemplate::SCRIPT_ADDRESS] = std::vector<unsigned char>(1,15);
-    netManTestnetTemplate->base58Prefixes[CNetworkTemplate::SECRET_KEY] =     std::vector<unsigned char>(1,159);
-    netManTestnetTemplate->base58Prefixes[CNetworkTemplate::EXT_PUBLIC_KEY] = boost::assign::list_of(0x04)(0x88)(0xB2)(0x1E).convert_to_container<std::vector<unsigned char> >();
-    netManTestnetTemplate->base58Prefixes[CNetworkTemplate::EXT_SECRET_KEY] = boost::assign::list_of(0x04)(0x88)(0xAD)(0xE4).convert_to_container<std::vector<unsigned char> >();
+    testnet0Template->fMiningRequiresPeers = false;
+    testnet0Template->fDefaultConsistencyChecks = false;
+    testnet0Template->fRequireStandard = true;
+    testnet0Template->fMineBlocksOnDemand = false;
+    testnet0Template->fTestnetToBeDeprecatedFieldRPC = true;
 
-    netManTestnetTemplate->fMiningRequiresPeers = false;
-    netManTestnetTemplate->fDefaultConsistencyChecks = false;
-    netManTestnetTemplate->fRequireStandard = true;
-    netManTestnetTemplate->fMineBlocksOnDemand = true;
-    netManTestnetTemplate->fTestnetToBeDeprecatedFieldRPC = false;
-
-    netManTestnetTemplate->checkpointData = (CCheckpointData){
+    testnet0Template->checkpointData = (CCheckpointData){
         boost::assign::map_list_of
-        (     0, uint256S("0x94e16dc2de0cec9f52c9e8f1b729b4e1d9d47720eac56388c33e9dec30e52124"))
+        (     0, uint256S("0xcdf2b68d2fc9afdf991df5e321f59198189926ee757bf5efcf5c8c1a07b7c90e"))
+    };
+}
+
+void CNetworkManager::ConstructRegTestTemplate()
+{
+    regTestTemplate->strNetworkID = "REGTEST";
+    regTestTemplate->strNetworkDataDir = "regtest";
+    regTestTemplate->consensus.nMajorityEnforceBlockUpgrade = 750;
+    regTestTemplate->consensus.nMajorityRejectBlockOutdated = 950;
+    regTestTemplate->consensus.nMajorityWindow = 1000;
+    regTestTemplate->consensus.powLimit  = uint256S("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+    regTestTemplate->consensus.posLimit  = uint256S("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+    regTestTemplate->consensus.nTargetTimespan = 30 * 45;
+    regTestTemplate->consensus.nTargetSpacing = 45;
+    regTestTemplate->consensus.fPowAllowMinDifficultyBlocks = true;
+    regTestTemplate->consensus.fPowNoRetargeting = true;
+    regTestTemplate->consensus.nRuleChangeActivationThreshold = 1916; // 95% of 2016
+    regTestTemplate->consensus.nMinerConfirmationWindow = 2016; // nPowTargetTimespan / nTargetSpacing
+    regTestTemplate->consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].bit = 28;
+    regTestTemplate->consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nStartTime = 1199145601; // January 1, 2008
+    regTestTemplate->consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nTimeout = 1230767999; // December 31, 2008
+
+    /**
+     * The message start string is designed to be unlikely to occur in normal data.
+     * The characters are rarely used upper ASCII, not valid as UTF-8, and produce
+     * a large 32-bit integer with any alignment.
+     */
+    regTestTemplate->pchMessageStart[0] = 0xaa;
+    regTestTemplate->pchMessageStart[1] = 0xbb;
+    regTestTemplate->pchMessageStart[2] = 0xcc;
+    regTestTemplate->pchMessageStart[3] = 0xdd;
+    regTestTemplate->nDefaultPort = 40000;
+    regTestTemplate->nRPCPort = 40001;
+    regTestTemplate->nMaxTipAge = 24 * 60 * 60;
+    regTestTemplate->nStakeMaxAge = 60; // 1 minute
+    regTestTemplate->nStakeMinAge = 60; // 1 minute
+
+    const char* pszTimestamp = "AP | Sep 12, 2018, Regtest implemented";
+    CTransaction txNew;
+    txNew.nTime = 1536781520;
+    txNew.vin.resize(1);
+    txNew.vout.resize(1);
+    txNew.vin[0].scriptSig =  CScript() << 486604799 << CScriptNum(9999) << std::vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
+    txNew.vout[0].SetEmpty();
+
+    regTestTemplate->genesis.vtx.push_back(MakeTransactionRef(txNew));
+    regTestTemplate->genesis.hashPrevBlock.SetNull();
+    regTestTemplate->genesis.nVersion = 1;
+    regTestTemplate->genesis.nTime    = 1536781520;
+    regTestTemplate->genesis.nBits    = 0x207fffff;
+    regTestTemplate->genesis.nNonce   = 12799721;
+    regTestTemplate->genesis.hashMerkleRoot = BlockMerkleRoot(regTestTemplate->genesis);
+
+    regTestTemplate->consensus.hashGenesisBlock = regTestTemplate->genesis.GetHash();
+    assert(regTestTemplate->consensus.hashGenesisBlock == uint256S("0x296d58ef241b0dde2372fbc7b09ec4aacf7b4dad88561f02469f3f4695c4fbb1"));
+    assert(regTestTemplate->genesis.hashMerkleRoot == uint256S("0x3565e20605dbdfe7a63ec4b9f5b9d2d25b69fcc13d6bfd7cc42615fcd41a323c"));
+
+    regTestTemplate->base58Prefixes[CNetworkTemplate::PUBKEY_ADDRESS] = std::vector<unsigned char>(1,51);
+    regTestTemplate->base58Prefixes[CNetworkTemplate::SCRIPT_ADDRESS] = std::vector<unsigned char>(1,15);
+    regTestTemplate->base58Prefixes[CNetworkTemplate::SECRET_KEY] =     std::vector<unsigned char>(1,159);
+    regTestTemplate->base58Prefixes[CNetworkTemplate::EXT_PUBLIC_KEY] = boost::assign::list_of(0x04)(0x88)(0xB2)(0x1E).convert_to_container<std::vector<unsigned char> >();
+    regTestTemplate->base58Prefixes[CNetworkTemplate::EXT_SECRET_KEY] = boost::assign::list_of(0x04)(0x88)(0xAD)(0xE4).convert_to_container<std::vector<unsigned char> >();
+
+    regTestTemplate->fMiningRequiresPeers = false;
+    regTestTemplate->fDefaultConsistencyChecks = true;
+    regTestTemplate->fRequireStandard = false;
+    regTestTemplate->fMineBlocksOnDemand = true;
+    regTestTemplate->fTestnetToBeDeprecatedFieldRPC = false;
+
+    regTestTemplate->checkpointData = (CCheckpointData){
+        boost::assign::map_list_of
+        (     0, uint256S("0x296d58ef241b0dde2372fbc7b09ec4aacf7b4dad88561f02469f3f4695c4fbb1"))
     };
 }
 
@@ -262,9 +335,17 @@ std::string ChainNameFromCommandLine()
     bool fTestNet = gArgs.GetBoolArg("-testnet0", false);
 
     if (fTestNet && fRegTest)
+    {
         throw std::runtime_error("Invalid combination of -regtest and -testnet.");
+    }
     if (fTestNet)
-        return "TESTNET0-TEMPORARY";
+    {
+        return "TESTNET0";
+    }
+    if(fRegTest)
+    {
+        return "REGTEST";
+    }
     return "LEGACY";
 }
 
@@ -274,15 +355,23 @@ int RPCPortFromCommandLine()
     bool fTestNet = gArgs.GetBoolArg("-testnet0", false);
 
     if (fTestNet && fRegTest)
+    {
         throw std::runtime_error("Invalid combination of -regtest and -testnet.");
+    }
     if (fTestNet)
+    {
         return 30001;
+    }
+    if(fRegTest)
+    {
+        return 40001;
+    }
     return 19119;
 }
 
 void CheckParams(const std::string& network)
 {
-    if (network != "LEGACY" && network != "TESTNET0-TEMPORARY")
+    if (network != "LEGACY" && network != "TESTNET0" && network != "REGTEST")
     {
         throw std::runtime_error(strprintf("%s: Unknown network %s.", __func__, network));
     }

@@ -22,9 +22,9 @@
 #define BITCOIN_PRIMITIVES_BLOCK_H
 
 #include "chain/tx.h"
+#include "keystore.h"
 #include "serialize.h"
 #include "uint256.h"
-#include "keystore.h"
 
 /** Nodes collect new transactions into a block, hash them into a hash tree,
  * and scan through nonce values to make the block's hash satisfy proof-of-work
@@ -45,15 +45,12 @@ public:
     uint32_t nBits;
     uint32_t nNonce;
 
-    CBlockHeader()
-    {
-        SetNull();
-    }
-
+    CBlockHeader() { SetNull(); }
     ADD_SERIALIZE_METHODS
 
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action) {
+    inline void SerializationOp(Stream &s, Operation ser_action)
+    {
         READWRITE(this->nVersion);
         nVersion = this->nVersion;
         READWRITE(hashPrevBlock);
@@ -73,18 +70,10 @@ public:
         nNonce = 0;
     }
 
-    bool IsNull() const
-    {
-        return (nBits == 0);
-    }
-
+    bool IsNull() const { return (nBits == 0); }
     uint256 GetHash() const;
 
-    int64_t GetBlockTime() const
-    {
-        return (int64_t)nTime;
-    }
-
+    int64_t GetBlockTime() const { return (int64_t)nTime; }
     // entropy bit for stake modifier if chosen by modifier
     unsigned int GetStakeEntropyBit() const
     {
@@ -92,7 +81,6 @@ public:
         unsigned int nEntropyBit = static_cast<unsigned int>((GetHash().Get64()) & uint64_t(1));
         return nEntropyBit;
     }
-
 };
 
 
@@ -108,22 +96,19 @@ public:
     // memory only
     mutable bool fChecked;
 
-    CBlock()
-    {
-        SetNull();
-    }
-
+    CBlock() { SetNull(); }
     CBlock(const CBlockHeader &header)
     {
         SetNull();
-        *((CBlockHeader*)this) = header;
+        *((CBlockHeader *)this) = header;
     }
 
     ADD_SERIALIZE_METHODS
 
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action) {
-        READWRITE(*(CBlockHeader*)this);
+    inline void SerializationOp(Stream &s, Operation ser_action)
+    {
+        READWRITE(*(CBlockHeader *)this);
         READWRITE(vtx);
         READWRITE(vchBlockSig);
     }
@@ -139,12 +124,12 @@ public:
     CBlockHeader GetBlockHeader() const
     {
         CBlockHeader block;
-        block.nVersion       = nVersion;
-        block.hashPrevBlock  = hashPrevBlock;
+        block.nVersion = nVersion;
+        block.hashPrevBlock = hashPrevBlock;
         block.hashMerkleRoot = hashMerkleRoot;
-        block.nTime          = nTime;
-        block.nBits          = nBits;
-        block.nNonce         = nNonce;
+        block.nTime = nTime;
+        block.nBits = nBits;
+        block.nNonce = nNonce;
         return block;
     }
 
@@ -152,9 +137,8 @@ public:
     bool IsProofOfStake() const;
     bool IsProofOfWork() const;
     std::pair<COutPoint, unsigned int> GetProofOfStake() const;
-    bool SignScryptBlock(const CKeyStore& keystore);
+    bool SignScryptBlock(const CKeyStore &keystore);
     bool CheckBlockSignature() const;
-    void UpdateTime();
     int64_t GetMaxTransactionTime() const;
 };
 
@@ -168,31 +152,20 @@ struct CBlockLocator
     std::vector<uint256> vHave;
 
     CBlockLocator() {}
-
-    CBlockLocator(const std::vector<uint256>& vHaveIn)
-    {
-        vHave = vHaveIn;
-    }
-
+    CBlockLocator(const std::vector<uint256> &vHaveIn) { vHave = vHaveIn; }
     ADD_SERIALIZE_METHODS
 
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action) {
+    inline void SerializationOp(Stream &s, Operation ser_action)
+    {
         int nVersion = s.GetVersion();
         if (!(s.GetType() & SER_GETHASH))
             READWRITE(nVersion);
         READWRITE(vHave);
     }
 
-    void SetNull()
-    {
-        vHave.clear();
-    }
-
-    bool IsNull() const
-    {
-        return vHave.empty();
-    }
+    void SetNull() { vHave.clear(); }
+    bool IsNull() const { return vHave.empty(); }
 };
 
 #endif // BITCOIN_PRIMITIVES_BLOCK_H

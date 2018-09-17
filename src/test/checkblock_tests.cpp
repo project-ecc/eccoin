@@ -3,17 +3,15 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include "chain/block.h"
 #include "clientversion.h"
 #include "consensus/validation.h"
 #include "main.h" // For CheckBlock
-#include "chain/block.h"
 #include "test/test_bitcoin.h"
 #include "util/utiltime.h"
 
 #include <cstdio>
 
-#include <boost/filesystem/operations.hpp>
-#include <boost/filesystem/path.hpp>
 #include <boost/test/unit_test.hpp>
 
 bool read_block(const std::string &filename, CBlock &block)

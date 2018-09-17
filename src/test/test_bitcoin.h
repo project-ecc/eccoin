@@ -10,7 +10,7 @@
 
 #include <boost/thread.hpp>
 
-extern CNetworkManager* pnetman;
+extern CNetworkManager *pnetman;
 
 /** Basic testing setup.
  * This just configures logging and chain parameters.
