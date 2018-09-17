@@ -8,6 +8,7 @@
 #include "test_bitcoin.h"
 
 
+#include "blockgeneration/blockgeneration.h"
 #include "consensus/consensus.h"
 #include "consensus/validation.h"
 #include "crypto/sha256.h"
@@ -16,7 +17,6 @@
 #include "key.h"
 #include "main.h"
 #include "messages.h"
-#include "miner.h"
 #include "processblock.h"
 #include "pubkey.h"
 #include "random.h"

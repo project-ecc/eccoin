@@ -20,9 +20,9 @@
 
 #include "miner.h"
 #include "args.h"
-#include "coins.h"
+#include "blockgeneration.h"
+#include "compare.h"
 #include "consensus/consensus.h"
-#include "consensus/merkle.h"
 #include "consensus/validation.h"
 #include "crypto/scrypt.h"
 #include "init.h"
@@ -39,7 +39,7 @@
 #include "util/util.h"
 #include "util/utilmoneystr.h"
 
-#include <boost/thread.hpp>
+#include <memory>
 #include <openssl/sha.h>
 #include <queue>
 
@@ -49,7 +49,6 @@ typedef boost::tuple<double, double, CTransaction *> TxPriority;
 
 uint64_t nLastBlockTx = 0;
 uint64_t nLastBlockSize = 0;
-int64_t nLastCoinStakeSearchInterval = 0;
 double dHashesPerSec;
 int64_t nHPSTimerStart;
 
@@ -108,83 +107,8 @@ void SHA256Transform(void *pstate, void *pinput, const void *pinit)
         ((uint32_t *)pstate)[i] = ctx.h[i];
 }
 
-// Some explaining would be appreciated
-class COrphan
-{
-public:
-    CTransaction *ptx;
-    std::set<uint256> setDependsOn;
-    double dPriority;
-    double dFeePerKb;
-
-    COrphan(CTransaction *ptxIn)
-    {
-        ptx = ptxIn;
-        dPriority = dFeePerKb = 0;
-    }
-
-    void print() const
-    {
-        LogPrintf("COrphan(hash=%s, dPriority=%.1f, dFeePerKb=%.1f)\n", ptx->GetHash().ToString().substr(0, 10).c_str(),
-            dPriority, dFeePerKb);
-        for (auto hash : setDependsOn)
-            LogPrintf("   setDependsOn %s\n", hash.ToString().substr(0, 10).c_str());
-    }
-};
-
-// We want to sort transactions by priority and fee, so:
-typedef boost::tuple<double, double, CTransaction *> TxPriority;
-class TxPriorityCompare
-{
-    bool byFee;
-
-public:
-    TxPriorityCompare(bool _byFee) : byFee(_byFee) {}
-    bool operator()(const TxPriority &a, const TxPriority &b)
-    {
-        if (byFee)
-        {
-            if (a.get<1>() == b.get<1>())
-                return a.get<0>() < b.get<0>();
-            return a.get<1>() < b.get<1>();
-        }
-        else
-        {
-            if (a.get<0>() == b.get<0>())
-                return a.get<1>() < b.get<1>();
-            return a.get<0>() < b.get<0>();
-        }
-    }
-};
-
-class ScoreCompare
-{
-public:
-    ScoreCompare() {}
-    bool operator()(const CTxMemPool::txiter a, const CTxMemPool::txiter b)
-    {
-        return CompareTxMemPoolEntryByScore()(*b, *a); // Convert to less than
-    }
-};
-
-int64_t UpdateTime(CBlockHeader *pblock, const Consensus::Params &consensusParams, const CBlockIndex *pindexPrev)
-{
-    int64_t nOldTime = pblock->nTime;
-    int64_t nNewTime = std::max(pindexPrev->GetMedianTimePast() + 1, GetAdjustedTime());
-
-    if (nOldTime < nNewTime)
-        pblock->nTime = nNewTime;
-
-    // Updating time can change work required on testnet:
-    if (consensusParams.fPowAllowMinDifficultyBlocks)
-        pblock->nBits = GetNextTargetRequired(pindexPrev, false);
-
-    return nNewTime - nOldTime;
-}
-
 // CreateNewBlock:
-//   fProofOfStake: try (best effort) to make a proof-of-stake block
-std::unique_ptr<CBlockTemplate> CreateNewBlock(CWallet *pwallet, bool fProofOfStake)
+std::unique_ptr<CBlockTemplate> CreateNewPoWBlock(CWallet *pwallet)
 {
     CReserveKey reservekey(pwallet);
 
@@ -247,39 +171,7 @@ std::unique_ptr<CBlockTemplate> CreateNewBlock(CWallet *pwallet, bool fProofOfSt
     int lastFewTxs = 0;
     CAmount nFees = 0;
 
-
-    if (fProofOfStake) // attempt to find a coinstake
-    {
-        pblock->nBits = GetNextTargetRequired(pindexPrev, true);
-
-
-        CTransaction txCoinStake;
-        txCoinStake.nTime = GetTime();
-        int64_t nSearchTime = txCoinStake.nTime; // search to current time
-
-
-        if (nSearchTime > nLastCoinStakeSearchTime)
-        {
-            // LogPrintf(">>> OK1\n");
-            if (pwallet->CreateCoinStake(*pwallet, pblock->nBits, nSearchTime - nLastCoinStakeSearchTime, txCoinStake))
-            {
-                if (txCoinStake.nTime >=
-                    std::max(pindexPrev->GetMedianTimePast() + 1, pindexPrev->GetBlockTime() - nMaxClockDrift))
-                { // make sure coinstake would meet timestamp protocol
-                    // as it would be the same as the block timestamp
-                    (*pblock->vtx[0]).vout[0].SetEmpty();
-                    (*pblock->vtx[0]).nTime = txCoinStake.nTime;
-                    pblock->vtx.push_back(MakeTransactionRef(txCoinStake));
-                }
-            }
-            nLastCoinStakeSearchInterval = nSearchTime - nLastCoinStakeSearchTime;
-            nLastCoinStakeSearchTime = nSearchTime;
-        }
-    }
-    else
-    {
-        pblock->nBits = GetNextTargetRequired(pindexPrev, false);
-    }
+    pblock->nBits = GetNextTargetRequired(pindexPrev, false);
     // Collect memory pool transactions into the block
     {
         LOCK2(cs_main, mempool.cs);
@@ -435,47 +327,16 @@ std::unique_ptr<CBlockTemplate> CreateNewBlock(CWallet *pwallet, bool fProofOfSt
 
         // Fill in header
         pblock->hashPrevBlock = pindexPrev->GetBlockHash();
-        if (pblock->IsProofOfStake())
-        {
-            pblock->nTime = pblock->vtx[1]->nTime; // same as coinstake timestamp
-            pblock->nTime = std::max(pindexPrev->GetMedianTimePast() + 1, pblock->GetMaxTransactionTime());
-            pblock->nTime = std::max(pblock->GetBlockTime(), pindexPrev->GetBlockTime() - nMaxClockDrift);
-        }
-        else
-        {
-            pblock->nTime = std::max(pindexPrev->GetMedianTimePast() + 1, pblock->GetMaxTransactionTime());
-            pblock->nTime = std::max(pblock->GetBlockTime(), pindexPrev->GetBlockTime() - nMaxClockDrift);
-        }
-        if (pblock->IsProofOfWork())
-        {
-            UpdateTime(pblock, pnetMan->getActivePaymentNetwork()->GetConsensus(), pindexPrev);
-            pblock->vtx[0]->vout[0].nValue =
-                GetProofOfWorkReward(nFees, pindexPrev->nHeight + 1, pindexPrev->GetBlockHash());
-        }
+        pblock->nTime = std::max(pindexPrev->GetMedianTimePast() + 1, pblock->GetMaxTransactionTime());
+        pblock->nTime = std::max(pblock->GetBlockTime(), pindexPrev->GetBlockTime() - nMaxClockDrift);
+        UpdateTime(pblock, pnetMan->getActivePaymentNetwork()->GetConsensus(), pindexPrev);
+        pblock->vtx[0]->vout[0].nValue =
+            GetProofOfWorkReward(nFees, pindexPrev->nHeight + 1, pindexPrev->GetBlockHash());
         pblock->nNonce = 0;
     }
 
     return std::move(pblocktemplate);
 }
-
-
-void IncrementExtraNonce(CBlock *pblock, CBlockIndex *pindexPrev, unsigned int &nExtraNonce)
-{
-    // Update nExtraNonce
-    static uint256 hashPrevBlock;
-    if (hashPrevBlock != pblock->hashPrevBlock)
-    {
-        nExtraNonce = 0;
-        hashPrevBlock = pblock->hashPrevBlock;
-    }
-    ++nExtraNonce;
-    unsigned int nHeight = pindexPrev->nHeight + 1; // Height first in coinbase required for block.version=2
-    pblock->vtx[0]->vin[0].scriptSig = (CScript() << nHeight << CScriptNum(nExtraNonce)) + COINBASE_FLAGS;
-    assert(pblock->vtx[0]->vin[0].scriptSig.size() <= 100);
-
-    pblock->hashMerkleRoot = BlockMerkleRoot(*pblock);
-}
-
 
 void FormatHashBuffers(CBlock *pblock, char *pmidstate, char *pdata, char *phash1)
 {
@@ -591,7 +452,7 @@ void EccMiner(CWallet *pwallet)
         //
         unsigned int nTransactionsUpdatedLast = mempool.GetTransactionsUpdated();
         CBlockIndex *pindexPrev = pnetMan->getChainActive()->chainActive.Tip();
-        std::unique_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(pwallet, true));
+        std::unique_ptr<CBlockTemplate> pblocktemplate(CreateNewPoWBlock(pwallet));
         if (!pblocktemplate.get())
         {
             LogPrintf(
@@ -692,100 +553,4 @@ void EccMiner(CWallet *pwallet)
         }
     }
     scrypt_buffer_free(scratchbuf);
-}
-
-void EccMinter(CWallet *pwallet)
-{
-    LogPrintf("CPUMiner started for proof-of-%s\n", "stake");
-    SetThreadPriority(THREAD_PRIORITY_LOWEST);
-    // Make this thread recognisable as the mining thread
-    RenameThread("ecc-minter");
-    // Each thread has its own key and counter
-    CReserveKey reservekey(pwallet);
-    unsigned int nExtraNonce = 0;
-    while (true)
-    {
-        if (fShutdown)
-            return;
-        if (!g_connman)
-        {
-            MilliSleep(1000);
-            if (fShutdown)
-                return;
-        }
-        while (g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL) < 6 ||
-               pnetMan->getChainActive()->IsInitialBlockDownload() || pwallet->IsLocked())
-        {
-            MilliSleep(1000);
-            if (fShutdown)
-                return;
-        }
-        //
-        // Create new block
-        //
-        CBlockIndex *pindexPrev = pnetMan->getChainActive()->chainActive.Tip();
-        std::unique_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(pwallet, true));
-        if (!pblocktemplate.get())
-        {
-            LogPrintf(
-                "Error in Miner: Keypool ran out, please call keypoolrefill before restarting the mining thread\n");
-            return;
-        }
-        CBlock *pblock = &pblocktemplate->block;
-        IncrementExtraNonce(pblock, pindexPrev, nExtraNonce);
-        // ppcoin: if proof-of-stake block found then process block
-        if (pblock->IsProofOfStake())
-        {
-            if (!pblock->SignScryptBlock(*pwalletMain))
-            {
-                continue;
-            }
-            LogPrintf("CPUMiner : proof-of-stake block found %s\n", pblock->GetHash().ToString().c_str());
-            SetThreadPriority(THREAD_PRIORITY_NORMAL);
-            const std::shared_ptr<const CBlock> spblock = std::make_shared<const CBlock>(*pblock);
-            CheckWork(spblock, *pwalletMain, reservekey);
-            SetThreadPriority(THREAD_PRIORITY_LOWEST);
-        }
-        MilliSleep(1000); // 1 second delay
-        continue;
-    }
-}
-
-
-boost::thread_group *minerThreads = nullptr;
-
-void ThreadMiner(void *parg, bool shutdownOnly)
-{
-    if (minerThreads != nullptr)
-    {
-        minerThreads->interrupt_all();
-        delete minerThreads;
-        minerThreads = nullptr;
-        LogPrintf("CPUMiner stopped for proof-of-%s\n", "stake");
-        return;
-    }
-    if (shutdownOnly)
-    {
-        LogPrintf("CPUMiner stopped for proof-of-%s\n", "stake");
-        return;
-    }
-
-    minerThreads = new boost::thread_group();
-
-    CWallet *pwallet = (CWallet *)parg;
-    try
-    {
-        minerThreads->create_thread(boost::bind(&EccMinter, pwallet));
-    }
-    catch (std::exception &e)
-    {
-        PrintException(&e, "ThreadECCMinter()");
-    }
-    catch (...)
-    {
-        PrintException(NULL, "ThreadECCMinter()");
-    }
-    nHPSTimerStart = 0;
-    dHashesPerSec = 0;
-    LogPrintf("ThreadECCMinter exiting \n");
 }

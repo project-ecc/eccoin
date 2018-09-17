@@ -46,6 +46,10 @@ BITCOIN_CORE_H = \
   args.h \
   arith_uint256.h \
   base58.h \
+  blockgeneration/blockgeneration.h \
+  blockgeneration/compare.h \
+  blockgeneration/miner.h \
+  blockgeneration/minter.h \
   bloom.h \
   chain/chain.h \
   chain/chainman.h \
@@ -79,7 +83,6 @@ BITCOIN_CORE_H = \
   messages.h \
   memusage.h \
   merkleblock.h \
-  miner.h \
   net.h \
   netaddress.h \
   netbase.h \
@@ -103,7 +106,7 @@ BITCOIN_CORE_H = \
   pubkey.h \
   random.h \
   reverselock.h \
-	rpc/events.h \
+  rpc/events.h \
   rpc/rpcclient.h \
   rpc/rpcprotocol.h \
   rpc/rpcserver.h \
@@ -164,6 +167,9 @@ libbitcoin_server_a_SOURCES = \
   addrman.cpp \
   services/ans.cpp \
   services/ansrecord.cpp \
+  blockgeneration/blockgeneration.cpp \
+  blockgeneration/miner.cpp \
+  blockgeneration/minter.cpp \
   bloom.cpp \
   chain/chain.cpp \
   chain/checkpoints.cpp \
@@ -174,7 +180,6 @@ libbitcoin_server_a_SOURCES = \
   kernel.cpp \
   main.cpp \
   merkleblock.cpp \
-  miner.cpp \
   net.cpp \
   netaddress.cpp \
   noui.cpp \

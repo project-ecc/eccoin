@@ -10,6 +10,13 @@ arith_uint256.cpp
 arith_uint256.h
 base58.cpp
 base58.h
+blockgeneration/blockgeneration.cpp
+blockgeneration/blockgeneration.h
+blockgeneration/compare.h
+blockgeneration/miner.cpp
+blockgeneration/miner.h
+blockgeneration/minter.cpp
+blockgeneration/minter.h
 bloom.cpp
 bloom.h
 chain/block.cpp
@@ -63,8 +70,6 @@ main.h
 memusage.h
 merkleblock.cpp
 merkleblock.h
-miner.cpp
-miner.h
 net.cpp
 net.h
 netaddress.cpp
