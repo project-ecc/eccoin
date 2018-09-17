@@ -18,14 +18,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "services/ans.h"
-#include "main.h"
-#include "consensus/consensus.h"
-#include "script/standard.h"
 #include "base58.h"
+#include "consensus/consensus.h"
+#include "main.h"
 #include "messages.h"
+#include "script/standard.h"
+#include "services/ans.h"
 
-bool CheckTransaction(const CTransaction& tx, CValidationState &state)
+bool CheckTransaction(const CTransaction &tx, CValidationState &state)
 {
     // Basic checks that don't depend on any context
     if (tx.vin.empty())
@@ -38,7 +38,7 @@ bool CheckTransaction(const CTransaction& tx, CValidationState &state)
 
     // Check for negative or overflow output values
     CAmount nValueOut = 0;
-    for (auto const& txout: tx.vout)
+    for (auto const &txout : tx.vout)
     {
         if (txout.nValue < 0)
         {
@@ -53,7 +53,7 @@ bool CheckTransaction(const CTransaction& tx, CValidationState &state)
 
     // Check for duplicate inputs
     std::set<COutPoint> vInOutPoints;
-    for (auto const& txin: tx.vin)
+    for (auto const &txin : tx.vin)
     {
         if (vInOutPoints.count(txin.prevout))
             return state.DoS(100, false, REJECT_INVALID, "bad-txns-inputs-duplicate");
@@ -67,13 +67,13 @@ bool CheckTransaction(const CTransaction& tx, CValidationState &state)
     }
     else
     {
-        for (auto const& txin: tx.vin)
+        for (auto const &txin : tx.vin)
             if (txin.prevout.IsNull())
                 return state.DoS(10, false, REJECT_INVALID, "bad-txns-prevout-null");
     }
-    if(tx.nVersion == 2)
+    if (tx.nVersion == 2)
     {
-        if(tx.serviceReferenceHash.IsNull())
+        if (tx.serviceReferenceHash.IsNull())
         {
             state.DoS(100, false, REJECT_INVALID, "bad-stx-ref-hash");
         }
@@ -83,29 +83,29 @@ bool CheckTransaction(const CTransaction& tx, CValidationState &state)
 
 
 /// This should only be run after CheckTransaction is run on the payment transaction
-bool CheckServiceTransaction(const CServiceTransaction &stx, const CTransaction& ptx, CValidationState &state)
+bool CheckServiceTransaction(const CServiceTransaction &stx, const CTransaction &ptx, CValidationState &state)
 {
-    if(stx.IsNull())
+    if (stx.IsNull())
     {
         return state.DoS(100, false, REJECT_INVALID, "service-transaction-is-null");
     }
 
-    if(ptx.IsNull())
+    if (ptx.IsNull())
     {
         return state.DoS(100, false, REJECT_INVALID, "payment-transaction-is-null");
     }
 
-    if(ptx.nVersion < 2)
+    if (ptx.nVersion < 2)
     {
         return state.DoS(100, false, REJECT_INVALID, "payment-version-too-low");
     }
 
-    if(stx.GetHash() != ptx.serviceReferenceHash)
+    if (stx.GetHash() != ptx.serviceReferenceHash)
     {
         return state.DoS(100, false, REJECT_INVALID, "service-hash-not-referenced");
     }
 
-    if(stx.paymentReferenceHash != ptx.GetHash())
+    if (stx.paymentReferenceHash != ptx.GetHash())
     {
         return state.DoS(100, false, REJECT_INVALID, "payment-hash-not-referenced");
     }
@@ -115,11 +115,11 @@ bool CheckServiceTransaction(const CServiceTransaction &stx, const CTransaction&
     CKeyID addressInID;
     CBitcoinAddress addrIn;
 
-    if(ptx.vin.size() != 1)
+    if (ptx.vin.size() != 1)
     {
         return state.DoS(100, false, REJECT_INVALID, "payment-tx-vin-improper-size");
     }
-    if(ptx.vout.size() > 2) // should only be sending to ourself and maybe have a change output
+    if (ptx.vout.size() > 2) // should only be sending to ourself and maybe have a change output
     {
         return state.DoS(100, false, REJECT_INVALID, "payment-tx-vout-improper-size");
     }
@@ -194,7 +194,7 @@ bool CheckServiceTransaction(const CServiceTransaction &stx, const CTransaction&
     }
     addrOut = CBitcoinAddress(addressOutID);
 
-    if(addrIn.ToString() != addrOut.ToString())
+    if (addrIn.ToString() != addrOut.ToString())
     {
         return state.DoS(100, false, REJECT_INVALID, "ownership-being-transfered");
     }
@@ -205,67 +205,67 @@ bool CheckServiceTransaction(const CServiceTransaction &stx, const CTransaction&
 std::string numToHex(int num)
 {
     num = num % 16;
-    if(num == 0)
+    if (num == 0)
     {
         return "0";
     }
-    else if(num == 1)
+    else if (num == 1)
     {
         return "1";
     }
-    else if(num == 2)
+    else if (num == 2)
     {
         return "2";
     }
-    else if(num == 3)
+    else if (num == 3)
     {
         return "3";
     }
-    else if(num == 4)
+    else if (num == 4)
     {
         return "4";
     }
-    else if(num == 5)
+    else if (num == 5)
     {
         return "5";
     }
-    else if(num == 6)
+    else if (num == 6)
     {
         return "6";
     }
-    else if(num == 7)
+    else if (num == 7)
     {
         return "7";
     }
-    else if(num == 8)
+    else if (num == 8)
     {
         return "8";
     }
-    else if(num == 9)
+    else if (num == 9)
     {
         return "9";
     }
-    else if(num == 10)
+    else if (num == 10)
     {
         return "A";
     }
-    else if(num == 11)
+    else if (num == 11)
     {
         return "B";
     }
-    else if(num == 12)
+    else if (num == 12)
     {
         return "C";
     }
-    else if(num == 13)
+    else if (num == 13)
     {
         return "D";
     }
-    else if(num == 14)
+    else if (num == 14)
     {
         return "E";
     }
-    else if(num == 15)
+    else if (num == 15)
     {
         return "F";
     }
@@ -273,24 +273,25 @@ std::string numToHex(int num)
 }
 
 // TODO : should clean this up and do this in a better way
-void CalcVerificationCode(const CServiceTransaction &stx, std::string& code, const CBlock* pblock)
+void CalcVerificationCode(const CServiceTransaction &stx, std::string &code, const CBlock *pblock)
 {
     CTransaction tx;
     uint256 blockHashOfTx;
     CBlock block;
     int height = 0;
-    if(pblock == nullptr)
+    if (pblock == nullptr)
     {
-         if(!GetTransaction(stx.paymentReferenceHash, tx, pnetMan->getActivePaymentNetwork()->GetConsensus(), blockHashOfTx))
-         {
-             return;
-         }
-         CBlockIndex* index = pnetMan->getChainActive()->mapBlockIndex[blockHashOfTx];
-         if (!ReadBlockFromDisk(block, index, pnetMan->getActivePaymentNetwork()->GetConsensus()))
-         {
-             return;
-         }
-         height = pnetMan->getChainActive()->mapBlockIndex[block.GetHash()]->nHeight;
+        if (!GetTransaction(
+                stx.paymentReferenceHash, tx, pnetMan->getActivePaymentNetwork()->GetConsensus(), blockHashOfTx))
+        {
+            return;
+        }
+        CBlockIndex *index = pnetMan->getChainActive()->mapBlockIndex[blockHashOfTx];
+        if (!ReadBlockFromDisk(block, index, pnetMan->getActivePaymentNetwork()->GetConsensus()))
+        {
+            return;
+        }
+        height = pnetMan->getChainActive()->mapBlockIndex[block.GetHash()]->nHeight;
     }
     else
     {
@@ -299,32 +300,32 @@ void CalcVerificationCode(const CServiceTransaction &stx, std::string& code, con
         block = *pblock;
     }
     int ptxIndex = 0;
-    for(uint32_t i = 0 ; i < block.vtx.size(); i++)
+    for (uint32_t i = 0; i < block.vtx.size(); i++)
     {
-        if(block.vtx[i]->GetHash() == stx.paymentReferenceHash)
+        if (block.vtx[i]->GetHash() == stx.paymentReferenceHash)
         {
             ptxIndex = i;
             break;
         }
     }
     std::string tempNum = std::to_string(height);
-    if(tempNum.size() % 2 != 0)
+    if (tempNum.size() % 2 != 0)
     {
         tempNum = "0" + tempNum;
     }
     std::vector<std::string> subs;
-    for(uint32_t i = 0; i < tempNum.length(); i = i + 2)
+    for (uint32_t i = 0; i < tempNum.length(); i = i + 2)
     {
-        subs.push_back(tempNum.substr(i,2));
+        subs.push_back(tempNum.substr(i, 2));
     }
-    for(uint32_t j = 0; j < subs.size(); j++ )
+    for (uint32_t j = 0; j < subs.size(); j++)
     {
         code = code + numToHex(std::stoi(subs[j]));
     }
     code = code + "-" + std::to_string(ptxIndex);
 }
 
-void ProcessANSCommand(const CServiceTransaction &stx, const CTransaction& ptx, const CBlock* block)
+void ProcessANSCommand(const CServiceTransaction &stx, const CTransaction &ptx, const CBlock *block)
 {
     std::string addr = "";
     std::vector<std::vector<unsigned char> > vSolutionsOut;
@@ -342,7 +343,7 @@ void ProcessANSCommand(const CServiceTransaction &stx, const CTransaction& ptx, 
         CPubKey pubKey(vSolutionsOut[0]);
         if (!pubKey.IsValid())
         {
-           return;
+            return;
         }
         addressOutID = pubKey.GetID();
     }
@@ -358,36 +359,37 @@ void ProcessANSCommand(const CServiceTransaction &stx, const CTransaction& ptx, 
     addr = addrOut.ToString();
 
     // process for specific code
-    if(stx.nOpCode == Opcode_ANS::OP_REGISTER)
+    if (stx.nOpCode == Opcode_ANS::OP_REGISTER)
     {
         std::string code = "";
         CalcVerificationCode(stx, code, block);
         CAnsRecord newRec(stx, addr, code);
         // check to make sure address does not already have an A record, we can check this by checking for PTR record
-        if(pansMain->existsRecord(AnsRecordTypes::PTR_RECORD,newRec.getAddress()))
+        if (pansMain->existsRecord(AnsRecordTypes::PTR_RECORD, newRec.getAddress()))
         {
             return;
         }
-        if(!pansMain->addRecord(A_RECORD, newRec.getName(), newRec))
+        if (!pansMain->addRecord(A_RECORD, newRec.getName(), newRec))
         {
             return;
         }
         pansMain->addRecord(PTR_RECORD, newRec.getAddress(), newRec);
     }
-    else if(stx.nOpCode == Opcode_ANS::OP_RENEW)
+    else if (stx.nOpCode == Opcode_ANS::OP_RENEW)
     {
         pansMain->addTimeToRecord(stx, addr, stx.nExpireTime);
     }
     // else, leave blank for future use
 }
 
-void ProcessServiceCommand(const CServiceTransaction &stx, const CTransaction& ptx, CValidationState &state, const CBlock* block)
+void ProcessServiceCommand(const CServiceTransaction &stx,
+    const CTransaction &ptx,
+    CValidationState &state,
+    const CBlock *block)
 {
-    if(stx.nServiceId == 0)
+    if (stx.nServiceId == 0)
     {
         ProcessANSCommand(stx, ptx, block);
     }
     // else, leave blank for future use
 }
-
-

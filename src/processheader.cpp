@@ -19,13 +19,16 @@
  */
 
 #include "processheader.h"
-#include "main.h"
-#include "util/util.h"
-#include "timedata.h"
 #include "init.h"
+#include "main.h"
+#include "timedata.h"
+#include "util/util.h"
 
 
-bool AcceptBlockHeader(const CBlockHeader& block, CValidationState& state, const CNetworkTemplate& chainparams, CBlockIndex** ppindex)
+bool AcceptBlockHeader(const CBlockHeader &block,
+    CValidationState &state,
+    const CNetworkTemplate &chainparams,
+    CBlockIndex **ppindex)
 {
     AssertLockHeld(cs_main);
     // Check for duplicate
@@ -34,8 +37,8 @@ bool AcceptBlockHeader(const CBlockHeader& block, CValidationState& state, const
     CBlockIndex *pindex = NULL;
     if (hash != chainparams.GetConsensus().hashGenesisBlock)
     {
-
-        if (miSelf != pnetMan->getChainActive()->mapBlockIndex.end()) {
+        if (miSelf != pnetMan->getChainActive()->mapBlockIndex.end())
+        {
             // Block header is already known.
             pindex = miSelf->second;
             if (ppindex)
@@ -49,7 +52,7 @@ bool AcceptBlockHeader(const CBlockHeader& block, CValidationState& state, const
             return false;
 
         // Get prev block index
-        CBlockIndex* pindexPrev = NULL;
+        CBlockIndex *pindexPrev = NULL;
         BlockMap::iterator mi = pnetMan->getChainActive()->mapBlockIndex.find(block.hashPrevBlock);
         if (mi == pnetMan->getChainActive()->mapBlockIndex.end())
             return state.DoS(10, error("%s: prev block not found", __func__), 0, "bad-prevblk");
@@ -74,25 +77,22 @@ bool AcceptBlockHeader(const CBlockHeader& block, CValidationState& state, const
 }
 
 
-
-bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, bool fCheckPOW)
+bool CheckBlockHeader(const CBlockHeader &block, CValidationState &state, bool fCheckPOW)
 {
-
     // Check timestamp
     if (block.GetBlockTime() > GetAdjustedTime() + 2 * 60 * 60)
-        return state.Invalid(error("CheckBlockHeader(): block timestamp too far in the future"),
-                             REJECT_INVALID, "time-too-new");
+        return state.Invalid(
+            error("CheckBlockHeader(): block timestamp too far in the future"), REJECT_INVALID, "time-too-new");
 
     return true;
 }
 
 
-bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& state, CBlockIndex * const pindexPrev)
+bool ContextualCheckBlockHeader(const CBlockHeader &block, CValidationState &state, CBlockIndex *const pindexPrev)
 {
     // Check timestamp against prev
     if (block.GetBlockTime() <= pindexPrev->GetMedianTimePast())
-        return state.Invalid(error("%s: block's timestamp is too early", __func__),
-                             REJECT_INVALID, "time-too-old");
+        return state.Invalid(error("%s: block's timestamp is too early", __func__), REJECT_INVALID, "time-too-old");
 
     return true;
 }

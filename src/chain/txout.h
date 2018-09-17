@@ -33,19 +33,16 @@ public:
     CAmount nValue;
     CScript scriptPubKey;
 
-    CTxOut()
-    {
-        SetNull();
-    }
-
-    CTxOut(const CAmount& nValueIn, CScript scriptPubKeyIn);
+    CTxOut() { SetNull(); }
+    CTxOut(const CAmount &nValueIn, CScript scriptPubKeyIn);
 
     ADD_SERIALIZE_METHODS
 
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action) {
+    inline void SerializationOp(Stream &s, Operation ser_action)
+    {
         READWRITE(nValue);
-        READWRITE(*(CScriptBase*)(&scriptPubKey));
+        READWRITE(*(CScriptBase *)(&scriptPubKey));
     }
 
     void SetNull()
@@ -54,22 +51,14 @@ public:
         scriptPubKey.clear();
     }
 
-    bool IsNull() const
-    {
-        return (nValue == -1);
-    }
-
+    bool IsNull() const { return (nValue == -1); }
     void SetEmpty()
     {
         nValue = 0;
         scriptPubKey.clear();
     }
 
-    bool IsEmpty() const
-    {
-        return (nValue == 0 && scriptPubKey.empty());
-    }
-
+    bool IsEmpty() const { return (nValue == 0 && scriptPubKey.empty()); }
     uint256 GetHash() const;
 
     CAmount GetDustThreshold(const CFeeRate &minRelayTxFee) const
@@ -88,25 +77,16 @@ public:
         size_t nSize = GetSerializeSize(*this, SER_DISK, 0);
         // the 148 mentioned above
         nSize += (32 + 4 + 1 + 107 + 4);
-        return 3*minRelayTxFee.GetFee(nSize);
+        return 3 * minRelayTxFee.GetFee(nSize);
     }
 
-    bool IsDust(const CFeeRate &minRelayTxFee) const
+    bool IsDust(const CFeeRate &minRelayTxFee) const { return (nValue < GetDustThreshold(minRelayTxFee)); }
+    friend bool operator==(const CTxOut &a, const CTxOut &b)
     {
-        return (nValue < GetDustThreshold(minRelayTxFee));
+        return (a.nValue == b.nValue && a.scriptPubKey == b.scriptPubKey);
     }
 
-    friend bool operator==(const CTxOut& a, const CTxOut& b)
-    {
-        return (a.nValue       == b.nValue &&
-                a.scriptPubKey == b.scriptPubKey);
-    }
-
-    friend bool operator!=(const CTxOut& a, const CTxOut& b)
-    {
-        return !(a == b);
-    }
-
+    friend bool operator!=(const CTxOut &a, const CTxOut &b) { return !(a == b); }
     std::string ToString() const;
 };
 

@@ -23,10 +23,9 @@
 #include <univalue.h>
 
 extern UniValue read_json(const std::string &jsondata);
-
+extern CNetworkManager *pnetMan;
 BOOST_FIXTURE_TEST_SUITE(base58_tests, BasicTestingSetup)
 
-CNetworkManager netman = *pnetman;
 // Goal: test low-level base58 encoding functionality
 BOOST_AUTO_TEST_CASE(base58_EncodeBase58)
 {
@@ -121,7 +120,7 @@ BOOST_AUTO_TEST_CASE(base58_keys_valid_parse)
     std::vector<unsigned char> result;
     CBitcoinSecret secret;
     CBitcoinAddress addr;
-    netman.SetParams("LEGACY");
+    pnetMan->SetParams("LEGACY");
 
     for (unsigned int idx = 0; idx < tests.size(); idx++)
     {
@@ -138,9 +137,9 @@ BOOST_AUTO_TEST_CASE(base58_keys_valid_parse)
         bool isPrivkey = find_value(metadata, "isPrivkey").get_bool();
         bool isTestnet = find_value(metadata, "isTestnet").get_bool();
         if (isTestnet)
-            netman.SetParams("TESTNET0-TEMPORARY");
+            pnetMan->SetParams("TESTNET0-TEMPORARY");
         else
-            netman.SetParams("LEGACY");
+            pnetMan->SetParams("LEGACY");
         if (isPrivkey)
         {
             bool isCompressed = find_value(metadata, "isCompressed").get_bool();
@@ -198,9 +197,9 @@ BOOST_AUTO_TEST_CASE(base58_keys_valid_gen)
         bool isPrivkey = find_value(metadata, "isPrivkey").get_bool();
         bool isTestnet = find_value(metadata, "isTestnet").get_bool();
         if (isTestnet)
-            netman.SetParams("TESTNET0-TEMPORARY");
+            pnetMan->SetParams("TESTNET0-TEMPORARY");
         else
-            netman.SetParams("LEGACY");
+            pnetMan->SetParams("LEGACY");
         if (isPrivkey)
         {
             bool isCompressed = find_value(metadata, "isCompressed").get_bool();
@@ -243,7 +242,7 @@ BOOST_AUTO_TEST_CASE(base58_keys_valid_gen)
     CTxDestination nodest = CNoDestination();
     BOOST_CHECK(!dummyAddr.Set(nodest));
 
-    netman.SetParams("LEGACY");
+    pnetMan->SetParams("LEGACY");
 }
 
 // Goal: check that base58 parsing code is robust against a variety of corrupted data

@@ -20,20 +20,20 @@
 
 #include "chain/tx.h"
 
-#include "crypto/hash.h"
-#include "tinyformat.h"
-#include "util/utilstrencodings.h"
-#include "txdb.h"
-#include "timedata.h"
-#include "networks/networktemplate.h"
-#include "chain/chain.h"
-#include "main.h"
 #include "args.h"
+#include "chain/chain.h"
 #include "consensus/consensus.h"
-#include "wallet/wallet.h"
-#include "networks/netman.h"
+#include "crypto/hash.h"
 #include "init.h"
+#include "main.h"
+#include "networks/netman.h"
+#include "networks/networktemplate.h"
+#include "timedata.h"
+#include "tinyformat.h"
+#include "txdb.h"
 #include "txmempool.h"
+#include "util/utilstrencodings.h"
+#include "wallet/wallet.h"
 
 
 struct serializeTx
@@ -47,21 +47,18 @@ struct serializeTx
     ADD_SERIALIZE_METHODS
 
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action) {
-        READWRITE(*const_cast<int32_t*>(&this->nVersion));
+    inline void SerializationOp(Stream &s, Operation ser_action)
+    {
+        READWRITE(*const_cast<int32_t *>(&this->nVersion));
         nVersion = this->nVersion;
-        READWRITE(*const_cast<uint32_t*>(&this->nTime));
-        READWRITE(*const_cast<std::vector<CTxIn>*>(&vin));
-        READWRITE(*const_cast<std::vector<CTxOut>*>(&vout));
-        READWRITE(*const_cast<uint32_t*>(&nLockTime));
+        READWRITE(*const_cast<uint32_t *>(&this->nTime));
+        READWRITE(*const_cast<std::vector<CTxIn> *>(&vin));
+        READWRITE(*const_cast<std::vector<CTxOut> *>(&vout));
+        READWRITE(*const_cast<uint32_t *>(&nLockTime));
     }
 };
 
-std::string COutPoint::ToString() const
-{
-    return strprintf("COutPoint(%s, %u)", hash.ToString().substr(0,10), n);
-}
-
+std::string COutPoint::ToString() const { return strprintf("COutPoint(%s, %u)", hash.ToString().substr(0, 10), n); }
 CTxIn::CTxIn(COutPoint prevoutIn, CScript scriptSigIn, uint32_t nSequenceIn)
 {
     prevout = prevoutIn;
@@ -91,25 +88,22 @@ std::string CTxIn::ToString() const
     return str;
 }
 
-CTxOut::CTxOut(const CAmount& nValueIn, CScript scriptPubKeyIn)
+CTxOut::CTxOut(const CAmount &nValueIn, CScript scriptPubKeyIn)
 {
     nValue = nValueIn;
     scriptPubKey = scriptPubKeyIn;
 }
 
-uint256 CTxOut::GetHash() const
-{
-    return SerializeHash(*this);
-}
-
+uint256 CTxOut::GetHash() const { return SerializeHash(*this); }
 std::string CTxOut::ToString() const
 {
-    return strprintf("CTxOut(nValue=%d.%08d, scriptPubKey=%s)", nValue / COIN, nValue % COIN, HexStr(scriptPubKey).substr(0, 30));
+    return strprintf(
+        "CTxOut(nValue=%d.%08d, scriptPubKey=%s)", nValue / COIN, nValue % COIN, HexStr(scriptPubKey).substr(0, 30));
 }
 
 uint256 CTransaction::GetHash() const
 {
-    if(this->nVersion == 1)
+    if (this->nVersion == 1)
     {
         serializeTx txtohash;
         txtohash.nVersion = this->nVersion;
@@ -124,7 +118,7 @@ uint256 CTransaction::GetHash() const
 
 void CTransaction::UpdateHash() const
 {
-    if(this->nVersion == 1)
+    if (this->nVersion == 1)
     {
         serializeTx txtohash;
         txtohash.nVersion = this->nVersion;
@@ -132,30 +126,37 @@ void CTransaction::UpdateHash() const
         txtohash.vin = this->vin;
         txtohash.vout = this->vout;
         txtohash.nLockTime = this->nLockTime;
-        *const_cast<uint256*>(&hash) = SerializeHash(txtohash);
+        *const_cast<uint256 *>(&hash) = SerializeHash(txtohash);
     }
     else
     {
-        *const_cast<uint256*>(&hash) = SerializeHash(*this);
+        *const_cast<uint256 *>(&hash) = SerializeHash(*this);
     }
 }
 
-CTransaction::CTransaction() : nVersion(CTransaction::CURRENT_VERSION), nTime(GetAdjustedTime()), vin(), vout(), nLockTime(0), serviceReferenceHash() {
+CTransaction::CTransaction()
+    : nVersion(CTransaction::CURRENT_VERSION), nTime(GetAdjustedTime()), vin(), vout(), nLockTime(0),
+      serviceReferenceHash()
+{
     serviceReferenceHash.SetNull();
 }
 
-CTransaction::CTransaction(const CTransaction &tx) : nVersion(tx.nVersion), nTime(tx.nTime), vin(tx.vin), vout(tx.vout), nLockTime(tx.nLockTime), serviceReferenceHash(tx.serviceReferenceHash) {
+CTransaction::CTransaction(const CTransaction &tx)
+    : nVersion(tx.nVersion), nTime(tx.nTime), vin(tx.vin), vout(tx.vout), nLockTime(tx.nLockTime),
+      serviceReferenceHash(tx.serviceReferenceHash)
+{
     UpdateHash();
 }
 
-CTransaction& CTransaction::operator=(const CTransaction &tx) {
-    *const_cast<int*>(&nVersion) = tx.nVersion;
-    *const_cast<unsigned int*>(&nTime) = tx.nTime;
-    *const_cast<std::vector<CTxIn>*>(&vin) = tx.vin;
-    *const_cast<std::vector<CTxOut>*>(&vout) = tx.vout;
-    *const_cast<unsigned int*>(&nLockTime) = tx.nLockTime;
-    *const_cast<uint256*>(&hash) = tx.hash;
-    *const_cast<uint256*>(&serviceReferenceHash) = tx.serviceReferenceHash;
+CTransaction &CTransaction::operator=(const CTransaction &tx)
+{
+    *const_cast<int *>(&nVersion) = tx.nVersion;
+    *const_cast<unsigned int *>(&nTime) = tx.nTime;
+    *const_cast<std::vector<CTxIn> *>(&vin) = tx.vin;
+    *const_cast<std::vector<CTxOut> *>(&vout) = tx.vout;
+    *const_cast<unsigned int *>(&nLockTime) = tx.nLockTime;
+    *const_cast<uint256 *>(&hash) = tx.hash;
+    *const_cast<uint256 *>(&serviceReferenceHash) = tx.serviceReferenceHash;
 
     return *this;
 }
@@ -175,7 +176,8 @@ CAmount CTransaction::GetValueOut() const
 double CTransaction::ComputePriority(double dPriorityInputs, unsigned int nTxSize) const
 {
     nTxSize = CalculateModifiedSize(nTxSize);
-    if (nTxSize == 0) return 0.0;
+    if (nTxSize == 0)
+        return 0.0;
 
     return dPriorityInputs / nTxSize;
 }
@@ -201,13 +203,9 @@ unsigned int CTransaction::CalculateModifiedSize(unsigned int nTxSize) const
 std::string CTransaction::ToString() const
 {
     std::string str;
-    str += strprintf("CTransaction(hash=%s, ver=%d, nTime=%u, vin.size=%u, vout.size=%u, nLockTime=%u, serviceReferenceHash=%s)\n",
-        GetHash().ToString().substr(0,10),
-        nVersion,
-        nTime,
-        vin.size(),
-        vout.size(),
-        nLockTime,
+    str += strprintf(
+        "CTransaction(hash=%s, ver=%d, nTime=%u, vin.size=%u, vout.size=%u, nLockTime=%u, serviceReferenceHash=%s)\n",
+        GetHash().ToString().substr(0, 10), nVersion, nTime, vin.size(), vout.size(), nLockTime,
         serviceReferenceHash.GetHex().c_str());
     for (unsigned int i = 0; i < vin.size(); i++)
         str += "    " + vin[i].ToString() + "\n";
@@ -227,7 +225,7 @@ bool CTransaction::IsFinal(int nBlockHeight, int64_t nBlockTime) const
         nBlockTime = GetAdjustedTime();
     if ((int64_t)nLockTime < ((int64_t)nLockTime < LOCKTIME_THRESHOLD ? (int64_t)nBlockHeight : nBlockTime))
         return true;
-    for(const CTxIn& txin : vin)
+    for (const CTxIn &txin : vin)
         if (!txin.IsFinal())
             return false;
     return true;
@@ -244,17 +242,17 @@ bool CTransaction::IsFinal(int nBlockHeight, int64_t nBlockTime) const
 
 uint64_t CTransaction::GetCoinAge(uint64_t nCoinAge, bool byValue) const
 {
-    arith_uint256 bnCentSecond = 0;  // coin age in the unit of cent-seconds
+    arith_uint256 bnCentSecond = 0; // coin age in the unit of cent-seconds
     nCoinAge = 0;
 
     if (IsCoinBase())
         return true;
 
-    for(const CTxIn& txin: vin)
+    for (const CTxIn &txin : vin)
     {
         CDiskTxPos txindex;
         if (!pnetMan->getChainActive()->pblocktree->ReadTxIndex(txin.prevout.hash, txindex))
-            continue;  // previous transaction not in main chain
+            continue; // previous transaction not in main chain
 
         // Read block header
         CBlock block;
@@ -266,19 +264,21 @@ uint64_t CTransaction::GetCoinAge(uint64_t nCoinAge, bool byValue) const
 
         CTransaction txPrev;
         uint256 blockHashOfTx;
-        if (!GetTransaction(txin.prevout.hash, txPrev, pnetMan->getActivePaymentNetwork()->GetConsensus(), blockHashOfTx))
+        if (!GetTransaction(
+                txin.prevout.hash, txPrev, pnetMan->getActivePaymentNetwork()->GetConsensus(), blockHashOfTx))
         {
             return false;
         }
 
         if (nTime < txPrev.nTime)
-            return false;  // Transaction timestamp violation
+            return false; // Transaction timestamp violation
 
         int64_t nValueIn = txPrev.vout[txin.prevout.n].nValue;
-        bnCentSecond += arith_uint256(nValueIn) * (nTime-txPrev.nTime) / CENT;
+        bnCentSecond += arith_uint256(nValueIn) * (nTime - txPrev.nTime) / CENT;
 
         if (fDebug && gArgs.GetBoolArg("-printcoinage", false))
-            LogPrintf("coin age nValueIn=%d nTimeDiff=%d bnCentSecond=%s\n", nValueIn, nTime - txPrev.nTime, bnCentSecond.ToString().c_str());
+            LogPrintf("coin age nValueIn=%d nTimeDiff=%d bnCentSecond=%s\n", nValueIn, nTime - txPrev.nTime,
+                bnCentSecond.ToString().c_str());
     }
 
     arith_uint256 bnCoinDay = bnCentSecond * CENT / COIN / (24 * 60 * 60);
@@ -289,19 +289,19 @@ uint64_t CTransaction::GetCoinAge(uint64_t nCoinAge, bool byValue) const
 }
 
 
-bool CTransaction::GetCoinAge(uint64_t& nCoinAge) const
+bool CTransaction::GetCoinAge(uint64_t &nCoinAge) const
 {
-    arith_uint256 bnCentSecond = 0;  // coin age in the unit of cent-seconds
+    arith_uint256 bnCentSecond = 0; // coin age in the unit of cent-seconds
     nCoinAge = 0;
 
     if (IsCoinBase())
         return true;
 
-    for(const CTxIn& txin: vin)
+    for (const CTxIn &txin : vin)
     {
         CDiskTxPos txindex;
         if (!pnetMan->getChainActive()->pblocktree->ReadTxIndex(txin.prevout.hash, txindex))
-            continue;  // previous transaction not in main chain
+            continue; // previous transaction not in main chain
 
         // Read block header
         CBlock block;
@@ -313,19 +313,21 @@ bool CTransaction::GetCoinAge(uint64_t& nCoinAge) const
 
         CTransaction txPrev;
         uint256 blockHashOfTx;
-        if (!GetTransaction(txin.prevout.hash, txPrev, pnetMan->getActivePaymentNetwork()->GetConsensus(), blockHashOfTx))
+        if (!GetTransaction(
+                txin.prevout.hash, txPrev, pnetMan->getActivePaymentNetwork()->GetConsensus(), blockHashOfTx))
         {
             return false;
         }
 
         if (nTime < txPrev.nTime)
-            return false;  // Transaction timestamp violation
+            return false; // Transaction timestamp violation
 
         int64_t nValueIn = txPrev.vout[txin.prevout.n].nValue;
-        bnCentSecond += arith_uint256(nValueIn) * (nTime-txPrev.nTime) / CENT;
+        bnCentSecond += arith_uint256(nValueIn) * (nTime - txPrev.nTime) / CENT;
 
         if (fDebug && gArgs.GetBoolArg("-printcoinage", false))
-            LogPrintf("coin age nValueIn=%d nTimeDiff=%d bnCentSecond=%s\n", nValueIn, nTime - txPrev.nTime, bnCentSecond.ToString().c_str());
+            LogPrintf("coin age nValueIn=%d nTimeDiff=%d bnCentSecond=%s\n", nValueIn, nTime - txPrev.nTime,
+                bnCentSecond.ToString().c_str());
     }
 
     arith_uint256 bnCoinDay = bnCentSecond * CENT / COIN / (24 * 60 * 60);
@@ -337,7 +339,11 @@ bool CTransaction::GetCoinAge(uint64_t& nCoinAge) const
 
 
 /** Return transaction in tx, and if it was found inside a block, its hash is placed in hashBlock */
-bool GetTransaction(const uint256 &hash, CTransaction &txOut, const Consensus::Params& consensusParams, uint256 &hashBlock, bool fAllowSlow)
+bool GetTransaction(const uint256 &hash,
+    CTransaction &txOut,
+    const Consensus::Params &consensusParams,
+    uint256 &hashBlock,
+    bool fAllowSlow)
 {
     CBlockIndex *pindexSlow = NULL;
 
@@ -349,16 +355,20 @@ bool GetTransaction(const uint256 &hash, CTransaction &txOut, const Consensus::P
     }
 
     CDiskTxPos postx;
-    if (pnetMan->getChainActive()->pblocktree->ReadTxIndex(hash, postx)) {
+    if (pnetMan->getChainActive()->pblocktree->ReadTxIndex(hash, postx))
+    {
         CAutoFile file(OpenBlockFile(postx, true), SER_DISK, CLIENT_VERSION);
         if (file.IsNull())
             return error("%s: OpenBlockFile failed", __func__);
         CBlockHeader header;
-        try {
+        try
+        {
             file >> header;
             fseek(file.Get(), postx.nTxOffset, SEEK_CUR);
             file >> txOut;
-        } catch (const std::exception& e) {
+        }
+        catch (const std::exception &e)
+        {
             return error("%s: Deserialize or I/O error - %s", __func__, e.what());
         }
         hashBlock = header.GetHash();
@@ -369,17 +379,20 @@ bool GetTransaction(const uint256 &hash, CTransaction &txOut, const Consensus::P
 
     if (fAllowSlow) // use coin database to locate block that contains transaction, and scan it
     {
-            const Coin &coin = AccessByTxid(*(pnetMan->getChainActive()->pcoinsTip), hash);
-            if (!coin.IsSpent())
-            {
-                pindexSlow = pnetMan->getChainActive()->chainActive[coin.nHeight];
-            }
+        const Coin &coin = AccessByTxid(*(pnetMan->getChainActive()->pcoinsTip), hash);
+        if (!coin.IsSpent())
+        {
+            pindexSlow = pnetMan->getChainActive()->chainActive[coin.nHeight];
+        }
     }
 
-    if (pindexSlow) {
+    if (pindexSlow)
+    {
         CBlock block;
-        if (ReadBlockFromDisk(block, pindexSlow, consensusParams)) {
-            for (auto const& tx: block.vtx) {
+        if (ReadBlockFromDisk(block, pindexSlow, consensusParams))
+        {
+            for (auto const &tx : block.vtx)
+            {
                 if (tx->GetHash() == hash)
                 {
                     txOut = *tx;

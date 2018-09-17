@@ -3,7 +3,7 @@
 # Copyright (c) 2015-2017 The Bitcoin Unlimited developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
-
+import test_framework.loginit
 #
 # Test proper accounting with an equivalent malleability clone
 #
@@ -173,4 +173,4 @@ def Test():
         "debug": ["net", "blk", "thin", "mempool", "req", "bench", "evict"],  # "lck"
         "blockprioritysize": 2000000  # we don't want any transactions rejected due to insufficient fees...
     }
-    t.main(["--tmpdir=/ramdisk/test","--nocleanup","--noshutdown"], bitcoinConf, None)  # , "--tracerpc"])
+    t.main(["--tmppfx=/ramdisk/test","--nocleanup","--noshutdown"], bitcoinConf, None)  # , "--tracerpc"])

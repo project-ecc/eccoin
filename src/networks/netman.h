@@ -37,12 +37,13 @@ private:
 
     CNetwork* pnetLegacy;
     CNetwork* pnetPayment;
-
     CNetwork* pnetTestnet0;
+    CNetwork* pnetRegTest;
 
     CNetworkTemplate* legacyTemplate;
     CNetworkTemplate* paymentTemplate;
-    CNetworkTemplate* netManTestnetTemplate;
+    CNetworkTemplate* testnet0Template;
+    CNetworkTemplate* regTestTemplate;
 
 public:
     CNetworkManager()
@@ -53,27 +54,35 @@ public:
 
     void setNull()
     {
-        legacyTemplate = NULL;
-        paymentTemplate = NULL;
-        netManTestnetTemplate = NULL;
-        pnetLegacy = NULL;
-        pnetPayment = NULL;
-        pnetTestnet0 = NULL;
-        activePaymentNetwork = NULL;
+        legacyTemplate = nullptr;
+        paymentTemplate = nullptr;
+        testnet0Template = nullptr;
+        regTestTemplate = nullptr;
+
+
+        pnetLegacy = nullptr;
+        pnetPayment = nullptr;
+        pnetTestnet0 = nullptr;
+        pnetRegTest = nullptr;
+
+        activePaymentNetwork = nullptr;
     }
 
     void initialize()
     {
         legacyTemplate = new CNetworkTemplate();
         ConstructLegacyNetworkTemplate();
-        netManTestnetTemplate = new CNetworkTemplate();
+        testnet0Template = new CNetworkTemplate();
         ConstructTetnet0Template();
+        regTestTemplate = new CNetworkTemplate();
+        ConstructRegTestTemplate();
         //only run construct networks after all templates have been made
         ConstructNetworks();
     }
 
     void ConstructLegacyNetworkTemplate();
     void ConstructTetnet0Template();
+    void ConstructRegTestTemplate();
     void ConstructNetworks();
 
     CNetwork* getActivePaymentNetwork()
@@ -91,9 +100,13 @@ public:
         {
             activePaymentNetwork = pnetLegacy;
         }
-        else if (network == "TESTNET0-TEMPORARY")
+        else if (network == "TESTNET0")
         {
             activePaymentNetwork = pnetTestnet0;
+        }
+        else if (network == "REGTEST")
+        {
+            activePaymentNetwork = pnetRegTest;
         }
         else
         {
@@ -116,4 +129,3 @@ std::string ChainNameFromCommandLine();
 void CheckParams(const std::string& network);
 
 #endif // BITCOIN_CHAINPARAMSBASE_H
-

@@ -15,9 +15,7 @@
 #include "test/test_bitcoin.h"
 #include "uint256.h"
 
-#ifdef ENABLE_WALLET
 #include "wallet/wallet.h" // Freeze wallet test
-#endif
 
 #include <boost/foreach.hpp>
 #include <boost/test/unit_test.hpp>
@@ -106,16 +104,14 @@ BOOST_AUTO_TEST_CASE(multisig_verify)
     {
         keys.assign(1, key[i]);
         s = sign_multisig(a_and_b, keys, txTo[0], 0);
-        BOOST_CHECK_MESSAGE(
-            !VerifyScript(s, a_and_b, flags, TransactionSignatureChecker(&txTo[0], 0, amount), &err),
+        BOOST_CHECK_MESSAGE(!VerifyScript(s, a_and_b, flags, TransactionSignatureChecker(&txTo[0], 0, amount), &err),
             strprintf("a&b 1: %d", i));
         BOOST_CHECK_MESSAGE(err == SCRIPT_ERR_INVALID_STACK_OPERATION, ScriptErrorString(err));
 
         keys.assign(1, key[1]);
         keys.push_back(key[i]);
         s = sign_multisig(a_and_b, keys, txTo[0], 0);
-        BOOST_CHECK_MESSAGE(
-            !VerifyScript(s, a_and_b, flags, TransactionSignatureChecker(&txTo[0], 0, amount), &err),
+        BOOST_CHECK_MESSAGE(!VerifyScript(s, a_and_b, flags, TransactionSignatureChecker(&txTo[0], 0, amount), &err),
             strprintf("a&b 2: %d", i));
         BOOST_CHECK_MESSAGE(err == SCRIPT_ERR_EVAL_FALSE, ScriptErrorString(err));
     }
@@ -127,15 +123,13 @@ BOOST_AUTO_TEST_CASE(multisig_verify)
         s = sign_multisig(a_or_b, keys, txTo[1], 0);
         if (i == 0 || i == 1)
         {
-            BOOST_CHECK_MESSAGE(
-                VerifyScript(s, a_or_b, flags, TransactionSignatureChecker(&txTo[1], 0, amount), &err),
+            BOOST_CHECK_MESSAGE(VerifyScript(s, a_or_b, flags, TransactionSignatureChecker(&txTo[1], 0, amount), &err),
                 strprintf("a|b: %d", i));
             BOOST_CHECK_MESSAGE(err == SCRIPT_ERR_OK, ScriptErrorString(err));
         }
         else
         {
-            BOOST_CHECK_MESSAGE(
-                !VerifyScript(s, a_or_b, flags, TransactionSignatureChecker(&txTo[1], 0, amount), &err),
+            BOOST_CHECK_MESSAGE(!VerifyScript(s, a_or_b, flags, TransactionSignatureChecker(&txTo[1], 0, amount), &err),
                 strprintf("a|b: %d", i));
             BOOST_CHECK_MESSAGE(err == SCRIPT_ERR_EVAL_FALSE, ScriptErrorString(err));
         }
@@ -244,11 +238,9 @@ BOOST_AUTO_TEST_CASE(multisig_Solver1)
         CTxDestination addr;
         BOOST_CHECK(ExtractDestination(s, addr));
         BOOST_CHECK(addr == keyaddr[0]);
-#ifdef ENABLE_WALLET
         CBlockIndex *nullBestBlock = nullptr;
         BOOST_CHECK(IsMine(keystore, s, nullBestBlock));
         BOOST_CHECK(!IsMine(emptykeystore, s, nullBestBlock));
-#endif
     }
     {
         vector<valtype> solutions;
@@ -260,11 +252,9 @@ BOOST_AUTO_TEST_CASE(multisig_Solver1)
         CTxDestination addr;
         BOOST_CHECK(ExtractDestination(s, addr));
         BOOST_CHECK(addr == keyaddr[0]);
-#ifdef ENABLE_WALLET
         CBlockIndex *nullBestBlock = nullptr;
         BOOST_CHECK(IsMine(keystore, s, nullBestBlock));
         BOOST_CHECK(!IsMine(emptykeystore, s, nullBestBlock));
-#endif
     }
     {
         vector<valtype> solutions;
@@ -275,12 +265,10 @@ BOOST_AUTO_TEST_CASE(multisig_Solver1)
         BOOST_CHECK_EQUAL(solutions.size(), 4U);
         CTxDestination addr;
         BOOST_CHECK(!ExtractDestination(s, addr));
-#ifdef ENABLE_WALLET
         CBlockIndex *nullBestBlock = nullptr;
         BOOST_CHECK(IsMine(keystore, s, nullBestBlock));
         BOOST_CHECK(!IsMine(emptykeystore, s, nullBestBlock));
         BOOST_CHECK(!IsMine(partialkeystore, s, nullBestBlock));
-#endif
     }
     {
         vector<valtype> solutions;
@@ -295,12 +283,10 @@ BOOST_AUTO_TEST_CASE(multisig_Solver1)
         BOOST_CHECK(addrs[0] == keyaddr[0]);
         BOOST_CHECK(addrs[1] == keyaddr[1]);
         BOOST_CHECK(nRequired == 1);
-#ifdef ENABLE_WALLET
         CBlockIndex *nullBestBlock = nullptr;
         BOOST_CHECK(IsMine(keystore, s, nullBestBlock));
         BOOST_CHECK(!IsMine(emptykeystore, s, nullBestBlock));
         BOOST_CHECK(!IsMine(partialkeystore, s, nullBestBlock));
-#endif
     }
     {
         vector<valtype> solutions;
@@ -356,7 +342,6 @@ BOOST_AUTO_TEST_CASE(multisig_Sign)
     }
 }
 
-#ifdef ENABLE_WALLET
 BOOST_AUTO_TEST_CASE(cltv_freeze)
 {
     CKey key[4];
@@ -431,5 +416,4 @@ BOOST_AUTO_TEST_CASE(opreturn_send)
     BOOST_CHECK(Solver(s, whichType, solutions));
     BOOST_CHECK(whichType == TX_LABELPUBLIC);
 }
-#endif
 BOOST_AUTO_TEST_SUITE_END()

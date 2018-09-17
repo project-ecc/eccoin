@@ -62,41 +62,27 @@ public:
      * 9 bits. */
     static const int SEQUENCE_LOCKTIME_GRANULARITY = 9;
 
-    CTxIn()
-    {
-        nSequence = SEQUENCE_FINAL;
-    }
-
-    explicit CTxIn(COutPoint prevoutIn, CScript scriptSigIn=CScript(), uint32_t nSequenceIn=SEQUENCE_FINAL);
-    CTxIn(uint256 hashPrevTx, uint32_t nOut, CScript scriptSigIn=CScript(), uint32_t nSequenceIn=SEQUENCE_FINAL);
+    CTxIn() { nSequence = SEQUENCE_FINAL; }
+    explicit CTxIn(COutPoint prevoutIn, CScript scriptSigIn = CScript(), uint32_t nSequenceIn = SEQUENCE_FINAL);
+    CTxIn(uint256 hashPrevTx, uint32_t nOut, CScript scriptSigIn = CScript(), uint32_t nSequenceIn = SEQUENCE_FINAL);
 
     ADD_SERIALIZE_METHODS
 
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action) {
+    inline void SerializationOp(Stream &s, Operation ser_action)
+    {
         READWRITE(prevout);
-        READWRITE(*(CScriptBase*)(&scriptSig));
+        READWRITE(*(CScriptBase *)(&scriptSig));
         READWRITE(nSequence);
     }
 
-    friend bool operator==(const CTxIn& a, const CTxIn& b)
+    friend bool operator==(const CTxIn &a, const CTxIn &b)
     {
-        return (a.prevout   == b.prevout &&
-                a.scriptSig == b.scriptSig &&
-                a.nSequence == b.nSequence);
+        return (a.prevout == b.prevout && a.scriptSig == b.scriptSig && a.nSequence == b.nSequence);
     }
 
-    friend bool operator!=(const CTxIn& a, const CTxIn& b)
-    {
-        return !(a == b);
-    }
-
-    bool IsFinal() const
-    {
-        return (nSequence == std::numeric_limits<unsigned int>::max());
-    }
-
-
+    friend bool operator!=(const CTxIn &a, const CTxIn &b) { return !(a == b); }
+    bool IsFinal() const { return (nSequence == std::numeric_limits<unsigned int>::max()); }
     std::string ToString() const;
 };
 

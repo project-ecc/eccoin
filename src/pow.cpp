@@ -20,16 +20,16 @@
 
 #include "pow.h"
 
-#include "networks/netman.h"
 #include "arith_uint256.h"
 #include "chain/chain.h"
+#include "main.h"
+#include "networks/netman.h"
 #include "uint256.h"
 #include "util/util.h"
-#include "main.h"
 
-bool CheckProofOfWork(uint256 hash, unsigned int nBits, const Consensus::Params& params)
+bool CheckProofOfWork(uint256 hash, unsigned int nBits, const Consensus::Params &params)
 {
-    if(hash == params.hashGenesisBlock)
+    if (hash == params.hashGenesisBlock)
         return true;
 
     bool fNegative;
@@ -45,14 +45,14 @@ bool CheckProofOfWork(uint256 hash, unsigned int nBits, const Consensus::Params&
     // Check proof of work matches claimed amount
     if (UintToArith256(hash) > bnTarget)
     {
-        LogPrintf("%s > %s and it should not be \n",hash.ToString().c_str(), bnTarget.ToString().c_str());
+        LogPrintf("%s > %s and it should not be \n", hash.ToString().c_str(), bnTarget.ToString().c_str());
         return error("CheckProofOfWork(): hash doesn't match nBits");
     }
 
     return true;
 }
 
-arith_uint256 GetBlockProof(const CBlockIndex& index)
+arith_uint256 GetBlockProof(const CBlockIndex &index)
 {
     arith_uint256 bnTarget;
     bool fNegative;
@@ -67,23 +67,30 @@ arith_uint256 GetBlockProof(const CBlockIndex& index)
     return (~bnTarget / (bnTarget + 1)) + 1;
 }
 
-int64_t GetBlockProofEquivalentTime(const CBlockIndex& to, const CBlockIndex& from, const CBlockIndex& tip, const Consensus::Params& params)
+int64_t GetBlockProofEquivalentTime(const CBlockIndex &to,
+    const CBlockIndex &from,
+    const CBlockIndex &tip,
+    const Consensus::Params &params)
 {
     arith_uint256 r;
     int sign = 1;
-    if (to.nChainWork > from.nChainWork) {
+    if (to.nChainWork > from.nChainWork)
+    {
         r = to.nChainWork - from.nChainWork;
-    } else {
+    }
+    else
+    {
         r = from.nChainWork - to.nChainWork;
         sign = -1;
     }
     int64_t targetSpacing = params.nTargetSpacing;
-    if(tip.GetMedianTimePast() > SERVICE_UPGRADE_HARDFORK)
+    if (tip.GetMedianTimePast() > SERVICE_UPGRADE_HARDFORK)
     {
         targetSpacing = 150;
     }
     r = r * arith_uint256(targetSpacing) / GetBlockProof(tip);
-    if (r.bits() > 63) {
+    if (r.bits() > 63)
+    {
         return sign * std::numeric_limits<int64_t>::max();
     }
     return sign * r.GetLow64();

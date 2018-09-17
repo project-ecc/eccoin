@@ -18,29 +18,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef NOVACOIN_MINER_H
-#define NOVACOIN_MINER_H
-
-#include "main.h"
+#include "chain/chain.h"
+#include "consensus/params.h"
 #include "wallet/wallet.h"
 
-extern int64_t nLastCoinStakeSearchInterval;
+#include <boost/thread.hpp>
+
+#ifndef ECCOIN_BLOCKGENERATION_H
+#define ECCOIN_BLOCKGENERATION_H
 
 static const bool DEFAULT_GENERATE = false;
 static const bool DEFAULT_PRINTPRIORITY = false;
-
-
-/** Base sha256 mining transform */
-void SHA256Transform(void* pstate, void* pinput, const void* pinit);
-
-void IncrementExtraNonce(CBlock* pblock, CBlockIndex* pindexPrev, unsigned int& nExtraNonce);
-void FormatHashBuffers(CBlock* pblock, char* pmidstate, char* pdata, char* phash1);
-bool CheckWork(const std::shared_ptr<const CBlock> pblock, CWallet& wallet, CReserveKey& reservekey);
-
-/** Check mined proof-of-stake block */
-bool CheckStake(CBlock* pblock, CWallet& wallet);
-
-void ThreadMiner(void* parg, bool shutdownOnly=false);
 
 struct CBlockTemplate
 {
@@ -49,8 +37,14 @@ struct CBlockTemplate
     std::vector<int64_t> vTxSigOps;
 };
 
-std::unique_ptr<CBlockTemplate> CreateNewBlock(CWallet* pwallet, bool fProofOfStake);
+void IncrementExtraNonce(CBlock *pblock, CBlockIndex *pindexPrev, unsigned int &nExtraNonce);
 
-extern boost::thread_group* minerThreads;
+int64_t UpdateTime(CBlockHeader *pblock, const Consensus::Params &consensusParams, const CBlockIndex *pindexPrev);
 
-#endif // NOVACOIN_MINER_H
+std::unique_ptr<CBlockTemplate> CreateNewBlock(CWallet *pwallet, bool fProofOfStake);
+
+void ThreadMiner(void *parg, bool shutdownOnly = false, bool fProofOfStake = false);
+
+extern boost::thread_group *minerThreads;
+
+#endif // ECCOIN_BLOCKGENERATION_H

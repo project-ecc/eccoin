@@ -66,7 +66,7 @@ private:
     unsigned int nTweak;
     unsigned char nFlags;
 
-    unsigned int Hash(unsigned int nHashNum, const std::vector<unsigned char>& vDataToHash) const;
+    unsigned int Hash(unsigned int nHashNum, const std::vector<unsigned char> &vDataToHash) const;
 
     // Private constructor for CRollingBloomFilter, no restrictions on size
     CBloomFilter(unsigned int nElements, double nFPRate, unsigned int nTweak);
@@ -84,24 +84,24 @@ public:
      */
     CBloomFilter(unsigned int nElements, double nFPRate, unsigned int nTweak, unsigned char nFlagsIn);
     CBloomFilter() : isFull(true), isEmpty(false), nHashFuncs(0), nTweak(0), nFlags(0) {}
-
     ADD_SERIALIZE_METHODS
 
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action) {
+    inline void SerializationOp(Stream &s, Operation ser_action)
+    {
         READWRITE(vData);
         READWRITE(nHashFuncs);
         READWRITE(nTweak);
         READWRITE(nFlags);
     }
 
-    void insert(const std::vector<unsigned char>& vKey);
-    void insert(const COutPoint& outpoint);
-    void insert(const uint256& hash);
+    void insert(const std::vector<unsigned char> &vKey);
+    void insert(const COutPoint &outpoint);
+    void insert(const uint256 &hash);
 
-    bool contains(const std::vector<unsigned char>& vKey) const;
-    bool contains(const COutPoint& outpoint) const;
-    bool contains(const uint256& hash) const;
+    bool contains(const std::vector<unsigned char> &vKey) const;
+    bool contains(const COutPoint &outpoint) const;
+    bool contains(const uint256 &hash) const;
 
     void clear();
     void reset(unsigned int nNewTweak);
@@ -111,7 +111,7 @@ public:
     bool IsWithinSizeConstraints() const;
 
     //! Also adds any outputs which match the filter to the filter (to match their spending txes)
-    bool IsRelevantAndUpdate(const CTransaction& tx);
+    bool IsRelevantAndUpdate(const CTransaction &tx);
 
     //! Checks for empty and full filters to avoid wasting cpu
     void UpdateEmptyFull();
@@ -141,10 +141,10 @@ public:
     // constructed before the randomizer is properly initialized.
     CRollingBloomFilter(unsigned int nElements, double nFPRate);
 
-    void insert(const std::vector<unsigned char>& vKey);
-    void insert(const uint256& hash);
-    bool contains(const std::vector<unsigned char>& vKey) const;
-    bool contains(const uint256& hash) const;
+    void insert(const std::vector<unsigned char> &vKey);
+    void insert(const uint256 &hash);
+    bool contains(const std::vector<unsigned char> &vKey) const;
+    bool contains(const uint256 &hash) const;
 
     void reset();
 
