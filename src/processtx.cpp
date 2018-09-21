@@ -38,10 +38,12 @@ bool CheckTransaction(const CTransaction &tx, CValidationState &state)
 
     // Check for negative or overflow output values
     CAmount nValueOut = 0;
+    int32_t out = 0;
     for (auto const &txout : tx.vout)
     {
         if (txout.nValue < 0)
         {
+            printf("failing on vout %i \n", out);
             return state.DoS(100, false, REJECT_INVALID, "bad-txns-vout-negative");
         }
         if (txout.nValue > MAX_MONEY)
@@ -49,6 +51,7 @@ bool CheckTransaction(const CTransaction &tx, CValidationState &state)
         nValueOut += txout.nValue;
         if (!MoneyRange(nValueOut))
             return state.DoS(100, false, REJECT_INVALID, "bad-txns-txouttotal-toolarge");
+        out++;
     }
 
     // Check for duplicate inputs

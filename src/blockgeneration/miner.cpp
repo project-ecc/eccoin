@@ -108,10 +108,8 @@ void SHA256Transform(void *pstate, void *pinput, const void *pinit)
 }
 
 // CreateNewBlock:
-std::unique_ptr<CBlockTemplate> CreateNewPoWBlock(CWallet *pwallet)
+std::unique_ptr<CBlockTemplate> CreateNewPoWBlock(CWallet *pwallet, const CScript &scriptPubKeyIn)
 {
-    CReserveKey reservekey(pwallet);
-
     // Create new block
     std::unique_ptr<CBlockTemplate> pblocktemplate(new CBlockTemplate());
     if (!pblocktemplate.get())
@@ -126,8 +124,7 @@ std::unique_ptr<CBlockTemplate> CreateNewPoWBlock(CWallet *pwallet)
     txNew.vin[0].prevout.SetNull();
     txNew.vout.resize(1);
     CPubKey vchPubKey;
-    reservekey.GetReservedKey(vchPubKey);
-    txNew.vout[0].scriptPubKey << vchPubKey << OP_CHECKSIG;
+    txNew.vout[0].scriptPubKey = scriptPubKeyIn;
 
     // Add our coinbase tx as first transaction
     pblock->vtx.push_back(MakeTransactionRef(txNew));
@@ -382,7 +379,9 @@ void FormatHashBuffers(CBlock *pblock, char *pmidstate, char *pdata, char *phash
 }
 
 
-bool CheckWork(const std::shared_ptr<const CBlock> pblock, CWallet &wallet, CReserveKey &reservekey)
+bool CheckWork(const std::shared_ptr<const CBlock> pblock,
+    CWallet &wallet,
+    boost::shared_ptr<CReserveScript> coinbaseScript)
 {
     arith_uint256 hash = UintToArith256(pblock->GetHash());
     arith_uint256 hashTarget = arith_uint256(pblock->nBits);
@@ -402,7 +401,7 @@ bool CheckWork(const std::shared_ptr<const CBlock> pblock, CWallet &wallet, CRes
             return error("BMiner : generated block is stale");
 
         // Remove key from key pool
-        reservekey.KeepKey();
+        coinbaseScript->KeepScript();
 
         // Track how many getdata requests this block gets
         {
@@ -428,7 +427,18 @@ void EccMiner(CWallet *pwallet)
     // Make this thread recognisable as the mining thread
     RenameThread("ecc-miner");
     // Each thread has its own key and counter
-    CReserveKey reservekey(pwallet);
+
+    boost::shared_ptr<CReserveScript> coinbaseScript;
+    GetMainSignals().ScriptForMining(coinbaseScript);
+
+    // If the keypool is exhausted, no script is returned at all.  Catch this.
+    if (!coinbaseScript)
+        return;
+
+    // throw an error if no script was provided
+    if (coinbaseScript->reserveScript.empty())
+        return;
+
     unsigned int nExtraNonce = 0;
     while (true)
     {
@@ -452,7 +462,7 @@ void EccMiner(CWallet *pwallet)
         //
         unsigned int nTransactionsUpdatedLast = mempool.GetTransactionsUpdated();
         CBlockIndex *pindexPrev = pnetMan->getChainActive()->chainActive.Tip();
-        std::unique_ptr<CBlockTemplate> pblocktemplate(CreateNewPoWBlock(pwallet));
+        std::unique_ptr<CBlockTemplate> pblocktemplate(CreateNewPoWBlock(pwallet, coinbaseScript->reserveScript));
         if (!pblocktemplate.get())
         {
             LogPrintf(
@@ -505,7 +515,7 @@ void EccMiner(CWallet *pwallet)
                     }
                     SetThreadPriority(THREAD_PRIORITY_NORMAL);
                     const std::shared_ptr<const CBlock> spblock = std::make_shared<const CBlock>(*pblock);
-                    CheckWork(spblock, *pwalletMain, reservekey);
+                    CheckWork(spblock, *pwalletMain, coinbaseScript);
                     SetThreadPriority(THREAD_PRIORITY_LOWEST);
                     break;
                 }

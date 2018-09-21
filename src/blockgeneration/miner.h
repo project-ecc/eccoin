@@ -29,7 +29,7 @@
 extern double dHashesPerSec;
 extern int64_t nHPSTimerStart;
 
-std::unique_ptr<CBlockTemplate> CreateNewPoWBlock(CWallet *pwallet);
+std::unique_ptr<CBlockTemplate> CreateNewPoWBlock(CWallet *pwallet, const CScript &scriptPubKeyIn);
 
 void EccMiner(CWallet *pwallet);
 

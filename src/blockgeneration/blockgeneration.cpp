@@ -58,13 +58,13 @@ int64_t UpdateTime(CBlockHeader *pblock, const Consensus::Params &consensusParam
     return nNewTime - nOldTime;
 }
 
-std::unique_ptr<CBlockTemplate> CreateNewBlock(CWallet *pwallet, bool fProofOfStake)
+std::unique_ptr<CBlockTemplate> CreateNewBlock(CWallet *pwallet, const CScript &scriptPubKeyIn, bool fProofOfStake)
 {
     if (fProofOfStake)
     {
-        return CreateNewPoSBlock(pwallet);
+        return CreateNewPoSBlock(pwallet, scriptPubKeyIn);
     }
-    return CreateNewPoWBlock(pwallet);
+    return CreateNewPoWBlock(pwallet, scriptPubKeyIn);
 }
 
 boost::thread_group *minerThreads = nullptr;
