@@ -184,6 +184,7 @@ testScripts = [ RpcTest(t) for t in [
     # 'fundrawtransaction', ???
     # 'reindex', ???
     'httpbasics',
+    'mintingtest',
     'nodehandling',
     'proxy_test',
     #

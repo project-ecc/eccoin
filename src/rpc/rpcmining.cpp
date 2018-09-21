@@ -33,6 +33,7 @@
 #include "rpcserver.h"
 #include "txmempool.h"
 #include "util/util.h"
+#include "util/utilmoneystr.h"
 #include "args.h"
 #include "util/utilstrencodings.h"
 #include "validationinterface.h"
@@ -150,17 +151,17 @@ UniValue generateBlocks(boost::shared_ptr<CReserveScript> coinbaseScript,
     UniValue blockHashes(UniValue::VARR);
     while (nHeight < nHeightEnd)
     {
-        std::unique_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(pwalletMain, fProofOfStake));
+        std::unique_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(pwalletMain, coinbaseScript->reserveScript, fProofOfStake));
         if (!pblocktemplate.get())
             throw JSONRPCError(RPC_INTERNAL_ERROR, "Couldn't create new block");
         CBlock *pblock = &pblocktemplate->block;
+
         {
             // LOCK(cs_main);
             IncrementExtraNonce(pblock, pnetMan->getChainActive()->chainActive.Tip(), nExtraNonce);
         }
-        while (nMaxTries > 0 && pblock->nNonce < nInnerLoopCount &&
-               pblock->IsProofOfWork() &&
-               !CheckProofOfWork(pblock->GetHash(), pblock->nBits, pnetMan->getActivePaymentNetwork()->GetConsensus()))
+        while (pblock->IsProofOfWork() && nMaxTries > 0 && pblock->nNonce < nInnerLoopCount &&
+            !CheckProofOfWork(pblock->GetHash(), pblock->nBits, pnetMan->getActivePaymentNetwork()->GetConsensus()))
         {
             ++pblock->nNonce;
             --nMaxTries;
@@ -188,7 +189,15 @@ UniValue generateBlocks(boost::shared_ptr<CReserveScript> coinbaseScript,
 
         CValidationState state;
         const std::shared_ptr<const CBlock> spblock = std::make_shared<const CBlock>(*pblock);
-        if (!ProcessNewBlock(state, pnetMan->getActivePaymentNetwork(), NULL, spblock, true, NULL))
+        for(auto tx : pblock->vtx)
+        {
+            LogPrintf("transaction: %s \n", tx->GetHash().GetHex().c_str());
+            for(auto vout : tx->vout)
+            {
+                LogPrintf("generated %s\n", FormatMoney(vout.nValue).c_str());
+            }
+        }
+        if (!ProcessNewBlock(state, pnetMan->getActivePaymentNetwork(), nullptr, spblock, true, nullptr))
             throw JSONRPCError(RPC_INTERNAL_ERROR, "ProcessNewBlock, block not accepted");
         ++nHeight;
         blockHashes.push_back(pblock->GetHash().GetHex());
@@ -197,6 +206,7 @@ UniValue generateBlocks(boost::shared_ptr<CReserveScript> coinbaseScript,
         // wallet
         if (keepScript)
         {
+            // Remove key from key pool
             coinbaseScript->KeepScript();
         }
     }
@@ -344,7 +354,7 @@ UniValue generatetoaddress(const UniValue& params, bool fHelp)
     UniValue blockHashes(UniValue::VARR);
     while (nHeight < nHeightEnd)
     {
-        std::unique_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(pwalletMain, false));
+        std::unique_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(pwalletMain, coinbaseScript->reserveScript, false));
         if (!pblocktemplate.get())
             throw JSONRPCError(RPC_INTERNAL_ERROR, "Couldn't create new block");
         CBlock *pblock = &pblocktemplate->block;
@@ -435,7 +445,7 @@ UniValue generatepostoaddress(const UniValue& params, bool fHelp)
     UniValue blockHashes(UniValue::VARR);
     while (nHeight < nHeightEnd)
     {
-        std::unique_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(pwalletMain, true));
+        std::unique_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(pwalletMain, coinbaseScript->reserveScript, true));
         if (!pblocktemplate.get())
             throw JSONRPCError(RPC_INTERNAL_ERROR, "Couldn't create new block");
         CBlock *pblock = &pblocktemplate->block;
@@ -797,7 +807,20 @@ UniValue getblocktemplate(const UniValue& params, bool fHelp)
             pblocktemplate.reset();
             pblocktemplate = nullptr;
         }
-        pblocktemplate.reset(CreateNewBlock(pwalletMain, false).get());
+
+        // Create new block
+        boost::shared_ptr<CReserveScript> coinbaseScript;
+        GetMainSignals().ScriptForMining(coinbaseScript);
+
+        // If the keypool is exhausted, no script is returned at all.  Catch this.
+        if (!coinbaseScript)
+            throw JSONRPCError(RPC_WALLET_KEYPOOL_RAN_OUT, "Error: Keypool ran out, please call keypoolrefill first");
+
+        // throw an error if no script was provided
+        if (coinbaseScript->reserveScript.empty())
+            throw JSONRPCError(RPC_INTERNAL_ERROR, "No coinbase script available (mining requires a wallet)");
+
+        pblocktemplate.reset(CreateNewBlock(pwalletMain, coinbaseScript->reserveScript, false).get());
         if (!pblocktemplate)
         {
             throw JSONRPCError(RPC_OUT_OF_MEMORY, "Out of memory");
@@ -1094,7 +1117,19 @@ UniValue getposblocktemplate(const UniValue& params, bool fHelp)
             pblocktemplate.reset();
             pblocktemplate = nullptr;
         }
-        pblocktemplate.reset(CreateNewBlock(pwalletMain, true).get());
+        // Create new block
+        boost::shared_ptr<CReserveScript> coinbaseScript;
+        GetMainSignals().ScriptForMining(coinbaseScript);
+
+        // If the keypool is exhausted, no script is returned at all.  Catch this.
+        if (!coinbaseScript)
+            throw JSONRPCError(RPC_WALLET_KEYPOOL_RAN_OUT, "Error: Keypool ran out, please call keypoolrefill first");
+
+        // throw an error if no script was provided
+        if (coinbaseScript->reserveScript.empty())
+            throw JSONRPCError(RPC_INTERNAL_ERROR, "No coinbase script available (mining requires a wallet)");
+
+        pblocktemplate.reset(CreateNewBlock(pwalletMain, coinbaseScript->reserveScript, true).get());
         if (!pblocktemplate)
         {
             throw JSONRPCError(RPC_OUT_OF_MEMORY, "Out of memory");

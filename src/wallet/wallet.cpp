@@ -3907,32 +3907,26 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
         LogPrintf("nCreditReward create=%d \n", nCreditReward);
         nCredit = nCredit + nCreditReward;
     }
-
-    int64_t nMinFee = 0;
-    while(true)
+    // Set output amount
+    if (txNew.vout.size() == 3)
     {
-        // Set output amount
-        if (txNew.vout.size() == 3)
-        {
-            txNew.vout[1].nValue = ((nCredit - nMinFee) / 2 / CENT) * CENT;
-            txNew.vout[2].nValue = nCredit - nMinFee - txNew.vout[1].nValue;
-        }
-        else
-            txNew.vout[1].nValue = nCredit - nMinFee;
-
-        // Sign
-        int nIn = 0;
-        for (auto const* pcoin: vwtxPrev)
-        {
-            if (!SignSignature(*this, *(pcoin->tx), txNew, nIn++))
-                return error("CreateCoinStake : failed to sign coinstake");
-        }
-
-        // Limit size
-        unsigned int nBytes = ::GetSerializeSize(txNew, SER_NETWORK, PROTOCOL_VERSION);
-        if (nBytes >= MAX_BLOCK_SIZE_GEN/5)
-            return error("CreateCoinStake : exceeded coinstake size limit");
+        txNew.vout[1].nValue = nCredit / 2;
+        txNew.vout[2].nValue = nCredit - txNew.vout[1].nValue;
     }
+    else
+        txNew.vout[1].nValue = nCredit;
+    // Sign
+    int nIn = 0;
+    for (auto const* pcoin: vwtxPrev)
+    {
+        if (!SignSignature(*this, *(pcoin->tx), txNew, nIn++))
+            return error("CreateCoinStake : failed to sign coinstake");
+    }
+
+    // Limit size
+    unsigned int nBytes = ::GetSerializeSize(txNew, SER_NETWORK, PROTOCOL_VERSION);
+    if (nBytes >= MAX_BLOCK_SIZE_GEN/5)
+        return error("CreateCoinStake : exceeded coinstake size limit");
 
     // Successfully generated coinstake
     return true;

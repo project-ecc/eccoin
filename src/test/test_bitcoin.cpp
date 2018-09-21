@@ -99,7 +99,7 @@ TestChain100Setup::TestChain100Setup() : TestingSetup("TESTNET0-TEMPORARY")
 //
 CBlock TestChain100Setup::CreateAndProcessBlock(const std::vector<CTransactionRef> &txns, const CScript &scriptPubKey)
 {
-    std::unique_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(pwallet, false));
+    std::unique_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(pwallet, scriptPubKey, false));
     std::shared_ptr<CBlock> pblock = std::make_shared<CBlock>();
     *pblock = pblocktemplate->block;
 
