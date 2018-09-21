@@ -28,7 +28,7 @@
 
 #include <memory>
 
-std::unique_ptr<CBlockTemplate> CreateNewPoSBlock(CWallet *pwallet);
+std::unique_ptr<CBlockTemplate> CreateNewPoSBlock(CWallet *pwallet, const CScript &scriptPubKeyIn);
 
 void EccMinter(CWallet *pwallet);
 

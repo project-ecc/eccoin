@@ -32,23 +32,31 @@
 extern CWallet *pwalletMain;
 int64_t nLastCoinStakeSearchInterval = 0;
 
-bool CheckStake(const std::shared_ptr<const CBlock> pblock, CWallet &wallet, CReserveKey &reservekey)
+bool CheckStake(const std::shared_ptr<const CBlock> pblock,
+    CWallet &wallet,
+    boost::shared_ptr<CReserveScript> coinbaseScript)
 {
     //// debug print
-    LogPrintf("Miner:\n");
-    LogPrintf("new block found  \n  hash: %s  \ntarget: %s\n", pblock->GetHash().GetHex().c_str(),
-        arith_uint256(pblock->nBits).GetHex().c_str());
-    LogPrintf("generated %s\n", FormatMoney(pblock->vtx[0]->vout[0].nValue).c_str());
+    LogPrintf("Minter:\n");
+    LogPrintf("new block found  \n  hash: %s\n", pblock->GetHash().GetHex().c_str());
+    for (auto tx : pblock->vtx)
+    {
+        LogPrintf("transaction: %s \n", tx->GetHash().GetHex().c_str());
+        for (auto vout : tx->vout)
+        {
+            LogPrintf("generated %s\n", FormatMoney(vout.nValue).c_str());
+        }
+    }
 
     // Found a solution
     {
         LOCK(cs_main);
         if (pblock->hashPrevBlock != pnetMan->getChainActive()->chainActive.Tip()->GetBlockHash())
         {
-            return error("Miner : generated block is stale");
+            return error("Minter : generated block is stale");
         }
         // Remove key from key pool
-        reservekey.KeepKey();
+        coinbaseScript->KeepScript();
         // Track how many getdata requests this block gets
         {
             LOCK(wallet.cs_wallet);
@@ -59,17 +67,15 @@ bool CheckStake(const std::shared_ptr<const CBlock> pblock, CWallet &wallet, CRe
         const CNetworkTemplate &chainparams = pnetMan->getActivePaymentNetwork();
         if (!ProcessNewBlock(state, chainparams, nullptr, pblock, true, nullptr))
         {
-            return error("Miner : ProcessBlock, block not accepted");
+            return error("Minter : ProcessBlock, block not accepted");
         }
     }
     return true;
 }
 
 // CreateNewBlock:
-std::unique_ptr<CBlockTemplate> CreateNewPoSBlock(CWallet *pwallet)
+std::unique_ptr<CBlockTemplate> CreateNewPoSBlock(CWallet *pwallet, const CScript &scriptPubKeyIn)
 {
-    CReserveKey reservekey(pwallet);
-
     // Create new block
     std::unique_ptr<CBlockTemplate> pblocktemplate(new CBlockTemplate());
     if (!pblocktemplate.get())
@@ -84,8 +90,7 @@ std::unique_ptr<CBlockTemplate> CreateNewPoSBlock(CWallet *pwallet)
     txNew.vin[0].prevout.SetNull();
     txNew.vout.resize(1);
     CPubKey vchPubKey;
-    reservekey.GetReservedKey(vchPubKey);
-    txNew.vout[0].scriptPubKey << vchPubKey << OP_CHECKSIG;
+    txNew.vout[0].scriptPubKey = scriptPubKeyIn;
 
     // Add our coinbase tx as first transaction
     pblock->vtx.push_back(MakeTransactionRef(txNew));
@@ -130,26 +135,35 @@ std::unique_ptr<CBlockTemplate> CreateNewPoSBlock(CWallet *pwallet)
     CAmount nFees = 0;
 
     pblock->nBits = GetNextTargetRequired(pindexPrev, true);
-    CTransaction txCoinStake;
-    txCoinStake.nTime = GetTime();
-    int64_t nSearchTime = txCoinStake.nTime; // search to current time
-    if (nSearchTime > nLastCoinStakeSearchTime)
+    int64_t nSearchTime = GetTime(); // search to current time
+    while (true)
     {
-        // LogPrintf(">>> OK1\n");
-        if (pwallet->CreateCoinStake(*pwallet, pblock->nBits, nSearchTime - nLastCoinStakeSearchTime, txCoinStake))
+        CTransaction txCoinStake;
+        nSearchTime = GetTime(); // update search time
+        if (nSearchTime > nLastCoinStakeSearchTime)
         {
-            if (txCoinStake.nTime >=
-                std::max(pindexPrev->GetMedianTimePast() + 1, pindexPrev->GetBlockTime() - nMaxClockDrift))
-            { // make sure coinstake would meet timestamp protocol
-                // as it would be the same as the block timestamp
-                (*pblock->vtx[0]).vout[0].SetEmpty();
-                (*pblock->vtx[0]).nTime = txCoinStake.nTime;
-                pblock->vtx.push_back(MakeTransactionRef(txCoinStake));
+            txCoinStake.nTime = nSearchTime;
+            if (pwallet->CreateCoinStake(*pwallet, pblock->nBits, nSearchTime - nLastCoinStakeSearchTime, txCoinStake))
+            {
+                if (txCoinStake.nTime >=
+                    std::max(pindexPrev->GetMedianTimePast() + 1, pindexPrev->GetBlockTime() - nMaxClockDrift))
+                { // make sure coinstake would meet timestamp protocol
+                    // as it would be the same as the block timestamp
+                    (*pblock->vtx[0]).vout[0].SetEmpty();
+                    (*pblock->vtx[0]).nTime = txCoinStake.nTime;
+                    LogPrintf("PUSHING COINSTAKE TX ON TO BLOCK \N");
+                    pblock->vtx.push_back(MakeTransactionRef(txCoinStake));
+                    break;
+                }
             }
+            nLastCoinStakeSearchInterval = nSearchTime - nLastCoinStakeSearchTime;
+            nLastCoinStakeSearchTime = nSearchTime;
         }
-        nLastCoinStakeSearchInterval = nSearchTime - nLastCoinStakeSearchTime;
-        nLastCoinStakeSearchTime = nSearchTime;
+        MilliSleep(100);
+        if (fShutdown)
+            return nullptr;
     }
+    LogPrintf("CHECKPOINT \n");
 
     // Collect memory pool transactions into the block
     {
@@ -305,10 +319,13 @@ std::unique_ptr<CBlockTemplate> CreateNewPoSBlock(CWallet *pwallet)
 
         // Fill in header
         pblock->hashPrevBlock = pindexPrev->GetBlockHash();
-        pblock->nTime = pblock->vtx[1]->nTime; // same as coinstake timestamp
         pblock->nTime = std::max(pindexPrev->GetMedianTimePast() + 1, pblock->GetMaxTransactionTime());
         pblock->nTime = std::max(pblock->GetBlockTime(), pindexPrev->GetBlockTime() - nMaxClockDrift);
         pblock->nNonce = 0;
+        if (!pblock->IsProofOfStake())
+        {
+            LogPrintf("WARNING, RETURNING POW BLOCK IN POS BLOCK CREATION \n");
+        }
     }
 
     return std::move(pblocktemplate);
@@ -322,7 +339,18 @@ void EccMinter(CWallet *pwallet)
     // Make this thread recognisable as the mining thread
     RenameThread("ecc-minter");
     // Each thread has its own key and counter
-    CReserveKey reservekey(pwallet);
+
+    boost::shared_ptr<CReserveScript> coinbaseScript;
+    GetMainSignals().ScriptForMining(coinbaseScript);
+
+    // If the keypool is exhausted, no script is returned at all.  Catch this.
+    if (!coinbaseScript)
+        return;
+
+    // throw an error if no script was provided
+    if (coinbaseScript->reserveScript.empty())
+        return;
+
     unsigned int nExtraNonce = 0;
     while (true)
     {
@@ -342,7 +370,7 @@ void EccMinter(CWallet *pwallet)
                 return;
         }
         CBlockIndex *pindexPrev = pnetMan->getChainActive()->chainActive.Tip();
-        std::unique_ptr<CBlockTemplate> pblocktemplate(CreateNewPoSBlock(pwallet));
+        std::unique_ptr<CBlockTemplate> pblocktemplate(CreateNewPoSBlock(pwallet, coinbaseScript->reserveScript));
         if (!pblocktemplate.get())
         {
             LogPrintf(
@@ -358,7 +386,7 @@ void EccMinter(CWallet *pwallet)
         LogPrintf("CPUMiner : proof-of-stake block found %s\n", pblock->GetHash().ToString().c_str());
         SetThreadPriority(THREAD_PRIORITY_NORMAL);
         const std::shared_ptr<const CBlock> spblock = std::make_shared<const CBlock>(*pblock);
-        CheckStake(spblock, *pwalletMain, reservekey);
+        CheckStake(spblock, *pwalletMain, coinbaseScript);
         SetThreadPriority(THREAD_PRIORITY_LOWEST);
         MilliSleep(1000); // 1 second delay
         continue;
