@@ -47,7 +47,7 @@ class Class
 
   The fully-automatic way:
   ========================
-  Add the following to your $HOME/.gitconfig or .git/config in the Bitcoin directory:
+  Add the following to your $HOME/.gitconfig or .git/config in the Eccoin directory:
   ```
 [filter "bitcoin-clang-format"]
         clean = "contrib/devtools/clang-format.py format-stdout-if-wanted clang-format-3.8 %f"
@@ -186,7 +186,7 @@ to see it.
 
 **testnet and regtest modes**
 
-Run with the -testnet option to run with "play bitcoins" on the test network, if you
+Run with the -testnet option to run with "play eccoins" on the test network, if you
 are testing multi-machine code that needs to operate across the internet.
 
 If you are testing something that can run on one machine, run with the -regtest option.
@@ -195,7 +195,7 @@ that run in -regtest mode.
 
 **DEBUG_LOCKORDER**
 
-Bitcoin Unlimited is a multithreaded application, and deadlocks or other multithreading bugs
+ECCoin is a multithreaded application, and deadlocks or other multithreading bugs
 can be very difficult to track down. Compiling with -DDEBUG_LOCKORDER (configure
 CXXFLAGS="-DDEBUG_LOCKORDER -g") inserts run-time checks to keep track of which locks
 are held, and adds warnings to the debug.log file if inconsistencies are detected.
@@ -204,7 +204,7 @@ are held, and adds warnings to the debug.log file if inconsistencies are detecte
 
 *Currently only available on Linux*
 
-Bitcoin Unlimited can be compiled with the libtcmalloc allocation library and
+ECCoin can be compiled with the libtcmalloc allocation library and
 memory profiling tool.  First install libtcmalloc either from source here
 https://github.com/gperftools/gperftools or via package manager:
 ```bash
@@ -265,7 +265,9 @@ Threads
 
 - ThreadRPCServer : Remote procedure call handler, listens on port 8332 for connections and services them.
 
-- BitcoinMiner : Generates bitcoins (if wallet is enabled).
+- ECC-Miner : Generates eccoins via Proof-of-Work (if wallet is enabled and PoW is a valid generation method).
+
+- ECC-Minter : Generates eccoins via Proof-of-Stake (if wallet is enabled and PoS is a valid generation method).
 
 - Shutdown : Does an orderly shutdown of everything.
 
@@ -275,7 +277,7 @@ Ignoring IDE/editor files
 In closed-source environments in which everyone uses the same IDE it is common
 to add temporary files it produces to the project-wide `.gitignore` file.
 
-However, in open source software such as Bitcoin Unlimited, where everyone uses
+However, in open source software such as Eccoin, where everyone uses
 their own editors/IDE/tools, it is less common. Only you know what files your
 editor produces and this may change from version to version. The canonical way
 to do this is thus to create your local gitignore. Add this to `~/.gitconfig`:
@@ -305,9 +307,9 @@ Development guidelines
 ============================
 
 A few non-style-related recommendations for developers, as well as points to
-pay attention to for reviewers of Bitcoin Unlimited code.
+pay attention to for reviewers of Eccoin code.
 
-General Bitcoin Unlimited
+General Eccoin
 ----------------------
 
 - New features should be exposed on RPC first, then can be made available in the GUI
@@ -320,9 +322,9 @@ General Bitcoin Unlimited
   - *Rationale*: Makes sure that they pass thorough testing, and that the tester will keep passing
      on the master branch. Otherwise all new pull requests will start failing the tests, resulting in
      confusion and mayhem
- 
+
   - *Explanation*: If the test suite is to be updated for a change, this has to
-    be done first 
+    be done first
 
 Wallet
 -------
@@ -418,7 +420,7 @@ Strings and formatting
 
 - For `strprintf`, `LOG`, `LOGA` formatting characters don't need size specifiers
 
-  - *Rationale*: Bitcoin Unlimited uses tinyformat, which is type safe. Leave them out to avoid confusion
+  - *Rationale*: Eccoin uses tinyformat, which is type safe. Leave them out to avoid confusion
 
 Threads and synchronization
 ----------------------------
@@ -481,7 +483,7 @@ directly upstream without being PRed directly against the project.  They will be
 subtree merge.
 
 Others are external projects without a tight relationship with our project.  Changes to these should also
-be sent upstream but bugfixes may also be prudent to PR against Bitcoin Unlimited so that they can be integrated
+be sent upstream but bugfixes may also be prudent to PR against Eccoin so that they can be integrated
 quickly.  Cosmetic changes should be purely taken upstream.
 
 There is a tool in contrib/devtools/git-subtree-check.sh to check a subtree directory for consistency with
@@ -525,7 +527,7 @@ In addition to reviewing the upstream changes in `env_posix.cc`, you can use `ls
 check this. For example, on Linux this command will show open `.ldb` file counts:
 
 ```bash
-$ lsof -p $(pidof bitcoind) |\
+$ lsof -p $(pidof eccoind) |\
     awk 'BEGIN { fd=0; mem=0; } /ldb$/ { if ($4 == "mem") mem++; else fd++ } END { printf "mem = %s, fd = %s\n", mem, fd}'
 mem = 119, fd = 0
 ```
@@ -593,7 +595,7 @@ Git and GitHub tips
 
         [remote "upstream-pull"]
                 fetch = +refs/pull/*:refs/remotes/upstream-pull/*
-                url = git@github.com:bitcoin/bitcoin.git
+                url = git@github.com:project-ecc/Eccoin.git
 
   This will add an `upstream-pull` remote to your git repository, which can be fetched using `git fetch --all`
   or `git fetch upstream-pull`. Afterwards, you can use `upstream-pull/NUMBER/head` in arguments to `git show`,
