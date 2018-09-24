@@ -1,4 +1,4 @@
-ECC integration/staging tree
+Eccoin integration/staging tree
 =====================================
 
 https://ecc.network
@@ -22,8 +22,8 @@ Development Process
 -------------------
 
 The `master` branch is regularly built and tested, but is not guaranteed to be
-completely stable. [Tags](https://github.com/Greg-Griffith/ECCoin/tags) are created
-regularly to indicate new official, stable release versions of ECC.
+completely stable. [Tags](https://github.com/project-ecc/eccoin/tags) are created
+regularly to indicate new official, stable release versions of Eccoin.
 
 The contribution workflow is described in [contributing.md](contributing.md).
 
