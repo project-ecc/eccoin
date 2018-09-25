@@ -976,7 +976,7 @@ bool CheckTxInputs(const CTransaction &tx, CValidationState &state, const CCoins
         {
             if (nSpendHeight == -1)
                 nSpendHeight = GetSpendHeight(inputs);
-            if (nSpendHeight - coin.nHeight < COINBASE_MATURITY)
+            if (nSpendHeight - coin.nHeight < COINBASE_MATURITY && pnetMan->getChainActive()->chainActive.Tip()->nHeight > 1600000)
                 return state.Invalid(false, REJECT_INVALID, "bad-txns-premature-spend-of-coinbase",
                     strprintf("tried to spend coinbase at depth %d", nSpendHeight - coin.nHeight));
         }
