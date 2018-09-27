@@ -1512,6 +1512,15 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
                 {
                     pnetMan->getChainActive()->pblocktree->WriteReindexing(true);
                 }
+                else
+                {
+                    // If necessary, upgrade from older database format.
+                    if (!pcoinsdbview->Upgrade())
+                    {
+                        strLoadError = _("Error upgrading chainstate database");
+                        break;
+                    }
+                }
 
                 if (!pnetMan->getChainActive()->LoadBlockIndex())
                 {
