@@ -285,14 +285,32 @@ public:
     //! at which height this transaction was included in the active block chain
     int nHeight;
 
+    // version of the CTransaction
+    int nVersion;
+
+    // whether the tx is a coinstake
+    bool fCoinStake;
+
+    // tx timestamp
+    unsigned int nTime;
+
     //! empty constructor
-    CCoins() : fCoinBase(false), vout(0), nHeight(0) {}
-    template <typename Stream>
-    void Unserialize(Stream &s)
-    {
+    CCoins() : fCoinBase(false), vout(0), nHeight(0), nVersion(0), fCoinStake(false), nTime(0) {}
+
+
+    //!remove spent outputs at the end of vout
+    void Cleanup() {
+        while (vout.size() > 0 && vout.back().IsNull())
+            vout.pop_back();
+        if (vout.empty())
+            std::vector<CTxOut>().swap(vout);
+    }
+
+    template<typename Stream>
+    void Unserialize(Stream &s) {
         unsigned int nCode = 0;
         // version
-        int nVersionDummy;
+        unsigned int nVersionDummy = 0;
         ::Unserialize(s, VARINT(nVersionDummy));
         // header code
         ::Unserialize(s, VARINT(nCode));
@@ -302,12 +320,10 @@ public:
         vAvail[1] = (nCode & 4) != 0;
         unsigned int nMaskCode = (nCode / 8) + ((nCode & 6) != 0 ? 0 : 1);
         // spentness bitmask
-        while (nMaskCode > 0)
-        {
+        while (nMaskCode > 0) {
             unsigned char chAvail = 0;
             ::Unserialize(s, chAvail);
-            for (unsigned int p = 0; p < 8; p++)
-            {
+            for (unsigned int p = 0; p < 8; p++) {
                 bool f = (chAvail & (1 << p)) != 0;
                 vAvail.push_back(f);
             }
@@ -316,13 +332,19 @@ public:
         }
         // txouts themself
         vout.assign(vAvail.size(), CTxOut());
-        for (unsigned int i = 0; i < vAvail.size(); i++)
-        {
+        for (unsigned int i = 0; i < vAvail.size(); i++) {
             if (vAvail[i])
                 ::Unserialize(s, REF(CTxOutCompressor(vout[i])));
         }
         // coinbase height
-        ::Unserialize(s, VARINT(nHeight));
+        ::Unserialize(s, VARINT(nHeight, VarIntMode::NONNEGATIVE_SIGNED));
+        // pos flags
+        unsigned int nFlag = 0;
+        ::Unserialize(s, VARINT(nFlag));
+        fCoinStake = nFlag & 1;
+        // transaction timestamp
+        ::Unserialize(s, VARINT(nTime));
+        Cleanup();
     }
 };
 }
@@ -364,7 +386,7 @@ bool CCoinsViewDB::Upgrade()
             {
                 if (!old_coins.vout[i].IsNull() && !old_coins.vout[i].scriptPubKey.IsUnspendable())
                 {
-                    Coin newcoin(std::move(old_coins.vout[i]), old_coins.nHeight, old_coins.fCoinBase);
+                    Coin newcoin(std::move(old_coins.vout[i]), old_coins.nHeight, old_coins.fCoinBase, old_coins.fCoinStake, old_coins.nTime);
                     outpoint.n = i;
                     CoinEntry entry(&outpoint);
                     batch.Write(entry, newcoin);
