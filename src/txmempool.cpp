@@ -1141,7 +1141,7 @@ bool CCoinsViewMemPool::GetCoin(const COutPoint &outpoint, Coin &coin) const
     {
         if (outpoint.n < ptx->vout.size())
         {
-            coin = Coin(ptx->vout[outpoint.n], MEMPOOL_HEIGHT, false);
+            coin = Coin(ptx->vout[outpoint.n], MEMPOOL_HEIGHT, false, false, ptx->nTime);
             return true;
         }
         else

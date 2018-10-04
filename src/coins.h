@@ -79,17 +79,22 @@ public:
     CTxOut out;
 
     //! whether containing transaction was a coinbase
-    unsigned int fCoinBase : 1;
+    uint32_t fCoinBase : 1;
+
+    uint32_t fCoinStake : 1;
 
     //! at which height this containing transaction was included in the active block chain
     uint32_t nHeight : 31;
 
+    uint64_t nTime;
+
     //! construct a Coin from a CTxOut and height/coinbase information.
-    Coin(CTxOut &&outIn, int nHeightIn, bool fCoinBaseIn)
-        : out(std::move(outIn)), fCoinBase(fCoinBaseIn), nHeight(nHeightIn)
+    Coin(CTxOut &&outIn, int nHeightIn, bool fCoinBaseIn, bool fCoinStakeIn, bool nTimeIn)
+        : out(std::move(outIn)), fCoinBase(fCoinBaseIn), fCoinStake(fCoinStakeIn), nHeight(nHeightIn), nTime(nTimeIn)
     {
     }
-    Coin(const CTxOut &outIn, int nHeightIn, bool fCoinBaseIn) : out(outIn), fCoinBase(fCoinBaseIn), nHeight(nHeightIn)
+    Coin(const CTxOut &outIn, int nHeightIn, bool fCoinBaseIn, bool fCoinStakeIn, bool nTimeIn) 
+        : out(outIn), fCoinBase(fCoinBaseIn), fCoinStake(fCoinStakeIn), nHeight(nHeightIn), nTime(nTimeIn)
     {
     }
 
@@ -97,18 +102,32 @@ public:
     {
         out.SetNull();
         fCoinBase = false;
+        fCoinStake = false;
         nHeight = 0;
+        nTime = 0;
     }
 
     //! empty constructor
     Coin() : fCoinBase(false), nHeight(0) {}
     bool IsCoinBase() const { return fCoinBase; }
+    bool IsCoinStake() const { return fCoinStake; }
     template <typename Stream>
     void Serialize(Stream &s) const
     {
         assert(!IsSpent());
-        uint32_t code = nHeight * 2 + fCoinBase;
+	uint8_t code = 0;
+        if(fCoinBase)
+        {
+            code = code & 1;
+        }
+        if(fCoinStake)
+        {
+            code = code & 2;
+        }
+        assert((code & 3) != 3);
         ::Serialize(s, VARINT(code));
+        ::Serialize(s, VARINT(nHeight));
+        ::Serialize(s, VARINT(nTime));
         ::Serialize(s, CTxOutCompressor(REF(out)));
     }
 
@@ -117,8 +136,10 @@ public:
     {
         uint32_t code = 0;
         ::Unserialize(s, VARINT(code));
-        nHeight = code >> 1;
         fCoinBase = code & 1;
+        fCoinStake = code & 2;
+        ::Unserialize(s, VARINT(nHeight));
+        ::Unserialize(s, VARINT(nTime));
         ::Unserialize(s, REF(CTxOutCompressor(out)));
     }
 
