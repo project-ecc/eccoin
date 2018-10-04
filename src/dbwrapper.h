@@ -353,6 +353,43 @@ public:
         pdb->GetApproximateSizes(&range, 1, &size);
         return size;
     }
+
+    /**
+     * Compact a certain range of keys in the database.
+     */
+    template <typename K>
+    void CompactRange(const K &key_begin, const K &key_end) const
+    {
+        CDataStream ssKey1(SER_DISK, CLIENT_VERSION), ssKey2(SER_DISK, CLIENT_VERSION);
+        ssKey1.reserve(DBWRAPPER_PREALLOC_KEY_SIZE);
+        ssKey2.reserve(DBWRAPPER_PREALLOC_KEY_SIZE);
+        ssKey1 << key_begin;
+        ssKey2 << key_end;
+        leveldb::Slice slKey1(ssKey1.data(), ssKey1.size());
+        leveldb::Slice slKey2(ssKey2.data(), ssKey2.size());
+        pdb->CompactRange(&slKey1, &slKey2);
+    }
+
+    /**
+     * Compact the entire database.
+     */
+    void Compact() const
+    {
+        // workaround for google/leveldb#227
+        // NULL batch means just wait for earlier writes to be done
+        leveldb::WriteBatch b;
+        pdb->Write(writeoptions, &b);
+        pdb->CompactRange(NULL, NULL);
+    }
+
+    /**
+     * Return the size of all write buffers.
+     */
+    size_t TotalWriteBufferSize() const
+    {
+        // There can be up to two write buffers so return the total
+        return options.write_buffer_size * 2;
+    }
 };
 
 

@@ -1512,6 +1512,15 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
                 {
                     pnetMan->getChainActive()->pblocktree->WriteReindexing(true);
                 }
+                else
+                {
+                    // If necessary, upgrade from older database format.
+                    if (!pcoinsdbview->Upgrade())
+                    {
+                        strLoadError = _("Error upgrading chainstate database");
+                        break;
+                    }
+                }
 
                 if (!pnetMan->getChainActive()->LoadBlockIndex())
                 {
@@ -1556,30 +1565,31 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
                 g_ans.reset(new CServiceDB("ans", nBlockTreeDBCache, false, false));
 
                 // verify the blocks
-                {
-                    uiInterface.InitMessage(_("Verifying blocks..."));
-                    LogPrintf("Verifying blocks...");
-                    {
-                        LOCK(cs_main);
-                        CBlockIndex *tip = pnetMan->getChainActive()->chainActive.Tip();
-                        if (tip && tip->nTime > GetAdjustedTime() + 2 * 60 * 60)
-                        {
-                            strLoadError = _("The block database contains a block which appears to be from the future. "
-                                             "This may be due to your computer's date and time being set incorrectly. "
-                                             "Only rebuild the block database if you are sure that your computer's "
-                                             "date and time are correct");
-                            break;
-                        }
-                    }
+                
+                uiInterface.InitMessage(_("Verifying blocks..."));
+                LogPrintf("Verifying blocks...");
 
-                    if (!CVerifyDB().VerifyDB(chainparams, pcoinsdbview.get(),
-                            gArgs.GetArg("-checklevel", DEFAULT_CHECKLEVEL),
-                            gArgs.GetArg("-checkblocks", DEFAULT_CHECKBLOCKS)))
+                {
+                    LOCK(cs_main);
+                    CBlockIndex *tip = pnetMan->getChainActive()->chainActive.Tip();
+                    if (tip && tip->nTime > GetAdjustedTime() + 2 * 60 * 60)
                     {
-                        strLoadError = _("Corrupted block database detected");
+                        strLoadError = _("The block database contains a block which appears to be from the future. "
+                                         "This may be due to your computer's date and time being set incorrectly. "
+                                         "Only rebuild the block database if you are sure that your computer's "
+                                         "date and time are correct");
                         break;
                     }
                 }
+
+                if (!CVerifyDB().VerifyDB(chainparams, pcoinsdbview.get(),
+                        gArgs.GetArg("-checklevel", DEFAULT_CHECKLEVEL),
+                        gArgs.GetArg("-checkblocks", DEFAULT_CHECKBLOCKS)))
+                {
+                    strLoadError = _("Corrupted block database detected");
+                    break;
+                }
+                
             }
             catch (const std::exception &e)
             {
@@ -1597,18 +1607,9 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
             // first suggest a reindex
             if (!fReset)
             {
-                bool fRet;
-                if (fDaemon)
-                {
-                    /// default to true on daemons
-                    fRet = true;
-                }
-                else
-                {
-                    fRet = uiInterface.ThreadSafeMessageBox(
+                bool fRet = uiInterface.ThreadSafeMessageBox(
                         strLoadError + ".\n\n" + _("Do you want to rebuild the block database now?"), "",
                         CClientUIInterface::MSG_ERROR | CClientUIInterface::BTN_ABORT);
-                }
                 if (fRet)
                 {
                     fReindex = true;
