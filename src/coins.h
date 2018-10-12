@@ -93,7 +93,7 @@ public:
         : out(std::move(outIn)), fCoinBase(fCoinBaseIn), fCoinStake(fCoinStakeIn), nHeight(nHeightIn), nTime(nTimeIn)
     {
     }
-    Coin(const CTxOut &outIn, int nHeightIn, bool fCoinBaseIn, bool fCoinStakeIn, bool nTimeIn) 
+    Coin(const CTxOut &outIn, int nHeightIn, bool fCoinBaseIn, bool fCoinStakeIn, bool nTimeIn)
         : out(outIn), fCoinBase(fCoinBaseIn), fCoinStake(fCoinStakeIn), nHeight(nHeightIn), nTime(nTimeIn)
     {
     }
@@ -115,12 +115,12 @@ public:
     void Serialize(Stream &s) const
     {
         assert(!IsSpent());
-	uint8_t code = 0;
-        if(fCoinBase)
+        uint8_t code = 0;
+        if (fCoinBase)
         {
             code = code & 1;
         }
-        if(fCoinStake)
+        if (fCoinStake)
         {
             code = code & 2;
         }

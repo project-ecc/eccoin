@@ -1565,7 +1565,7 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
                 g_ans.reset(new CServiceDB("ans", nBlockTreeDBCache, false, false));
 
                 // verify the blocks
-                
+
                 uiInterface.InitMessage(_("Verifying blocks..."));
                 LogPrintf("Verifying blocks...");
 
@@ -1589,7 +1589,6 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
                     strLoadError = _("Corrupted block database detected");
                     break;
                 }
-                
             }
             catch (const std::exception &e)
             {
@@ -1608,8 +1607,8 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
             if (!fReset)
             {
                 bool fRet = uiInterface.ThreadSafeMessageBox(
-                        strLoadError + ".\n\n" + _("Do you want to rebuild the block database now?"), "",
-                        CClientUIInterface::MSG_ERROR | CClientUIInterface::BTN_ABORT);
+                    strLoadError + ".\n\n" + _("Do you want to rebuild the block database now?"), "",
+                    CClientUIInterface::MSG_ERROR | CClientUIInterface::BTN_ABORT);
                 if (fRet)
                 {
                     fReindex = true;
