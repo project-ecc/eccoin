@@ -183,6 +183,7 @@ testScripts = [ RpcTest(t) for t in [
     # 'multi_rpc', ???
     # 'fundrawtransaction', ???
     # 'reindex', ???
+    'getchaintips',
     'httpbasics',
     'keypool',
     'mintingtest',
@@ -211,7 +212,7 @@ testScripts = [ RpcTest(t) for t in [
     Disabled('mempool_resurrect_test', "TIMEOUT"),
     Disabled('txn_doublespend --mineblock', "TIMEOUT"),
     Disabled('txn_clone', "TIMEOUT"),
-    Disabled('getchaintips', "TIMEOUT"),
+
     Disabled('notify', "TIMEOUT"),
     Disabled('validateblocktemplate', "TIMEOUT"),
     Disabled('blockchain', "TIMEOUT"),
