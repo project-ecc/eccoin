@@ -89,11 +89,11 @@ public:
     uint64_t nTime;
 
     //! construct a Coin from a CTxOut and height/coinbase information.
-    Coin(CTxOut &&outIn, int nHeightIn, bool fCoinBaseIn, bool fCoinStakeIn, bool nTimeIn)
+    Coin(CTxOut &&outIn, int nHeightIn, bool fCoinBaseIn, bool fCoinStakeIn, uint64_t nTimeIn)
         : out(std::move(outIn)), fCoinBase(fCoinBaseIn), fCoinStake(fCoinStakeIn), nHeight(nHeightIn), nTime(nTimeIn)
     {
     }
-    Coin(const CTxOut &outIn, int nHeightIn, bool fCoinBaseIn, bool fCoinStakeIn, bool nTimeIn)
+    Coin(const CTxOut &outIn, int nHeightIn, bool fCoinBaseIn, bool fCoinStakeIn, uint64_t nTimeIn)
         : out(outIn), fCoinBase(fCoinBaseIn), fCoinStake(fCoinStakeIn), nHeight(nHeightIn), nTime(nTimeIn)
     {
     }
