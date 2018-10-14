@@ -29,8 +29,8 @@
 
 #include "args.h"
 #include "chain/checkpoints.h"
-#include "crypto/hash.h"
 #include "checkqueue.h"
+#include "crypto/hash.h"
 #include "init.h"
 #include "kernel.h"
 #include "main.h"

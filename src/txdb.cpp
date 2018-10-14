@@ -296,18 +296,18 @@ public:
 
     //! empty constructor
     CCoins() : fCoinBase(false), vout(0), nHeight(0), nVersion(0), fCoinStake(false), nTime(0) {}
-
-
-    //!remove spent outputs at the end of vout
-    void Cleanup() {
+    //! remove spent outputs at the end of vout
+    void Cleanup()
+    {
         while (vout.size() > 0 && vout.back().IsNull())
             vout.pop_back();
         if (vout.empty())
             std::vector<CTxOut>().swap(vout);
     }
 
-    template<typename Stream>
-    void Unserialize(Stream &s) {
+    template <typename Stream>
+    void Unserialize(Stream &s)
+    {
         unsigned int nCode = 0;
         // version
         unsigned int nVersionDummy = 0;
@@ -320,10 +320,12 @@ public:
         vAvail[1] = (nCode & 4) != 0;
         unsigned int nMaskCode = (nCode / 8) + ((nCode & 6) != 0 ? 0 : 1);
         // spentness bitmask
-        while (nMaskCode > 0) {
+        while (nMaskCode > 0)
+        {
             unsigned char chAvail = 0;
             ::Unserialize(s, chAvail);
-            for (unsigned int p = 0; p < 8; p++) {
+            for (unsigned int p = 0; p < 8; p++)
+            {
                 bool f = (chAvail & (1 << p)) != 0;
                 vAvail.push_back(f);
             }
@@ -332,7 +334,8 @@ public:
         }
         // txouts themself
         vout.assign(vAvail.size(), CTxOut());
-        for (unsigned int i = 0; i < vAvail.size(); i++) {
+        for (unsigned int i = 0; i < vAvail.size(); i++)
+        {
             if (vAvail[i])
                 ::Unserialize(s, REF(CTxOutCompressor(vout[i])));
         }
@@ -386,7 +389,8 @@ bool CCoinsViewDB::Upgrade()
             {
                 if (!old_coins.vout[i].IsNull() && !old_coins.vout[i].scriptPubKey.IsUnspendable())
                 {
-                    Coin newcoin(std::move(old_coins.vout[i]), old_coins.nHeight, old_coins.fCoinBase, old_coins.fCoinStake, old_coins.nTime);
+                    Coin newcoin(std::move(old_coins.vout[i]), old_coins.nHeight, old_coins.fCoinBase,
+                        old_coins.fCoinStake, old_coins.nTime);
                     outpoint.n = i;
                     CoinEntry entry(&outpoint);
                     batch.Write(entry, newcoin);
