@@ -74,7 +74,7 @@ public:
         const uint64_t nBestCoinHeight,
         size_t &nChildCachedCoinsUsage) override;
 
-        //! Attempt to update from an older database format. Returns whether an error occurred.
+    //! Attempt to update from an older database format. Returns whether an error occurred.
     bool Upgrade();
 };
 

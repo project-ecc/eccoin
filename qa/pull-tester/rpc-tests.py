@@ -183,7 +183,9 @@ testScripts = [ RpcTest(t) for t in [
     # 'multi_rpc', ???
     # 'fundrawtransaction', ???
     # 'reindex', ???
+    'getchaintips',
     'httpbasics',
+    'keypool',
     'mintingtest',
     'nodehandling',
     'proxy_test',
@@ -192,7 +194,6 @@ testScripts = [ RpcTest(t) for t in [
     Disabled('bip68-112-113-p2p', "FAILS"),
     Disabled('decodescript', "FAILS"),
     Disabled('invalidtxrequest', "FAILS"),
-    Disabled('keypool', "FAILS"),
     Disabled('mempool_limit', "FAILS"),
     Disabled('mempool_reorg', "FAILS"),
     Disabled('mempool_spendcoinbase', "FAILS"),
@@ -211,7 +212,7 @@ testScripts = [ RpcTest(t) for t in [
     Disabled('mempool_resurrect_test', "TIMEOUT"),
     Disabled('txn_doublespend --mineblock', "TIMEOUT"),
     Disabled('txn_clone', "TIMEOUT"),
-    Disabled('getchaintips', "TIMEOUT"),
+
     Disabled('notify', "TIMEOUT"),
     Disabled('validateblocktemplate', "TIMEOUT"),
     Disabled('blockchain', "TIMEOUT"),

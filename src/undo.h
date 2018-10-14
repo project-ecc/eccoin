@@ -40,12 +40,13 @@ public:
     template <typename Stream>
     void Serialize(Stream &s) const
     {
-        ::Serialize(s, VARINT(txout->nHeight * 4 + (txout->fCoinBase ? 1 : 0)+(txout->fCoinStake ? 2 : 0), VarIntMode::NONNEGATIVE_SIGNED));
+        ::Serialize(s, VARINT(txout->nHeight * 4 + (txout->fCoinBase ? 1 : 0) + (txout->fCoinStake ? 2 : 0),
+                           VarIntMode::NONNEGATIVE_SIGNED));
         // Required to maintain compatibility with older undo format
         ::Serialize(s, (unsigned char)0);
         if (txout->nHeight > 0)
         {
-	    // Required to maintain compatibility with older undo format
+            // Required to maintain compatibility with older undo format
             ::Serialize(s, (unsigned char)0);
         }
         ::Serialize(s, CTxOutCompressor(REF(txout->out)));
@@ -67,7 +68,7 @@ public:
         txout->nHeight = nCode / 4;
         txout->fCoinBase = nCode & 1;
         txout->fCoinStake = nCode & 2;
-	unsigned int nTimeDummy;
+        unsigned int nTimeDummy;
         ::Unserialize(s, VARINT(nTimeDummy));
         if (txout->nHeight > 0)
         {
