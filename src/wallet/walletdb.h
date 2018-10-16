@@ -33,9 +33,6 @@
 
 static const bool DEFAULT_FLUSHWALLET = true;
 
-class CAccount;
-class CAccountingEntry;
-struct CBlockLocator;
 class CKeyPool;
 class CMasterKey;
 class CScript;
@@ -43,6 +40,8 @@ class CWallet;
 class CWalletTx;
 class uint160;
 class uint256;
+
+struct CBlockLocator;
 
 /** Error statuses for the wallet database */
 enum DBErrors
@@ -127,20 +126,11 @@ public:
 
     bool WriteMinVersion(int nVersion);
 
-    /// This writes directly to the database, and will not update the CWallet's cached accounting entries!
-    /// Use wallet.AddAccountingEntry instead, to write *and* update its caches.
-    bool WriteAccountingEntry_Backend(const CAccountingEntry& acentry);
-    bool ReadAccount(const std::string& strAccount, CAccount& account);
-    bool WriteAccount(const std::string& strAccount, const CAccount& account);
-
     /// Write destination data key,value tuple to database
     bool WriteDestData(const std::string &address, const std::string &key, const std::string &value);
     /// Erase destination data tuple from wallet database
     bool EraseDestData(const std::string &address, const std::string &key);
-
-    CAmount GetAccountCreditDebit(const std::string& strAccount);
-    void ListAccountCreditDebit(const std::string& strAccount, std::list<CAccountingEntry>& acentries);
-
+    
     DBErrors ReorderTransactions(CWallet* pwallet);
     DBErrors LoadWallet(CWallet* pwallet);
     DBErrors FindWalletTx(CWallet* pwallet, std::vector<uint256>& vTxHash, std::vector<CWalletTx>& vWtx);
@@ -151,8 +141,6 @@ public:
 private:
     CWalletDB(const CWalletDB&);
     void operator=(const CWalletDB&);
-
-    bool WriteAccountingEntry(const uint64_t nAccEntryNum, const CAccountingEntry& acentry);
 };
 
 bool BackupWallet(const CWallet& wallet, const std::string& strDest);

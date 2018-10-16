@@ -637,7 +637,7 @@ bool CWallet::AddToWallet(const CWalletTx& wtxIn, bool fFromLoadWallet, CWalletD
         mapWallet[hash] = wtxIn;
         CWalletTx& wtx = mapWallet[hash];
         wtx.BindWallet(this);
-        wtxOrdered.insert(make_pair(wtx.nOrderPos, TxPair(&wtx, (CAccountingEntry*)0)));
+        wtxOrdered.insert(std::make_pair(wtx.nOrderPos, &wtx));
         AddToSpends(hash);
         for (auto const& txin: wtx.tx->vin) {
             if (mapWallet.count(txin.prevout.hash)) {
@@ -660,7 +660,7 @@ bool CWallet::AddToWallet(const CWalletTx& wtxIn, bool fFromLoadWallet, CWalletD
         {
             wtx.nTimeReceived = GetAdjustedTime();
             wtx.nOrderPos = IncOrderPosNext(pwalletdb);
-            wtxOrdered.insert(make_pair(wtx.nOrderPos, TxPair(&wtx, (CAccountingEntry*)0)));
+            wtxOrdered.insert(std::make_pair(wtx.nOrderPos, &wtx));
 
             wtx.nTimeSmart = wtx.nTimeReceived;
             if (!wtxIn.hashUnset())
@@ -675,10 +675,9 @@ bool CWallet::AddToWallet(const CWalletTx& wtxIn, bool fFromLoadWallet, CWalletD
                         const TxItems & txOrdered = wtxOrdered;
                         for (TxItems::const_reverse_iterator it = txOrdered.rbegin(); it != txOrdered.rend(); ++it)
                         {
-                            CWalletTx *const pwtx = (*it).second.first;
+                            CWalletTx *const pwtx = (*it).second;
                             if (pwtx == &wtx)
                                 continue;
-                            CAccountingEntry *const pacentry = (*it).second.second;
                             int64_t nSmartTime;
                             if (pwtx)
                             {
@@ -686,8 +685,6 @@ bool CWallet::AddToWallet(const CWalletTx& wtxIn, bool fFromLoadWallet, CWalletD
                                 if (!nSmartTime)
                                     nSmartTime = pwtx->nTimeReceived;
                             }
-                            else
-                                nSmartTime = pacentry->nTime;
                             if (nSmartTime <= latestTolerated)
                             {
                                 latestEntry = nSmartTime;
@@ -1154,12 +1151,11 @@ int CWalletTx::GetRequestCount() const
 }
 
 void CWalletTx::GetAmounts(std::list<COutputEntry>& listReceived,
-                           std::list<COutputEntry>& listSent, CAmount& nFee, std::string& strSentAccount, const isminefilter& filter) const
+                           std::list<COutputEntry>& listSent, CAmount& nFee, const isminefilter& filter) const
 {
     nFee = 0;
     listReceived.clear();
     listSent.clear();
-    strSentAccount = strFromAccount;
 
     // Compute fee:
     CAmount nDebit = GetDebit(filter);
@@ -1214,23 +1210,20 @@ void CWalletTx::GetAmounts(std::list<COutputEntry>& listReceived,
 
 }
 
-void CWalletTx::GetAccountAmounts(const std::string& strAccount, CAmount& nReceived,
+void CWalletTx::GetAmounts(CAmount& nReceived,
                                   CAmount& nSent, CAmount& nFee, const isminefilter& filter) const
 {
     nReceived = nSent = nFee = 0;
 
     CAmount allFee;
-    std::string strSentAccount;
     std::list<COutputEntry> listReceived;
     std::list<COutputEntry> listSent;
-    GetAmounts(listReceived, listSent, allFee, strSentAccount, filter);
+    GetAmounts(listReceived, listSent, allFee, filter);
 
-    if (strAccount == strSentAccount)
-    {
-        for (auto const& s: listSent)
-            nSent += s.amount;
-        nFee = allFee;
-    }
+    for (auto const& s: listSent)
+        nSent += s.amount;
+    nFee = allFee;
+
     {
         LOCK(pwallet->cs_wallet);
         for (auto const& r: listReceived)
@@ -1238,10 +1231,12 @@ void CWalletTx::GetAccountAmounts(const std::string& strAccount, CAmount& nRecei
             if (pwallet->mapAddressBook.count(r.destination))
             {
                 std::map<CTxDestination, CAddressBookData>::const_iterator mi = pwallet->mapAddressBook.find(r.destination);
-                if (mi != pwallet->mapAddressBook.end() && (*mi).second.name == strAccount)
+                if (mi != pwallet->mapAddressBook.end())
+                {
                     nReceived += r.amount;
+                }
             }
-            else if (strAccount.empty())
+            else
             {
                 nReceived += r.amount;
             }
@@ -2816,18 +2811,6 @@ bool CWallet::CommitTransactionForService(CServiceTransaction& stxNew, std::stri
         // Track how many getdata requests our transaction gets
         mapRequestCount[stxNew.GetHash()] = 0;
     }
-    return true;
-}
-
-bool CWallet::AddAccountingEntry(const CAccountingEntry& acentry, CWalletDB & pwalletdb)
-{
-    if (!pwalletdb.WriteAccountingEntry_Backend(acentry))
-        return false;
-
-    laccentries.push_back(acentry);
-    CAccountingEntry & entry = laccentries.back();
-    wtxOrdered.insert(make_pair(entry.nOrderPos, TxPair((CWalletTx*)0, &entry)));
-
     return true;
 }
 
