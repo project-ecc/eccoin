@@ -59,14 +59,16 @@ GENERATED_TEST_FILES = $(JSON_TEST_FILES:.json=.json.h) $(RAW_TEST_FILES:.raw=.r
 # test/util_tests.cpp #
 # all_wallet_tests #
 
-# test_bitcoin binary #
-BITCOIN_TESTS =\
+
+BITCOIN_TEST_SUITE = \
+  test/scriptnum10.h \
   test/test_bitcoin.cpp \
   test/test_bitcoin.h \
   test/testutil.cpp \
-  test/testutil.h \
+  test/testutil.h
+
+BITCOIN_TESTS = \
   test/arith_uint256_tests.cpp \
-  test/scriptnum10.h \
   test/addrman_tests.cpp \
   test/allocator_tests.cpp \
   test/base32_tests.cpp \
@@ -92,7 +94,16 @@ BITCOIN_TESTS =\
   test/uint256_tests.cpp \
   test/univalue_tests.cpp
 
-test_test_bitcoin_SOURCES = $(BITCOIN_TESTS) $(JSON_TEST_FILES) $(RAW_TEST_FILES)
+BITCOIN_TESTS += \
+  wallet/test/wallet_tests.cpp 
+#  wallet/test/walletdb_tests.cpp \
+#  wallet/test/crypto_tests.cpp
+
+# BITCOIN_TEST_SUITE += \
+#  wallet/test/wallet_test_fixture.cpp \
+#  wallet/test/wallet_test_fixture.h
+
+test_test_bitcoin_SOURCES = $(BITCOIN_TEST_SUITE) $(BITCOIN_TESTS) $(JSON_TEST_FILES) $(RAW_TEST_FILES)
 test_test_bitcoin_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES) -I$(builddir)/test/ $(TESTDEFS) $(EVENT_CFLAGS)
 test_test_bitcoin_LDADD = \
   $(LIBBITCOIN_SERVER) \
