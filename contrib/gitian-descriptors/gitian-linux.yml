@@ -109,7 +109,7 @@ script: |
   chmod +x ${WRAP_DIR}/${prog}
   done
 
-  cd bitcoin
+  cd eccoin
   BASEPREFIX=`pwd`/depends
   # Build dependencies for each host
   for i in $HOSTS; do
@@ -156,10 +156,10 @@ script: |
     make ${MAKEOPTS} -C src check-symbols
     make install DESTDIR=${INSTALLPATH}
     # BU save the executables with debug symbols
-    cp -f src/bitcoind ${OUTDIR}/bitcoind-${i}.debug
-    if [ -f src/qt/bitcoin-qt ]
+    cp -f src/eccoind ${OUTDIR}/eccoind-${i}.debug
+    if [ -f src/qt/eccoin-qt ]
     then
-      cp -f src/qt/bitcoin-qt ${OUTDIR}/bitcoin-qt-${i}.debug
+      cp -f src/qt/eccoin-qt ${OUTDIR}/eccoin-qt-${i}.debug
     fi
 
     make install-strip DESTDIR=${INSTALLPATH}

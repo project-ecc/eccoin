@@ -115,7 +115,7 @@ script: |
   chmod +x ${WRAP_DIR}/${prog}
   done
 
-  cd bitcoin
+  cd eccoin
   BASEPREFIX=`pwd`/depends
   # Build dependencies for each host
   for i in $HOSTS; do
@@ -169,7 +169,7 @@ script: |
     esac
 
     # BU save the executables with debug symbols
-    cp -f src/bitcoind ${OUTDIR}/bitcoind-${i}.debug
+    cp -f src/eccoind ${OUTDIR}/eccoind-${i}.debug
     #BU clean and tar up the output files
     cd installed
     find . -name "lib*.la" -delete
