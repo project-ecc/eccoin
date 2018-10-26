@@ -1,4 +1,7 @@
 # Building Eccoin with Gitian
+
+Note: These instructions were created on a machine that natively ran Ubuntu 16.04.5 (Xenial). No virtualization was used.
+
 ## Verify hardware compatability
 Verify that your machine has the hardware virtualizations extensions to build
 
