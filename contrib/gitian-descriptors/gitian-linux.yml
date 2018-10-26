@@ -1,5 +1,5 @@
 ---
-name: "eccoin-linux-1.5"
+name: "eccoin-linux-0.2.5.12"
 enable_cache: true
 suites:
 - "trusty"
@@ -29,7 +29,7 @@ script: |
 
   WRAP_DIR=$HOME/wrapped
   HOSTS="i686-pc-linux-gnu x86_64-linux-gnu"
-  CONFIGFLAGS="--enable-glibc-back-compat --enable-reduce-exports --disable-bench --disable-gui-tests"
+  CONFIGFLAGS="--enable-glibc-back-compat --enable-reduce-exports --disable-bench --disable-tests"
   FAKETIME_HOST_PROGS=""
   FAKETIME_PROGS="date ar ranlib nm strip"
   HOST_CFLAGS="-O2 -g"
@@ -109,7 +109,7 @@ script: |
   chmod +x ${WRAP_DIR}/${prog}
   done
 
-  cd bitcoin
+  cd eccoin
   BASEPREFIX=`pwd`/depends
   # Build dependencies for each host
   for i in $HOSTS; do
@@ -156,11 +156,7 @@ script: |
     make ${MAKEOPTS} -C src check-symbols
     make install DESTDIR=${INSTALLPATH}
     # BU save the executables with debug symbols
-    cp -f src/bitcoind ${OUTDIR}/bitcoind-${i}.debug
-    if [ -f src/qt/bitcoin-qt ]
-    then
-      cp -f src/qt/bitcoin-qt ${OUTDIR}/bitcoin-qt-${i}.debug
-    fi
+    cp -f src/eccoind ${OUTDIR}/eccoind-${i}.debug
 
     make install-strip DESTDIR=${INSTALLPATH}
     #BU clean and tar up the output files

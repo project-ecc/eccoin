@@ -1,5 +1,5 @@
 ---
-name: "eccoin-osx-1.5"
+name: "eccoin-osx-0.2.5.12"
 enable_cache: true
 suites:
 - "trusty"
@@ -76,7 +76,7 @@ script: |
   done
   export PATH=${WRAP_DIR}:${PATH}
 
-  cd bitcoin
+  cd eccoin
   BASEPREFIX=`pwd`/depends
 
   mkdir -p ${BASEPREFIX}/SDKs

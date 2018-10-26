@@ -52,6 +52,8 @@ crypto/hash.h
 dbwrapper.cpp
 dbwrapper.h
 eccoind.cpp
+fs.cpp
+fs.h
 httprpc.cpp
 httprpc.h
 httpserver.cpp

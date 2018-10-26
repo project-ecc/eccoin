@@ -55,13 +55,16 @@ BITCOIN_CORE_H = \
   chain/chainman.h \
   chain/blockindex.h \
   chain/checkpoints.h \
+  chain/outpoint.h \
+  chain/txout.h \
+  chain/txin.h \ 
   checkqueue.h \
   clientversion.h \
   coincontrol.h \
   coins.h \
   compat.h \
   compat/byteswap.h \
-  compat/endian.h \
+  compat/ecc_endian.h \
   compat/sanity.h \
   compressor.h \
   consensus/consensus.h \
@@ -72,6 +75,7 @@ BITCOIN_CORE_H = \
   core_memusage.h \
   crypto/hash.h \
   dbwrapper.h \
+  fs.h \
   httprpc.h \
   httpserver.h \
   init.h \
@@ -177,6 +181,7 @@ libbitcoin_server_a_SOURCES = \
   httpserver.cpp \
   init.cpp \
   dbwrapper.cpp \
+  fs.cpp \
   kernel.cpp \
   main.cpp \
   merkleblock.cpp \

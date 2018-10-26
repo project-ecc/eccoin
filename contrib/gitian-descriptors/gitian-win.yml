@@ -1,5 +1,5 @@
 ---
-name: "eccoin-win-1.5"
+name: "eccoin-win-0.2.5.12"
 enable_cache: true
 suites:
 - "trusty"
@@ -92,7 +92,7 @@ script: |
 
   export PATH=${WRAP_DIR}:${PATH}
 
-  cd bitcoin
+  cd eccoin
   BASEPREFIX=`pwd`/depends
   # Build dependencies for each host
   for i in $HOSTS; do
@@ -103,7 +103,6 @@ script: |
   ./autogen.sh
   ./configure --prefix=${BASEPREFIX}/`echo "${HOSTS}" | awk '{print $1;}'`
   make dist
-  # cp bitcoinUnlimited-*.tar.gz eccoin-1.1.0.tar.gz
   SOURCEDIST=`echo eccoin-*.tar.gz`
   DISTNAME=`echo ${SOURCEDIST} | sed 's/.tar.*//'`
 
@@ -131,11 +130,8 @@ script: |
     make ${MAKEOPTS} -C src check-security
     make deploy
     make install-strip
-    cp -f eccoin*setup*.exe $OUTDIR/
+    cp -f ./src/eccoin*.exe $OUTDIR/
     cd installed
-    mv ${DISTNAME}/bin/*.dll ${DISTNAME}/lib/
-    find . -name "lib*.la" -delete
-    find . -name "lib*.a" -delete
     rm -rf ${DISTNAME}/lib/pkgconfig
     find ${DISTNAME} -type f | sort | zip -X@ ${OUTDIR}/${DISTNAME}-${i}.zip
     cd ../..

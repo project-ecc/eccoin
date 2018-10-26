@@ -21,7 +21,7 @@
 #ifndef BITCOIN_SERIALIZE_H
 #define BITCOIN_SERIALIZE_H
 
-#include "compat/crypto_endian.h"
+#include "compat/ecc_endian.h"
 
 #include <algorithm>
 #include <cassert>
