@@ -43,8 +43,9 @@ int64_t UpdateTime(CBlockHeader *pblock, const Consensus::Params &consensusParam
 
 std::unique_ptr<CBlockTemplate> CreateNewBlock(CWallet *pwallet, const CScript &scriptPubKeyIn, bool fProofOfStake);
 
-void ThreadMiner(void *parg, bool shutdownOnly = false, bool fProofOfStake = false);
+void ThreadGeneration(void *parg, bool shutdownOnly = false, bool fProofOfStake = false);
 
 extern boost::thread_group *minerThreads;
+extern boost::thread_group *minterThreads;
 
 #endif // ECCOIN_BLOCKGENERATION_H
