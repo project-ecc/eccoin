@@ -130,6 +130,25 @@ UniValue getgenerate(const UniValue& params, bool fHelp)
     return minerThreads != NULL;
 }
 
+UniValue getgeneratepos(const UniValue& params, bool fHelp)
+{
+    if (fHelp || params.size() != 0)
+        throw std::runtime_error(
+            "getgeneratepos\n"
+            "\nReturn if the server is set to generate pos coins or not. The default is false.\n"
+            "It is set with the command line argument -staking (or " + std::string(CONF_FILENAME) + " setting staking)\n"
+            "It can also be set with the setgeneratepos call.\n"
+            "\nResult\n"
+            "true|false      (boolean) If the server is set to generate pos coins or not\n"
+            "\nExamples:\n"
+            + HelpExampleCli("getgeneratepos", "")
+            + HelpExampleRpc("getgeneratepos", "")
+        );
+
+    LOCK(cs_main);
+    return minterThreads != NULL;
+}
+
 UniValue generateBlocks(boost::shared_ptr<CReserveScript> coinbaseScript,
     int nGenerate,
     uint64_t nMaxTries,
@@ -483,19 +502,41 @@ UniValue setgenerate(const UniValue& params, bool fHelp)
     if (fHelp || params.size() != 0)
         throw std::runtime_error(
             "setgenerate \n"
-            "\nToggle pos generation on and off with this command.\n"
+            "\nToggle pow generation on and off with this command.\n"
             "See the getgenerate call for the current setting.\n"
             "\nArguments:\n"
-            "None, this will just toggle staking on and off"
+            "None, this will just toggle mining on and off"
             "\nExamples:\n"
-            "\nToggle the pos generation\n"
+            "\nToggle the pow generation\n"
             + HelpExampleCli("setgenerate", "")
         );
 
     if (pnetMan->getActivePaymentNetwork()->MineBlocksOnDemand())
         throw JSONRPCError(RPC_METHOD_NOT_FOUND, "Use the generate method instead of setgenerate on this network");
 
-    ThreadMiner(pwalletMain, false);
+    ThreadGeneration(pwalletMain, false, false);
+
+    return NullUniValue;
+}
+
+UniValue setgeneratepos(const UniValue& params, bool fHelp)
+{
+    if (fHelp || params.size() != 0)
+        throw std::runtime_error(
+            "setgeneratepos \n"
+            "\nToggle pos generation on and off with this command.\n"
+            "See the getgeneratepos call for the current setting.\n"
+            "\nArguments:\n"
+            "None, this will just toggle staking on and off"
+            "\nExamples:\n"
+            "\nToggle the pos generation\n"
+            + HelpExampleCli("setgeneratepos", "")
+        );
+
+    if (pnetMan->getActivePaymentNetwork()->MineBlocksOnDemand())
+        throw JSONRPCError(RPC_METHOD_NOT_FOUND, "Use the generate method instead of setgeneratepos on this network");
+
+    ThreadGeneration(pwalletMain, false, true);
 
     return NullUniValue;
 }
@@ -514,11 +555,11 @@ UniValue getmininginfo(const UniValue& params, bool fHelp)
             "  \"currentblocktx\": nnn,     (numeric) The last block transaction\n"
             "  \"difficulty\": xxx.xxxxx    (numeric) The current difficulty\n"
             "  \"errors\": \"...\"          (string) Current errors\n"
-            "  \"generate\": true|false     (boolean) If the generation is on or off (see getgenerate or setgenerate calls)\n"
-            "  \"genproclimit\": n          (numeric) The processor limit for generation. -1 if no generation. (see getgenerate or setgenerate calls)\n"
             "  \"pooledtx\": n              (numeric) The size of the mem pool\n"
             "  \"testnet\": true|false      (boolean) If using testnet or not\n"
             "  \"chain\": \"xxxx\",         (string) current network name as defined in BIP70 (main, test, regtest)\n"
+            "  \"generate\": true|false     (boolean) If the pow generation is on or off (see getgenerate or setgenerate calls)\n"
+            "  \"generatepos\": true|false  (boolean) If the pos generation is on or off (see getgeneratepos or setgeneratepos calls)\n"
             "}\n"
             "\nExamples:\n"
             + HelpExampleCli("getmininginfo", "")
@@ -539,6 +580,7 @@ UniValue getmininginfo(const UniValue& params, bool fHelp)
     obj.push_back(Pair("testnet",          pnetMan->getActivePaymentNetwork()->TestnetToBeDeprecatedFieldRPC()));
     obj.push_back(Pair("chain",            pnetMan->getActivePaymentNetwork()->NetworkIDString()));
     obj.push_back(Pair("generate",         getgenerate(params, false)));
+    obj.push_back(Pair("generatepos",         getgeneratepos(params, false)));
     return obj;
 }
 
