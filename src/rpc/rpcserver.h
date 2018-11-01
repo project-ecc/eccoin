@@ -200,6 +200,8 @@ extern UniValue importwallet(const UniValue& params, bool fHelp);
 
 extern UniValue getgenerate(const UniValue& params, bool fHelp); // in rpcmining.cpp
 extern UniValue setgenerate(const UniValue& params, bool fHelp);
+extern UniValue getgeneratepos(const UniValue& params, bool fHelp);
+extern UniValue setgeneratepos(const UniValue& params, bool fHelp);
 extern UniValue generate(const UniValue& params, bool fHelp);
 extern UniValue generatepos(const UniValue& params, bool fHelp);
 extern UniValue generatetoaddress(const UniValue& params, bool fHelp);

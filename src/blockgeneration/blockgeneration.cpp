@@ -71,7 +71,7 @@ boost::thread_group *minerThreads = nullptr;
 
 void ThreadMiner(void *parg, bool shutdownOnly, bool fProofOfStake)
 {
-    if (minerThreads != nullptr)
+    if (minerThreads != nullptr && !fProofOfStake)
     {
         minerThreads->interrupt_all();
         delete minerThreads;
@@ -82,20 +82,11 @@ void ThreadMiner(void *parg, bool shutdownOnly, bool fProofOfStake)
     {
         return;
     }
-
     minerThreads = new boost::thread_group();
-
     CWallet *pwallet = (CWallet *)parg;
     try
     {
-        if (fProofOfStake)
-        {
-            minerThreads->create_thread(boost::bind(&EccMinter, pwallet));
-        }
-        else
-        {
-            minerThreads->create_thread(boost::bind(&EccMiner, pwallet));
-        }
+        minerThreads->create_thread(boost::bind(&EccMiner, pwallet));
     }
     catch (std::exception &e)
     {
@@ -107,5 +98,49 @@ void ThreadMiner(void *parg, bool shutdownOnly, bool fProofOfStake)
     }
     nHPSTimerStart = 0;
     dHashesPerSec = 0;
-    LogPrintf("Block Generation thread exiting \n");
+    LogPrintf("Thread Miner thread exiting \n");
+}
+
+boost::thread_group *minterThreads = nullptr;
+
+void ThreadMinter(void *parg, bool shutdownOnly, bool fProofOfStake)
+{
+    if (minterThreads != nullptr && fProofOfStake)
+    {
+        minterThreads->interrupt_all();
+        delete minterThreads;
+        minterThreads = nullptr;
+        return;
+    }
+    if (shutdownOnly)
+    {
+        return;
+    }
+    minterThreads = new boost::thread_group();
+    CWallet *pwallet = (CWallet *)parg;
+    try
+    {
+        minterThreads->create_thread(boost::bind(&EccMinter, pwallet));
+    }
+    catch (std::exception &e)
+    {
+        PrintException(&e, "ThreadECCMinter()");
+    }
+    catch (...)
+    {
+        PrintException(NULL, "ThreadECCMinter()");
+    }
+    LogPrintf("Thread Minter thread exiting \n");
+}
+
+void ThreadGeneration(void *parg, bool shutdownOnly, bool fProofOfStake)
+{
+    if(fProofOfStake)
+    {
+        ThreadMinter(parg, shutdownOnly, fProofOfStake);
+    }
+    else
+    {
+        ThreadMiner(parg, shutdownOnly, fProofOfStake);
+    }
 }

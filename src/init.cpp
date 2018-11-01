@@ -206,7 +206,10 @@ void Shutdown()
 
     if (pwalletMain)
         pwalletMain->Flush(false);
-    ThreadMiner(pwalletMain, true);
+    // shut off pos miner
+    ThreadGeneration(pwalletMain, true, true);
+    // shut off pow miner
+    ThreadGeneration(pwalletMain, true, false);
     MapPort(false);
     UnregisterValidationInterface(peerLogic.get());
     peerLogic.reset();
@@ -1734,9 +1737,13 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
     }
 
     // Generate coins in the background
+    if (gArgs.GetBoolArg("-gen", false))
+    {
+        ThreadGeneration(pwalletMain, false, true);
+    }
     if (gArgs.GetBoolArg("-staking", false))
     {
-        ThreadMiner(pwalletMain);
+        ThreadGeneration(pwalletMain, false, true);
     }
 
     // ********************************************************* Step 12: finished

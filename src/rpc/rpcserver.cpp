@@ -332,6 +332,8 @@ static const CRPCCommand vRPCCommands[] =
     /* Coin generation */
     { "generating",         "getgenerate",            &getgenerate,            true  },
     { "generating",         "setgenerate",            &setgenerate,            true  },
+    { "generating",         "getgeneratepos",         &getgeneratepos,         true  },
+    { "generating",         "setgeneratepos",         &setgeneratepos,         true  },
     { "generating",         "generate",               &generate,               true  },
     { "generating",         "generatepos",            &generatepos,            true  },
     { "generating",         "generatetoaddress",      &generatetoaddress,      true  },
