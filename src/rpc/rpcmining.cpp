@@ -344,6 +344,8 @@ UniValue generatetoaddress(const UniValue& params, bool fHelp)
     int nHeight = 0;
     int nGenerate = params[0].get_int();
 
+    uint64_t nMaxTries = 1000000;
+
     std::string strAddress = params[1].get_str();
     CBitcoinAddress addr(strAddress);
     if (!addr.IsValid())
@@ -352,7 +354,7 @@ UniValue generatetoaddress(const UniValue& params, bool fHelp)
                            "Error: Invalid address");
     }
     LogPrintf("we are mining to %s \n", addr.ToString().c_str());
-    std::shared_ptr<CReserveScript> coinbaseScript = std::make_shared<CReserveScript>();
+    boost::shared_ptr<CReserveScript> coinbaseScript = boost::make_shared<CReserveScript>();
     coinbaseScript->reserveScript = GetScriptForDestination(addr.Get());
 
     // If the keypool is exhausted, no script is returned at all.  Catch this.
@@ -363,46 +365,7 @@ UniValue generatetoaddress(const UniValue& params, bool fHelp)
     if (coinbaseScript->reserveScript.empty())
         throw JSONRPCError(RPC_INTERNAL_ERROR, "No coinbase script available (mining requires a wallet)");
 
-    {   // Don't keep cs_main locked
-        LOCK(cs_main);
-        nHeightStart = pnetMan->getChainActive()->chainActive.Height();
-        nHeight = nHeightStart;
-        nHeightEnd = nHeightStart+nGenerate;
-    }
-    unsigned int nExtraNonce = 0;
-    UniValue blockHashes(UniValue::VARR);
-    while (nHeight < nHeightEnd)
-    {
-        std::unique_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(pwalletMain, coinbaseScript->reserveScript, false));
-        if (!pblocktemplate.get())
-            throw JSONRPCError(RPC_INTERNAL_ERROR, "Couldn't create new block");
-        CBlock *pblock = &pblocktemplate->block;
-        {
-            LOCK(cs_main);
-            IncrementExtraNonce(pblock, pnetMan->getChainActive()->chainActive.Tip(), nExtraNonce);
-        }
-        while (pblock->IsProofOfWork() && !CheckProofOfWork(pblock->GetHash(), pblock->nBits, pnetMan->getActivePaymentNetwork()->GetConsensus()))
-        {
-            // Yes, there is a chance every nonce could fail to satisfy the -regtest
-            // target -- 1 in 2^(2^32). That ain't gonna happen.
-            ++pblock->nNonce;
-        }
-        if (!pblock->SignScryptBlock(*pwalletMain))
-        {
-            LogPrintf("signging block in generate RPC call failed \n");
-            continue;
-        }
-        CValidationState state;
-        const std::shared_ptr<const CBlock> spblock = std::make_shared<const CBlock>(*pblock);
-        if (!ProcessNewBlock(state, pnetMan->getActivePaymentNetwork(), NULL, spblock, true, NULL))
-            throw JSONRPCError(RPC_INTERNAL_ERROR, "ProcessNewBlock, block not accepted");
-        ++nHeight;
-        blockHashes.push_back(pblock->GetHash().GetHex());
-
-        //mark script as important because it was used at least for one coinbase output
-        coinbaseScript->KeepScript();
-    }
-    return blockHashes;
+    return generateBlocks(coinbaseScript, nGenerate, nMaxTries, true, false);
 }
 
 UniValue generatepostoaddress(const UniValue& params, bool fHelp)
@@ -435,6 +398,8 @@ UniValue generatepostoaddress(const UniValue& params, bool fHelp)
     int nHeight = 0;
     int nGenerate = params[0].get_int();
 
+    uint64_t nMaxTries = 1000000;
+
     std::string strAddress = params[1].get_str();
     CBitcoinAddress addr(strAddress);
     if (!addr.IsValid())
@@ -443,7 +408,7 @@ UniValue generatepostoaddress(const UniValue& params, bool fHelp)
                            "Error: Invalid address");
     }
     LogPrintf("we are mining to %s \n", addr.ToString().c_str());
-    std::shared_ptr<CReserveScript> coinbaseScript = std::make_shared<CReserveScript>();
+    boost::shared_ptr<CReserveScript> coinbaseScript = boost::make_shared<CReserveScript>();
     coinbaseScript->reserveScript = GetScriptForDestination(addr.Get());
 
     // If the keypool is exhausted, no script is returned at all.  Catch this.
@@ -454,46 +419,7 @@ UniValue generatepostoaddress(const UniValue& params, bool fHelp)
     if (coinbaseScript->reserveScript.empty())
         throw JSONRPCError(RPC_INTERNAL_ERROR, "No coinbase script available (mining requires a wallet)");
 
-    {   // Don't keep cs_main locked
-        LOCK(cs_main);
-        nHeightStart = pnetMan->getChainActive()->chainActive.Height();
-        nHeight = nHeightStart;
-        nHeightEnd = nHeightStart+nGenerate;
-    }
-    unsigned int nExtraNonce = 0;
-    UniValue blockHashes(UniValue::VARR);
-    while (nHeight < nHeightEnd)
-    {
-        std::unique_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(pwalletMain, coinbaseScript->reserveScript, true));
-        if (!pblocktemplate.get())
-            throw JSONRPCError(RPC_INTERNAL_ERROR, "Couldn't create new block");
-        CBlock *pblock = &pblocktemplate->block;
-        {
-            LOCK(cs_main);
-            IncrementExtraNonce(pblock, pnetMan->getChainActive()->chainActive.Tip(), nExtraNonce);
-        }
-        while (pblock->IsProofOfWork() && !CheckProofOfWork(pblock->GetHash(), pblock->nBits, pnetMan->getActivePaymentNetwork()->GetConsensus()))
-        {
-            // Yes, there is a chance every nonce could fail to satisfy the -regtest
-            // target -- 1 in 2^(2^32). That ain't gonna happen.
-            ++pblock->nNonce;
-        }
-        if (!pblock->SignScryptBlock(*pwalletMain))
-        {
-            LogPrintf("signging block in generate RPC call failed \n");
-            continue;
-        }
-        CValidationState state;
-        const std::shared_ptr<const CBlock> spblock = std::make_shared<const CBlock>(*pblock);
-        if (!ProcessNewBlock(state, pnetMan->getActivePaymentNetwork(), NULL, spblock, true, NULL))
-            throw JSONRPCError(RPC_INTERNAL_ERROR, "ProcessNewBlock, block not accepted");
-        ++nHeight;
-        blockHashes.push_back(pblock->GetHash().GetHex());
-
-        //mark script as important because it was used at least for one coinbase output
-        coinbaseScript->KeepScript();
-    }
-    return blockHashes;
+    return generateBlocks(coinbaseScript, nGenerate, nMaxTries, true, true);
 }
 
 
