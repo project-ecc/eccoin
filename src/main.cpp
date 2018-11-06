@@ -760,8 +760,7 @@ bool AcceptToMemoryPoolWorker(CTxMemPool &pool,
         if (fRejectAbsurdFee && tx.nVersion == 2 && nFees > 100000000)
         {
             LogPrintf("Absurdly-high-fee of %d for tx with version of 2 \n", nFees);
-            return state.Invalid(false, REJECT_HIGHFEE, "absurdly-high-fee",
-                strprintf("%d > %d", nFees, 100000000));
+            return state.Invalid(false, REJECT_HIGHFEE, "absurdly-high-fee", strprintf("%d > %d", nFees, 100000000));
         }
 
 

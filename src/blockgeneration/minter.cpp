@@ -151,7 +151,6 @@ std::unique_ptr<CBlockTemplate> CreateNewPoSBlock(CWallet *pwallet, const CScrip
                     // as it would be the same as the block timestamp
                     (*pblock->vtx[0]).vout[0].SetEmpty();
                     (*pblock->vtx[0]).nTime = txCoinStake.nTime;
-                    LogPrintf("PUSHING COINSTAKE TX ON TO BLOCK \N");
                     pblock->vtx.push_back(MakeTransactionRef(txCoinStake));
                     break;
                 }

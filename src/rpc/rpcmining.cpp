@@ -354,7 +354,7 @@ UniValue generatetoaddress(const UniValue& params, bool fHelp)
                            "Error: Invalid address");
     }
     LogPrintf("we are mining to %s \n", addr.ToString().c_str());
-    boost::shared_ptr<CReserveScript> coinbaseScript = boost::make_shared<CReserveScript>();
+    boost::shared_ptr<CReserveScript> coinbaseScript;
     coinbaseScript->reserveScript = GetScriptForDestination(addr.Get());
 
     // If the keypool is exhausted, no script is returned at all.  Catch this.
@@ -408,7 +408,7 @@ UniValue generatepostoaddress(const UniValue& params, bool fHelp)
                            "Error: Invalid address");
     }
     LogPrintf("we are mining to %s \n", addr.ToString().c_str());
-    boost::shared_ptr<CReserveScript> coinbaseScript = boost::make_shared<CReserveScript>();
+    boost::shared_ptr<CReserveScript> coinbaseScript;
     coinbaseScript->reserveScript = GetScriptForDestination(addr.Get());
 
     // If the keypool is exhausted, no script is returned at all.  Catch this.
