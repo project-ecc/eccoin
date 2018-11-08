@@ -135,7 +135,7 @@ void ThreadMinter(void *parg, bool shutdownOnly)
 
 void ThreadGeneration(void *parg, bool shutdownOnly, bool fProofOfStake)
 {
-    if(fProofOfStake)
+    if (fProofOfStake)
     {
         ThreadMinter(parg, shutdownOnly);
     }
