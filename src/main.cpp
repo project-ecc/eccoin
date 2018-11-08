@@ -805,8 +805,11 @@ bool AcceptToMemoryPoolWorker(CTxMemPool &pool,
             }
         }
 
-        // Store transaction in memory
-        pool.addUnchecked(hash, entry, setAncestors, !pnetMan->getChainActive()->IsInitialBlockDownload());
+        {
+            LOCK(pool.cs);
+            // Store transaction in memory
+            pool.addUnchecked(hash, entry, setAncestors, !pnetMan->getChainActive()->IsInitialBlockDownload());
+        }
 
         // trim mempool and check if tx was trimmed
         if (!fOverrideMempoolLimit)

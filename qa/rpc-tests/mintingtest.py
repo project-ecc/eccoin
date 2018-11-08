@@ -50,10 +50,10 @@ class MintingTest (BitcoinTestFramework):
         # generate non-empty blocks on the mining node
         for x in range(0, self.generatedblocks):
             self.nodes[0].generate(1)
-            if x % 10 == 0:
-                self.sync_blocks()
 
         self.sync_blocks()
+
+        time.sleep(75)
 
         # check that nodes across different db's have the same data
         for x in range(0, self.blockstotest):

@@ -162,7 +162,6 @@ std::unique_ptr<CBlockTemplate> CreateNewPoSBlock(CWallet *pwallet, const CScrip
         if (fShutdown)
             return nullptr;
     }
-    LogPrintf("CHECKPOINT \n");
 
     // Collect memory pool transactions into the block
     {
