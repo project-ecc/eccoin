@@ -2016,6 +2016,11 @@ bool CWallet::SelectCoinsForService(const CAmount& nTargetValue, int nConfMine, 
 void CWallet::AvailableCoinsByOwner(std::vector<COutput>& vCoins, const CRecipient& recipient) const
 {
     vCoins.clear();
+    CTxDestination owneraddr;
+    if(!ExtractDestination(recipient.scriptPubKey, owneraddr))
+    {
+        return;
+    }
 
     {
         LOCK2(cs_main, cs_wallet);
@@ -2044,7 +2049,12 @@ void CWallet::AvailableCoinsByOwner(std::vector<COutput>& vCoins, const CRecipie
 
             for (unsigned int i = 0; i < pcoin->tx->vout.size(); i++)
             {
-                if(pcoin->tx->vout[i].scriptPubKey == recipient.scriptPubKey)
+                CTxDestination addr;
+                if(!ExtractDestination(pcoin->tx->vout[i].scriptPubKey, addr))
+                {
+                    continue;
+                }
+                if(addr == owneraddr)
                 {
                     isminetype mine = IsMine(pcoin->tx->vout[i]);
                     if (!(IsSpent(wtxid, i)) && mine != ISMINE_NO && !IsLockedCoin((*it).first, i) && (pcoin->tx->vout[i].nValue > 0))

@@ -288,8 +288,8 @@ void CNetworkManager::ConstructRegTestTemplate()
     regTestTemplate->nDefaultPort = 40000;
     regTestTemplate->nRPCPort = 40001;
     regTestTemplate->nMaxTipAge = 24 * 60 * 60;
-    regTestTemplate->nStakeMaxAge = 5; // 5 seconds
-    regTestTemplate->nStakeMinAge = 5; // 5 seconds
+    regTestTemplate->nStakeMaxAge = 1;
+    regTestTemplate->nStakeMinAge = 1;
 
     const char* pszTimestamp = "AP | Sep 12, 2018, Regtest implemented";
     CTransaction txNew;

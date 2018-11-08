@@ -757,11 +757,10 @@ bool AcceptToMemoryPoolWorker(CTxMemPool &pool,
                 strprintf("%d > %d", nFees, ::minRelayTxFee.GetFee(nSize) * 10000));
         }
 
-        if (fRejectAbsurdFee && tx.nVersion == 2 && nFees > ::minRelayTxFee.GetFee(nSize) * 50000000)
+        if (fRejectAbsurdFee && tx.nVersion == 2 && nFees > 100000000)
         {
             LogPrintf("Absurdly-high-fee of %d for tx with version of 2 \n", nFees);
-            return state.Invalid(false, REJECT_HIGHFEE, "absurdly-high-fee",
-                strprintf("%d > %d", nFees, ::minRelayTxFee.GetFee(nSize) * 5000000));
+            return state.Invalid(false, REJECT_HIGHFEE, "absurdly-high-fee", strprintf("%d > %d", nFees, 100000000));
         }
 
 
@@ -806,8 +805,11 @@ bool AcceptToMemoryPoolWorker(CTxMemPool &pool,
             }
         }
 
-        // Store transaction in memory
-        pool.addUnchecked(hash, entry, setAncestors, !pnetMan->getChainActive()->IsInitialBlockDownload());
+        {
+            LOCK(pool.cs);
+            // Store transaction in memory
+            pool.addUnchecked(hash, entry, setAncestors, !pnetMan->getChainActive()->IsInitialBlockDownload());
+        }
 
         // trim mempool and check if tx was trimmed
         if (!fOverrideMempoolLimit)
