@@ -66,6 +66,26 @@ bool AppInit(int argc, char *argv[])
     //
     gArgs.ParseParameters(argc, argv);
 
+    // Check for -testnet or -regtest parameter (Params() calls are only valid after this clause)
+    try
+    {
+        CheckParams(ChainNameFromCommandLine());
+    }
+    catch (const std::exception &e)
+    {
+        fprintf(stderr, "Error: %s\n", e.what());
+        return false;
+    }
+    try
+    {
+        gArgs.ReadConfigFile();
+    }
+    catch (const std::exception &e)
+    {
+        fprintf(stderr, "Error reading configuration file: %s\n", e.what());
+        return false;
+    }
+
     GenerateNetworkTemplates();
 
     // Process help and version before taking care about datadir
@@ -95,25 +115,6 @@ bool AppInit(int argc, char *argv[])
         {
             fprintf(stderr, "Error: Specified data directory \"%s\" does not exist.\n",
                 gArgs.GetArg("-datadir", "").c_str());
-            return false;
-        }
-        try
-        {
-            gArgs.ReadConfigFile();
-        }
-        catch (const std::exception &e)
-        {
-            fprintf(stderr, "Error reading configuration file: %s\n", e.what());
-            return false;
-        }
-        // Check for -testnet or -regtest parameter (Params() calls are only valid after this clause)
-        try
-        {
-            CheckParams(ChainNameFromCommandLine());
-        }
-        catch (const std::exception &e)
-        {
-            fprintf(stderr, "Error: %s\n", e.what());
             return false;
         }
         // Command-line RPC
