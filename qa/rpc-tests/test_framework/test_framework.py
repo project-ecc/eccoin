@@ -47,7 +47,7 @@ class BitcoinTestFramework(object):
     def run_test(self):
         for node in self.nodes:
             assert_equal(node.getblockcount(), 200)
-            # ECC cant check for static balance due to randomness in pow reward
+            # Eccoind cant check for static balance due to randomness in pow reward
             #assert_equal(node.getbalance(), 25*50)
 
     def add_options(self, parser):

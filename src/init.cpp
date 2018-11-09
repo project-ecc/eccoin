@@ -1,8 +1,8 @@
 /*
- * This file is part of the ECC project
+ * This file is part of the Eccoin project
  * Copyright (c) 2009-2010 Satoshi Nakamoto
  * Copyright (c) 2009-2016 The Bitcoin Core developers
- * Copyright (c) 2014-2018 The ECC developers
+ * Copyright (c) 2014-2018 The Eccoin developers
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -882,7 +882,7 @@ void InitLogging()
     fLogIPs = gArgs.GetBoolArg("-logips", DEFAULT_LOGIPS);
 
     LogPrintf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
-    LogPrintf("ECC version %s (%s)\n", FormatFullVersion(), CLIENT_DATE);
+    LogPrintf("Eccoin version %s (%s)\n", FormatFullVersion(), CLIENT_DATE);
 }
 
 namespace
@@ -1186,12 +1186,12 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
         static boost::interprocess::file_lock lock(pathLockFile.string().c_str());
         if (!lock.try_lock())
             return InitError(strprintf(
-                _("Cannot obtain a lock on data directory %s. ECC is probably already running."), strDataDir));
+                _("Cannot obtain a lock on data directory %s. Eccoind is probably already running."), strDataDir));
     }
     catch (const boost::interprocess::interprocess_exception &e)
     {
         return InitError(
-            strprintf(_("Cannot obtain a lock on data directory %s. ECC is probably already running.") + " %s.",
+            strprintf(_("Cannot obtain a lock on data directory %s. Eccoind is probably already running.") + " %s.",
                 strDataDir, e.what()));
     }
 
@@ -1551,7 +1551,7 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
                 {
                     if (!fs::is_directory(servicesFolder))
                     {
-                        LogPrintf("services exists but is not a folder, check your ecc data files \n");
+                        LogPrintf("services exists but is not a folder, check your eccoin data files \n");
                         assert(false);
                     }
                 }

@@ -5,7 +5,7 @@ Note: These instructions were created on a machine that natively ran Ubuntu 16.0
 ## Verify hardware compatability
 Verify that your machine has the hardware virtualizations extensions to build
 
-#### For intel the following command should give you a list of flags 
+#### For intel the following command should give you a list of flags
 
 `grep -e 'vmx' /proc/cpuinfo`
 
@@ -14,8 +14,8 @@ Verify that your machine has the hardware virtualizations extensions to build
 `grep -e 'svm' /proc/cpuinfo`
 
 If there is no output make sure that virtualization extensions is enabled in BIOS.
-Verify that KVM modules are loaded in the kernel. 
-It should be loaded by default. Verify this using 
+Verify that KVM modules are loaded in the kernel.
+It should be loaded by default. Verify this using
 `lsmod | grep kvm`. You should get some output.
 
 Running `modprobe kvm` might also help
@@ -55,21 +55,21 @@ export RELEASE_DIR=~/ecc-releases/${VERSION}
 
 #### Make the base gitian image
 
-Eccoind builds on an Ubuntu trusty VM, create that base vm image by doing the following:
+Eccoin builds on an Ubuntu trusty VM, create that base vm image by doing the following:
 ```
 cd ecc-gitian-builder
 ./bin/make-base-vm --arch amd64 --suite trusty
 ```
 
-If you get an error code here it is due to an issue with python. To fix it find the file 
+If you get an error code here it is due to an issue with python. To fix it find the file
 
 `/usr/lib/python2.7/dist-packages/VMBuilder/plugins/ubuntu/dapper.py`
 
-Find the line: 
+Find the line:
 ```
 self.run_in_target('apt-get', '-y', '--force-yes', 'dist-upgrade',
 ```
-and replace it with: 
+and replace it with:
 ```
 self.run_in_target('apt-get', '-y', '--force-yes', '--option=Dpkg::Options::=--force-confnew', 'dist-upgrade',
 ```
@@ -92,7 +92,7 @@ For example if I wanted to build windows binaries:
 
 Linux Signing
 
-``` 
+```
 ./bin/gsign --signer $SIGNER --release ${VERSION}-linux --destination ~/gitian.sigs/ ${ECC_PATH}/contrib/gitian-descriptors/gitian-linux.yml
 ```
 
