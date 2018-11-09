@@ -1,8 +1,8 @@
 /*
- * This file is part of the ECC project
+ * This file is part of the Eccoin project
  * Copyright (c) 2009-2010 Satoshi Nakamoto
  * Copyright (c) 2009-2016 The Bitcoin Core developers
- * Copyright (c) 2014-2018 The ECC developers
+ * Copyright (c) 2014-2018 The Eccoin developers
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -50,13 +50,9 @@ public:
         page_mask = ~(page_size - 1);
     }
 
-    ~LockedPageManagerBase()
-    {
-    }
-
-
+    ~LockedPageManagerBase() {}
     // For all pages in affected range, increase lock count
-    void LockRange(void* p, size_t size)
+    void LockRange(void *p, size_t size)
     {
         boost::mutex::scoped_lock lock(mutex);
         if (!size)
@@ -64,13 +60,15 @@ public:
         const size_t base_addr = reinterpret_cast<size_t>(p);
         const size_t start_page = base_addr & page_mask;
         const size_t end_page = (base_addr + size - 1) & page_mask;
-        for (size_t page = start_page; page <= end_page; page += page_size) {
+        for (size_t page = start_page; page <= end_page; page += page_size)
+        {
             Histogram::iterator it = histogram.find(page);
             if (it == histogram.end()) // Newly locked page
             {
-                locker.Lock(reinterpret_cast<void*>(page), page_size);
+                locker.Lock(reinterpret_cast<void *>(page), page_size);
                 histogram.insert(std::make_pair(page, 1));
-            } else // Page was already locked; increase counter
+            }
+            else // Page was already locked; increase counter
             {
                 it->second += 1;
             }
@@ -78,7 +76,7 @@ public:
     }
 
     // For all pages in affected range, decrease lock count
-    void UnlockRange(void* p, size_t size)
+    void UnlockRange(void *p, size_t size)
     {
         boost::mutex::scoped_lock lock(mutex);
         if (!size)
@@ -86,7 +84,8 @@ public:
         const size_t base_addr = reinterpret_cast<size_t>(p);
         const size_t start_page = base_addr & page_mask;
         const size_t end_page = (base_addr + size - 1) & page_mask;
-        for (size_t page = start_page; page <= end_page; page += page_size) {
+        for (size_t page = start_page; page <= end_page; page += page_size)
+        {
             Histogram::iterator it = histogram.find(page);
             assert(it != histogram.end()); // Cannot unlock an area that was not locked
             // Decrease counter for page, when it is zero, the page will be unlocked
@@ -94,7 +93,7 @@ public:
             if (it->second == 0) // Nothing on the page anymore that keeps it locked
             {
                 // Unlock page and remove the count from histogram
-                locker.Unlock(reinterpret_cast<void*>(page), page_size);
+                locker.Unlock(reinterpret_cast<void *>(page), page_size);
                 histogram.erase(it);
             }
         }
@@ -127,11 +126,11 @@ public:
     /** Lock memory pages.
      * addr and len must be a multiple of the system page size
      */
-    bool Lock(const void* addr, size_t len);
+    bool Lock(const void *addr, size_t len);
     /** Unlock memory pages.
      * addr and len must be a multiple of the system page size
      */
-    bool Unlock(const void* addr, size_t len);
+    bool Unlock(const void *addr, size_t len);
 };
 
 /**
@@ -148,7 +147,7 @@ public:
 class LockedPageManager : public LockedPageManagerBase<MemoryPageLocker>
 {
 public:
-    static LockedPageManager& Instance()
+    static LockedPageManager &Instance()
     {
         boost::call_once(LockedPageManager::CreateInstance, LockedPageManager::init_flag);
         return *LockedPageManager::_instance;
@@ -168,7 +167,7 @@ private:
         LockedPageManager::_instance = &instance;
     }
 
-    static LockedPageManager* _instance;
+    static LockedPageManager *_instance;
     static boost::once_flag init_flag;
 };
 
@@ -177,16 +176,16 @@ private:
 // Intended for non-dynamically allocated structures.
 //
 template <typename T>
-void LockObject(const T& t)
+void LockObject(const T &t)
 {
-    LockedPageManager::Instance().LockRange((void*)(&t), sizeof(T));
+    LockedPageManager::Instance().LockRange((void *)(&t), sizeof(T));
 }
 
 template <typename T>
-void UnlockObject(const T& t)
+void UnlockObject(const T &t)
 {
-    memory_cleanse((void*)(&t), sizeof(T));
-    LockedPageManager::Instance().UnlockRange((void*)(&t), sizeof(T));
+    memory_cleanse((void *)(&t), sizeof(T));
+    LockedPageManager::Instance().UnlockRange((void *)(&t), sizeof(T));
 }
 
 #endif // BITCOIN_SUPPORT_PAGELOCKER_H

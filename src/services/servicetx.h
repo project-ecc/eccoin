@@ -1,5 +1,5 @@
 /*
- * This file is part of the ECC project
+ * This file is part of the Eccoin project
  * Copyright (c) 2018 Greg Griffith
  *
  * This program is free software: you can redistribute it and/or modify
@@ -19,8 +19,8 @@
 #ifndef SERVICETX_H
 #define SERVICETX_H
 
-#include "uint256.h"
 #include "serialize.h"
+#include "uint256.h"
 
 /** The basic transaction that is broadcasted on the network and contained in
  * blocks.  A transaction can contain multiple inputs and outputs.
@@ -34,13 +34,13 @@ private:
 
 public:
     // Default transaction version.
-    static const int32_t CURRENT_VERSION=1;
+    static const int32_t CURRENT_VERSION = 1;
 
     // Changing the default transaction version requires a two step process: first
     // adapting relay policy by bumping MAX_STANDARD_VERSION, and then later date
     // bumping the default CURRENT_VERSION at which point both CURRENT_VERSION and
     // MAX_STANDARD_VERSION will be equal.
-    static const int32_t MAX_STANDARD_VERSION=2;
+    static const int32_t MAX_STANDARD_VERSION = 2;
 
     // The local variables are made const to prevent unintended modification
     // without updating the cached hash value. However, CTransaction is not
@@ -54,7 +54,7 @@ public:
     uint32_t nExpireTime;
     std::vector<unsigned char> vdata;
     uint256 paymentReferenceHash;
-    //uint256 securityHash;
+    // uint256 securityHash;
 
     /** Construct a CTransaction that qualifies as IsNull() */
     CServiceTransaction();
@@ -62,21 +62,22 @@ public:
     /** Convert a CTransaction into a CTransaction. */
     CServiceTransaction(const CServiceTransaction &tx);
 
-    CServiceTransaction& operator=(const CServiceTransaction& tx);
+    CServiceTransaction &operator=(const CServiceTransaction &tx);
 
     ADD_SERIALIZE_METHODS
 
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action) {
-        READWRITE(*const_cast<int32_t*>(&this->nVersion));
+    inline void SerializationOp(Stream &s, Operation ser_action)
+    {
+        READWRITE(*const_cast<int32_t *>(&this->nVersion));
         nVersion = this->nVersion;
-        READWRITE(*const_cast<uint16_t*>(&this->nServiceId));
-        READWRITE(*const_cast<uint32_t*>(&this->nTime));
-        READWRITE(*const_cast<uint16_t*>(&this->nOpCode));
-        READWRITE(*const_cast<uint32_t*>(&nExpireTime));
-        READWRITE(*const_cast<std::vector<unsigned char>*>(&vdata));
-        READWRITE(*const_cast<uint256*>(&this->paymentReferenceHash));
-        //READWRITE(*const_cast<uint256*>(&this->securityHash));
+        READWRITE(*const_cast<uint16_t *>(&this->nServiceId));
+        READWRITE(*const_cast<uint32_t *>(&this->nTime));
+        READWRITE(*const_cast<uint16_t *>(&this->nOpCode));
+        READWRITE(*const_cast<uint32_t *>(&nExpireTime));
+        READWRITE(*const_cast<std::vector<unsigned char> *>(&vdata));
+        READWRITE(*const_cast<uint256 *>(&this->paymentReferenceHash));
+        // READWRITE(*const_cast<uint256*>(&this->securityHash));
         if (ser_action.ForRead())
             UpdateHash();
     }
@@ -89,18 +90,10 @@ public:
 
     uint256 GetHash() const;
 
-    friend bool operator==(const CServiceTransaction& a, const CServiceTransaction& b)
-    {
-        return a.hash == b.hash;
-    }
-
-    friend bool operator!=(const CServiceTransaction& a, const CServiceTransaction& b)
-    {
-        return a.hash != b.hash;
-    }
-
+    friend bool operator==(const CServiceTransaction &a, const CServiceTransaction &b) { return a.hash == b.hash; }
+    friend bool operator!=(const CServiceTransaction &a, const CServiceTransaction &b) { return a.hash != b.hash; }
     std::string ToString() const;
-    //void setSecurityHash();
+    // void setSecurityHash();
 };
 
 

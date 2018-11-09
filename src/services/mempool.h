@@ -1,5 +1,5 @@
 /*
- * This file is part of the ECC project
+ * This file is part of the Eccoin project
  * Copyright (c) 2018 Greg Griffith
  *
  * This program is free software: you can redistribute it and/or modify
@@ -20,8 +20,8 @@
 #define STXMEMPOOL_H
 
 #include "dbwrapper.h"
-#include "uint256.h"
 #include "services/servicetx.h"
+#include "uint256.h"
 
 #include <map>
 #include <string>
@@ -39,13 +39,14 @@ class CStxDB : public CDBWrapper
 {
 public:
     CStxDB(size_t nCacheSize, bool fMemory = false, bool fWipe = false);
-private:
-    CStxDB(const CStxDB&);
-    void operator=(const CStxDB&);
-public:
 
+private:
+    CStxDB(const CStxDB &);
+    void operator=(const CStxDB &);
+
+public:
     bool WriteEntry(uint256 hash, CServiceTransaction stx);
-    bool ReadEntry(uint256 hash, CServiceTransaction& stx);
+    bool ReadEntry(uint256 hash, CServiceTransaction &stx);
     bool EraseEntry(uint256 hash);
 };
 
@@ -53,11 +54,9 @@ class CStxMemPool
 {
 private:
     std::unique_ptr<CStxDB> stxdb;
+
 public:
-    CStxMemPool()
-    {
-        stxdb.reset(new CStxDB(nDefaultStxCache, false, false));
-    }
+    CStxMemPool() { stxdb.reset(new CStxDB(nDefaultStxCache, false, false)); }
     ~CStxMemPool()
     {
         stxdb.reset();
@@ -65,8 +64,8 @@ public:
     }
 
     bool exists(uint256 hash) const;
-    bool lookup(uint256 hash, CServiceTransaction& result) const;
-    bool add(uint256 hash, CServiceTransaction& stx) const;
+    bool lookup(uint256 hash, CServiceTransaction &result) const;
+    bool add(uint256 hash, CServiceTransaction &stx) const;
 };
 
 extern std::unique_ptr<CStxMemPool> g_stxmempool;

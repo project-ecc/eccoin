@@ -1,8 +1,8 @@
 /*
- * This file is part of the ECC project
+ * This file is part of the Eccoin project
  * Copyright (c) 2009-2010 Satoshi Nakamoto
  * Copyright (c) 2009-2016 The Bitcoin Core developers
- * Copyright (c) 2014-2018 The ECC developers
+ * Copyright (c) 2014-2018 The Eccoin developers
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -77,8 +77,8 @@
 #include <openssl/crypto.h>
 
 bool fShutdown = false;
-CWallet *pwalletMain = NULL;
-CNetworkManager *pnetMan = NULL;
+CWallet *pwalletMain = nullptr;
+CNetworkManager *pnetMan = nullptr;
 
 std::unique_ptr<CConnman> g_connman;
 std::unique_ptr<PeerLogicValidation> peerLogic;
@@ -265,7 +265,7 @@ void Shutdown()
     UnregisterAllValidationInterfaces();
 
     delete pwalletMain;
-    pwalletMain = NULL;
+    pwalletMain = nullptr;
     g_ans.reset();
     g_stxmempool.reset();
     globalVerifyHandle.reset();
@@ -409,7 +409,8 @@ std::string HelpMessage()
     if (showDebug)
         strUsage += HelpMessageOpt("-enforcenodebloom",
             strprintf("Enforce minimum protocol version to limit use of bloom filters (default: %u)", 0));
-    strUsage += HelpMessageOpt("-port=<port>", strprintf(_("Listen for connections on <port> (default: %u)"), 19118));
+    strUsage += HelpMessageOpt("-port=<port>", strprintf(_("Listen for connections on <port> (default: %u)"),
+                                                   pnetMan->getActivePaymentNetwork()->GetDefaultPort()));
     strUsage += HelpMessageOpt("-proxy=<ip:port>", _("Connect through SOCKS5 proxy"));
     strUsage += HelpMessageOpt(
         "-proxyrandomize",
@@ -628,8 +629,9 @@ std::string HelpMessage()
         "-rpcauth=<userpw>", _("Username and hashed password for JSON-RPC connections. The field <userpw> comes in the "
                                "format: <USERNAME>:<SALT>$<HASH>. A canonical python script is included in "
                                "share/rpcuser. This option can be specified multiple times"));
-    strUsage += HelpMessageOpt(
-        "-rpcport=<port>", strprintf(_("Listen for JSON-RPC connections on <port> (default: %u)"), 19119));
+    strUsage +=
+        HelpMessageOpt("-rpcport=<port>", strprintf(_("Listen for JSON-RPC connections on <port> (default: %u)"),
+                                              pnetMan->getActivePaymentNetwork()->GetRPCPort()));
     strUsage += HelpMessageOpt(
         "-rpcallowip=<ip>", _("Allow JSON-RPC connections from specified source. Valid for <ip> are a single IP (e.g. "
                               "1.2.3.4), a network/netmask (e.g. 1.2.3.4/255.255.255.0) or a network/CIDR (e.g. "
@@ -882,7 +884,7 @@ void InitLogging()
     fLogIPs = gArgs.GetBoolArg("-logips", DEFAULT_LOGIPS);
 
     LogPrintf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
-    LogPrintf("ECC version %s (%s)\n", FormatFullVersion(), CLIENT_DATE);
+    LogPrintf("Eccoin version %s (%s)\n", FormatFullVersion(), CLIENT_DATE);
 }
 
 namespace
@@ -1186,12 +1188,12 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
         static boost::interprocess::file_lock lock(pathLockFile.string().c_str());
         if (!lock.try_lock())
             return InitError(strprintf(
-                _("Cannot obtain a lock on data directory %s. ECC is probably already running."), strDataDir));
+                _("Cannot obtain a lock on data directory %s. Eccoind is probably already running."), strDataDir));
     }
     catch (const boost::interprocess::interprocess_exception &e)
     {
         return InitError(
-            strprintf(_("Cannot obtain a lock on data directory %s. ECC is probably already running.") + " %s.",
+            strprintf(_("Cannot obtain a lock on data directory %s. Eccoind is probably already running.") + " %s.",
                 strDataDir, e.what()));
     }
 
@@ -1551,7 +1553,7 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
                 {
                     if (!fs::is_directory(servicesFolder))
                     {
-                        LogPrintf("services exists but is not a folder, check your ecc data files \n");
+                        LogPrintf("services exists but is not a folder, check your eccoin data files \n");
                         assert(false);
                     }
                 }

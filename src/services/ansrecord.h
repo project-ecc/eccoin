@@ -1,5 +1,5 @@
 /*
- * This file is part of the ECC project
+ * This file is part of the Eccoin project
  * Copyright (c) 2018 Greg Griffith
  *
  * This program is free software: you can redistribute it and/or modify
@@ -19,12 +19,13 @@
 #ifndef ANSRECORD_H
 #define ANSRECORD_H
 
-#include <string>
-#include "uint256.h"
 #include "serialize.h"
 #include "services/servicetx.h"
+#include "uint256.h"
+#include <string>
 
-enum AnsRecordTypes{
+enum AnsRecordTypes
+{
     A_RECORD, // name to address
     PTR_RECORD, // address to name
 
@@ -44,11 +45,7 @@ private:
     uint64_t CalcValidTime(uint64_t nTime, uint256 paymentHash);
 
 public:
-    CAnsRecord()
-    {
-        setNull();
-    }
-
+    CAnsRecord() { setNull(); }
     CAnsRecord(const CServiceTransaction stx, std::string addr, std::string code = "")
     {
         std::string name(stx.vdata.begin(), stx.vdata.end());
@@ -63,7 +60,8 @@ public:
     ADD_SERIALIZE_METHODS
 
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action) {
+    inline void SerializationOp(Stream &s, Operation ser_action)
+    {
         READWRITE(name);
         READWRITE(address);
         READWRITE(expireTime);
@@ -73,23 +71,17 @@ public:
     }
 
 
-    friend bool operator==(const CAnsRecord& a, const CAnsRecord& b)
+    friend bool operator==(const CAnsRecord &a, const CAnsRecord &b)
     {
-        return a.name == b.name &&
-               a.address == b.address &&
-               a.expireTime == b.expireTime &&
-               a.paymentHash == b.paymentHash &&
-               a.serviceHash == b.serviceHash &&
+        return a.name == b.name && a.address == b.address && a.expireTime == b.expireTime &&
+               a.paymentHash == b.paymentHash && a.serviceHash == b.serviceHash &&
                a.verificationCode == b.verificationCode;
     }
 
-    friend bool operator!=(const CAnsRecord& a, const CAnsRecord& b)
+    friend bool operator!=(const CAnsRecord &a, const CAnsRecord &b)
     {
-        return a.name != b.name ||
-               a.address == b.address ||
-               a.expireTime != b.expireTime ||
-               a.paymentHash != b.paymentHash ||
-               a.serviceHash != b.serviceHash ||
+        return a.name != b.name || a.address == b.address || a.expireTime != b.expireTime ||
+               a.paymentHash != b.paymentHash || a.serviceHash != b.serviceHash ||
                a.verificationCode != b.verificationCode;
     }
 
@@ -113,7 +105,6 @@ public:
 
     std::string getVertificationCode();
     bool isValidCode(std::string code);
-
 };
 
 class CAnsKey
@@ -121,16 +112,14 @@ class CAnsKey
 private:
     const char record;
     const std::string name;
+
 public:
-    CAnsKey(const char& _record, std::string& _name) : record(_record), name(_name)
-    {
-
-    }
-
+    CAnsKey(const char &_record, std::string &_name) : record(_record), name(_name) {}
     ADD_SERIALIZE_METHODS
 
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action) {
+    inline void SerializationOp(Stream &s, Operation ser_action)
+    {
         READWRITE(record);
         READWRITE(name);
     }
@@ -140,38 +129,32 @@ class CAnsRecordSet
 {
 private:
     std::map<std::string, CAnsRecord> recordSet;
+
 public:
-    CAnsRecordSet()
-    {
-        recordSet.clear();
-    }
-
-    CAnsRecordSet(std::map<std::string, CAnsRecord> _recordSet)
-    {
-        recordSet = _recordSet;
-    }
-
+    CAnsRecordSet() { recordSet.clear(); }
+    CAnsRecordSet(std::map<std::string, CAnsRecord> _recordSet) { recordSet = _recordSet; }
     ADD_SERIALIZE_METHODS
 
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action) {
+    inline void SerializationOp(Stream &s, Operation ser_action)
+    {
         READWRITE(recordSet);
     }
 
     bool addRecord(std::string code, CAnsRecord rec)
     {
-        if(code == "")
+        if (code == "")
         {
             return false;
         }
-        auto ret = recordSet.insert(std::make_pair(code,rec));
+        auto ret = recordSet.insert(std::make_pair(code, rec));
         return ret.second;
     }
 
-    bool getRecord(std::string code, CAnsRecord& rec)
+    bool getRecord(std::string code, CAnsRecord &rec)
     {
         auto ret = recordSet.find(code);
-        if(ret != recordSet.end())
+        if (ret != recordSet.end())
         {
             rec = (*ret).second;
             return true;
@@ -179,15 +162,11 @@ public:
         return false;
     }
 
-    std::map<std::string, CAnsRecord> getRecords()
-    {
-        return recordSet;
-    }
-
+    std::map<std::string, CAnsRecord> getRecords() { return recordSet; }
     bool removeRecord(std::string code)
     {
         auto ret = recordSet.find(code);
-        if(ret != recordSet.end())
+        if (ret != recordSet.end())
         {
             recordSet.erase(ret);
             return true;

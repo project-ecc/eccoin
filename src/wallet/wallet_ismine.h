@@ -1,8 +1,8 @@
 /*
- * This file is part of the ECC project
+ * This file is part of the Eccoin project
  * Copyright (c) 2009-2010 Satoshi Nakamoto
  * Copyright (c) 2009-2016 The Bitcoin Core developers
- * Copyright (c) 2014-2018 The ECC developers
+ * Copyright (c) 2014-2018 The Eccoin developers
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,9 +32,11 @@ class CScript;
 enum isminetype
 {
     ISMINE_NO = 0,
-    //! Indicates that we dont know how to create a scriptSig that would solve this if we were given the appropriate private keys
+    //! Indicates that we dont know how to create a scriptSig that would solve this if we were given the appropriate
+    //! private keys
     ISMINE_WATCH_UNSOLVABLE = 1,
-    //! Indicates that we know how to create a scriptSig that would solve this if we were given the appropriate private keys
+    //! Indicates that we know how to create a scriptSig that would solve this if we were given the appropriate private
+    //! keys
     ISMINE_WATCH_SOLVABLE = 2,
     ISMINE_WATCH_ONLY = ISMINE_WATCH_SOLVABLE | ISMINE_WATCH_UNSOLVABLE,
     ISMINE_SPENDABLE = 4,
@@ -43,7 +45,7 @@ enum isminetype
 /** used for bitflags of isminetype */
 typedef uint8_t isminefilter;
 
-isminetype IsMine(const CKeyStore& keystore, const CScript& scriptPubKey);
-isminetype IsMine(const CKeyStore& keystore, const CTxDestination& dest);
+isminetype IsMine(const CKeyStore &keystore, const CScript &scriptPubKey);
+isminetype IsMine(const CKeyStore &keystore, const CTxDestination &dest);
 
 #endif // BITCOIN_WALLET_WALLET_ISMINE_H
