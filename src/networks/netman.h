@@ -33,15 +33,15 @@ static const int64_t SERVICE_UPGRADE_HARDFORK = 1525478400; // May 5th at 00:00:
 class CNetworkManager
 {
 private:
-    CNetwork* activePaymentNetwork;
+    CNetwork *activePaymentNetwork;
 
-    CNetwork* pnetLegacy;
-    CNetwork* pnetTestnet0;
-    CNetwork* pnetRegTest;
+    CNetwork *pnetLegacy;
+    CNetwork *pnetTestnet0;
+    CNetwork *pnetRegTest;
 
-    CNetworkTemplate* legacyTemplate;
-    CNetworkTemplate* testnet0Template;
-    CNetworkTemplate* regTestTemplate;
+    CNetworkTemplate *legacyTemplate;
+    CNetworkTemplate *testnet0Template;
+    CNetworkTemplate *regTestTemplate;
 
 public:
     CNetworkManager()
@@ -72,7 +72,7 @@ public:
         ConstructTetnet0Template();
         regTestTemplate = new CNetworkTemplate();
         ConstructRegTestTemplate();
-        //only run construct networks after all templates have been made
+        // only run construct networks after all templates have been made
         ConstructNetworks();
     }
 
@@ -81,16 +81,9 @@ public:
     void ConstructRegTestTemplate();
     void ConstructNetworks();
 
-    CNetwork* getActivePaymentNetwork()
-    {
-        return activePaymentNetwork;
-    }
-    CChainManager* getChainActive()
-    {
-        return activePaymentNetwork->getChainManager();
-    }
-
-    void SetParams(const std::string& network)
+    CNetwork *getActivePaymentNetwork() { return activePaymentNetwork; }
+    CChainManager *getChainActive() { return activePaymentNetwork->getChainManager(); }
+    void SetParams(const std::string &network)
     {
         if (network == "LEGACY")
         {
@@ -112,7 +105,8 @@ public:
     }
 };
 
-/// TODO : Fix this workaround that is used for RPC on command line. shuould either construct pnetMan earlier or find another way to get this value
+// TODO : Fix this workaround that is used for RPC on command line. shuould either construct pnetMan earlier or find
+// another way to get this value
 int RPCPortFromCommandLine();
 
 /**
@@ -122,6 +116,6 @@ int RPCPortFromCommandLine();
 std::string ChainNameFromCommandLine();
 
 
-void CheckParams(const std::string& network);
+void CheckParams(const std::string &network);
 
 #endif // BITCOIN_CHAINPARAMSBASE_H

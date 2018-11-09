@@ -27,19 +27,20 @@
 /** The maximum allowed size for a serialized block, in bytes (network rule) */
 static const uint64_t MAX_BLOCK_SIZE = 1000000;
 
-static const uint64_t MAX_BLOCK_SIZE_GEN = MAX_BLOCK_SIZE/2;
+static const uint64_t MAX_BLOCK_SIZE_GEN = MAX_BLOCK_SIZE / 2;
 
 static const uint64_t DEFAULT_LARGEST_TRANSACTION = 1000000;
 
-static const int64_t nMaxClockDrift = 2 * 60 * 60;        // two hours
+static const int64_t nMaxClockDrift = 2 * 60 * 60; // two hours
 
 /** The maximum allowed number of signature check operations in a block (network rule) */
-static const uint64_t MAX_BLOCK_SIGOPS = MAX_BLOCK_SIZE/50;
+static const uint64_t MAX_BLOCK_SIGOPS = MAX_BLOCK_SIZE / 50;
 /** Coinbase transaction outputs can only be spent after this number of new blocks (network rule) */
 static const int COINBASE_MATURITY = 30;
 
 /** Flags for nSequence and nLockTime locks */
-enum {
+enum
+{
     /* Interpret sequence numbers as relative lock-time constraints. */
     LOCKTIME_VERIFY_SEQUENCE = (1 << 0),
 

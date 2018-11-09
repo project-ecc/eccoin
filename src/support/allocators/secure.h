@@ -29,7 +29,8 @@
 // out of memory and clears its contents before deletion.
 //
 template <typename T>
-struct secure_allocator : public std::allocator<T> {
+struct secure_allocator : public std::allocator<T>
+{
     // MSVC8 default copy constructor is broken
     typedef std::allocator<T> base;
     typedef typename base::size_type size_type;
@@ -40,29 +41,31 @@ struct secure_allocator : public std::allocator<T> {
     typedef typename base::const_reference const_reference;
     typedef typename base::value_type value_type;
     secure_allocator() throw() {}
-    secure_allocator(const secure_allocator& a) throw() : base(a) {}
+    secure_allocator(const secure_allocator &a) throw() : base(a) {}
     template <typename U>
-    secure_allocator(const secure_allocator<U>& a) throw() : base(a)
+    secure_allocator(const secure_allocator<U> &a) throw() : base(a)
     {
     }
     ~secure_allocator() throw() {}
     template <typename _Other>
-    struct rebind {
+    struct rebind
+    {
         typedef secure_allocator<_Other> other;
     };
 
-    T* allocate(std::size_t n, const void* hint = 0)
+    T *allocate(std::size_t n, const void *hint = 0)
     {
-        T* p;
+        T *p;
         p = std::allocator<T>::allocate(n, hint);
         if (p != NULL)
             LockedPageManager::Instance().LockRange(p, sizeof(T) * n);
         return p;
     }
 
-    void deallocate(T* p, std::size_t n)
+    void deallocate(T *p, std::size_t n)
     {
-        if (p != NULL) {
+        if (p != NULL)
+        {
             memory_cleanse(p, sizeof(T) * n);
             LockedPageManager::Instance().UnlockRange(p, sizeof(T) * n);
         }

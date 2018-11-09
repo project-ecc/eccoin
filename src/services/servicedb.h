@@ -34,9 +34,11 @@ class CServiceDB : public CDBWrapper
 {
 public:
     CServiceDB(std::string name, size_t nCacheSize, bool fMemory = false, bool fWipe = false);
+
 private:
-    CServiceDB(const CServiceDB&);
-    void operator=(const CServiceDB&);
+    CServiceDB(const CServiceDB &);
+    void operator=(const CServiceDB &);
+
 public:
     bool WriteBatchSync();
 
