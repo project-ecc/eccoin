@@ -25,8 +25,8 @@
 #include <map>
 #include <string>
 
-namespace Consensus {
-
+namespace Consensus
+{
 enum DeploymentPos
 {
     DEPLOYMENT_TESTDUMMY,
@@ -37,7 +37,8 @@ enum DeploymentPos
 /**
  * Struct for each individual consensus rule change using BIP9.
  */
-struct BIP9Deployment {
+struct BIP9Deployment
+{
     /** Bit position to select the particular bit in nVersion. */
     int bit;
     /** Start MedianTime for version bits miner confirmation. Can be a date in the past */
@@ -49,7 +50,8 @@ struct BIP9Deployment {
 /**
  * Parameters that influence chain consensus.
  */
-struct Params {
+struct Params
+{
     uint256 hashGenesisBlock;
     /** Used to check majorities for block version upgrade */
     int nMajorityEnforceBlockUpgrade;

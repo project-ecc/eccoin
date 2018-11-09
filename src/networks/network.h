@@ -19,9 +19,9 @@
 #ifndef NETWORK_H
 #define NETWORK_H
 
+#include <boost/variant.hpp>
 #include <string>
 #include <vector>
-#include <boost/variant.hpp>
 
 #include "chain/chainman.h"
 #include "networktemplate.h"
@@ -52,13 +52,12 @@
 class CNetwork : public CNetworkTemplate
 {
 public:
-    CNetwork(CNetworkTemplate* param_netTemplate) : CNetworkTemplate(param_netTemplate)
+    CNetwork(CNetworkTemplate *param_netTemplate) : CNetworkTemplate(param_netTemplate)
     {
         this->chainman = CChainManager();
     }
-    const std::string& DataDir() const { return strNetworkDataDir; }
-    CChainManager* getChainManager() { return &chainman; }
-
+    const std::string &DataDir() const { return strNetworkDataDir; }
+    CChainManager *getChainManager() { return &chainman; }
     /// TODO: put a check somewhere to make sure all data members have been set properly
 private:
     CChainManager chainman;

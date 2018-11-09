@@ -29,19 +29,19 @@
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
-#include <winsock2.h>
 #include <windows.h>
+#include <winsock2.h>
 // This is used to attempt to keep keying material out of swap
 // Note that VirtualLock does not provide this as a guarantee on Windows,
 // but, in practice, memory that has been VirtualLock'd almost never gets written to
 // the pagefile except in rare circumstances where memory is extremely low.
 #else
-#include <sys/mman.h>
 #include <limits.h> // for PAGESIZE
+#include <sys/mman.h>
 #include <unistd.h> // for sysconf
 #endif
 
-LockedPageManager* LockedPageManager::_instance = NULL;
+LockedPageManager *LockedPageManager::_instance = NULL;
 boost::once_flag LockedPageManager::init_flag = BOOST_ONCE_INIT;
 
 /** Determine system page size in bytes */
@@ -54,30 +54,28 @@ static inline size_t GetSystemPageSize()
     page_size = sSysInfo.dwPageSize;
 #elif defined(PAGESIZE) // defined in limits.h
     page_size = PAGESIZE;
-#else                   // assume some POSIX OS
+#else // assume some POSIX OS
     page_size = sysconf(_SC_PAGESIZE);
 #endif
     return page_size;
 }
 
-bool MemoryPageLocker::Lock(const void* addr, size_t len)
+bool MemoryPageLocker::Lock(const void *addr, size_t len)
 {
 #ifdef WIN32
-    return VirtualLock(const_cast<void*>(addr), len) != 0;
+    return VirtualLock(const_cast<void *>(addr), len) != 0;
 #else
     return mlock(addr, len) == 0;
 #endif
 }
 
-bool MemoryPageLocker::Unlock(const void* addr, size_t len)
+bool MemoryPageLocker::Unlock(const void *addr, size_t len)
 {
 #ifdef WIN32
-    return VirtualUnlock(const_cast<void*>(addr), len) != 0;
+    return VirtualUnlock(const_cast<void *>(addr), len) != 0;
 #else
     return munlock(addr, len) == 0;
 #endif
 }
 
-LockedPageManager::LockedPageManager() : LockedPageManagerBase<MemoryPageLocker>(GetSystemPageSize())
-{
-}
+LockedPageManager::LockedPageManager() : LockedPageManagerBase<MemoryPageLocker>(GetSystemPageSize()) {}

@@ -24,11 +24,12 @@
 
 #include "servicedb.h"
 
+#include <memory>
 #include <string>
 #include <unordered_map>
-#include <memory>
 
-enum Opcode_ANS{
+enum Opcode_ANS
+{
     OP_REGISTER,
     OP_RENEW,
 };
@@ -43,8 +44,8 @@ public:
     bool addRecord(AnsRecordTypes recordType, std::string key, CAnsRecord &value);
     bool getRecord(std::string key, CAnsRecordSet &value);
     bool getRecord(std::string key, CAnsRecord &value);
-    bool addTimeToRecord(CServiceTransaction stx, std::string& addr, uint64_t additionalTime);
+    bool addTimeToRecord(CServiceTransaction stx, std::string &addr, uint64_t additionalTime);
 };
 
-extern CAnsZone* pansMain;
+extern CAnsZone *pansMain;
 #endif // ANS_H
