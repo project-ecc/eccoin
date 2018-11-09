@@ -1,7 +1,7 @@
 /*
- * This file is part of the ECC project
+ * This file is part of the Eccoin project
  * Copyright (c) 2009-2016 The Bitcoin Core developers
- * Copyright (c) 2014-2018 The ECC developers
+ * Copyright (c) 2014-2018 The Eccoin developers
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,26 +34,6 @@
 
 #include <stdio.h>
 
-/* Introduction text for doxygen: */
-
-/*! \mainpage Developer documentation
- *
- * \section intro_sec Introduction
- *
- //www.bitcoin.org/),
- * This is the developer documentation of the reference client for an experimental new digital currency called Bitcoin
- (https:
- * which enables instant payments to anyone, anywhere in the world. Bitcoin uses peer-to-peer technology to operate
- * with no central authority: managing transactions and issuing money are carried out collectively by the network.
- *
- * The software is a community-driven open source project, released under the MIT license.
- *
- * \section Navigation
- * Use the buttons <code>Namespaces</code>, <code>Classes</code> or <code>Files</code> at the top of the page to start
- navigating the code.
- */
-
-
 void WaitForShutdown(boost::thread_group *threadGroup)
 {
     bool fShutdown = ShutdownRequested();
@@ -84,13 +64,34 @@ bool AppInit(int argc, char *argv[])
     //
     // Parameters
     //
-    // If Qt is used, parameters/bitcoin.conf are parsed in qt/bitcoin.cpp's main()
     gArgs.ParseParameters(argc, argv);
+
+    // Check for -testnet or -regtest parameter (Params() calls are only valid after this clause)
+    try
+    {
+        CheckParams(ChainNameFromCommandLine());
+    }
+    catch (const std::exception &e)
+    {
+        fprintf(stderr, "Error: %s\n", e.what());
+        return false;
+    }
+    try
+    {
+        gArgs.ReadConfigFile();
+    }
+    catch (const std::exception &e)
+    {
+        fprintf(stderr, "Error reading configuration file: %s\n", e.what());
+        return false;
+    }
+
+    GenerateNetworkTemplates();
 
     // Process help and version before taking care about datadir
     if (gArgs.IsArgSet("-?") || gArgs.IsArgSet("-h") || gArgs.IsArgSet("-help") || gArgs.IsArgSet("-version"))
     {
-        std::string strUsage = _("ECC Daemon") + " " + _("version") + " " + FormatFullVersion() + "\n";
+        std::string strUsage = _("Eccoind") + " " + _("version") + " " + FormatFullVersion() + "\n";
 
         if (gArgs.IsArgSet("-version"))
         {
@@ -99,7 +100,7 @@ bool AppInit(int argc, char *argv[])
         else
         {
             strUsage +=
-                "\n" + _("Usage:") + "\n" + "  eccoind [options]                     " + _("Start ECC Daemon") + "\n";
+                "\n" + _("Usage:") + "\n" + "  eccoind [options]                     " + _("Start Eccoind") + "\n";
 
             strUsage += "\n" + HelpMessage();
         }
@@ -114,25 +115,6 @@ bool AppInit(int argc, char *argv[])
         {
             fprintf(stderr, "Error: Specified data directory \"%s\" does not exist.\n",
                 gArgs.GetArg("-datadir", "").c_str());
-            return false;
-        }
-        try
-        {
-            gArgs.ReadConfigFile();
-        }
-        catch (const std::exception &e)
-        {
-            fprintf(stderr, "Error reading configuration file: %s\n", e.what());
-            return false;
-        }
-        // Check for -testnet or -regtest parameter (Params() calls are only valid after this clause)
-        try
-        {
-            CheckParams(ChainNameFromCommandLine());
-        }
-        catch (const std::exception &e)
-        {
-            fprintf(stderr, "Error: %s\n", e.what());
             return false;
         }
         // Command-line RPC
@@ -153,7 +135,7 @@ bool AppInit(int argc, char *argv[])
         fDaemon = gArgs.GetBoolArg("-daemon", false);
         if (fDaemon)
         {
-            fprintf(stdout, "ECC server starting\n");
+            fprintf(stdout, "Eccoind server starting\n");
 
             // Daemonize
             pid_t pid = fork();
@@ -177,7 +159,6 @@ bool AppInit(int argc, char *argv[])
         // Set this early so that parameter interactions go to console
         InitLogging();
         InitParameterInteraction();
-        GenerateNetworkTemplates();
         fRet = AppInit2(threadGroup, scheduler);
     }
     catch (const std::exception &e)

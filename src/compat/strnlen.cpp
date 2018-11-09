@@ -1,5 +1,5 @@
 /*
- * This file is part of the ECC project
+ * This file is part of the Eccoin project
  * Copyright (c) 2009-2010 Satoshi Nakamoto
  * Copyright (c) 2009-2016 The Bitcoin Core developers
  *
@@ -20,7 +20,7 @@
 #include <cstring>
 
 #if HAVE_DECL_STRNLEN == 0
-size_t strnlen( const char *start, size_t max_len)
+size_t strnlen(const char *start, size_t max_len)
 {
     const char *end = (const char *)memchr(start, '\0', max_len);
 

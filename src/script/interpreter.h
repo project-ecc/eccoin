@@ -1,8 +1,8 @@
 /*
- * This file is part of the ECC project
+ * This file is part of the Eccoin project
  * Copyright (c) 2009-2010 Satoshi Nakamoto
  * Copyright (c) 2009-2016 The Bitcoin Core developers
- * Copyright (c) 2014-2018 The ECC developers
+ * Copyright (c) 2014-2018 The Eccoin developers
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,12 +21,12 @@
 #ifndef BITCOIN_SCRIPT_INTERPRETER_H
 #define BITCOIN_SCRIPT_INTERPRETER_H
 
-#include "script_error.h"
 #include "chain/tx.h"
+#include "script_error.h"
 
-#include <vector>
 #include <stdint.h>
 #include <string>
+#include <vector>
 
 class CPubKey;
 class CScript;
@@ -47,10 +47,10 @@ enum
 /** Script verification flags */
 enum
 {
-    SCRIPT_VERIFY_NONE      = 0,
+    SCRIPT_VERIFY_NONE = 0,
 
     // Evaluate P2SH subscripts (softfork safe, BIP16).
-    SCRIPT_VERIFY_P2SH      = (1U << 0),
+    SCRIPT_VERIFY_P2SH = (1U << 0),
 
     // Passing a non-strict-DER signature or one with undefined hashtype to a checksig operation causes script failure.
     // Evaluating a pubkey that is not (0x04 + 64 bytes) or (0x02 or 0x03 + 32 bytes) by checksig causes script failure.
@@ -58,11 +58,11 @@ enum
     SCRIPT_VERIFY_STRICTENC = (1U << 1),
 
     // Passing a non-strict-DER signature to a checksig operation causes script failure (softfork safe, BIP62 rule 1)
-    SCRIPT_VERIFY_DERSIG    = (1U << 2),
+    SCRIPT_VERIFY_DERSIG = (1U << 2),
 
     // Passing a non-strict-DER signature or one with S > order/2 to a checksig operation causes script failure
     // (softfork safe, BIP62 rule 5).
-    SCRIPT_VERIFY_LOW_S     = (1U << 3),
+    SCRIPT_VERIFY_LOW_S = (1U << 3),
 
     // verify dummy stack item consumed by CHECKMULTISIG is of zero-length (softfork safe, BIP62 rule 7).
     SCRIPT_VERIFY_NULLDUMMY = (1U << 4),
@@ -85,7 +85,7 @@ enum
     // discouraged NOPs fails the script. This verification flag will never be
     // a mandatory flag applied to scripts in a block. NOPs that are not
     // executed, e.g.  within an unexecuted IF ENDIF block, are *not* rejected.
-    SCRIPT_VERIFY_DISCOURAGE_UPGRADABLE_NOPS  = (1U << 7),
+    SCRIPT_VERIFY_DISCOURAGE_UPGRADABLE_NOPS = (1U << 7),
 
     // Require that only a single stack element remains after evaluation. This changes the success criterion from
     // "At least one stack element must remain, and when interpreted as a boolean, it must be true" to
@@ -109,45 +109,43 @@ enum
 
 };
 
-bool CheckSignatureEncoding(const std::vector<unsigned char> &vchSig, unsigned int flags, ScriptError* serror);
+bool CheckSignatureEncoding(const std::vector<unsigned char> &vchSig, unsigned int flags, ScriptError *serror);
 
-uint256 SignatureHash(const CScript &scriptCode, const CTransaction& txTo, unsigned int nIn, int nHashType);
+uint256 SignatureHash(const CScript &scriptCode, const CTransaction &txTo, unsigned int nIn, int nHashType);
 
 class BaseSignatureChecker
 {
 public:
-    virtual bool CheckSig(const std::vector<unsigned char>& scriptSig, const std::vector<unsigned char>& vchPubKey, const CScript& scriptCode) const
+    virtual bool CheckSig(const std::vector<unsigned char> &scriptSig,
+        const std::vector<unsigned char> &vchPubKey,
+        const CScript &scriptCode) const
     {
         return false;
     }
 
-    virtual bool CheckLockTime(const CScriptNum& nLockTime) const
-    {
-         return false;
-    }
-
-    virtual bool CheckSequence(const CScriptNum& nSequence) const
-    {
-         return false;
-    }
-
+    virtual bool CheckLockTime(const CScriptNum &nLockTime) const { return false; }
+    virtual bool CheckSequence(const CScriptNum &nSequence) const { return false; }
     virtual ~BaseSignatureChecker() {}
 };
 
 class TransactionSignatureChecker : public BaseSignatureChecker
 {
 private:
-    const CTransaction* txTo;
+    const CTransaction *txTo;
     unsigned int nIn;
 
 protected:
-    virtual bool VerifySignature(const std::vector<unsigned char>& vchSig, const CPubKey& vchPubKey, const uint256& sighash) const;
+    virtual bool VerifySignature(const std::vector<unsigned char> &vchSig,
+        const CPubKey &vchPubKey,
+        const uint256 &sighash) const;
 
 public:
-    TransactionSignatureChecker(const CTransaction* txToIn, unsigned int nInIn) : txTo(txToIn), nIn(nInIn) {}
-    bool CheckSig(const std::vector<unsigned char>& scriptSig, const std::vector<unsigned char>& vchPubKey, const CScript& scriptCode) const;
-    bool CheckLockTime(const CScriptNum& nLockTime) const;
-    bool CheckSequence(const CScriptNum& nSequence) const;
+    TransactionSignatureChecker(const CTransaction *txToIn, unsigned int nInIn) : txTo(txToIn), nIn(nInIn) {}
+    bool CheckSig(const std::vector<unsigned char> &scriptSig,
+        const std::vector<unsigned char> &vchPubKey,
+        const CScript &scriptCode) const;
+    bool CheckLockTime(const CScriptNum &nLockTime) const;
+    bool CheckSequence(const CScriptNum &nSequence) const;
 };
 
 class MutableTransactionSignatureChecker : public TransactionSignatureChecker
@@ -156,11 +154,22 @@ private:
     const CTransaction txTo;
 
 public:
-    MutableTransactionSignatureChecker(const CTransaction* txToIn, unsigned int nInIn) : TransactionSignatureChecker(&txTo, nInIn), txTo(*txToIn) {}
+    MutableTransactionSignatureChecker(const CTransaction *txToIn, unsigned int nInIn)
+        : TransactionSignatureChecker(&txTo, nInIn), txTo(*txToIn)
+    {
+    }
 };
 
-bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& script, unsigned int flags, const BaseSignatureChecker& checker, ScriptError* error = NULL);
-bool VerifyScript(const CScript& scriptSig, const CScript& scriptPubKey, unsigned int flags, const BaseSignatureChecker& checker, ScriptError* error = NULL);
+bool EvalScript(std::vector<std::vector<unsigned char> > &stack,
+    const CScript &script,
+    unsigned int flags,
+    const BaseSignatureChecker &checker,
+    ScriptError *error = NULL);
+bool VerifyScript(const CScript &scriptSig,
+    const CScript &scriptPubKey,
+    unsigned int flags,
+    const BaseSignatureChecker &checker,
+    ScriptError *error = NULL);
 bool CastToBool(const valtype &vch);
 
 #endif // BITCOIN_SCRIPT_INTERPRETER_H

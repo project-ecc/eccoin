@@ -1,8 +1,8 @@
 /*
- * This file is part of the ECC project
+ * This file is part of the Eccoin project
  * Copyright (c) 2009-2010 Satoshi Nakamoto
  * Copyright (c) 2009-2016 The Bitcoin Core developers
- * Copyright (c) 2014-2018 The ECC developers
+ * Copyright (c) 2014-2018 The Eccoin developers
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,16 +20,16 @@
 
 #include "rpcprotocol.h"
 
+#include "args.h"
 #include "random.h"
 #include "tinyformat.h"
 #include "util/util.h"
-#include "args.h"
 #include "util/utilstrencodings.h"
 #include "util/utiltime.h"
 #include "version.h"
 
-#include <stdint.h>
 #include <fstream>
+#include <stdint.h>
 
 /**
  * JSON-RPC protocol.  Bitcoin speaks version 1.0 for maximum compatibility,
@@ -40,7 +40,7 @@
  * 1.2 spec: http://jsonrpc.org/historical/json-rpc-over-http.html
  */
 
-UniValue JSONRPCRequestObj(const std::string& strMethod, const UniValue& params, const UniValue& id)
+UniValue JSONRPCRequestObj(const std::string &strMethod, const UniValue &params, const UniValue &id)
 {
     UniValue request(UniValue::VOBJ);
     request.push_back(Pair("method", strMethod));
@@ -49,7 +49,7 @@ UniValue JSONRPCRequestObj(const std::string& strMethod, const UniValue& params,
     return request;
 }
 
-std::string JSONRPCRequest(const std::string& strMethod, const UniValue& params, const UniValue& id)
+std::string JSONRPCRequest(const std::string &strMethod, const UniValue &params, const UniValue &id)
 {
     UniValue request(UniValue::VOBJ);
     request.push_back(Pair("method", strMethod));
@@ -58,7 +58,7 @@ std::string JSONRPCRequest(const std::string& strMethod, const UniValue& params,
     return request.write() + "\n";
 }
 
-UniValue JSONRPCReplyObj(const UniValue& result, const UniValue& error, const UniValue& id)
+UniValue JSONRPCReplyObj(const UniValue &result, const UniValue &error, const UniValue &id)
 {
     UniValue reply(UniValue::VOBJ);
     if (!error.isNull())
@@ -70,13 +70,13 @@ UniValue JSONRPCReplyObj(const UniValue& result, const UniValue& error, const Un
     return reply;
 }
 
-std::string JSONRPCReply(const UniValue& result, const UniValue& error, const UniValue& id)
+std::string JSONRPCReply(const UniValue &result, const UniValue &error, const UniValue &id)
 {
     UniValue reply = JSONRPCReplyObj(result, error, id);
     return reply.write() + "\n";
 }
 
-UniValue JSONRPCError(int code, const std::string& message)
+UniValue JSONRPCError(int code, const std::string &message)
 {
     UniValue error(UniValue::VOBJ);
     error.push_back(Pair("code", code));
@@ -94,7 +94,8 @@ static const std::string COOKIEAUTH_FILE = ".cookie";
 fs::path GetAuthCookieFile()
 {
     fs::path path(gArgs.GetArg("-rpccookiefile", COOKIEAUTH_FILE));
-    if (!path.is_complete()) path = GetDataDir() / path;
+    if (!path.is_complete())
+        path = GetDataDir() / path;
     return path;
 }
 
@@ -102,7 +103,7 @@ bool GenerateAuthCookie(std::string *cookie_out)
 {
     unsigned char rand_pwd[32];
     GetRandBytes(rand_pwd, 32);
-    std::string cookie = COOKIEAUTH_USER + ":" + EncodeBase64(&rand_pwd[0],32);
+    std::string cookie = COOKIEAUTH_USER + ":" + EncodeBase64(&rand_pwd[0], 32);
 
     /** the umask determines what permissions are used to create this file -
      * these are set to 077 in init.cpp unless overridden with -sysperms.
@@ -110,7 +111,8 @@ bool GenerateAuthCookie(std::string *cookie_out)
     std::ofstream file;
     fs::path filepath = GetAuthCookieFile();
     file.open(filepath.string().c_str());
-    if (!file.is_open()) {
+    if (!file.is_open())
+    {
         LogPrintf("Unable to open cookie authentication file %s for writing\n", filepath.string());
         return false;
     }
@@ -141,26 +143,33 @@ bool GetAuthCookie(std::string *cookie_out)
 
 void DeleteAuthCookie()
 {
-    try {
+    try
+    {
         fs::remove(GetAuthCookieFile());
-    } catch (const fs::filesystem_error& e) {
+    }
+    catch (const fs::filesystem_error &e)
+    {
         LogPrintf("%s: Unable to remove random auth cookie file: %s\n", __func__, e.what());
     }
 }
 
 std::vector<UniValue> JSONRPCProcessBatchReply(const UniValue &in, size_t num)
 {
-    if (!in.isArray()) {
+    if (!in.isArray())
+    {
         throw std::runtime_error("Batch must be an array");
     }
     std::vector<UniValue> batch(num);
-    for (size_t i=0; i<in.size(); ++i) {
+    for (size_t i = 0; i < in.size(); ++i)
+    {
         const UniValue &rec = in[i];
-        if (!rec.isObject()) {
+        if (!rec.isObject())
+        {
             throw std::runtime_error("Batch member must be object");
         }
         size_t id = rec["id"].get_int();
-        if (id >= num) {
+        if (id >= num)
+        {
             throw std::runtime_error("Batch member id larger than size");
         }
         batch[id] = rec;

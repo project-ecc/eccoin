@@ -1,5 +1,5 @@
 /*
- * This file is part of the ECC project
+ * This file is part of the Eccoin project
  * Copyright (c) 2018 Greg Griffith
  *
  * This program is free software: you can redistribute it and/or modify
@@ -34,9 +34,11 @@ class CServiceDB : public CDBWrapper
 {
 public:
     CServiceDB(std::string name, size_t nCacheSize, bool fMemory = false, bool fWipe = false);
+
 private:
-    CServiceDB(const CServiceDB&);
-    void operator=(const CServiceDB&);
+    CServiceDB(const CServiceDB &);
+    void operator=(const CServiceDB &);
+
 public:
     bool WriteBatchSync();
 

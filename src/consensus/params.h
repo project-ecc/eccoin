@@ -1,8 +1,8 @@
 /*
- * This file is part of the ECC project
+ * This file is part of the Eccoin project
  * Copyright (c) 2009-2010 Satoshi Nakamoto
  * Copyright (c) 2009-2016 The Bitcoin Core developers
- * Copyright (c) 2014-2018 The ECC developers
+ * Copyright (c) 2014-2018 The Eccoin developers
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,8 +25,8 @@
 #include <map>
 #include <string>
 
-namespace Consensus {
-
+namespace Consensus
+{
 enum DeploymentPos
 {
     DEPLOYMENT_TESTDUMMY,
@@ -37,7 +37,8 @@ enum DeploymentPos
 /**
  * Struct for each individual consensus rule change using BIP9.
  */
-struct BIP9Deployment {
+struct BIP9Deployment
+{
     /** Bit position to select the particular bit in nVersion. */
     int bit;
     /** Start MedianTime for version bits miner confirmation. Can be a date in the past */
@@ -49,7 +50,8 @@ struct BIP9Deployment {
 /**
  * Parameters that influence chain consensus.
  */
-struct Params {
+struct Params
+{
     uint256 hashGenesisBlock;
     /** Used to check majorities for block version upgrade */
     int nMajorityEnforceBlockUpgrade;

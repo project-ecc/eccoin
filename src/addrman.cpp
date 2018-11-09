@@ -1,5 +1,5 @@
 /*
- * This file is part of the ECC project
+ * This file is part of the Eccoin project
  * Copyright (c) 2012 Pieter Wuille
  * Copyright (c) 2012-2016 The Bitcoin Core developers
  *

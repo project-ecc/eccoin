@@ -1,8 +1,8 @@
 /*
- * This file is part of the ECC project
+ * This file is part of the Eccoin project
  * Copyright (c) 2009-2010 Satoshi Nakamoto
  * Copyright (c) 2009-2016 The Bitcoin Core developers
- * Copyright (c) 2014-2018 The ECC developers
+ * Copyright (c) 2014-2018 The Eccoin developers
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,10 +20,10 @@
 
 #include "args.h"
 #include "base58.h"
+#include "blockgeneration/blockgeneration.h"
 #include "clientversion.h"
 #include "init.h"
 #include "main.h"
-#include "blockgeneration/blockgeneration.h"
 #include "net.h"
 #include "netbase.h"
 #include "rpcserver.h"
@@ -54,7 +54,7 @@
  *
  * Or alternatively, create a specific query method for the information.
  **/
-UniValue getinfo(const UniValue& params, bool fHelp)
+UniValue getinfo(const UniValue &params, bool fHelp)
 {
     if (fHelp || params.size() != 0)
         throw std::runtime_error(
@@ -72,17 +72,20 @@ UniValue getinfo(const UniValue& params, bool fHelp)
             "  \"proxy\": \"host:port\",     (string, optional) the proxy used by the server\n"
             "  \"difficulty\": xxxxxx,       (numeric) the current difficulty\n"
             "  \"testnet\": true|false,      (boolean) if the server is using testnet or not\n"
-            "  \"keypoololdest\": xxxxxx,    (numeric) the timestamp (seconds since GMT epoch) of the oldest pre-generated key in the key pool\n"
+            "  \"keypoololdest\": xxxxxx,    (numeric) the timestamp (seconds since GMT epoch) of the oldest "
+            "pre-generated key in the key pool\n"
             "  \"keypoolsize\": xxxx,        (numeric) how many new keys are pre-generated\n"
-            "  \"unlocked_until\": ttt,      (numeric) the timestamp in seconds since epoch (midnight Jan 1 1970 GMT) that the wallet is unlocked for transfers, or 0 if the wallet is locked\n"
-            "  \"paytxfee\": x.xxxx,         (numeric) the transaction fee set in " + CURRENCY_UNIT + "/kB\n"
-            "  \"relayfee\": x.xxxx,         (numeric) minimum relay fee for non-free transactions in " + CURRENCY_UNIT + "/kB\n"
-            "  \"errors\": \"...\"           (string) any error messages\n"
-            "}\n"
-            "\nExamples:\n"
-            + HelpExampleCli("getinfo", "")
-            + HelpExampleRpc("getinfo", "")
-        );
+            "  \"unlocked_until\": ttt,      (numeric) the timestamp in seconds since epoch (midnight Jan 1 1970 GMT) "
+            "that the wallet is unlocked for transfers, or 0 if the wallet is locked\n"
+            "  \"paytxfee\": x.xxxx,         (numeric) the transaction fee set in " +
+            CURRENCY_UNIT +
+            "/kB\n"
+            "  \"relayfee\": x.xxxx,         (numeric) minimum relay fee for non-free transactions in " +
+            CURRENCY_UNIT + "/kB\n"
+                            "  \"errors\": \"...\"           (string) any error messages\n"
+                            "}\n"
+                            "\nExamples:\n" +
+            HelpExampleCli("getinfo", "") + HelpExampleRpc("getinfo", ""));
 
     LOCK2(cs_main, pwalletMain ? &pwalletMain->cs_wallet : NULL);
 
@@ -95,32 +98,32 @@ UniValue getinfo(const UniValue& params, bool fHelp)
     if (pwalletMain)
     {
         obj.push_back(Pair("walletversion", pwalletMain->GetVersion()));
-        obj.push_back(Pair("balance",       ValueFromAmount(pwalletMain->GetBalance())));
-        obj.push_back(Pair("newmint",       ValueFromAmount(pwalletMain->GetNewMint())));
-        obj.push_back(Pair("stake",         ValueFromAmount(pwalletMain->GetStake())));
+        obj.push_back(Pair("balance", ValueFromAmount(pwalletMain->GetBalance())));
+        obj.push_back(Pair("newmint", ValueFromAmount(pwalletMain->GetNewMint())));
+        obj.push_back(Pair("stake", ValueFromAmount(pwalletMain->GetStake())));
     }
-    obj.push_back(Pair("blocks",        (int)pnetMan->getChainActive()->chainActive.Height()));
-    obj.push_back(Pair("headers",       (int)pnetMan->getChainActive()->pindexBestHeader->nHeight));
-    obj.push_back(Pair("moneysupply",   ValueFromAmount(pnetMan->getChainActive()->chainActive.Tip()->nMoneySupply)));
-    obj.push_back(Pair("timeoffset",    GetTimeOffset()));
-    obj.push_back(Pair("connections",   (int)g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL)));
-    obj.push_back(Pair("proxy",         (proxy.IsValid() ? proxy.proxy.ToStringIPPort() : std::string())));
-    obj.push_back(Pair("difficulty",    (double)GetDifficulty()));
-    obj.push_back(Pair("testnet",       pnetMan->getActivePaymentNetwork()->TestnetToBeDeprecatedFieldRPC()));
+    obj.push_back(Pair("blocks", (int)pnetMan->getChainActive()->chainActive.Height()));
+    obj.push_back(Pair("headers", (int)pnetMan->getChainActive()->pindexBestHeader->nHeight));
+    obj.push_back(Pair("moneysupply", ValueFromAmount(pnetMan->getChainActive()->chainActive.Tip()->nMoneySupply)));
+    obj.push_back(Pair("timeoffset", GetTimeOffset()));
+    obj.push_back(Pair("connections", (int)g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL)));
+    obj.push_back(Pair("proxy", (proxy.IsValid() ? proxy.proxy.ToStringIPPort() : std::string())));
+    obj.push_back(Pair("difficulty", (double)GetDifficulty()));
+    obj.push_back(Pair("testnet", pnetMan->getActivePaymentNetwork()->TestnetToBeDeprecatedFieldRPC()));
     if (pwalletMain)
     {
         obj.push_back(Pair("keypoololdest", pwalletMain->GetOldestKeyPoolTime()));
-        obj.push_back(Pair("keypoolsize",   (int)pwalletMain->GetKeyPoolSize()));
+        obj.push_back(Pair("keypoolsize", (int)pwalletMain->GetKeyPoolSize()));
         obj.push_back(Pair("encrypted", pwalletMain->IsCrypted()));
-        if(pwalletMain->IsCrypted())
+        if (pwalletMain->IsCrypted())
         {
             obj.push_back(Pair("unlocked_until", nWalletUnlockTime));
         }
     }
     obj.push_back(Pair("staking", minerThreads != NULL));
-    obj.push_back(Pair("paytxfee",      ValueFromAmount(payTxFee.GetFeePerK())));
-    obj.push_back(Pair("relayfee",      ValueFromAmount(::minRelayTxFee.GetFeePerK())));
-    obj.push_back(Pair("errors",        GetWarnings("statusbar")));
+    obj.push_back(Pair("paytxfee", ValueFromAmount(payTxFee.GetFeePerK())));
+    obj.push_back(Pair("relayfee", ValueFromAmount(::minRelayTxFee.GetFeePerK())));
+    obj.push_back(Pair("errors", GetWarnings("statusbar")));
     return obj;
 }
 
@@ -128,31 +131,34 @@ class DescribeAddressVisitor : public boost::static_visitor<UniValue>
 {
 public:
     UniValue operator()(const CNoDestination &dest) const { return UniValue(UniValue::VOBJ); }
-
-    UniValue operator()(const CKeyID &keyID) const {
+    UniValue operator()(const CKeyID &keyID) const
+    {
         UniValue obj(UniValue::VOBJ);
         CPubKey vchPubKey;
         obj.push_back(Pair("isscript", false));
-        if (pwalletMain && pwalletMain->GetPubKey(keyID, vchPubKey)) {
+        if (pwalletMain && pwalletMain->GetPubKey(keyID, vchPubKey))
+        {
             obj.push_back(Pair("pubkey", HexStr(vchPubKey)));
             obj.push_back(Pair("iscompressed", vchPubKey.IsCompressed()));
         }
         return obj;
     }
 
-    UniValue operator()(const CScriptID &scriptID) const {
+    UniValue operator()(const CScriptID &scriptID) const
+    {
         UniValue obj(UniValue::VOBJ);
         CScript subscript;
         obj.push_back(Pair("isscript", true));
-        if (pwalletMain && pwalletMain->GetCScript(scriptID, subscript)) {
-            std::vector <CTxDestination> addresses;
+        if (pwalletMain && pwalletMain->GetCScript(scriptID, subscript))
+        {
+            std::vector<CTxDestination> addresses;
             txnouttype whichType;
             int nRequired;
             ExtractDestinations(subscript, whichType, addresses, nRequired);
             obj.push_back(Pair("script", GetTxnOutputType(whichType)));
             obj.push_back(Pair("hex", HexStr(subscript.begin(), subscript.end())));
             UniValue a(UniValue::VARR);
-            for (auto const& addr: addresses)
+            for (auto const &addr : addresses)
                 a.push_back(CBitcoinAddress(addr).ToString());
             obj.push_back(Pair("addresses", a));
             if (whichType == TX_MULTISIG)
@@ -162,7 +168,7 @@ public:
     }
 };
 
-UniValue validateaddress(const UniValue& params, bool fHelp)
+UniValue validateaddress(const UniValue &params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
         throw std::runtime_error(
@@ -172,7 +178,8 @@ UniValue validateaddress(const UniValue& params, bool fHelp)
             "1. \"ecc address\"     (string, required) The ecc address to validate\n"
             "\nResult:\n"
             "{\n"
-            "  \"isvalid\" : true|false,       (boolean) If the address is valid or not. If not, this is the only property returned.\n"
+            "  \"isvalid\" : true|false,       (boolean) If the address is valid or not. If not, this is the only "
+            "property returned.\n"
             "  \"address\" : \"ecc address\", (string) The ECC address validated\n"
             "  \"scriptPubKey\" : \"hex\",       (string) The hex encoded scriptPubKey generated by the address\n"
             "  \"ismine\" : true|false,        (boolean) If the address is yours or not\n"
@@ -180,12 +187,12 @@ UniValue validateaddress(const UniValue& params, bool fHelp)
             "  \"isscript\" : true|false,      (boolean) If the key is a script\n"
             "  \"pubkey\" : \"publickeyhex\",    (string) The hex value of the raw public key\n"
             "  \"iscompressed\" : true|false,  (boolean) If the address is compressed\n"
-            "  \"account\" : \"account\"         (string) DEPRECATED. The account associated with the address, \"\" is the default account\n"
+            "  \"account\" : \"account\"         (string) DEPRECATED. The account associated with the address, \"\" is "
+            "the default account\n"
             "}\n"
-            "\nExamples:\n"
-            + HelpExampleCli("validateaddress", "\"1PSSGeFHDnKNxiEyFrD1wcEaHr9hrQDDWc\"")
-            + HelpExampleRpc("validateaddress", "\"1PSSGeFHDnKNxiEyFrD1wcEaHr9hrQDDWc\"")
-        );
+            "\nExamples:\n" +
+            HelpExampleCli("validateaddress", "\"1PSSGeFHDnKNxiEyFrD1wcEaHr9hrQDDWc\"") +
+            HelpExampleRpc("validateaddress", "\"1PSSGeFHDnKNxiEyFrD1wcEaHr9hrQDDWc\""));
 
     LOCK2(cs_main, pwalletMain ? &pwalletMain->cs_wallet : NULL);
 
@@ -205,7 +212,7 @@ UniValue validateaddress(const UniValue& params, bool fHelp)
 
         isminetype mine = pwalletMain ? IsMine(*pwalletMain, dest) : ISMINE_NO;
         ret.push_back(Pair("ismine", (mine & ISMINE_SPENDABLE) ? true : false));
-        ret.push_back(Pair("iswatchonly", (mine & ISMINE_WATCH_ONLY) ? true: false));
+        ret.push_back(Pair("iswatchonly", (mine & ISMINE_WATCH_ONLY) ? true : false));
         UniValue detail = boost::apply_visitor(DescribeAddressVisitor(), dest);
         ret.pushKVs(detail);
         if (pwalletMain && pwalletMain->mapAddressBook.count(dest))
@@ -217,76 +224,76 @@ UniValue validateaddress(const UniValue& params, bool fHelp)
 /**
  * Used by addmultisigaddress / createmultisig:
  */
-CScript _createmultisig_redeemScript(const UniValue& params)
+CScript _createmultisig_redeemScript(const UniValue &params)
 {
     int nRequired = params[0].get_int();
-    const UniValue& keys = params[1].get_array();
+    const UniValue &keys = params[1].get_array();
 
     // Gather public keys
     if (nRequired < 1)
         throw std::runtime_error("a multisignature address must require at least one key to redeem");
     if ((int)keys.size() < nRequired)
-        throw std::runtime_error(
-            strprintf("not enough keys supplied "
-                      "(got %u keys, but need at least %d to redeem)", keys.size(), nRequired));
+        throw std::runtime_error(strprintf("not enough keys supplied "
+                                           "(got %u keys, but need at least %d to redeem)",
+            keys.size(), nRequired));
     if (keys.size() > 16)
-        throw std::runtime_error("Number of addresses involved in the multisignature address creation > 16\nReduce the number");
-    std::vector <CPubKey> pubkeys;
+        throw std::runtime_error(
+            "Number of addresses involved in the multisignature address creation > 16\nReduce the number");
+    std::vector<CPubKey> pubkeys;
     pubkeys.resize(keys.size());
     for (unsigned int i = 0; i < keys.size(); i++)
     {
-        const std::string& ks = keys[i].get_str();
+        const std::string &ks = keys[i].get_str();
         // Case 1: ECC address and we have full public key:
         CBitcoinAddress address(ks);
         if (pwalletMain && address.IsValid())
         {
             CKeyID keyID;
             if (!address.GetKeyID(keyID))
-                throw std::runtime_error(
-                    strprintf("%s does not refer to a key",ks));
+                throw std::runtime_error(strprintf("%s does not refer to a key", ks));
             CPubKey vchPubKey;
             if (!pwalletMain->GetPubKey(keyID, vchPubKey))
-                throw std::runtime_error(
-                    strprintf("no full public key for address %s",ks));
+                throw std::runtime_error(strprintf("no full public key for address %s", ks));
             if (!vchPubKey.IsFullyValid())
-                throw std::runtime_error(" Invalid public key: "+ks);
+                throw std::runtime_error(" Invalid public key: " + ks);
             pubkeys[i] = vchPubKey;
         }
 
         // Case 2: hex public key
-        else
-        if (IsHex(ks))
+        else if (IsHex(ks))
         {
             CPubKey vchPubKey(ParseHex(ks));
             if (!vchPubKey.IsFullyValid())
-                throw std::runtime_error(" Invalid public key: "+ks);
+                throw std::runtime_error(" Invalid public key: " + ks);
             pubkeys[i] = vchPubKey;
         }
         else
         {
-            throw std::runtime_error(" Invalid public key: "+ks);
+            throw std::runtime_error(" Invalid public key: " + ks);
         }
     }
     CScript result = GetScriptForMultisig(nRequired, pubkeys);
 
     if (result.size() > MAX_SCRIPT_ELEMENT_SIZE)
         throw std::runtime_error(
-                strprintf("redeemScript exceeds size limit: %d > %d", result.size(), MAX_SCRIPT_ELEMENT_SIZE));
+            strprintf("redeemScript exceeds size limit: %d > %d", result.size(), MAX_SCRIPT_ELEMENT_SIZE));
 
     return result;
 }
 
-UniValue createmultisig(const UniValue& params, bool fHelp)
+UniValue createmultisig(const UniValue &params, bool fHelp)
 {
     if (fHelp || params.size() < 2 || params.size() > 2)
     {
-        std::string msg = "createmultisig nrequired [\"key\",...]\n"
+        std::string msg =
+            "createmultisig nrequired [\"key\",...]\n"
             "\nCreates a multi-signature address with n signature of m keys required.\n"
             "It returns a json object with the address and redeemScript.\n"
 
             "\nArguments:\n"
             "1. nrequired      (numeric, required) The number of required signatures out of the n keys or addresses.\n"
-            "2. \"keys\"       (string, required) A json array of keys which are ECC addresses or hex-encoded public keys\n"
+            "2. \"keys\"       (string, required) A json array of keys which are ECC addresses or hex-encoded public "
+            "keys\n"
             "     [\n"
             "       \"key\"    (string) ECC address or hex-encoded public key\n"
             "       ,...\n"
@@ -299,11 +306,12 @@ UniValue createmultisig(const UniValue& params, bool fHelp)
             "}\n"
 
             "\nExamples:\n"
-            "\nCreate a multisig address from 2 addresses\n"
-            + HelpExampleCli("createmultisig", "2 \"[\\\"16sSauSf5pF2UkUwvKGq4qjNRzBZYqgEL5\\\",\\\"171sgjn4YtPu27adkKGrdDwzRTxnRkBfKV\\\"]\"") +
-            "\nAs a json rpc call\n"
-            + HelpExampleRpc("createmultisig", "2, \"[\\\"16sSauSf5pF2UkUwvKGq4qjNRzBZYqgEL5\\\",\\\"171sgjn4YtPu27adkKGrdDwzRTxnRkBfKV\\\"]\"")
-        ;
+            "\nCreate a multisig address from 2 addresses\n" +
+            HelpExampleCli("createmultisig",
+                "2 \"[\\\"16sSauSf5pF2UkUwvKGq4qjNRzBZYqgEL5\\\",\\\"171sgjn4YtPu27adkKGrdDwzRTxnRkBfKV\\\"]\"") +
+            "\nAs a json rpc call\n" +
+            HelpExampleRpc("createmultisig",
+                "2, \"[\\\"16sSauSf5pF2UkUwvKGq4qjNRzBZYqgEL5\\\",\\\"171sgjn4YtPu27adkKGrdDwzRTxnRkBfKV\\\"]\"");
         throw std::runtime_error(msg);
     }
 
@@ -319,7 +327,7 @@ UniValue createmultisig(const UniValue& params, bool fHelp)
     return result;
 }
 
-UniValue verifymessage(const UniValue& params, bool fHelp)
+UniValue verifymessage(const UniValue &params, bool fHelp)
 {
     if (fHelp || params.size() != 3)
         throw std::runtime_error(
@@ -327,26 +335,25 @@ UniValue verifymessage(const UniValue& params, bool fHelp)
             "\nVerify a signed message\n"
             "\nArguments:\n"
             "1. \"ecc address\"  (string, required) The ECC address to use for the signature.\n"
-            "2. \"signature\"       (string, required) The signature provided by the signer in base 64 encoding (see signmessage).\n"
+            "2. \"signature\"       (string, required) The signature provided by the signer in base 64 encoding (see "
+            "signmessage).\n"
             "3. \"message\"         (string, required) The message that was signed.\n"
             "\nResult:\n"
             "true|false   (boolean) If the signature is verified or not.\n"
             "\nExamples:\n"
-            "\nUnlock the wallet for 30 seconds\n"
-            + HelpExampleCli("walletpassphrase", "\"mypassphrase\" 30") +
-            "\nCreate the signature\n"
-            + HelpExampleCli("signmessage", "\"1D1ZrZNe3JUo7ZycKEYQQiQAWd9y54F4XZ\" \"my message\"") +
-            "\nVerify the signature\n"
-            + HelpExampleCli("verifymessage", "\"1D1ZrZNe3JUo7ZycKEYQQiQAWd9y54F4XZ\" \"signature\" \"my message\"") +
-            "\nAs json rpc\n"
-            + HelpExampleRpc("verifymessage", "\"1D1ZrZNe3JUo7ZycKEYQQiQAWd9y54F4XZ\", \"signature\", \"my message\"")
-        );
+            "\nUnlock the wallet for 30 seconds\n" +
+            HelpExampleCli("walletpassphrase", "\"mypassphrase\" 30") + "\nCreate the signature\n" +
+            HelpExampleCli("signmessage", "\"1D1ZrZNe3JUo7ZycKEYQQiQAWd9y54F4XZ\" \"my message\"") +
+            "\nVerify the signature\n" +
+            HelpExampleCli("verifymessage", "\"1D1ZrZNe3JUo7ZycKEYQQiQAWd9y54F4XZ\" \"signature\" \"my message\"") +
+            "\nAs json rpc\n" +
+            HelpExampleRpc("verifymessage", "\"1D1ZrZNe3JUo7ZycKEYQQiQAWd9y54F4XZ\", \"signature\", \"my message\""));
 
     LOCK(cs_main);
 
-    std::string strAddress  = params[0].get_str();
-    std::string strSign     = params[1].get_str();
-    std::string strMessage  = params[2].get_str();
+    std::string strAddress = params[0].get_str();
+    std::string strSign = params[1].get_str();
+    std::string strMessage = params[2].get_str();
 
     CBitcoinAddress addr(strAddress);
     if (!addr.IsValid())
@@ -357,7 +364,7 @@ UniValue verifymessage(const UniValue& params, bool fHelp)
         throw JSONRPCError(RPC_TYPE_ERROR, "Address does not refer to key");
 
     bool fInvalid = false;
-    std::vector <unsigned char> vchSig = DecodeBase64(strSign.c_str(), &fInvalid);
+    std::vector<unsigned char> vchSig = DecodeBase64(strSign.c_str(), &fInvalid);
 
     if (fInvalid)
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Malformed base64 encoding");
@@ -373,16 +380,14 @@ UniValue verifymessage(const UniValue& params, bool fHelp)
     return (pubkey.GetID() == keyID);
 }
 
-UniValue setmocktime(const UniValue& params, bool fHelp)
+UniValue setmocktime(const UniValue &params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
-        throw std::runtime_error(
-            "setmocktime timestamp\n"
-            "\nSet the local time to given timestamp (-regtest only)\n"
-            "\nArguments:\n"
-            "1. timestamp  (integer, required) Unix seconds-since-epoch timestamp\n"
-            "   Pass 0 to go back to using the system time."
-        );
+        throw std::runtime_error("setmocktime timestamp\n"
+                                 "\nSet the local time to given timestamp (-regtest only)\n"
+                                 "\nArguments:\n"
+                                 "1. timestamp  (integer, required) Unix seconds-since-epoch timestamp\n"
+                                 "   Pass 0 to go back to using the system time.");
 
     if (!pnetMan->getActivePaymentNetwork()->MineBlocksOnDemand())
         throw std::runtime_error("setmocktime for regression testing (-regtest mode) only");
