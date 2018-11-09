@@ -77,8 +77,8 @@
 #include <openssl/crypto.h>
 
 bool fShutdown = false;
-CWallet *pwalletMain = NULL;
-CNetworkManager *pnetMan = NULL;
+CWallet *pwalletMain = nullptr;
+CNetworkManager *pnetMan = nullptr;
 
 std::unique_ptr<CConnman> g_connman;
 std::unique_ptr<PeerLogicValidation> peerLogic;
@@ -265,7 +265,7 @@ void Shutdown()
     UnregisterAllValidationInterfaces();
 
     delete pwalletMain;
-    pwalletMain = NULL;
+    pwalletMain = nullptr;
     g_ans.reset();
     g_stxmempool.reset();
     globalVerifyHandle.reset();
