@@ -43,7 +43,6 @@ bool CheckTransaction(const CTransaction &tx, CValidationState &state)
     {
         if (txout.nValue < 0)
         {
-            printf("failing on vout %i \n", out);
             return state.DoS(100, false, REJECT_INVALID, "bad-txns-vout-negative");
         }
         if (txout.nValue > MAX_MONEY)
