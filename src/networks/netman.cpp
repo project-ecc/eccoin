@@ -42,10 +42,6 @@ void CNetworkManager::ConstructNetworks()
     {
         pnetLegacy = new CNetwork(legacyTemplate);
     }
-    if(paymentTemplate != nullptr)
-    {
-        pnetPayment = new CNetwork(paymentTemplate);
-    }
     if(testnet0Template != nullptr)
     {
         pnetTestnet0 = new CNetwork(testnet0Template);
@@ -342,7 +338,7 @@ std::string ChainNameFromCommandLine()
     {
         return "TESTNET0";
     }
-    if(fRegTest)
+    if (fRegTest)
     {
         return "REGTEST";
     }
