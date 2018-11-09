@@ -36,12 +36,10 @@ private:
     CNetwork* activePaymentNetwork;
 
     CNetwork* pnetLegacy;
-    CNetwork* pnetPayment;
     CNetwork* pnetTestnet0;
     CNetwork* pnetRegTest;
 
     CNetworkTemplate* legacyTemplate;
-    CNetworkTemplate* paymentTemplate;
     CNetworkTemplate* testnet0Template;
     CNetworkTemplate* regTestTemplate;
 
@@ -55,13 +53,11 @@ public:
     void setNull()
     {
         legacyTemplate = nullptr;
-        paymentTemplate = nullptr;
         testnet0Template = nullptr;
         regTestTemplate = nullptr;
 
 
         pnetLegacy = nullptr;
-        pnetPayment = nullptr;
         pnetTestnet0 = nullptr;
         pnetRegTest = nullptr;
 
