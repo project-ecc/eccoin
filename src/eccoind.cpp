@@ -1,7 +1,7 @@
 /*
- * This file is part of the ECC project
+ * This file is part of the Eccoin project
  * Copyright (c) 2009-2016 The Bitcoin Core developers
- * Copyright (c) 2014-2018 The ECC developers
+ * Copyright (c) 2014-2018 The Eccoin developers
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -90,7 +90,7 @@ bool AppInit(int argc, char *argv[])
     // Process help and version before taking care about datadir
     if (gArgs.IsArgSet("-?") || gArgs.IsArgSet("-h") || gArgs.IsArgSet("-help") || gArgs.IsArgSet("-version"))
     {
-        std::string strUsage = _("ECC Daemon") + " " + _("version") + " " + FormatFullVersion() + "\n";
+        std::string strUsage = _("Eccoind") + " " + _("version") + " " + FormatFullVersion() + "\n";
 
         if (gArgs.IsArgSet("-version"))
         {
@@ -99,7 +99,7 @@ bool AppInit(int argc, char *argv[])
         else
         {
             strUsage +=
-                "\n" + _("Usage:") + "\n" + "  eccoind [options]                     " + _("Start ECC Daemon") + "\n";
+                "\n" + _("Usage:") + "\n" + "  eccoind [options]                     " + _("Start Eccoind") + "\n";
 
             strUsage += "\n" + HelpMessage();
         }
@@ -153,7 +153,7 @@ bool AppInit(int argc, char *argv[])
         fDaemon = gArgs.GetBoolArg("-daemon", false);
         if (fDaemon)
         {
-            fprintf(stdout, "ECC server starting\n");
+            fprintf(stdout, "Eccoind server starting\n");
 
             // Daemonize
             pid_t pid = fork();

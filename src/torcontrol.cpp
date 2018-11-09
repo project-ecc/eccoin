@@ -1,5 +1,5 @@
 /*
- * This file is part of the ECC project
+ * This file is part of the Eccoin project
  * Copyright (c) 2015-2017 The Bitcoin Core developers
  * Copyright (c) 2017 The Zcash developers
  *
