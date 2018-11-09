@@ -409,7 +409,7 @@ std::string HelpMessage()
     if (showDebug)
         strUsage += HelpMessageOpt("-enforcenodebloom",
             strprintf("Enforce minimum protocol version to limit use of bloom filters (default: %u)", 0));
-    strUsage += HelpMessageOpt("-port=<port>", strprintf(_("Listen for connections on <port> (default: %u)"), 19118));
+    strUsage += HelpMessageOpt("-port=<port>", strprintf(_("Listen for connections on <port> (default: %u)"), pnetMan->getActivePaymentNetwork()->GetDefaultPort()));
     strUsage += HelpMessageOpt("-proxy=<ip:port>", _("Connect through SOCKS5 proxy"));
     strUsage += HelpMessageOpt(
         "-proxyrandomize",
@@ -629,7 +629,7 @@ std::string HelpMessage()
                                "format: <USERNAME>:<SALT>$<HASH>. A canonical python script is included in "
                                "share/rpcuser. This option can be specified multiple times"));
     strUsage += HelpMessageOpt(
-        "-rpcport=<port>", strprintf(_("Listen for JSON-RPC connections on <port> (default: %u)"), 19119));
+        "-rpcport=<port>", strprintf(_("Listen for JSON-RPC connections on <port> (default: %u)"), pnetMan->getActivePaymentNetwork()->GetRPCPort()));
     strUsage += HelpMessageOpt(
         "-rpcallowip=<ip>", _("Allow JSON-RPC connections from specified source. Valid for <ip> are a single IP (e.g. "
                               "1.2.3.4), a network/netmask (e.g. 1.2.3.4/255.255.255.0) or a network/CIDR (e.g. "
