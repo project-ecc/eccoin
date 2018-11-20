@@ -54,10 +54,21 @@ class AnsRegistrationTest (BitcoinTestFramework):
         coinaddr = addrgrps[0][0][0]
 
         #try to register ans addr
-        self.nodes[0].registerans(coinaddr, "testname")
-        # mine another block for validity
-        self.nodes[0].generate(1)
+        registrationTx = self.nodes[0].registerans(coinaddr, "testname")
+        # mine another few blocks for validity
+        self.nodes[0].generate(5)
         self.sync_blocks()
+
+        #the synced blocks should have propogated the ans name by now
+        #try to fetch it
+        records = self.nodes[1].getansrecord("testname", "A");
+        assert(records[0]["Code"] == '11-1')
+        assert(records[0]["Address"] != '')
+        assert(records[0]["paymentHash"] != '')
+        assert(records[0]["ServiceHash"] != '')
+        
+
+        
 
 
 if __name__ == '__main__':
