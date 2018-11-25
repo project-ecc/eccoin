@@ -25,7 +25,6 @@
 #include "consensus/consensus.h"
 #include "net.h"
 #include "policy/policy.h"
-#include "services/servicetx.h"
 #include "streams.h"
 #include "tinyformat.h"
 #include "ui_interface.h"
@@ -420,9 +419,6 @@ public:
     std::set<uint256> GetConflicts() const;
 };
 
-bool RelayServiceTransaction(CConnman *connman, const CServiceTransaction &stx);
-
-
 class COutput
 {
 public:
@@ -623,13 +619,6 @@ public:
         std::vector<COutput> vCoins,
         std::set<std::pair<const CWalletTx *, unsigned int> > &setCoinsRet,
         CAmount &nValueRet) const;
-    bool SelectCoinsForService(const CAmount &nTargetValue,
-        int nConfMine,
-        int nConfTheirs,
-        std::vector<COutput> vCoins,
-        std::set<std::pair<const CWalletTx *, unsigned int> > &setCoinsRet,
-        CAmount &nValueRet) const;
-
 
     bool IsSpent(const uint256 &hash, unsigned int n) const;
 
@@ -733,21 +722,7 @@ public:
         std::string &strFailReason,
         bool sign = true);
 
-    /**
-     * Create a new transaction paying a set amount of coins for a service
-     * There should be no change output. receipient will it itself so that address still owns the service item being
-     * paid for
-     */
-    bool CreateTransactionForService(const CRecipient &recipient,
-        CWalletTx &wtxNew,
-        CReserveKey &reservekey,
-        CAmount &nFeeRequired,
-        CAmount &nFeeRet,
-        std::string &strFailReason,
-        bool sign = true);
-
     bool CommitTransaction(CWalletTx &wtxNew, CReserveKey &reservekey, CConnman *connman, CValidationState &state);
-    bool CommitTransactionForService(CServiceTransaction &stxNew, std::string &addr, CConnman *connman);
 
     static CFeeRate minTxFee;
     static CFeeRate fallbackFee;

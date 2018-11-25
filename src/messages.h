@@ -21,10 +21,9 @@
 #ifndef MESSAGES_H
 #define MESSAGES_H
 
-#include "validationinterface.h"
-#include "net.h"
 #include "chain/blockindex.h"
-#include "services/servicetx.h"
+#include "net.h"
+#include "validationinterface.h"
 
 
 /** Average delay between trickled inventory transmissions in seconds.
@@ -56,7 +55,8 @@ extern std::unique_ptr<CRollingBloomFilter> recentRejects;
 extern std::map<uint256, int64_t> pendingStx;
 extern CCriticalSection cs_pendstx;
 
-class PeerLogicValidation : public CValidationInterface {
+class PeerLogicValidation : public CValidationInterface
+{
 private:
     CConnman *connman;
 
@@ -64,18 +64,15 @@ public:
     PeerLogicValidation(CConnman *connmanIn);
 
     void BlockConnected(const std::shared_ptr<const CBlock> &pblock,
-                   const CBlockIndex *pindexConnected,
-                   const std::vector<CTransactionRef> &vtxConflicted) override;
-    void UpdatedBlockTip(const CBlockIndex *pindexNew,
-                         const CBlockIndex *pindexFork,
-                         bool fInitialDownload) override;
-    void BlockChecked(const CBlock &block,
-                      const CValidationState &state) override;
-    void NewPoWValidBlock(const CBlockIndex *pindex,
-                          const std::shared_ptr<const CBlock> &pblock) override;
+        const CBlockIndex *pindexConnected,
+        const std::vector<CTransactionRef> &vtxConflicted) override;
+    void UpdatedBlockTip(const CBlockIndex *pindexNew, const CBlockIndex *pindexFork, bool fInitialDownload) override;
+    void BlockChecked(const CBlock &block, const CValidationState &state) override;
+    void NewPoWValidBlock(const CBlockIndex *pindex, const std::shared_ptr<const CBlock> &pblock) override;
 };
 
-struct CNodeStateStats {
+struct CNodeStateStats
+{
     int nMisbehavior;
     int nSyncHeight;
     int nCommonHeight;
@@ -83,22 +80,23 @@ struct CNodeStateStats {
 };
 
 
-struct CBlockReject {
+struct CBlockReject
+{
     unsigned char chRejectCode;
     std::string strRejectReason;
     uint256 hashBlock;
 };
 
 /** Blocks that are in flight, and that are in the queue to be downloaded. Protected by cs_main. */
-struct QueuedBlock {
+struct QueuedBlock
+{
     uint256 hash;
-    const CBlockIndex* pindex;     //!< Optional.
-    bool fValidatedHeaders;  //!< Whether this block has validated headers at the time of request.
+    const CBlockIndex *pindex; //!< Optional.
+    bool fValidatedHeaders; //!< Whether this block has validated headers at the time of request.
 };
 
 extern std::map<uint256, std::pair<NodeId, std::list<QueuedBlock>::iterator> > mapBlocksInFlight;
-extern std::map<uint256, std::pair<NodeId, bool>> mapBlockSource;
-
+extern std::map<uint256, std::pair<NodeId, bool> > mapBlockSource;
 
 
 /**
@@ -107,7 +105,8 @@ extern std::map<uint256, std::pair<NodeId, bool>> mapBlockSource;
  * processing of incoming data is done after the ProcessMessage call returns,
  * and we're no longer holding the node's locks.
  */
-struct CNodeState {
+struct CNodeState
+{
     //! The peer's address
     const CService address;
     //! Whether we have a fully established connection.
@@ -162,8 +161,8 @@ struct CNodeState {
      */
     bool fSupportsDesiredCmpctVersion;
 
-    CNodeState(CAddress addrIn, std::string addrNameIn)
-        : address(addrIn), name(addrNameIn) {
+    CNodeState(CAddress addrIn, std::string addrNameIn) : address(addrIn), name(addrNameIn)
+    {
         fCurrentlyConnected = false;
         nMisbehavior = 0;
         fShouldBan = false;
@@ -199,19 +198,16 @@ bool ProcessMessages(CNode *pfrom, CConnman &connman, const std::atomic<bool> &i
 /**Send queued protocol messages to be sent to a give node. */
 bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interrupt);
 
-/** Returns a bool indicating whether we requested this block. If we did request it, marks it as receieved and removes block from in flight list*/
-bool MarkBlockAsReceived(const uint256& hash);
+/** Returns a bool indicating whether we requested this block. If we did request it, marks it as receieved and removes
+ * block from in flight list*/
+bool MarkBlockAsReceived(const uint256 &hash);
 
 const CBlockIndex *LastCommonAncestor(const CBlockIndex *pa, const CBlockIndex *pb);
 
 /** Register with a network node to receive its signals */
-void RegisterNodeSignals(CNodeSignals& nodeSignals);
+void RegisterNodeSignals(CNodeSignals &nodeSignals);
 /** Unregister a network node */
-void UnregisterNodeSignals(CNodeSignals& nodeSignals);
-
-extern void RelayServiceTransaction(const CServiceTransaction &stx, CConnman &connman);
-
-
+void UnregisterNodeSignals(CNodeSignals &nodeSignals);
 
 
 #endif // MESSAGES_H

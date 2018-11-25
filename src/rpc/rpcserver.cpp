@@ -338,10 +338,6 @@ static const CRPCCommand vRPCCommands[] = {
     {"wallet", "settxfee", &settxfee, true}, {"wallet", "signmessage", &signmessage, true},
     {"wallet", "walletlock", &walletlock, true}, {"wallet", "walletpassphrasechange", &walletpassphrasechange, true},
     {"wallet", "walletpassphrase", &walletpassphrase, true},
-
-    /* ANS commands */
-    {"ans", "getansrecord", &getansrecord, false}, {"ans", "registerans", &registerans, false},
-    {"ans", "renewans", &renewans, false}, {"ans", "sendtoans", &sendtoans, false},
 };
 
 CRPCTable::CRPCTable()

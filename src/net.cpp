@@ -3044,8 +3044,8 @@ CNode::CNode(NodeId idIn,
     bool fInboundIn)
     : nTimeConnected(GetSystemTimeInSeconds()), addr(addrIn), fInbound(fInboundIn), id(idIn),
       nKeyedNetGroup(nKeyedNetGroupIn), addrKnown(5000, 0.001), filterInventoryKnown(50000, 0.000001),
-      filterServiceDataKnown(50000, 0.000001), nLocalHostNonce(nLocalHostNonceIn), nLocalServices(nLocalServicesIn),
-      nMyStartingHeight(nMyStartingHeightIn), nSendVersion(0)
+      nLocalHostNonce(nLocalHostNonceIn), nLocalServices(nLocalServicesIn), nMyStartingHeight(nMyStartingHeightIn),
+      nSendVersion(0)
 {
     nServices = NODE_NONE;
     nServicesExpected = NODE_NONE;
@@ -3073,7 +3073,6 @@ CNode::CNode(NodeId idIn,
     hashContinue = uint256();
     nStartingHeight = -1;
     filterInventoryKnown.reset();
-    filterServiceDataKnown.reset();
     fSendMempool = false;
     fGetAddr = false;
     nNextLocalAddrSend = 0;
@@ -3158,10 +3157,6 @@ void CNode::AskFor(const CInv &inv)
 
     // Each retry is 2 minutes after the last
     nRequestTime = std::max(nRequestTime + 2 * 60 * 1000000, nNow);
-    if (inv.type == MSG_STX)
-    {
-        nRequestTime = 0;
-    }
     if (it != mapAlreadyAskedFor.end())
     {
         mapAlreadyAskedFor.update(it, nRequestTime);
