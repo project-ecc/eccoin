@@ -25,7 +25,6 @@
 #include "chain/chain.h"
 #include "chain/checkpoints.h"
 #include "chain/tx.h"
-#include "coincontrol.h"
 #include "coins.h"
 #include "consensus/consensus.h"
 #include "consensus/validation.h"
@@ -1790,10 +1789,7 @@ CAmount CWallet::GetImmatureWatchOnlyBalance() const
     return nTotal;
 }
 
-void CWallet::AvailableCoins(std::vector<COutput> &vCoins,
-    bool fOnlyConfirmed,
-    const CCoinControl *coinControl,
-    bool fIncludeZeroValue) const
+void CWallet::AvailableCoins(std::vector<COutput> &vCoins, bool fOnlyConfirmed, bool fIncludeZeroValue) const
 {
     vCoins.clear();
 
@@ -1826,12 +1822,8 @@ void CWallet::AvailableCoins(std::vector<COutput> &vCoins,
             {
                 isminetype mine = IsMine(pcoin->tx->vout[i]);
                 if (!(IsSpent(wtxid, i)) && mine != ISMINE_NO && !IsLockedCoin((*it).first, i) &&
-                    (pcoin->tx->vout[i].nValue > 0 || fIncludeZeroValue) &&
-                    (!coinControl || !coinControl->HasSelected() || coinControl->fAllowOtherInputs ||
-                        coinControl->IsSelected((*it).first, i)))
-                    vCoins.push_back(COutput(pcoin, i, nDepth,
-                        ((mine & ISMINE_SPENDABLE) != ISMINE_NO) || (coinControl && coinControl->fAllowWatchOnly &&
-                                                                        (mine & ISMINE_WATCH_SOLVABLE) != ISMINE_NO)));
+                    (pcoin->tx->vout[i].nValue > 0 || fIncludeZeroValue))
+                    vCoins.push_back(COutput(pcoin, i, nDepth, (mine & ISMINE_SPENDABLE) != ISMINE_NO));
             }
         }
     }
@@ -2140,32 +2132,16 @@ bool CWallet::SelectCoinsByOwner(const CAmount &nTargetValue,
 
 bool CWallet::SelectCoins(const CAmount &nTargetValue,
     std::set<std::pair<const CWalletTx *, unsigned int> > &setCoinsRet,
-    CAmount &nValueRet,
-    const CCoinControl *coinControl) const
+    CAmount &nValueRet) const
 {
     std::vector<COutput> vCoins;
-    AvailableCoins(vCoins, true, coinControl);
-
-    // coin control -> return all selected outputs (we want all selected to go into the transaction for sure)
-    if (coinControl && coinControl->HasSelected() && !coinControl->fAllowOtherInputs)
-    {
-        for (auto const &out : vCoins)
-        {
-            if (!out.fSpendable)
-                continue;
-            nValueRet += out.tx->tx->vout[out.i].nValue;
-            setCoinsRet.insert(std::make_pair(out.tx, out.i));
-        }
-        return (nValueRet >= nTargetValue);
-    }
+    AvailableCoins(vCoins, true);
 
     // calculate value from preset inputs and store them
     std::set<std::pair<const CWalletTx *, uint32_t> > setPresetCoins;
     CAmount nValueFromPresetInputs = 0;
 
     std::vector<COutPoint> vPresetInputs;
-    if (coinControl)
-        coinControl->ListSelected(vPresetInputs);
     for (auto const &outpoint : vPresetInputs)
     {
         std::map<uint256, CWalletTx>::const_iterator it = mapWallet.find(outpoint.hash);
@@ -2180,16 +2156,6 @@ bool CWallet::SelectCoins(const CAmount &nTargetValue,
         }
         else
             return false; // TODO: Allow non-wallet inputs
-    }
-
-    // remove preset inputs from vCoins
-    for (std::vector<COutput>::iterator it = vCoins.begin();
-         it != vCoins.end() && coinControl && coinControl->HasSelected();)
-    {
-        if (setPresetCoins.count(std::make_pair(it->tx, it->i)))
-            it = vCoins.erase(it);
-        else
-            ++it;
     }
 
     bool res = nTargetValue <= nValueFromPresetInputs ||
@@ -2222,15 +2188,9 @@ bool CWallet::FundTransaction(CTransaction &tx,
         vecSend.push_back(recipient);
     }
 
-    CCoinControl coinControl;
-    coinControl.fAllowOtherInputs = true;
-    coinControl.fAllowWatchOnly = includeWatching;
-    for (auto const &txin : tx.vin)
-        coinControl.Select(txin.prevout);
-
     CReserveKey reservekey(this);
     CWalletTx wtx;
-    if (!CreateTransaction(vecSend, wtx, reservekey, nFeeRet, nChangePosRet, strFailReason, &coinControl, false))
+    if (!CreateTransaction(vecSend, wtx, reservekey, nFeeRet, nChangePosRet, strFailReason, false))
         return false;
 
     if (nChangePosRet != -1)
@@ -2263,7 +2223,6 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient> &vecSend,
     CAmount &nFeeRet,
     int &nChangePosRet,
     std::string &strFailReason,
-    const CCoinControl *coinControl,
     bool sign)
 {
     if (fWalletUnlockStakingOnly)
@@ -2380,7 +2339,7 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient> &vecSend,
                 // Choose coins to use
                 std::set<std::pair<const CWalletTx *, unsigned int> > setCoins;
                 CAmount nValueIn = 0;
-                if (!SelectCoins(nValueToSelect, setCoins, nValueIn, coinControl))
+                if (!SelectCoins(nValueToSelect, setCoins, nValueIn))
                 {
                     strFailReason = _("Insufficient funds");
                     return false;
@@ -2406,13 +2365,7 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient> &vecSend,
                     // TODO: pass in scriptChange instead of reservekey so
                     // change transaction isn't always pay-to-ecc-address
                     CScript scriptChange;
-
-                    // coin control: send change to custom address
-                    if (coinControl && !boost::get<CNoDestination>(&coinControl->destChange))
-                    {
-                        scriptChange = GetScriptForDestination(coinControl->destChange);
-                    }
-                    else if (gArgs.GetBoolArg("-returnchange", DEFAULT_RETURN_CHANGE))
+                    if (gArgs.GetBoolArg("-returnchange", DEFAULT_RETURN_CHANGE))
                     {
                         std::map<CTxDestination, CAmount> balances = GetAddressBalances();
                         if (balances.size() < 1)
@@ -2573,10 +2526,6 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient> &vecSend,
                 }
 
                 CAmount nFeeNeeded = GetMinimumFee(nBytes, nTxConfirmTarget, mempool);
-                if (coinControl && nFeeNeeded > 0 && coinControl->nMinimumTotalFee > nFeeNeeded)
-                {
-                    nFeeNeeded = coinControl->nMinimumTotalFee;
-                }
 
                 // If we made it here and we aren't even able to meet the relay fee on the next pass, give up
                 // because we must be at the maximum allowed fee.
@@ -3809,24 +3758,10 @@ bool CWallet::SelectCoinsMinConf(CAmount nTargetValue,
 bool CWallet::SelectCoins(CAmount nTargetValue,
     unsigned int nSpendTime,
     std::set<std::pair<const CWalletTx *, unsigned int> > &setCoinsRet,
-    int64_t &nValueRet,
-    const CCoinControl *coinControl) const
+    int64_t &nValueRet) const
 {
     std::vector<COutput> vCoins;
-    AvailableCoins(vCoins, true, coinControl);
-
-    // coin control -> return all selected outputs (we want all selected to go into the transaction for sure)
-    if (coinControl && coinControl->HasSelected() && !coinControl->fAllowOtherInputs)
-    {
-        for (auto const &out : vCoins)
-        {
-            if (!out.fSpendable)
-                continue;
-            nValueRet += out.tx->tx->vout[out.i].nValue;
-            setCoinsRet.insert(std::make_pair(out.tx, out.i));
-        }
-        return (nValueRet >= nTargetValue);
-    }
+    AvailableCoins(vCoins, true);
 
     return (SelectCoinsMinConf(nTargetValue, nSpendTime, 1, 6, vCoins, setCoinsRet, nValueRet) ||
             SelectCoinsMinConf(nTargetValue, nSpendTime, 1, 1, vCoins, setCoinsRet, nValueRet) ||
@@ -3968,7 +3903,7 @@ bool CWallet::CreateCoinStake(const CKeyStore &keystore,
                 // but it is here to keep cpu temps
                 // lower in times of high difficulty staking, possible change to configurable parameter later so i
                 // will mark this with todo
-                MilliSleep(100);
+                MilliSleep(5);
             }
         }
         if (fKernelFound)
