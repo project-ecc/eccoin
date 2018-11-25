@@ -24,7 +24,7 @@
 #include <boost/foreach.hpp>
 #include <boost/math/distributions/poisson.hpp>
 #include <boost/range/adaptor/reversed.hpp>
-#include <boost/thread.hpp>
+
 #include <sstream>
 
 #include "args.h"
@@ -678,7 +678,11 @@ bool ActivateBestChain(CValidationState &state,
     CBlockIndex *pindexMostWork = NULL;
     do
     {
-        boost::this_thread::interruption_point();
+        if (shutdown_threads.load())
+        {
+            break;
+        }
+
         if (ShutdownRequested())
             break;
 
@@ -1212,6 +1216,8 @@ void ThreadScriptCheck()
     RenameThread("bitcoin-scriptch");
     scriptcheckqueue.Thread();
 }
+
+void InterruptScriptCheck() { scriptcheckqueue.Stop(); }
 static int64_t nTimeCheck = 0;
 static int64_t nTimeForks = 0;
 static int64_t nTimeVerify = 0;
@@ -1456,12 +1462,9 @@ bool ConnectBlock(const CBlock &block,
             return state.DoS(100, error("ConnectBlock(): coinstake pays too much"), REJECT_INVALID, "bad-cb-amount");
         }
     }
-retry:
     if (!control.Wait())
     {
-        MilliSleep(50);
-        goto retry;
-        // return state.DoS(100, false);
+        return state.DoS(100, error("%s: CheckQueue failed", __func__), REJECT_INVALID, "block-validation-failed");
     }
     int64_t nTime4 = GetTimeMicros();
     nTimeVerify += nTime4 - nTime2;

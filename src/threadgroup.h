@@ -1,39 +1,42 @@
 #ifndef ECCOIN_THREAD_GROUP_H
 #define ECCOIN_THREAD_GROUP_H
 
+#include <atomic>
 #include <thread>
 #include <vector>
-#include <atomic>
 
 
-static std::atomic<bool> shutdown_threads(false);
+extern std::atomic<bool> shutdown_threads;
 
 class thread_group
 {
 private:
     std::vector<std::thread> threads;
+    std::vector<std::string> names;
 
 public:
-    void interrupt_all()
-    {
-        shutdown_threads.store(true);
-        for(size_t i = 0; i < threads.size(); i++)
-        {
-            threads[i].join();
-        }
-    }
-
-    template< class Fn, class... Args >
-    void create_thread(Fn&& f, Args&&... args)
+    void interrupt_all() { shutdown_threads.store(true); }
+    template <class Fn, class... Args>
+    void create_thread(std::string name, Fn &&f, Args &&... args)
     {
         threads.push_back(std::thread(f, args...));
+        names.push_back(name);
     }
 
-    bool empty()
+    bool empty() { return threads.empty(); }
+    void join_all()
     {
-        return threads.size();
+        // printf("num threads = %u \n", threads.size());
+        for (size_t i = 0; i < threads.size(); i++)
+        {
+            // printf("trying to join thread %s \n", names[i].c_str());
+            if (threads[i].joinable())
+            {
+                threads[i].join();
+            }
+            // printf("joined thread %s \n", names[i].c_str());
+        }
     }
-
 };
 
 #endif

@@ -46,7 +46,7 @@
 #include <assert.h>
 
 #include <boost/algorithm/string/replace.hpp>
-#include <boost/thread.hpp>
+
 
 const char *DEFAULT_WALLET_DAT = "wallet.dat";
 
@@ -775,7 +775,7 @@ bool CWallet::AddToWallet(const CWalletTx &wtxIn, bool fFromLoadWallet, CWalletD
         if (!strCmd.empty())
         {
             boost::replace_all(strCmd, "%s", wtxIn.tx->GetHash().GetHex());
-            boost::thread t(runCommand, strCmd); // thread runs free
+            std::thread t(runCommand, strCmd); // thread runs free
         }
     }
     return true;

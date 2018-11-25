@@ -753,7 +753,7 @@ void TorController::reconnect_cb(evutil_socket_t fd, short what, void *arg)
 
 /****** Thread ********/
 struct event_base *base;
-boost::thread torControlThread;
+std::thread torControlThread;
 
 static void TorControlThread()
 {
@@ -762,7 +762,7 @@ static void TorControlThread()
     event_base_dispatch(base);
 }
 
-void StartTorControl(boost::thread_group &threadGroup, CScheduler &scheduler)
+void StartTorControl(thread_group &threadGroup)
 {
     assert(!base);
 #ifdef WIN32
@@ -777,7 +777,7 @@ void StartTorControl(boost::thread_group &threadGroup, CScheduler &scheduler)
         return;
     }
 
-    torControlThread = boost::thread(boost::bind(&TraceThread<void (*)()>, "torcontrol", &TorControlThread));
+    torControlThread = std::thread(boost::bind(&TraceThread<void (*)()>, "torcontrol", &TorControlThread));
 }
 
 void InterruptTorControl()

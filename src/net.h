@@ -41,7 +41,7 @@
 #include "random.h"
 #include "streams.h"
 #include "sync.h"
-#include "threadinterrupt.h"
+#include "threadgroup.h"
 #include "uint256.h"
 
 #ifndef WIN32
@@ -172,7 +172,7 @@ public:
     };
     CConnman(uint64_t seed0, uint64_t seed1);
     ~CConnman();
-    bool Start(CScheduler &scheduler, std::string &strNodeError, Options options);
+    bool Start(std::string &strNodeError, Options options);
     void Stop();
     void Interrupt();
     bool BindListenPort(const CService &bindAddr, std::string &strError, bool fWhitelisted = false);
@@ -358,7 +358,8 @@ private:
     //! clean unused entries (if bantime has expired)
     void SweepBanned();
     void DumpAddresses();
-    void DumpData();
+    void _DumpData();
+    void DumpData(int64_t seconds_between_runs);
     void DumpBanlist();
 
     // Network stats
@@ -429,17 +430,18 @@ private:
     std::mutex mutexMsgProc;
     std::atomic<bool> flagInterruptMsgProc;
 
-    CThreadInterrupt interruptNet;
+    std::atomic<bool> interruptNet;
 
     std::thread threadDNSAddressSeed;
     std::thread threadSocketHandler;
     std::thread threadOpenAddedConnections;
     std::thread threadOpenConnections;
     std::thread threadMessageHandler;
+    std::thread threadDumpData;
 };
 
 extern std::unique_ptr<CConnman> g_connman;
-void Discover(boost::thread_group &threadGroup);
+void Discover(thread_group &threadGroup);
 void MapPort(bool fUseUPnP);
 unsigned short GetListenPort();
 bool BindListenPort(const CService &bindAddr, std::string &strError, bool fWhitelisted = false);

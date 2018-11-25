@@ -442,19 +442,19 @@ void EccMiner(CWallet *pwallet)
     unsigned int nExtraNonce = 0;
     while (true)
     {
-        if (fShutdown)
+        if (shutdown_threads.load())
             return;
         if (!g_connman)
         {
             MilliSleep(1000);
-            if (fShutdown)
+            if (shutdown_threads.load())
                 return;
         }
         while (g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL) < 6 ||
                pnetMan->getChainActive()->IsInitialBlockDownload() || pwallet->IsLocked())
         {
             MilliSleep(1000);
-            if (fShutdown)
+            if (shutdown_threads.load())
                 return;
         }
         //
@@ -543,7 +543,7 @@ void EccMiner(CWallet *pwallet)
                 }
             }
             // Check for stop or if block needs to be rebuilt
-            if (fShutdown)
+            if (shutdown_threads.load())
                 return;
             if (g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL))
                 break;

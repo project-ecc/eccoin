@@ -91,6 +91,7 @@
 #include <boost/program_options/detail/config_file.hpp>
 #include <boost/program_options/parsers.hpp>
 #include <boost/thread.hpp>
+
 #include <openssl/conf.h>
 #include <openssl/crypto.h>
 #include <openssl/rand.h>
@@ -740,15 +741,7 @@ void SetThreadPriority(int nPriority)
 #endif // WIN32
 }
 
-int GetNumCores()
-{
-#if BOOST_VERSION >= 105600
-    return boost::thread::physical_concurrency();
-#else // Must fall back to hardware_concurrency, which unfortunately counts virtual cores
-    return boost::thread::hardware_concurrency();
-#endif
-}
-
+int GetNumCores() { return std::thread::hardware_concurrency(); }
 bool WildcardMatch(const char *psz, const char *mask)
 {
     while (true)
