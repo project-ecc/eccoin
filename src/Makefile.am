@@ -60,7 +60,6 @@ BITCOIN_CORE_H = \
   chain/txin.h \ 
   checkqueue.h \
   clientversion.h \
-  coincontrol.h \
   coins.h \
   compat.h \
   compat/byteswap.h \
