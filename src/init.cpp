@@ -652,7 +652,7 @@ std::string HelpMessage()
 std::string LicenseInfo()
 {
     // todo: remove urls from translations on next change
-    return FormatParagraph(strprintf(_("Copyright (C) 2009-%i The Bitcoin Core Developers"), COPYRIGHT_YEAR)) + "\n" +
+    return FormatParagraph(strprintf(_("Copyright (C) 2014-%i The Eccoin Developers"), COPYRIGHT_YEAR)) + "\n" +
            "\n" + FormatParagraph(_("This is experimental software.")) + "\n" + "\n" +
            FormatParagraph(_("Distributed under the MIT software license, see the accompanying file COPYING or "
                              "<http://www.opensource.org/licenses/mit-license.php>.")) +
@@ -1669,12 +1669,6 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
         uiInterface.NotifyBlockTip.connect(BlockNotifyCallback);
 
     uiInterface.InitMessage(_("Activating best chain..."));
-
-    /// TODO: REMOVE THIS BLOCK OF COMMENTED CODE
-    // scan for better chains in the block chain database, that are not yet connected in the active best chain
-    // CValidationState state;
-    // if (!ActivateBestChain(state, chainparams, LOADED))
-    //    strErrors << "Failed to connect best block";
 
     std::vector<fs::path> vImportFiles;
     if (gArgs.IsArgSet("-loadblock"))
