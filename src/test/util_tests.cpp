@@ -3,15 +3,15 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "util.h"
+#include "util/util.h"
 
+#include "chain/tx.h"
 #include "clientversion.h"
-#include "primitives/transaction.h"
 #include "random.h"
 #include "sync.h"
 #include "test/test_bitcoin.h"
-#include "utilmoneystr.h"
-#include "utilstrencodings.h"
+#include "util/utilmoneystr.h"
+#include "util/utilstrencodings.h"
 
 #include <stdint.h>
 #include <vector>

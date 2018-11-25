@@ -1,8 +1,8 @@
 /*
- * This file is part of the ECC project
+ * This file is part of the Eccoin project
  * Copyright (c) 2009-2010 Satoshi Nakamoto
  * Copyright (c) 2009-2016 The Bitcoin Core developers
- * Copyright (c) 2014-2018 The ECC developers
+ * Copyright (c) 2014-2018 The Eccoin developers
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,8 +29,8 @@
 
 #include "amount.h"
 
-std::string FormatMoney(const CAmount& n);
-bool ParseMoney(const std::string& str, CAmount& nRet);
-bool ParseMoney(const char* pszIn, CAmount& nRet);
+std::string FormatMoney(const CAmount &n);
+bool ParseMoney(const std::string &str, CAmount &nRet);
+bool ParseMoney(const char *pszIn, CAmount &nRet);
 
 #endif // BITCOIN_UTILMONEYSTR_H

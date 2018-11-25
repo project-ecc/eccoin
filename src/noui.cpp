@@ -1,8 +1,8 @@
 /*
- * This file is part of the ECC project
+ * This file is part of the Eccoin project
  * Copyright (c) 2009-2010 Satoshi Nakamoto
  * Copyright (c) 2009-2016 The Bitcoin Core developers
- * Copyright (c) 2014-2018 The ECC developers
+ * Copyright (c) 2014-2018 The Eccoin developers
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,7 +19,6 @@
  */
 
 
-
 #include "noui.h"
 
 #include "ui_interface.h"
@@ -29,14 +28,15 @@
 #include <stdint.h>
 #include <string>
 
-static bool noui_ThreadSafeMessageBox(const std::string& message, const std::string& caption, unsigned int style)
+static bool noui_ThreadSafeMessageBox(const std::string &message, const std::string &caption, unsigned int style)
 {
     bool fSecure = style & CClientUIInterface::SECURE;
     style &= ~CClientUIInterface::SECURE;
 
     std::string strCaption;
     // Check for usage of predefined caption
-    switch (style) {
+    switch (style)
+    {
     case CClientUIInterface::MSG_ERROR:
         strCaption += _("Error");
         break;
@@ -56,11 +56,7 @@ static bool noui_ThreadSafeMessageBox(const std::string& message, const std::str
     return false;
 }
 
-static void noui_InitMessage(const std::string& message)
-{
-    LogPrintf("init message: %s\n", message);
-}
-
+static void noui_InitMessage(const std::string &message) { LogPrintf("init message: %s\n", message); }
 void noui_connect()
 {
     // Connect bitcoind signal handlers

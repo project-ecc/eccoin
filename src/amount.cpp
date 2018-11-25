@@ -1,8 +1,8 @@
 /*
- * This file is part of the ECC project
+ * This file is part of the Eccoin project
  * Copyright (c) 2009-2010 Satoshi Nakamoto
  * Copyright (c) 2009-2016 The Bitcoin Core developers
- * Copyright (c) 2014-2018 The ECC developers
+ * Copyright (c) 2014-2018 The Eccoin developers
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,17 +24,17 @@
 
 const std::string CURRENCY_UNIT = "BTC";
 
-CFeeRate::CFeeRate(const CAmount& nFeePaid, size_t nSize)
+CFeeRate::CFeeRate(const CAmount &nFeePaid, size_t nSize)
 {
     if (nSize > 0)
-        nSatoshisPerK = nFeePaid*1000/nSize;
+        nSatoshisPerK = nFeePaid * 1000 / nSize;
     else
         nSatoshisPerK = 0;
 }
 
 CAmount CFeeRate::GetFee(size_t nSize) const
 {
-    CAmount nFee = nSatoshisPerK*nSize / 1000;
+    CAmount nFee = nSatoshisPerK * nSize / 1000;
 
     if (nFee == 0 && nSatoshisPerK > 0)
         nFee = nSatoshisPerK;

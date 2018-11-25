@@ -3,7 +3,7 @@
 # Copyright (c) 2015-2017 The Bitcoin Unlimited developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
-
+import test_framework.loginit
 # Test for -rpcbind, as well as -rpcallowip and -rpcconnect
 
 # TODO extend this test from the test framework (like all other tests)
@@ -106,7 +106,7 @@ def main():
                       help="Leave bitcoinds and test.* datadir on exit or error")
     parser.add_option("--srcdir", dest="srcdir", default="../../src",
                       help="Source directory containing bitcoind/bitcoin-cli (default: %default%)")
-    parser.add_option("--tmpdir", dest="tmpdir", default=tempfile.mkdtemp(prefix="test"),
+    parser.add_option("--tmppfx", dest="tmpdir", default=tempfile.mkdtemp(prefix="test"),
                       help="Root directory for datadirs")
     (options, args) = parser.parse_args()
 

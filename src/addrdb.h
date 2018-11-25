@@ -1,8 +1,8 @@
 /*
- * This file is part of the ECC project
+ * This file is part of the Eccoin project
  * Copyright (c) 2009-2010 Satoshi Nakamoto
  * Copyright (c) 2009-2016 The Bitcoin Core developers
- * Copyright (c) 2014-2018 The ECC developers
+ * Copyright (c) 2014-2018 The Eccoin developers
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,13 +31,10 @@ class CSubNet;
 class CAddrMan;
 class CDataStream;
 
-typedef enum BanReason {
-    BanReasonUnknown = 0,
-    BanReasonNodeMisbehaving = 1,
-    BanReasonManuallyAdded = 2
-} BanReason;
+typedef enum BanReason { BanReasonUnknown = 0, BanReasonNodeMisbehaving = 1, BanReasonManuallyAdded = 2 } BanReason;
 
-class CBanEntry {
+class CBanEntry
+{
 public:
     static const int CURRENT_VERSION = 1;
     int nVersion;
@@ -46,8 +43,8 @@ public:
     uint8_t banReason;
 
     CBanEntry() { SetNull(); }
-
-    CBanEntry(int64_t nCreateTimeIn) {
+    CBanEntry(int64_t nCreateTimeIn)
+    {
         SetNull();
         nCreateTime = nCreateTimeIn;
     }
@@ -55,28 +52,32 @@ public:
     ADD_SERIALIZE_METHODS;
 
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream &s, Operation ser_action) {
+    inline void SerializationOp(Stream &s, Operation ser_action)
+    {
         READWRITE(this->nVersion);
         READWRITE(nCreateTime);
         READWRITE(nBanUntil);
         READWRITE(banReason);
     }
 
-    void SetNull() {
+    void SetNull()
+    {
         nVersion = CBanEntry::CURRENT_VERSION;
         nCreateTime = 0;
         nBanUntil = 0;
         banReason = BanReasonUnknown;
     }
 
-    std::string banReasonToString() {
-        switch (banReason) {
-            case BanReasonNodeMisbehaving:
-                return "node misbehaving";
-            case BanReasonManuallyAdded:
-                return "manually added";
-            default:
-                return "unknown";
+    std::string banReasonToString()
+    {
+        switch (banReason)
+        {
+        case BanReasonNodeMisbehaving:
+            return "node misbehaving";
+        case BanReasonManuallyAdded:
+            return "manually added";
+        default:
+            return "unknown";
         }
     }
 };
@@ -84,7 +85,8 @@ public:
 typedef std::map<CSubNet, CBanEntry> banmap_t;
 
 /** Access to the (IP) address database (peers.dat) */
-class CAddrDB {
+class CAddrDB
+{
 private:
     fs::path pathAddr;
 
@@ -96,7 +98,8 @@ public:
 };
 
 /** Access to the banlist database (banlist.dat) */
-class CBanDB {
+class CBanDB
+{
 private:
     fs::path pathBanlist;
 

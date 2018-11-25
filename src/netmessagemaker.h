@@ -1,8 +1,8 @@
 /*
- * This file is part of the ECC project
+ * This file is part of the Eccoin project
  * Copyright (c) 2009-2010 Satoshi Nakamoto
  * Copyright (c) 2009-2016 The Bitcoin Core developers
- * Copyright (c) 2014-2018 The ECC developers
+ * Copyright (c) 2014-2018 The Eccoin developers
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,22 +24,22 @@
 #include "net.h"
 #include "serialize.h"
 
-class CNetMsgMaker {
+class CNetMsgMaker
+{
 public:
     CNetMsgMaker(int nVersionIn) : nVersion(nVersionIn) {}
-
     template <typename... Args>
-    CSerializedNetMsg Make(int nFlags, std::string sCommand,
-                           Args &&... args) const {
+    CSerializedNetMsg Make(int nFlags, std::string sCommand, Args &&... args) const
+    {
         CSerializedNetMsg msg;
         msg.command = std::move(sCommand);
-        CVectorWriter{SER_NETWORK, nFlags | nVersion, msg.data, 0,
-                      std::forward<Args>(args)...};
+        CVectorWriter{SER_NETWORK, nFlags | nVersion, msg.data, 0, std::forward<Args>(args)...};
         return msg;
     }
 
     template <typename... Args>
-    CSerializedNetMsg Make(std::string sCommand, Args &&... args) const {
+    CSerializedNetMsg Make(std::string sCommand, Args &&... args) const
+    {
         return Make(0, std::move(sCommand), std::forward<Args>(args)...);
     }
 

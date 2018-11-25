@@ -20,17 +20,17 @@
 // we repeat those tests this many times and only complain if all iterations of the test fail
 #define RANDOM_REPEATS 5
 
-typedef set<pair<const CWalletTx*,unsigned int> > CoinSet;
+typedef std::set<std::pair<const CWalletTx*,unsigned int> > CoinSet;
 
 BOOST_FIXTURE_TEST_SUITE(wallet_tests, TestingSetup)
 
 static CWallet wallet;
-static vector<COutput> vCoins;
+static std::vector<COutput> vCoins;
 
 static void add_coin(const CAmount& nValue, int nAge = 6*24, bool fIsFromMe = false, int nInput=0)
 {
     static int nextLockTime = 0;
-    CMutableTransaction tx;
+    CTransaction tx;
     tx.nLockTime = nextLockTime++;        // so all transactions get different hashes
     tx.vout.resize(nInput+1);
     tx.vout[nInput].nValue = nValue;
@@ -39,7 +39,8 @@ static void add_coin(const CAmount& nValue, int nAge = 6*24, bool fIsFromMe = fa
         // so stop vin being empty, and cache a non-zero Debit to fake out IsFromMe()
         tx.vin.resize(1);
     }
-    CWalletTx* wtx = new CWalletTx(&wallet, tx);
+    CTransactionRef rtx = MakeTransactionRef(tx);
+    CWalletTx* wtx = new CWalletTx(&wallet, rtx);
     if (fIsFromMe)
     {
         wtx->fDebitCached = true;
@@ -58,7 +59,7 @@ static void empty_wallet(void)
 
 static bool equal_sets(CoinSet a, CoinSet b)
 {
-    pair<CoinSet::iterator, CoinSet::iterator> ret = mismatch(a.begin(), a.end(), b.begin());
+    std::pair<CoinSet::iterator, CoinSet::iterator> ret = mismatch(a.begin(), a.end(), b.begin());
     return ret.first == a.end() && ret.second == b.end();
 }
 

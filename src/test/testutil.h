@@ -10,6 +10,6 @@
 
 #include "fs.h"
 
-fs::path GetTempPath();
+fs::path GetTempPathTest();
 
 #endif // BITCOIN_TEST_TESTUTIL_H

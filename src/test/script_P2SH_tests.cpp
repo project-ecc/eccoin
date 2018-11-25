@@ -6,9 +6,7 @@
 #include "script/script.h"
 #include "key.h"
 #include "keystore.h"
-#include "parallel.h"
 #include "policy/policy.h"
-#include "script/ismine.h"
 #include "script/script_error.h"
 #include "script/sign.h"
 #include "test/test_bitcoin.h"
@@ -29,11 +27,11 @@ static std::vector<unsigned char> Serialize(const CScript &s)
 static bool Verify(const CScript &scriptSig, const CScript &scriptPubKey, bool fStrict, ScriptError &err)
 {
     // Create dummy to/from transactions:
-    CMutableTransaction txFrom;
+    CTransaction txFrom;
     txFrom.vout.resize(1);
     txFrom.vout[0].scriptPubKey = scriptPubKey;
 
-    CMutableTransaction txTo;
+    CTransaction txTo;
     txTo.vin.resize(1);
     txTo.vout.resize(1);
     txTo.vin[0].prevout.n = 0;
@@ -42,7 +40,7 @@ static bool Verify(const CScript &scriptSig, const CScript &scriptPubKey, bool f
     txTo.vout[0].nValue = 1;
 
     return VerifyScript(scriptSig, scriptPubKey, fStrict ? SCRIPT_VERIFY_P2SH : SCRIPT_VERIFY_NONE,
-        MutableTransactionSignatureChecker(&txTo, 0, txFrom.vout[0].nValue), &err);
+        TransactionSignatureChecker(&txTo, 0, txFrom.vout[0].nValue), &err);
 }
 
 
@@ -78,7 +76,7 @@ BOOST_AUTO_TEST_CASE(sign)
         evalScripts[i] = GetScriptForDestination(CScriptID(standardScripts[i]));
     }
 
-    CMutableTransaction txFrom; // Funding transaction:
+    CTransaction txFrom; // Funding transaction:
     string reason;
     txFrom.vout.resize(8);
     for (int i = 0; i < 4; i++)
@@ -90,7 +88,7 @@ BOOST_AUTO_TEST_CASE(sign)
     }
     BOOST_CHECK(IsStandardTx(txFrom, reason));
 
-    CMutableTransaction txTo[8]; // Spending transactions
+    CTransaction txTo[8]; // Spending transactions
     for (int i = 0; i < 8; i++)
     {
         txTo[i].vin.resize(1);
@@ -98,9 +96,7 @@ BOOST_AUTO_TEST_CASE(sign)
         txTo[i].vin[0].prevout.n = i;
         txTo[i].vin[0].prevout.hash = txFrom.GetHash();
         txTo[i].vout[0].nValue = 1;
-#ifdef ENABLE_WALLET
         BOOST_CHECK_MESSAGE(IsMine(keystore, txFrom.vout[i].scriptPubKey, 0), strprintf("IsMine %d", i));
-#endif
     }
     for (int i = 0; i < 8; i++)
     {
@@ -184,7 +180,7 @@ BOOST_AUTO_TEST_CASE(set)
         keystore.AddCScript(inner[i]);
     }
 
-    CMutableTransaction txFrom; // Funding transaction:
+    CTransaction txFrom; // Funding transaction:
     string reason;
     txFrom.vout.resize(4);
     for (int i = 0; i < 4; i++)
@@ -194,7 +190,7 @@ BOOST_AUTO_TEST_CASE(set)
     }
     BOOST_CHECK(IsStandardTx(txFrom, reason));
 
-    CMutableTransaction txTo[4]; // Spending transactions
+    CTransaction txTo[4]; // Spending transactions
     for (int i = 0; i < 4; i++)
     {
         txTo[i].vin.resize(1);
@@ -203,9 +199,7 @@ BOOST_AUTO_TEST_CASE(set)
         txTo[i].vin[0].prevout.hash = txFrom.GetHash();
         txTo[i].vout[0].nValue = 1 * CENT;
         txTo[i].vout[0].scriptPubKey = inner[i];
-#ifdef ENABLE_WALLET
         BOOST_CHECK_MESSAGE(IsMine(keystore, txFrom.vout[i].scriptPubKey, 0), strprintf("IsMine %d", i));
-#endif
     }
     for (int i = 0; i < 4; i++)
     {
@@ -288,7 +282,7 @@ BOOST_AUTO_TEST_CASE(AreInputsStandard)
     for (int i = 0; i < 3; i++)
         keys.push_back(key[i].GetPubKey());
 
-    CMutableTransaction txFrom;
+    CTransaction txFrom;
     txFrom.vout.resize(7);
 
     // First three are standard:
@@ -340,7 +334,7 @@ BOOST_AUTO_TEST_CASE(AreInputsStandard)
 
     AddCoins(coins, txFrom, 0);
 
-    CMutableTransaction txTo;
+    CTransaction txTo;
     txTo.vout.resize(1);
     txTo.vout[0].scriptPubKey = GetScriptForDestination(key[1].GetPubKey().GetID());
 
@@ -363,7 +357,7 @@ BOOST_AUTO_TEST_CASE(AreInputsStandard)
     // 22 P2SH sigops for all inputs (1 for vin[0], 6 for vin[3], 15 for vin[4]
     BOOST_CHECK_EQUAL(GetP2SHSigOpCount(txTo, coins), 22U);
 
-    CMutableTransaction txToNonStd1;
+    CTransaction txToNonStd1;
     txToNonStd1.vout.resize(1);
     txToNonStd1.vout[0].scriptPubKey = GetScriptForDestination(key[1].GetPubKey().GetID());
     txToNonStd1.vout[0].nValue = 1000;
@@ -375,7 +369,7 @@ BOOST_AUTO_TEST_CASE(AreInputsStandard)
     BOOST_CHECK(!::AreInputsStandard(txToNonStd1, coins));
     BOOST_CHECK_EQUAL(GetP2SHSigOpCount(txToNonStd1, coins), 16U);
 
-    CMutableTransaction txToNonStd2;
+    CTransaction txToNonStd2;
     txToNonStd2.vout.resize(1);
     txToNonStd2.vout[0].scriptPubKey = GetScriptForDestination(key[1].GetPubKey().GetID());
     txToNonStd2.vout[0].nValue = 1000;

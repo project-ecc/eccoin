@@ -1,8 +1,8 @@
 /*
- * This file is part of the ECC project
+ * This file is part of the Eccoin project
  * Copyright (c) 2009-2010 Satoshi Nakamoto
  * Copyright (c) 2009-2016 The Bitcoin Core developers
- * Copyright (c) 2014-2018 The ECC developers
+ * Copyright (c) 2014-2018 The Eccoin developers
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,10 +21,10 @@
 #ifndef BITCOIN_INIT_H
 #define BITCOIN_INIT_H
 
-#include <string>
-#include "wallet/wallet.h"
 #include "chain/chainman.h"
 #include "networks/netman.h"
+#include "wallet/wallet.h"
+#include <string>
 
 class CScheduler;
 class CWallet;
@@ -34,20 +34,20 @@ namespace boost
 class thread_group;
 } // namespace boost
 
-extern CWallet* pwalletMain;
-extern CNetworkManager* pnetMan;
+extern CWallet *pwalletMain;
+extern CNetworkManager *pnetMan;
 
 void StartShutdown();
 bool ShutdownRequested();
 /** Interrupt threads */
-void Interrupt(boost::thread_group& threadGroup);
+void Interrupt(boost::thread_group &threadGroup);
 void Shutdown();
-//!Initialize the logging infrastructure
+//! Initialize the logging infrastructure
 void InitLogging();
-//!Parameter interaction: change current parameters depending on various rules
+//! Parameter interaction: change current parameters depending on various rules
 void InitParameterInteraction();
 void GenerateNetworkTemplates();
-bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler);
+bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler);
 
 /** Help for options shared between UI and daemon (for -help) */
 std::string HelpMessage();
@@ -55,5 +55,7 @@ std::string HelpMessage();
 std::string LicenseInfo();
 
 extern bool fShutdown;
+extern std::unique_ptr<CCoinsViewDB> pcoinsdbview;
+
 
 #endif // BITCOIN_INIT_H

@@ -1,8 +1,8 @@
 /*
- * This file is part of the ECC project
+ * This file is part of the Eccoin project
  * Copyright (c) 2009-2010 Satoshi Nakamoto
  * Copyright (c) 2009-2016 The Bitcoin Core developers
- * Copyright (c) 2014-2018 The ECC developers
+ * Copyright (c) 2014-2018 The Eccoin developers
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,14 +30,14 @@ class CTransaction;
 class uint256;
 
 // core_read.cpp
-extern CScript ParseScript(const std::string& s);
-extern std::string ScriptToAsmStr(const CScript& script, const bool fAttemptSighashDecode = false);
-extern bool DecodeHexTx(CTransaction& tx, const std::string& strHexTx);
-extern bool DecodeHexBlk(CBlock&, const std::string& strHexBlk);
-extern uint256 ParseHashStr(const std::string&, const std::string& strName);
+extern CScript ParseScript(const std::string &s);
+extern std::string ScriptToAsmStr(const CScript &script, const bool fAttemptSighashDecode = false);
+extern bool DecodeHexTx(CTransaction &tx, const std::string &strHexTx);
+extern bool DecodeHexBlk(CBlock &, const std::string &strHexBlk);
+extern uint256 ParseHashStr(const std::string &, const std::string &strName);
 
 // core_write.cpp
-extern std::string FormatScript(const CScript& script);
-extern std::string EncodeHexTx(const CTransaction& tx);
+extern std::string FormatScript(const CScript &script);
+extern std::string EncodeHexTx(const CTransaction &tx);
 
 #endif // BITCOIN_CORE_IO_H

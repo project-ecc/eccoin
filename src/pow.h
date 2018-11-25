@@ -1,8 +1,8 @@
 /*
- * This file is part of the ECC project
+ * This file is part of the Eccoin project
  * Copyright (c) 2009-2010 Satoshi Nakamoto
  * Copyright (c) 2009-2016 The Bitcoin Core developers
- * Copyright (c) 2014-2018 The ECC developers
+ * Copyright (c) 2014-2018 The Eccoin developers
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,8 +21,8 @@
 #ifndef BITCOIN_POW_H
 #define BITCOIN_POW_H
 
-#include "consensus/params.h"
 #include "chain/blockindex.h"
+#include "consensus/params.h"
 
 #include <stdint.h>
 
@@ -32,10 +32,14 @@ class uint256;
 class arith_uint256;
 
 /** Check whether a block hash satisfies the proof-of-work requirement specified by nBits */
-bool CheckProofOfWork(uint256 hash, unsigned int nBits, const Consensus::Params&);
-arith_uint256 GetBlockProof(const CBlockIndex& index);
+bool CheckProofOfWork(uint256 hash, unsigned int nBits, const Consensus::Params &);
+arith_uint256 GetBlockProof(const CBlockIndex &index);
 
-/** Return the time it would take to redo the work difference between from and to, assuming the current hashrate corresponds to the difficulty at tip, in seconds. */
-int64_t GetBlockProofEquivalentTime(const CBlockIndex& to, const CBlockIndex& from, const CBlockIndex& tip, const Consensus::Params&);
+/** Return the time it would take to redo the work difference between from and to, assuming the current hashrate
+ * corresponds to the difficulty at tip, in seconds. */
+int64_t GetBlockProofEquivalentTime(const CBlockIndex &to,
+    const CBlockIndex &from,
+    const CBlockIndex &tip,
+    const Consensus::Params &);
 
 #endif // BITCOIN_POW_H

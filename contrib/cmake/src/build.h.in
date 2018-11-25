@@ -1,2 +1,0 @@
-#define BUILD_SUFFIX "@GIT_SHA1@"
-#define BUILD_DATE "@BUILD_DATETIME@"

@@ -1,8 +1,8 @@
 /*
- * This file is part of the ECC project
+ * This file is part of the Eccoin project
  * Copyright (c) 2009-2010 Satoshi Nakamoto
  * Copyright (c) 2009-2016 The Bitcoin Core developers
- * Copyright (c) 2014-2018 The ECC developers
+ * Copyright (c) 2014-2018 The Eccoin developers
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,14 +21,17 @@
 #ifndef TXVALIDATION_H
 #define TXVALIDATION_H
 
-#include "tx/tx.h"
-#include "tx/servicetx.h"
+#include "chain/tx.h"
+#include "services/servicetx.h"
 #include "validationinterface.h"
 
 /** Context-independent validity checks */
-bool CheckTransaction(const CTransaction& tx, CValidationState& state);
+bool CheckTransaction(const CTransaction &tx, CValidationState &state);
 
-bool CheckServiceTransaction(const CServiceTransaction &stx, const CTransaction& ptx, CValidationState &state);
-void ProcessServiceCommand(const CServiceTransaction &stx, const CTransaction& ptx, CValidationState &state, const CBlock* block = nullptr);
+bool CheckServiceTransaction(const CServiceTransaction &stx, const CTransaction &ptx, CValidationState &state);
+void ProcessServiceCommand(const CServiceTransaction &stx,
+    const CTransaction &ptx,
+    CValidationState &state,
+    const CBlock *block = nullptr);
 
 #endif // TXVALIDATION_H

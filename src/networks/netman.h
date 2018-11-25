@@ -1,5 +1,5 @@
 /*
- * This file is part of the ECC project
+ * This file is part of the Eccoin project
  * Copyright (c) 2017-2018 Greg Griffith
  *
  * This program is free software: you can redistribute it and/or modify
@@ -24,7 +24,7 @@
 
 #include "network.h"
 
-static const uint64_t SERVICE_UPGRADE_HARDFORK = 1525478400; // May 5th at 00:00:00 UTC
+static const int64_t SERVICE_UPGRADE_HARDFORK = 1525478400; // May 5th at 00:00:00 UTC
 
 /**
  * CNetwork defines the base parameters (shared between bitcoin-cli and bitcoind)
@@ -32,6 +32,17 @@ static const uint64_t SERVICE_UPGRADE_HARDFORK = 1525478400; // May 5th at 00:00
  */
 class CNetworkManager
 {
+private:
+    CNetwork *activePaymentNetwork;
+
+    CNetwork *pnetLegacy;
+    CNetwork *pnetTestnet0;
+    CNetwork *pnetRegTest;
+
+    CNetworkTemplate *legacyTemplate;
+    CNetworkTemplate *testnet0Template;
+    CNetworkTemplate *regTestTemplate;
+
 public:
     CNetworkManager()
     {
@@ -41,47 +52,50 @@ public:
 
     void setNull()
     {
-        legacyTemplate = NULL;
-        paymentTemplate = NULL;
-        netManTestnetTemplate = NULL;
-        
-        pnetLegacy = NULL;
-        pnetPayment = NULL;
-        pnetTestnet0 = NULL;
-        
-        activePaymentNetwork = NULL;
+        legacyTemplate = nullptr;
+        testnet0Template = nullptr;
+        regTestTemplate = nullptr;
+
+
+        pnetLegacy = nullptr;
+        pnetTestnet0 = nullptr;
+        pnetRegTest = nullptr;
+
+        activePaymentNetwork = nullptr;
     }
 
     void initialize()
     {
         legacyTemplate = new CNetworkTemplate();
         ConstructLegacyNetworkTemplate();
-        netManTestnetTemplate = new CNetworkTemplate();
+        testnet0Template = new CNetworkTemplate();
         ConstructTetnet0Template();
-        //only run construct networks after all templates have been made
+        regTestTemplate = new CNetworkTemplate();
+        ConstructRegTestTemplate();
+        // only run construct networks after all templates have been made
         ConstructNetworks();
     }
 
     void ConstructLegacyNetworkTemplate();
-
     void ConstructTetnet0Template();
-
+    void ConstructRegTestTemplate();
     void ConstructNetworks();
 
-    CNetwork* getActivePaymentNetwork()
-    {
-        return activePaymentNetwork;
-    }
-
-    void SetParams(const std::string& network)
+    CNetwork *getActivePaymentNetwork() { return activePaymentNetwork; }
+    CChainManager *getChainActive() { return activePaymentNetwork->getChainManager(); }
+    void SetParams(const std::string &network)
     {
         if (network == "LEGACY")
         {
             activePaymentNetwork = pnetLegacy;
         }
-        else if (network == "TESTNET0-TEMPORARY")
+        else if (network == "TESTNET0")
         {
             activePaymentNetwork = pnetTestnet0;
+        }
+        else if (network == "REGTEST")
+        {
+            activePaymentNetwork = pnetRegTest;
         }
         else
         {
@@ -89,22 +103,10 @@ public:
         }
         return;
     }
-private:
-    CNetwork* activePaymentNetwork;
-
-    CNetwork* pnetLegacy;
-    CNetwork* pnetPayment;
-
-    CNetwork* pnetTestnet0;
-
-    CNetworkTemplate* legacyTemplate;
-    CNetworkTemplate* paymentTemplate;
-    CNetworkTemplate* netManTestnetTemplate;
-
-
 };
 
-/// TODO : Fix this workaround that is used for RPC on command line. shuould either construct pnetMan earlier or find another way to get this value
+// TODO : Fix this workaround that is used for RPC on command line. shuould either construct pnetMan earlier or find
+// another way to get this value
 int RPCPortFromCommandLine();
 
 /**
@@ -114,7 +116,6 @@ int RPCPortFromCommandLine();
 std::string ChainNameFromCommandLine();
 
 
-void CheckParams(const std::string& network);
+void CheckParams(const std::string &network);
 
 #endif // BITCOIN_CHAINPARAMSBASE_H
-

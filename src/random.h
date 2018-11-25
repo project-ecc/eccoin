@@ -1,8 +1,8 @@
 /*
- * This file is part of the ECC project
+ * This file is part of the Eccoin project
  * Copyright (c) 2009-2010 Satoshi Nakamoto
  * Copyright (c) 2009-2016 The Bitcoin Core developers
- * Copyright (c) 2014-2018 The ECC developers
+ * Copyright (c) 2014-2018 The Eccoin developers
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,19 +26,23 @@
 #include "crypto/chacha20.h"
 #include <stdint.h>
 
-uint64_t static inline CountBits(uint64_t x) {
+uint64_t static inline CountBits(uint64_t x)
+{
 #ifdef HAVE_DECL___BUILTIN_CLZL
-    if (sizeof(unsigned long) >= sizeof(uint64_t)) {
+    if (sizeof(unsigned long) >= sizeof(uint64_t))
+    {
         return x ? 8 * sizeof(unsigned long) - __builtin_clzl(x) : 0;
     }
 #endif
 #ifdef HAVE_DECL___BUILTIN_CLZLL
-    if (sizeof(unsigned long long) >= sizeof(uint64_t)) {
+    if (sizeof(unsigned long long) >= sizeof(uint64_t))
+    {
         return x ? 8 * sizeof(unsigned long long) - __builtin_clzll(x) : 0;
     }
 #endif
     int ret = 0;
-    while (x) {
+    while (x)
+    {
         x >>= 1;
         ++ret;
     }
@@ -55,7 +59,7 @@ void RandAddSeedPerfmon();
 /**
  * Functions to gather random data via the OpenSSL PRNG
  */
-void GetRandBytes(unsigned char* buf, int num);
+void GetRandBytes(unsigned char *buf, int num);
 uint64_t GetRand(uint64_t nMax);
 int GetRandInt(int nMax);
 uint256 GetRandHash();
@@ -87,7 +91,8 @@ static inline uint32_t insecure_rand(void)
  * completely deterministic and insecure after that.
  * This class is not thread-safe.
  */
-class FastRandomContext {
+class FastRandomContext
+{
 private:
     bool requires_seed;
     ChaCha20 rng;
@@ -100,15 +105,18 @@ private:
 
     void RandomSeed();
 
-    void FillByteBuffer() {
-        if (requires_seed) {
+    void FillByteBuffer()
+    {
+        if (requires_seed)
+        {
             RandomSeed();
         }
         rng.Output(bytebuf, sizeof(bytebuf));
         bytebuf_size = sizeof(bytebuf);
     }
 
-    void FillBitBuffer() {
+    void FillBitBuffer()
+    {
         bitbuf = rand64();
         bitbuf_size = 64;
     }
@@ -120,8 +128,10 @@ public:
     explicit FastRandomContext(const uint256 &seed);
 
     /** Generate a random 64-bit integer. */
-    uint64_t rand64() {
-        if (bytebuf_size < 8) {
+    uint64_t rand64()
+    {
+        if (bytebuf_size < 8)
+        {
             FillByteBuffer();
         }
         uint64_t ret = ReadLE64(bytebuf + 64 - bytebuf_size);
@@ -130,13 +140,20 @@ public:
     }
 
     /** Generate a random (bits)-bit integer. */
-    uint64_t randbits(int bits) {
-        if (bits == 0) {
+    uint64_t randbits(int bits)
+    {
+        if (bits == 0)
+        {
             return 0;
-        } else if (bits > 32) {
+        }
+        else if (bits > 32)
+        {
             return rand64() >> (64 - bits);
-        } else {
-            if (bitbuf_size < bits) {
+        }
+        else
+        {
+            if (bitbuf_size < bits)
+            {
                 FillBitBuffer();
             }
             uint64_t ret = bitbuf & (~uint64_t(0) >> (64 - bits));
@@ -147,12 +164,15 @@ public:
     }
 
     /** Generate a random integer in the range [0..range). */
-    uint64_t randrange(uint64_t range) {
+    uint64_t randrange(uint64_t range)
+    {
         --range;
         int bits = CountBits(range);
-        while (true) {
+        while (true)
+        {
             uint64_t ret = randbits(bits);
-            if (ret <= range) {
+            if (ret <= range)
+            {
                 return ret;
             }
         }
@@ -160,7 +180,6 @@ public:
 
     /** Generate a random 32-bit integer. */
     uint32_t rand32() { return randbits(32); }
-
     /** Generate a random boolean. */
     bool randbool() { return randbits(1); }
 };

@@ -1,8 +1,8 @@
 /*
- * This file is part of the ECC project
+ * This file is part of the Eccoin project
  * Copyright (c) 2009-2010 Satoshi Nakamoto
  * Copyright (c) 2009-2016 The Bitcoin Core developers
- * Copyright (c) 2014-2018 The ECC developers
+ * Copyright (c) 2014-2018 The Eccoin developers
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,36 +23,44 @@
 /**
  * CChain implementation
  */
-void CChain::SetTip(CBlockIndex *pindex) {
-    if (pindex == NULL) {
+void CChain::SetTip(CBlockIndex *pindex)
+{
+    if (pindex == NULL)
+    {
         vChain.clear();
         return;
     }
     vChain.resize(pindex->nHeight + 1);
-    while (pindex && vChain[pindex->nHeight] != pindex) {
+    while (pindex && vChain[pindex->nHeight] != pindex)
+    {
         vChain[pindex->nHeight] = pindex;
         pindex = pindex->pprev;
     }
 }
 
-CBlockLocator CChain::GetLocator(const CBlockIndex *pindex) const {
+CBlockLocator CChain::GetLocator(const CBlockIndex *pindex) const
+{
     int nStep = 1;
     std::vector<uint256> vHave;
     vHave.reserve(32);
 
     if (!pindex)
         pindex = Tip();
-    while (pindex) {
+    while (pindex)
+    {
         vHave.push_back(pindex->GetBlockHash());
         // Stop when we have added the genesis block.
         if (pindex->nHeight == 0)
             break;
         // Exponentially larger steps back, plus the genesis block.
         int nHeight = std::max(pindex->nHeight - nStep, 0);
-        if (Contains(pindex)) {
+        if (Contains(pindex))
+        {
             // Use O(1) CChain index if possible.
             pindex = (*this)[nHeight];
-        } else {
+        }
+        else
+        {
             // Otherwise, use O(log n) skiplist.
             pindex = pindex->GetAncestor(nHeight);
         }
@@ -63,8 +71,10 @@ CBlockLocator CChain::GetLocator(const CBlockIndex *pindex) const {
     return CBlockLocator(vHave);
 }
 
-const CBlockIndex *CChain::FindFork(const CBlockIndex *pindex) const {
-    if (pindex == NULL) {
+const CBlockIndex *CChain::FindFork(const CBlockIndex *pindex) const
+{
+    if (pindex == NULL)
+    {
         return NULL;
     }
     if (pindex->nHeight > Height())
@@ -73,5 +83,3 @@ const CBlockIndex *CChain::FindFork(const CBlockIndex *pindex) const {
         pindex = pindex->pprev;
     return pindex;
 }
-
-

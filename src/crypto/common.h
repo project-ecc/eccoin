@@ -1,5 +1,5 @@
 /*
- * This file is part of the ECC project
+ * This file is part of the Eccoin project
  * Copyright (c) 2014-2017 The Bitcoin Core developers
  *
  * This program is free software: you can redistribute it and/or modify
@@ -21,7 +21,7 @@
 
 #include <stdint.h>
 
-#include "compat/crypto_endian.h"
+#include "compat/ecc_endian.h"
 
 uint16_t static inline ReadLE16(const unsigned char* ptr)
 {

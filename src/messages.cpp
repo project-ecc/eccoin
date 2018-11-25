@@ -1,8 +1,8 @@
 /*
- * This file is part of the ECC project
+ * This file is part of the Eccoin project
  * Copyright (c) 2009-2010 Satoshi Nakamoto
  * Copyright (c) 2009-2016 The Bitcoin Core developers
- * Copyright (c) 2014-2018 The ECC developers
+ * Copyright (c) 2014-2018 The Eccoin developers
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,11 +20,11 @@
 
 #include "messages.h"
 
-#include "ans/ans.h"
+#include "services/ans.h"
 #include "serialize.h"
 #include "sync.h"
-#include "tx/tx.h"
-#include "tx/servicetx.h"
+#include "chain/tx.h"
+#include "services/servicetx.h"
 #include "txmempool.h"
 #include "main.h"
 #include "util/util.h"
@@ -45,7 +45,7 @@
 #include "netmessagemaker.h"
 #include "policy/policy.h"
 #include "policy/fees.h"
-#include "stxmempool.h"
+#include "services/mempool.h"
 #include "processtx.h"
 
 #include <algorithm>
@@ -320,11 +320,11 @@ const CBlockIndex* LastCommonAncestor(const CBlockIndex* pa, const CBlockIndex* 
 bool CanDirectFetch(const Consensus::Params &consensusParams)
 {
     int64_t targetSpacing = consensusParams.nTargetSpacing;
-    if(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->GetMedianTimePast() > SERVICE_UPGRADE_HARDFORK)
+    if(pnetMan->getChainActive()->chainActive.Tip()->GetMedianTimePast() > SERVICE_UPGRADE_HARDFORK)
     {
         targetSpacing = 150;
     }
-    return pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->GetBlockTime() > GetAdjustedTime() - targetSpacing * 20;
+    return pnetMan->getChainActive()->chainActive.Tip()->GetBlockTime() > GetAdjustedTime() - targetSpacing * 20;
 }
 
 static void RelayTransaction(const CTransaction &tx, CConnman &connman)
@@ -489,8 +489,8 @@ void ProcessBlockAvailability(NodeId nodeid) {
     assert(state != NULL);
 
     if (!state->hashLastUnknownBlock.IsNull()) {
-        BlockMap::iterator itOld = pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.find(state->hashLastUnknownBlock);
-        if (itOld != pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.end() && itOld->second->nChainWork > 0) {
+        BlockMap::iterator itOld = pnetMan->getChainActive()->mapBlockIndex.find(state->hashLastUnknownBlock);
+        if (itOld != pnetMan->getChainActive()->mapBlockIndex.end() && itOld->second->nChainWork > 0) {
             if (state->pindexBestKnownBlock == NULL || itOld->second->nChainWork >= state->pindexBestKnownBlock->nChainWork)
                 state->pindexBestKnownBlock = itOld->second;
             state->hashLastUnknownBlock.SetNull();
@@ -521,7 +521,7 @@ void FindNextBlocksToDownload(NodeId nodeid, unsigned int count, std::vector<con
     // Make sure pindexBestKnownBlock is up to date, we'll need it.
     ProcessBlockAvailability(nodeid);
 
-    if (state->pindexBestKnownBlock == NULL || state->pindexBestKnownBlock->nChainWork < pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->nChainWork) {
+    if (state->pindexBestKnownBlock == NULL || state->pindexBestKnownBlock->nChainWork < pnetMan->getChainActive()->chainActive.Tip()->nChainWork) {
         // This peer has nothing interesting.
         return;
     }
@@ -529,7 +529,7 @@ void FindNextBlocksToDownload(NodeId nodeid, unsigned int count, std::vector<con
     if (state->pindexLastCommonBlock == NULL) {
         // Bootstrap quickly by guessing a parent of our best tip is the forking point.
         // Guessing wrong in either direction is not a problem.
-        state->pindexLastCommonBlock = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive[std::min(state->pindexBestKnownBlock->nHeight, pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Height())];
+        state->pindexLastCommonBlock = pnetMan->getChainActive()->chainActive[std::min(state->pindexBestKnownBlock->nHeight, pnetMan->getChainActive()->chainActive.Height())];
     }
 
     // If the peer reorganized, our previous pindexLastCommonBlock may not be an ancestor
@@ -567,7 +567,7 @@ void FindNextBlocksToDownload(NodeId nodeid, unsigned int count, std::vector<con
                 // We consider the chain that this peer is on invalid.
                 return;
             }
-            if (pindex->nStatus & BLOCK_HAVE_DATA || pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Contains(pindex))
+            if (pindex->nStatus & BLOCK_HAVE_DATA || pnetMan->getChainActive()->chainActive.Contains(pindex))
             {
                 if (pindex->nChainTx)
                 {
@@ -619,8 +619,8 @@ void UpdateBlockAvailability(NodeId nodeid, const uint256 &hash) {
 
     ProcessBlockAvailability(nodeid);
 
-    BlockMap::iterator it = pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.find(hash);
-    if (it != pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.end() && it->second->nChainWork > 0) {
+    BlockMap::iterator it = pnetMan->getChainActive()->mapBlockIndex.find(hash);
+    if (it != pnetMan->getChainActive()->mapBlockIndex.end() && it->second->nChainWork > 0) {
         // An actually better block was announced.
         if (state->pindexBestKnownBlock == NULL || it->second->nChainWork >= state->pindexBestKnownBlock->nChainWork)
             state->pindexBestKnownBlock = it->second;
@@ -842,23 +842,24 @@ bool AlreadyHave(const CInv& inv) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
     case MSG_TX:
         {
             assert(recentRejects);
-            if (pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->GetBlockHash() != hashRecentRejectsChainTip)
+            if (pnetMan->getChainActive()->chainActive.Tip()->GetBlockHash() != hashRecentRejectsChainTip)
             {
                 // If the chain tip has changed previously rejected transactions
                 // might be now valid, e.g. due to a nLockTime'd tx becoming valid,
                 // or a double-spend. Reset the rejects filter and give those
                 // txs a second chance.
-                hashRecentRejectsChainTip = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->GetBlockHash();
+                hashRecentRejectsChainTip = pnetMan->getChainActive()->chainActive.Tip()->GetBlockHash();
                 recentRejects->reset();
             }
 
             return recentRejects->contains(inv.hash) ||
                    mempool.exists(inv.hash) ||
                    mapOrphanTransactions.count(inv.hash) ||
-                   pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip->HaveCoins(inv.hash);
+                   pnetMan->getChainActive()->pcoinsTip->HaveCoinInCache(COutPoint(inv.hash, 0)) || // Best effort: only try output 0 and 1
+                   pnetMan->getChainActive()->pcoinsTip->HaveCoinInCache(COutPoint(inv.hash, 1));
         }
     case MSG_BLOCK:
-        return pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.count(inv.hash);
+        return pnetMan->getChainActive()->mapBlockIndex.count(inv.hash);
     case MSG_STX:
         return g_stxmempool->exists(inv.hash);
 
@@ -895,8 +896,8 @@ void static ProcessGetData(CNode* pfrom, CConnman &connman, const Consensus::Par
              if (inv.type == MSG_BLOCK || inv.type == MSG_FILTERED_BLOCK)
              {
                  bool send = false;
-                 BlockMap::iterator mi = pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.find(inv.hash);
-                 if (mi != pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.end())
+                 BlockMap::iterator mi = pnetMan->getChainActive()->mapBlockIndex.find(inv.hash);
+                 if (mi != pnetMan->getChainActive()->mapBlockIndex.end())
                  {
 
 /*
@@ -920,7 +921,7 @@ void static ProcessGetData(CNode* pfrom, CConnman &connman, const Consensus::Par
                      }
 
 */
-                     if (pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Contains(mi->second))
+                     if (pnetMan->getChainActive()->chainActive.Contains(mi->second))
                      {
                          send = true;
                      }
@@ -933,13 +934,13 @@ void static ProcessGetData(CNode* pfrom, CConnman &connman, const Consensus::Par
                          // equivalent proof of work) than the best header chain
                          // we know about.
                          send = mi->second->IsValid(BLOCK_VALID_SCRIPTS) &&
-                                (pnetMan->getActivePaymentNetwork()->getChainManager()->pindexBestHeader != nullptr) &&
-                                (pnetMan->getActivePaymentNetwork()->getChainManager()->pindexBestHeader->GetBlockTime() -
+                                (pnetMan->getChainActive()->pindexBestHeader != nullptr) &&
+                                (pnetMan->getChainActive()->pindexBestHeader->GetBlockTime() -
                                      mi->second->GetBlockTime() <
                                  nOneMonth) &&
                                 (GetBlockProofEquivalentTime(
-                                     *pnetMan->getActivePaymentNetwork()->getChainManager()->pindexBestHeader, *mi->second,
-                                     *pnetMan->getActivePaymentNetwork()->getChainManager()->pindexBestHeader,
+                                     *pnetMan->getChainActive()->pindexBestHeader, *mi->second,
+                                     *pnetMan->getChainActive()->pindexBestHeader,
                                      consensusParams) < nOneMonth);
                          if (!send) {
                              LogPrintf("%s: ignoring request from peer=%i for "
@@ -956,8 +957,8 @@ void static ProcessGetData(CNode* pfrom, CConnman &connman, const Consensus::Par
                  // assume > 1 week = historical
                  static const int nOneWeek = 7 * 24 * 60 * 60;
                  if (send && connman.OutboundTargetReached(true) &&
-                     (((pnetMan->getActivePaymentNetwork()->getChainManager()->pindexBestHeader != nullptr) &&
-                       (pnetMan->getActivePaymentNetwork()->getChainManager()->pindexBestHeader->GetBlockTime() - mi->second->GetBlockTime() > nOneWeek)) ||
+                     (((pnetMan->getChainActive()->pindexBestHeader != nullptr) &&
+                       (pnetMan->getChainActive()->pindexBestHeader->GetBlockTime() - mi->second->GetBlockTime() > nOneWeek)) ||
                       inv.type == MSG_FILTERED_BLOCK) && !pfrom->fWhitelisted)
                  {
                      LogPrintf("historical block serving limit "
@@ -1028,7 +1029,7 @@ void static ProcessGetData(CNode* pfrom, CConnman &connman, const Consensus::Par
                          // redundant, and we want it right after the last block
                          // so they don't wait for other stuff first.
                          std::vector<CInv> vInv;
-                         vInv.push_back(CInv(MSG_BLOCK, pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->GetBlockHash()));
+                         vInv.push_back(CInv(MSG_BLOCK, pnetMan->getChainActive()->chainActive.Tip()->GetBlockHash()));
                          connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::INV, vInv));
                          pfrom->hashContinue.SetNull();
                      }
@@ -1044,18 +1045,6 @@ void static ProcessGetData(CNode* pfrom, CConnman &connman, const Consensus::Par
                  {
                      connman.PushMessage(pfrom, msgMaker.Make(nSendFlags, NetMsgType::TX, mi->second));
                      push = true;
-                 }
-                 else if (pfrom->timeLastMempoolReq)
-                 {
-                     auto txinfo = mempool.info(inv.hash);
-                     // To protect privacy, do not answer getdata using the
-                     // mempool when that TX couldn't have been INVed in reply to
-                     // a MEMPOOL request.
-                     if (txinfo.tx && (txinfo.nTime <= pfrom->timeLastMempoolReq))
-                     {
-                         connman.PushMessage(pfrom, msgMaker.Make(nSendFlags,NetMsgType::TX, *txinfo.tx));
-                         push = true;
-                     }
                  }
                  if (!push)
                  {
@@ -1259,7 +1248,7 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
 
         if (!pfrom->fInbound) {
             // Advertise our address
-            if (fListen && !pnetMan->getActivePaymentNetwork()->getChainManager()->IsInitialBlockDownload()) {
+            if (fListen && !pnetMan->getChainActive()->IsInitialBlockDownload()) {
                 CAddress addr =
                     GetLocalAddress(&pfrom->addr, pfrom->GetLocalServices());
                 FastRandomContext insecure_rand;
@@ -1431,7 +1420,7 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
 
         LOCK(cs_main);
 
-        uint32_t nFetchFlags = GetFetchFlags(pfrom, pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip(), chainparams.GetConsensus());
+        uint32_t nFetchFlags = GetFetchFlags(pfrom, pnetMan->getChainActive()->chainActive.Tip(), chainparams.GetConsensus());
 
         std::vector<CInv> vToFetch;
 
@@ -1464,7 +1453,7 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
                     // should get the headers for first, we now only provide a
                     // getheaders response here. When we receive the headers, we
                     // will then ask for the blocks we need.
-                    connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::GETHEADERS, pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.GetLocator(pnetMan->getActivePaymentNetwork()->getChainManager()->pindexBestHeader), inv.hash));
+                    connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::GETHEADERS, pnetMan->getChainActive()->chainActive.GetLocator(pnetMan->getChainActive()->pindexBestHeader), inv.hash));
                     CNodeState *nodestate = State(pfrom->GetId());
                     if (CanDirectFetch(chainparams.GetConsensus()) && nodestate->nBlocksInFlight < MAX_BLOCKS_IN_TRANSIT_PER_PEER) 
                     {
@@ -1473,7 +1462,7 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
                         // later (within the same cs_main lock, though).
                         MarkBlockAsInFlight(pfrom->GetId(), inv.hash, chainparams.GetConsensus());
                     }
-                    LogPrintf("getheaders (%d) %s to peer=%d\n", pnetMan->getActivePaymentNetwork()->getChainManager()->pindexBestHeader->nHeight, inv.hash.ToString(), pfrom->id);
+                    LogPrintf("getheaders (%d) %s to peer=%d\n", pnetMan->getChainActive()->pindexBestHeader->nHeight, inv.hash.ToString(), pfrom->id);
                 }
             }
             else
@@ -1483,7 +1472,7 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
                 {
                     LogPrintf("transaction (%s) inv sent in violation of protocol peer=%d\n", inv.hash.ToString(), pfrom->id);
                 }
-                else if (!fAlreadyHave && !fImporting && !fReindex && !pnetMan->getActivePaymentNetwork()->getChainManager()->IsInitialBlockDownload())
+                else if (!fAlreadyHave && !fImporting && !fReindex && !pnetMan->getChainActive()->IsInitialBlockDownload())
                 {
                     pfrom->AskFor(inv);
                 }
@@ -1549,18 +1538,18 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
         LOCK(cs_main);
 
         // Find the last block the caller has in the main chain
-        const CBlockIndex *pindex = pnetMan->getActivePaymentNetwork()->getChainManager()->FindForkInGlobalIndex(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive, locator);
+        const CBlockIndex *pindex = pnetMan->getChainActive()->FindForkInGlobalIndex(pnetMan->getChainActive()->chainActive, locator);
 
         // Send the rest of the chain
         if (pindex) {
-            pindex = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Next(pindex);
+            pindex = pnetMan->getChainActive()->chainActive.Next(pindex);
         }
         int nLimit = 500;
         LogPrintf("getblocks %d to %s limit %d from peer=%d\n",
                  (pindex ? pindex->nHeight : -1),
                  hashStop.IsNull() ? "end" : hashStop.ToString(), nLimit,
                  pfrom->id);
-        for (; pindex; pindex = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Next(pindex))
+        for (; pindex; pindex = pnetMan->getChainActive()->chainActive.Next(pindex))
         {
             if (pindex->GetBlockHash() == hashStop) {
                 LogPrintf("  getblocks stopping at %d %s\n",
@@ -1586,7 +1575,7 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
 
         LOCK(cs_main);
 
-        if (pnetMan->getActivePaymentNetwork()->getChainManager()->IsInitialBlockDownload() && !pfrom->fWhitelisted)
+        if (pnetMan->getChainActive()->IsInitialBlockDownload() && !pfrom->fWhitelisted)
         {
             LogPrintf("Ignoring getheaders from peer=%d because node is in initial block download\n",pfrom->id);
             return true;
@@ -1597,8 +1586,8 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
         if (locator.IsNull())
         {
             // If locator is null, return the hashStop block
-            BlockMap::iterator mi = pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.find(hashStop);
-            if (mi == pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.end())
+            BlockMap::iterator mi = pnetMan->getChainActive()->mapBlockIndex.find(hashStop);
+            if (mi == pnetMan->getChainActive()->mapBlockIndex.end())
             {
                 return true;
             }
@@ -1607,10 +1596,10 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
         else
         {
             // Find the last block the caller has in the main chain
-            pindex = pnetMan->getActivePaymentNetwork()->getChainManager()->FindForkInGlobalIndex(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive, locator);
+            pindex = pnetMan->getChainActive()->FindForkInGlobalIndex(pnetMan->getChainActive()->chainActive, locator);
             if (pindex)
             {
-                pindex = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Next(pindex);
+                pindex = pnetMan->getChainActive()->chainActive.Next(pindex);
             }
         }
 
@@ -1621,7 +1610,7 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
         LogPrintf("getheaders %d to %s from peer=%d\n",
                  (pindex ? pindex->nHeight : -1),
                  hashStop.IsNull() ? "end" : hashStop.ToString(), pfrom->id);
-        for (; pindex; pindex = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Next(pindex))
+        for (; pindex; pindex = pnetMan->getChainActive()->chainActive.Next(pindex))
         {
             vHeaders.push_back(pindex->GetBlockHeader());
             if (--nLimit <= 0 || pindex->GetBlockHash() == hashStop)
@@ -1641,7 +1630,7 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
         // without the new block. By resetting the BestHeaderSent, we ensure we
         // will re-announce the new block via headers (or compact blocks again)
         // in the SendMessages logic.
-        nodestate->pindexBestHeaderSent = pindex ? pindex : pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
+        nodestate->pindexBestHeaderSent = pindex ? pindex : pnetMan->getChainActive()->chainActive.Tip();
         connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::HEADERS, vHeaders));
     }
 
@@ -1673,11 +1662,9 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
         pfrom->setAskFor.erase(inv.hash);
         mapAlreadyAskedFor.erase(inv.hash);
 
-        std::list<CTransaction> lRemovedTxn;
-
-        if (!AlreadyHave(inv) && AcceptToMemoryPool(mempool, state, ptx, true, &fMissingInputs, &lRemovedTxn))
+        if (!AlreadyHave(inv) && AcceptToMemoryPool(mempool, state, ptx, true, &fMissingInputs))
         {
-            mempool.check(pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.get());
+            mempool.check(pnetMan->getChainActive()->pcoinsTip.get());
             RelayTransaction(tx, connman);
             for (size_t i = 0; i < tx.vout.size(); i++)
             {
@@ -1720,7 +1707,7 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
                     if (setMisbehaving.count(fromPeer)) {
                         continue;
                     }
-                    if (AcceptToMemoryPool(mempool, stateDummy, porphanTx, true, &fMissingInputs2, &lRemovedTxn))
+                    if (AcceptToMemoryPool(mempool, stateDummy, porphanTx, true, &fMissingInputs2))
                     {
                         LogPrintf("   accepted orphan tx %s\n", orphanId.ToString());
                         RelayTransaction(orphanTx, connman);
@@ -1750,7 +1737,7 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
                             recentRejects->insert(orphanId);
                         }
                     }
-                    mempool.check(pnetMan->getActivePaymentNetwork()->getChainManager()->pcoinsTip.get());
+                    mempool.check(pnetMan->getChainActive()->pcoinsTip.get());
                 }
             }
 
@@ -1774,7 +1761,7 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
             }
             if (!fRejectedParents)
             {
-                uint32_t nFetchFlags = GetFetchFlags(pfrom, pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip(), chainparams.GetConsensus());
+                uint32_t nFetchFlags = GetFetchFlags(pfrom, pnetMan->getChainActive()->chainActive.Tip(), chainparams.GetConsensus());
                 for (const CTxIn &txin : tx.vin)
                 {
                     CInv _inv(MSG_TX | nFetchFlags, txin.prevout.hash);
@@ -1966,18 +1953,18 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
             // TODO: optimize: if pindexLast is an ancestor of chainActive.Tip or pindexBestHeader, continue
             // from there instead.
             LogPrint("net", "more getheaders (%d) to end to peer=%d (startheight:%d)\n", pindexLast->nHeight, pfrom->id, pfrom->nStartingHeight);
-            connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::GETHEADERS, pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.GetLocator(pindexLast), uint256()));
+            connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::GETHEADERS, pnetMan->getChainActive()->chainActive.GetLocator(pindexLast), uint256()));
         }
 
         bool fCanDirectFetch = CanDirectFetch(chainparams.GetConsensus());
         CNodeState *nodestate = State(pfrom->GetId());
         // If this set of headers is valid and ends in a block with at least as
         // much work as our tip, download as much as possible.
-        if (fCanDirectFetch && pindexLast->IsValid(BLOCK_VALID_TREE) && pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->nChainWork <= pindexLast->nChainWork) {
+        if (fCanDirectFetch && pindexLast->IsValid(BLOCK_VALID_TREE) && pnetMan->getChainActive()->chainActive.Tip()->nChainWork <= pindexLast->nChainWork) {
             std::vector<CBlockIndex *> vToFetch;
             CBlockIndex *pindexWalk = pindexLast;
             // Calculate all the blocks we'd need to switch to pindexLast, up to a limit.
-            while (pindexWalk && !pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Contains(pindexWalk) && vToFetch.size() <= MAX_BLOCKS_IN_TRANSIT_PER_PEER) {
+            while (pindexWalk && !pnetMan->getChainActive()->chainActive.Contains(pindexWalk) && vToFetch.size() <= MAX_BLOCKS_IN_TRANSIT_PER_PEER) {
                 if (!(pindexWalk->nStatus & BLOCK_HAVE_DATA) &&
                         !mapBlocksInFlight.count(pindexWalk->GetBlockHash())) {
                     // We don't have this block, and it's not yet in flight.
@@ -1989,7 +1976,7 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
             // very large reorg at a time we think we're close to caught up to
             // the main chain -- this shouldn't really happen.  Bail out on the
             // direct fetch and rely on parallel download instead.
-            if (!pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Contains(pindexWalk)) 
+            if (!pnetMan->getChainActive()->chainActive.Contains(pindexWalk))
             {
                 LogPrint("net", "Large reorg, won't direct fetch to %s (%d)\n",
                         pindexLast->GetBlockHash().ToString(),
@@ -2033,7 +2020,7 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
         // unless we're still syncing with the network. Such an unrequested
         // block may still be processed, subject to the conditions in
         // AcceptBlock().
-        bool forceProcessing = pfrom->fWhitelisted && !pnetMan->getActivePaymentNetwork()->getChainManager()->IsInitialBlockDownload();
+        bool forceProcessing = pfrom->fWhitelisted && !pnetMan->getChainActive()->IsInitialBlockDownload();
         const uint256 hash(pblock->GetHash());
         {
             LOCK(cs_main);
@@ -2100,22 +2087,32 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
 
     else if (strCommand == NetMsgType::MEMPOOL)
     {
-        if (!(pfrom->GetLocalServices() & NODE_BLOOM) && !pfrom->fWhitelisted)
+        std::vector<uint256> vtxid;
+        mempool.queryHashes(vtxid);
+        std::vector<CInv> vInv;
+        BOOST_FOREACH (uint256 &hash, vtxid)
         {
-            LogPrintf("mempool request with bloom filters disabled, disconnect peer=%d\n", pfrom->GetId());
-            pfrom->fDisconnect = true;
-            return true;
+            CInv inv(MSG_TX, hash);
+            if (pfrom->pfilter)
+            {
+                CTxMemPoolEntry txe;
+                bool fInMemPool = mempool.lookup(hash, txe);
+                if (!fInMemPool)
+                    continue; // another thread removed since queryHashes, maybe...
+                if (!pfrom->pfilter->IsRelevantAndUpdate(txe.GetTx()))
+                    continue;
+            }
+            vInv.push_back(inv);
+            if (vInv.size() == MAX_INV_SZ)
+            {
+                connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::INV, vInv));
+                vInv.clear();
+            }
         }
-
-        if (connman.OutboundTargetReached(false) && !pfrom->fWhitelisted)
+        if (vInv.size() > 0)
         {
-            LogPrintf("net", "mempool request with bandwidth limit reached, disconnect peer=%d\n", pfrom->GetId());
-            pfrom->fDisconnect = true;
-            return true;
+            connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::INV, vInv));
         }
-
-        LOCK(pfrom->cs_inventory);
-        pfrom->fSendMempool = true;
     }
 
 
@@ -2445,20 +2442,6 @@ bool ProcessMessages(CNode *pfrom, CConnman &connman, const std::atomic<bool> &i
     return fMoreWork;
 }
 
-class CompareInvMempoolOrder {
-    CTxMemPool *mp;
-
-public:
-    CompareInvMempoolOrder(CTxMemPool *_mempool) { mp = _mempool; }
-
-    bool operator()(std::set<uint256>::iterator a,
-                    std::set<uint256>::iterator b) {
-        /* As std::make_heap produces a max-heap, we want the entries with the
-         * fewest ancestors/highest fee to sort later. */
-        return mp->CompareDepthAndScore(*b, *a);
-    }
-};
-
 bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interruptMsgProc)
 {
     const Consensus::Params &consensusParams = pnetMan->getActivePaymentNetwork()->GetConsensus();
@@ -2512,7 +2495,7 @@ bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interr
 
     // Address refresh broadcast
     int64_t nNow = GetTimeMicros();
-    if (!pnetMan->getActivePaymentNetwork()->getChainManager()->IsInitialBlockDownload() && pto->nNextLocalAddrSend < nNow)
+    if (!pnetMan->getChainActive()->IsInitialBlockDownload() && pto->nNextLocalAddrSend < nNow)
     {
         AdvertiseLocal(pto);
         pto->nNextLocalAddrSend = PoissonNextSend(nNow, AVG_LOCAL_ADDRESS_BROADCAST_INTERVAL);
@@ -2550,9 +2533,9 @@ bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interr
     }
 
     // Start block sync
-    if (pnetMan->getActivePaymentNetwork()->getChainManager()->pindexBestHeader == nullptr)
+    if (pnetMan->getChainActive()->pindexBestHeader == nullptr)
     {
-        pnetMan->getActivePaymentNetwork()->getChainManager()->pindexBestHeader = pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip();
+        pnetMan->getChainActive()->pindexBestHeader = pnetMan->getChainActive()->chainActive.Tip();
     }
 
     // Download if this is a nice peer, or we have no nice peers and this one
@@ -2562,11 +2545,11 @@ bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interr
     if (!state.fSyncStarted && !pto->fClient && !fImporting && !fReindex) {
         // Only actively request headers from a single peer, unless we're close
         // to today.
-        if ((nSyncStarted == 0 && fFetch) || pnetMan->getActivePaymentNetwork()->getChainManager()->pindexBestHeader->GetBlockTime() > GetAdjustedTime() - 24 * 60 * 60)
+        if ((nSyncStarted == 0 && fFetch) || pnetMan->getChainActive()->pindexBestHeader->GetBlockTime() > GetAdjustedTime() - 24 * 60 * 60)
         {
             state.fSyncStarted = true;
             nSyncStarted++;
-            const CBlockIndex *pindexStart = pnetMan->getActivePaymentNetwork()->getChainManager()->pindexBestHeader;
+            const CBlockIndex *pindexStart = pnetMan->getChainActive()->pindexBestHeader;
             /**
              * If possible, start at the block preceding the currently best
              * known header. This ensures that we always get a non-empty list of
@@ -2580,14 +2563,14 @@ bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interr
             }
 
             LogPrint("net", "initial getheaders (%d) to peer=%d (startheight:%d)\n", pindexStart->nHeight, pto->id, pto->nStartingHeight);
-            connman.PushMessage( pto, msgMaker.Make(NetMsgType::GETHEADERS, pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.GetLocator(pindexStart), uint256()));
+            connman.PushMessage( pto, msgMaker.Make(NetMsgType::GETHEADERS, pnetMan->getChainActive()->chainActive.GetLocator(pindexStart), uint256()));
         }
     }
 
     // Resend wallet transactions that haven't gotten in a block yet
     // Except during reindex, importing and IBD, when old wallet transactions
     // become unconfirmed and spams other nodes.
-    if (!fReindex && !fImporting && !pnetMan->getActivePaymentNetwork()->getChainManager()->IsInitialBlockDownload())
+    if (!fReindex && !fImporting && !pnetMan->getChainActive()->IsInitialBlockDownload())
     {
         GetMainSignals().Broadcast(nTimeBestReceived, &connman);
     }
@@ -2616,10 +2599,10 @@ bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interr
             // send all headers past that one. If we come across an headers that
             // aren't on chainActive, give up.
             for (const uint256 &hash : pto->vBlockHashesToAnnounce) {
-                BlockMap::iterator mi = pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.find(hash);
-                assert(mi != pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.end());
+                BlockMap::iterator mi = pnetMan->getChainActive()->mapBlockIndex.find(hash);
+                assert(mi != pnetMan->getChainActive()->mapBlockIndex.end());
                 CBlockIndex *pindex = mi->second;
-                if (pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive[pindex->nHeight] != pindex)
+                if (pnetMan->getChainActive()->chainActive[pindex->nHeight] != pindex)
                 {
                     // Bail out if we reorged away from this block
                     fRevertToInv = true;
@@ -2696,17 +2679,17 @@ bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interr
             if (!pto->vBlockHashesToAnnounce.empty())
             {
                 const uint256 &hashToAnnounce = pto->vBlockHashesToAnnounce.back();
-                BlockMap::iterator mi = pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.find(hashToAnnounce);
-                assert(mi != pnetMan->getActivePaymentNetwork()->getChainManager()->mapBlockIndex.end());
+                BlockMap::iterator mi = pnetMan->getChainActive()->mapBlockIndex.find(hashToAnnounce);
+                assert(mi != pnetMan->getChainActive()->mapBlockIndex.end());
                 CBlockIndex *pindex = mi->second;
 
                 // Warn if we're announcing a block that is not on the main
                 // chain. This should be very rare and could be optimized out.
                 // Just log for now.
-                if (pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive[pindex->nHeight] != pindex)
+                if (pnetMan->getChainActive()->chainActive[pindex->nHeight] != pindex)
                 {
                     LogPrint("net", "Announcing block %s not on main chain (tip=%s)\n",
-                             hashToAnnounce.ToString(), pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->GetBlockHash().ToString());
+                             hashToAnnounce.ToString(), pnetMan->getChainActive()->chainActive.Tip()->GetBlockHash().ToString());
                 }
 
                 // If the peer's chain has this block, don't inv it back.
@@ -2761,53 +2744,16 @@ bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interr
             }
         }
 
-        // Respond to BIP35 mempool requests
-        if (fSendTrickle && pto->fSendMempool)
-        {
-            auto vtxinfo = mempool.infoAll();
-            pto->fSendMempool = false;
-
-            LOCK(pto->cs_filter);
-
-            for (const auto &txinfo : vtxinfo)
-            {
-                const uint256 &txid = txinfo.tx->GetId();
-                CInv inv(MSG_TX, txid);
-                pto->setInventoryTxToSend.erase(txid);
-                if (pto->pfilter)
-                {
-                    if (!pto->pfilter->IsRelevantAndUpdate(*txinfo.tx))
-                    {
-                        continue;
-                    }
-                }
-                pto->filterInventoryKnown.insert(txid);
-                vInv.push_back(inv);
-                if (vInv.size() == MAX_INV_SZ) {
-                    connman.PushMessage(pto,
-                                        msgMaker.Make(NetMsgType::INV, vInv));
-                    vInv.clear();
-                }
-            }
-            pto->timeLastMempoolReq = GetTime();
-        }
-
         // Determine transactions to relay
         if (fSendTrickle) 
         {
             // Produce a vector with all candidates for sending
             std::vector<std::set<uint256>::iterator> vInvTx;
             vInvTx.reserve(pto->setInventoryTxToSend.size());
-            for (std::set<uint256>::iterator it =
-                     pto->setInventoryTxToSend.begin();
-                 it != pto->setInventoryTxToSend.end(); it++) {
+            for (std::set<uint256>::iterator it = pto->setInventoryTxToSend.begin(); it != pto->setInventoryTxToSend.end(); it++)
+            {
                 vInvTx.push_back(it);
             }
-            // Topologically and fee-rate sort the inventory we send for privacy
-            // and priority reasons. A heap is used so that not all items need
-            // sorting if only a few are being sent.
-            CompareInvMempoolOrder compareInvMempoolOrder(&mempool);
-            std::make_heap(vInvTx.begin(), vInvTx.end(), compareInvMempoolOrder);
             // No reason to drain out at many times the network's capacity,
             // especially since we have many peers and some will draw much
             // shorter delays.
@@ -2815,8 +2761,6 @@ bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interr
             LOCK(pto->cs_filter);
             while (!vInvTx.empty() && nRelayedTransactions < INVENTORY_BROADCAST_MAX)
             {
-                // Fetch the top element from the heap
-                std::pop_heap(vInvTx.begin(), vInvTx.end(), compareInvMempoolOrder);
                 std::set<uint256>::iterator it = vInvTx.back();
                 vInvTx.pop_back();
                 uint256 hash = *it;
@@ -2828,12 +2772,7 @@ bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interr
                     continue;
                 }
                 // Not in the mempool anymore? don't bother sending it.
-                TxMempoolInfo txinfo = mempool.info(hash);
-                if (!txinfo.tx)
-                {
-                    continue;
-                }
-                if (pto->pfilter && !pto->pfilter->IsRelevantAndUpdate(*txinfo.tx))
+                if (!mempool.exists(hash))
                 {
                     continue;
                 }
@@ -2846,11 +2785,6 @@ bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interr
                     {
                         mapRelay.erase(vRelayExpiration.front().second);
                         vRelayExpiration.pop_front();
-                    }
-                    auto ret = mapRelay.insert(std::make_pair(hash, std::move(*txinfo.tx)));
-                    if (ret.second)
-                    {
-                        vRelayExpiration.push_back(std::make_pair(nNow + 15 * 60 * 1000000, ret.first));
                     }
                 }
                 if (vInv.size() == MAX_INV_SZ)
@@ -2918,7 +2852,7 @@ bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interr
     if (state.vBlocksInFlight.size() > 0)
     {
         int64_t targetSpacing = consensusParams.nTargetSpacing;
-        if(pnetMan->getActivePaymentNetwork()->getChainManager()->chainActive.Tip()->GetMedianTimePast() > SERVICE_UPGRADE_HARDFORK)
+        if(pnetMan->getChainActive()->chainActive.Tip()->GetMedianTimePast() > SERVICE_UPGRADE_HARDFORK)
         {
             targetSpacing = 150;
         }
@@ -2939,7 +2873,7 @@ bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interr
     // Message: getdata (blocks)
     //
     std::vector<CInv> vGetData;
-    if (!pto->fClient && (fFetch || !pnetMan->getActivePaymentNetwork()->getChainManager()->IsInitialBlockDownload()) && state.nBlocksInFlight < MAX_BLOCKS_IN_TRANSIT_PER_PEER)
+    if (!pto->fClient && (fFetch || !pnetMan->getChainActive()->IsInitialBlockDownload()) && state.nBlocksInFlight < MAX_BLOCKS_IN_TRANSIT_PER_PEER)
     {
         std::vector<const CBlockIndex *> vToDownload;
         NodeId staller = -1;

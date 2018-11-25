@@ -1,8 +1,8 @@
 /*
- * This file is part of the ECC project
+ * This file is part of the Eccoin project
  * Copyright (c) 2009-2010 Satoshi Nakamoto
  * Copyright (c) 2009-2016 The Bitcoin Core developers
- * Copyright (c) 2014-2018 The ECC developers
+ * Copyright (c) 2014-2018 The Eccoin developers
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
 #ifndef BITCOIN_COMPRESSOR_H
 #define BITCOIN_COMPRESSOR_H
 
-#include "tx/tx.h"
+#include "chain/tx.h"
 #include "script/script.h"
 #include "serialize.h"
 
@@ -42,7 +42,8 @@ class CScriptID;
  * Other scripts up to 121 bytes require 1 byte + script length. Above that,
  * scripts up to 16505 bytes require 2 bytes + script length.
  */
-class CScriptCompressor {
+class CScriptCompressor
+{
 private:
     /**
      * make this static for now (there are only 6 special scripts defined) this
@@ -72,10 +73,12 @@ protected:
 
 public:
     CScriptCompressor(CScript &scriptIn) : script(scriptIn) {}
-
-    template <typename Stream> void Serialize(Stream &s) const {
+    template <typename Stream>
+    void Serialize(Stream &s) const
+    {
         std::vector<uint8_t> compr;
-        if (Compress(compr)) {
+        if (Compress(compr))
+        {
             s << CFlatData(compr);
             return;
         }
@@ -84,21 +87,27 @@ public:
         s << CFlatData(script);
     }
 
-    template <typename Stream> void Unserialize(Stream &s) {
+    template <typename Stream>
+    void Unserialize(Stream &s)
+    {
         unsigned int nSize = 0;
         s >> VARINT(nSize);
-        if (nSize < nSpecialScripts) {
+        if (nSize < nSpecialScripts)
+        {
             std::vector<uint8_t> vch(GetSpecialSize(nSize), 0x00);
             s >> REF(CFlatData(vch));
             Decompress(nSize, vch);
             return;
         }
         nSize -= nSpecialScripts;
-        if (nSize > MAX_SCRIPT_SIZE) {
+        if (nSize > MAX_SCRIPT_SIZE)
+        {
             // Overly long script, replace with a short invalid one
             script << OP_RETURN;
             s.ignore(nSize);
-        } else {
+        }
+        else
+        {
             script.resize(nSize);
             s >> REF(CFlatData(script));
         }
@@ -106,7 +115,8 @@ public:
 };
 
 /** wrapper for CTxOut that provides a more compact serialization */
-class CTxOutCompressor {
+class CTxOutCompressor
+{
 private:
     CTxOut &txout;
 
@@ -115,15 +125,18 @@ public:
     static uint64_t DecompressAmount(uint64_t nAmount);
 
     CTxOutCompressor(CTxOut &txoutIn) : txout(txoutIn) {}
-
     ADD_SERIALIZE_METHODS;
 
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream &s, Operation ser_action) {
-        if (!ser_action.ForRead()) {
+    inline void SerializationOp(Stream &s, Operation ser_action)
+    {
+        if (!ser_action.ForRead())
+        {
             uint64_t nVal = CompressAmount(txout.nValue);
             READWRITE(VARINT(nVal));
-        } else {
+        }
+        else
+        {
             uint64_t nVal = 0;
             READWRITE(VARINT(nVal));
             txout.nValue = DecompressAmount(nVal);

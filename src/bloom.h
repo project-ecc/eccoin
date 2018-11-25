@@ -1,7 +1,7 @@
 /*
- * This file is part of the ECC project
+ * This file is part of the Eccoin project
  * Copyright (c) 2012-2016 The Bitcoin Core developers
- * Copyright (c) 2014-2018 The ECC developers
+ * Copyright (c) 2014-2018 The Eccoin developers
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -48,9 +48,9 @@ enum bloomflags
 /**
  * BloomFilter is a probabilistic filter which SPV clients provide
  * so that we can filter the transactions we send them.
- * 
+ *
  * This allows for significantly more efficient transaction and block downloads.
- * 
+ *
  * Because bloom filters are probabilistic, a SPV node can increase the false-
  * positive rate, making us send it transactions which aren't actually its,
  * allowing clients to trade more bandwidth for more privacy by obfuscating which
@@ -66,7 +66,7 @@ private:
     unsigned int nTweak;
     unsigned char nFlags;
 
-    unsigned int Hash(unsigned int nHashNum, const std::vector<unsigned char>& vDataToHash) const;
+    unsigned int Hash(unsigned int nHashNum, const std::vector<unsigned char> &vDataToHash) const;
 
     // Private constructor for CRollingBloomFilter, no restrictions on size
     CBloomFilter(unsigned int nElements, double nFPRate, unsigned int nTweak);
@@ -84,24 +84,24 @@ public:
      */
     CBloomFilter(unsigned int nElements, double nFPRate, unsigned int nTweak, unsigned char nFlagsIn);
     CBloomFilter() : isFull(true), isEmpty(false), nHashFuncs(0), nTweak(0), nFlags(0) {}
-
     ADD_SERIALIZE_METHODS
 
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action) {
+    inline void SerializationOp(Stream &s, Operation ser_action)
+    {
         READWRITE(vData);
         READWRITE(nHashFuncs);
         READWRITE(nTweak);
         READWRITE(nFlags);
     }
 
-    void insert(const std::vector<unsigned char>& vKey);
-    void insert(const COutPoint& outpoint);
-    void insert(const uint256& hash);
+    void insert(const std::vector<unsigned char> &vKey);
+    void insert(const COutPoint &outpoint);
+    void insert(const uint256 &hash);
 
-    bool contains(const std::vector<unsigned char>& vKey) const;
-    bool contains(const COutPoint& outpoint) const;
-    bool contains(const uint256& hash) const;
+    bool contains(const std::vector<unsigned char> &vKey) const;
+    bool contains(const COutPoint &outpoint) const;
+    bool contains(const uint256 &hash) const;
 
     void clear();
     void reset(unsigned int nNewTweak);
@@ -111,10 +111,15 @@ public:
     bool IsWithinSizeConstraints() const;
 
     //! Also adds any outputs which match the filter to the filter (to match their spending txes)
-    bool IsRelevantAndUpdate(const CTransaction& tx);
+    bool IsRelevantAndUpdate(const CTransaction &tx);
 
     //! Checks for empty and full filters to avoid wasting cpu
     void UpdateEmptyFull();
+
+    //! for testing only
+    bool getFull() const { return isFull; }
+    //! for testing only
+    unsigned int vDataSize() const { return vData.size(); }
 };
 
 /**
@@ -136,13 +141,15 @@ public:
     // constructed before the randomizer is properly initialized.
     CRollingBloomFilter(unsigned int nElements, double nFPRate);
 
-    void insert(const std::vector<unsigned char>& vKey);
-    void insert(const uint256& hash);
-    bool contains(const std::vector<unsigned char>& vKey) const;
-    bool contains(const uint256& hash) const;
+    void insert(const std::vector<unsigned char> &vKey);
+    void insert(const uint256 &hash);
+    bool contains(const std::vector<unsigned char> &vKey) const;
+    bool contains(const uint256 &hash) const;
 
     void reset();
 
+    //! for testing only
+    unsigned vDataTotalSize() const { return b1.vDataSize() + b2.vDataSize(); }
 private:
     unsigned int nBloomSize;
     unsigned int nInsertions;
