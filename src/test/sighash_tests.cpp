@@ -4,17 +4,18 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "consensus/validation.h"
+#include "crypto/hash.h"
 #include "data/sighash.json.h"
-#include "hash.h"
 #include "main.h" // For CheckTransaction
+#include "processtx.h"
 #include "random.h"
 #include "script/interpreter.h"
 #include "script/script.h"
 #include "serialize.h"
 #include "streams.h"
 #include "test/test_bitcoin.h"
-#include "util.h"
-#include "utilstrencodings.h"
+#include "util/util.h"
+#include "util/utilstrencodings.h"
 #include "version.h"
 
 #include <iostream>
@@ -34,7 +35,7 @@ uint256 static SignatureHashOld(CScript scriptCode, const CTransaction &txTo, un
         printf("ERROR: SignatureHash(): nIn=%d out of range\n", nIn);
         return one;
     }
-    CMutableTransaction txTmp(txTo);
+    CTransaction txTmp(txTo);
 
     // In case concatenating two scripts ends up with two codeseparators,
     // or an extra one at the end, this prevents all those possible incompatibilities.
@@ -98,7 +99,7 @@ void static RandomScript(CScript &script)
         script << oplist[insecure_rand() % (sizeof(oplist) / sizeof(oplist[0]))];
 }
 
-void static RandomTransaction(CMutableTransaction &tx, bool fSingle)
+void static RandomTransaction(CTransaction &tx, bool fSingle)
 {
     tx.nVersion = insecure_rand();
     tx.vin.clear();
@@ -143,10 +144,7 @@ BOOST_AUTO_TEST_CASE(sighash_test)
     {
         int nHashType = insecure_rand();
 
-        // Clear forkid
-        nHashType &= ~SIGHASH_FORKID;
-
-        CMutableTransaction txTo;
+        CTransaction txTo;
         RandomTransaction(txTo, (nHashType & 0x1f) == SIGHASH_SINGLE);
         CScript scriptCode;
         RandomScript(scriptCode);
@@ -154,7 +152,7 @@ BOOST_AUTO_TEST_CASE(sighash_test)
 
         uint256 sh, sho;
         sho = SignatureHashOld(scriptCode, txTo, nIn, nHashType);
-        sh = SignatureHash(scriptCode, txTo, nIn, nHashType, 0, 0);
+        sh = SignatureHash(scriptCode, txTo, nIn, nHashType);
 #if defined(PRINT_SIGHASH_JSON)
         CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
         ss << txTo;
@@ -226,7 +224,7 @@ BOOST_AUTO_TEST_CASE(sighash_from_data)
             continue;
         }
 
-        sh = SignatureHash(scriptCode, tx, nIn, nHashType, 0, 0);
+        sh = SignatureHash(scriptCode, tx, nIn, nHashType);
         BOOST_CHECK_MESSAGE(sh.GetHex() == sigHashHex, strTest);
     }
 }

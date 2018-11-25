@@ -1,5 +1,5 @@
 /*
- * This file is part of the ECC project
+ * This file is part of the Eccoin project
  * Copyright (c) 2017-2018 Greg Griffith
  *
  * This program is free software: you can redistribute it and/or modify
@@ -19,25 +19,27 @@
 #ifndef BITCOIN_CHAINPARAMS_H
 #define BITCOIN_CHAINPARAMS_H
 
-#include "consensus/params.h"
 #include "chain/block.h"
+#include "consensus/params.h"
 #include "protocol.h"
 
 #include <vector>
 
-struct CDNSSeedData {
+struct CDNSSeedData
+{
     std::string name, host;
     bool supportsServiceBitsFiltering;
-    CDNSSeedData(const std::string &strName, const std::string &strHost,
-                 bool supportsServiceBitsFilteringIn = false)
-        : name(strName), host(strHost),
-          supportsServiceBitsFiltering(supportsServiceBitsFilteringIn) {}
+    CDNSSeedData(const std::string &strName, const std::string &strHost, bool supportsServiceBitsFilteringIn = false)
+        : name(strName), host(strHost), supportsServiceBitsFiltering(supportsServiceBitsFilteringIn)
+    {
+    }
 };
 
 
 typedef std::map<int, uint256> MapCheckpoints;
 
-struct CCheckpointData {
+struct CCheckpointData
+{
     MapCheckpoints mapCheckpoints;
 };
 
@@ -51,7 +53,8 @@ struct CCheckpointData {
 class CNetworkTemplate
 {
 public:
-    enum Base58Type {
+    enum Base58Type
+    {
         PUBKEY_ADDRESS,
         SCRIPT_ADDRESS,
         SECRET_KEY,
@@ -83,12 +86,11 @@ public:
     unsigned int nStakeMinAge;
 
 
-    const Consensus::Params& GetConsensus() const { return consensus; }
-    const CMessageHeader::MessageMagic& MessageStart() const { return pchMessageStart; }
+    const Consensus::Params &GetConsensus() const { return consensus; }
+    const CMessageHeader::MessageMagic &MessageStart() const { return pchMessageStart; }
     int GetDefaultPort() const { return nDefaultPort; }
     int GetRPCPort() const { return nRPCPort; }
-
-    const CBlock& GenesisBlock() const { return genesis; }
+    const CBlock &GenesisBlock() const { return genesis; }
     /** Make miner wait to have peers to avoid wasting work */
     bool MiningRequiresPeers() const { return fMiningRequiresPeers; }
     /** Default value for -checkmempool and -checkblockindex argument */
@@ -103,23 +105,17 @@ public:
     /** Return the BIP70 network string (main, test or regtest) */
     std::string NetworkIDString() const { return strNetworkID; }
     std::string NetworkDataDir() const { return strNetworkDataDir; }
-    const std::vector<CDNSSeedData>& DNSSeeds() const { return vSeeds; }
-    const std::vector<unsigned char>& Base58Prefix(Base58Type type) const { return base58Prefixes[type]; }
-    const CCheckpointData& Checkpoints() const { return checkpointData; }
+    const std::vector<CDNSSeedData> &DNSSeeds() const { return vSeeds; }
+    const std::vector<unsigned char> &Base58Prefix(Base58Type type) const { return base58Prefixes[type]; }
+    const CCheckpointData &Checkpoints() const { return checkpointData; }
     unsigned int getStakeMaxAge() const { return nStakeMaxAge; }
     unsigned int getStakeMinAge() const { return nStakeMinAge; }
-
     int getpch0() const { return pchMessageStart[0]; }
     int getpch1() const { return pchMessageStart[1]; }
     int getpch2() const { return pchMessageStart[2]; }
     int getpch3() const { return pchMessageStart[3]; }
-  
-    CNetworkTemplate()
-    {
-
-    }
-
-    CNetworkTemplate(CNetworkTemplate* param_netTemplate)
+    CNetworkTemplate() {}
+    CNetworkTemplate(CNetworkTemplate *param_netTemplate)
     {
         this->consensus = param_netTemplate->GetConsensus();
 
@@ -128,11 +124,16 @@ public:
         this->pchMessageStart[2] = param_netTemplate->getpch2();
         this->pchMessageStart[3] = param_netTemplate->getpch3();
 
-        this->base58Prefixes[CNetworkTemplate::PUBKEY_ADDRESS] = param_netTemplate->Base58Prefix(CNetworkTemplate::PUBKEY_ADDRESS);
-        this->base58Prefixes[CNetworkTemplate::SCRIPT_ADDRESS] = param_netTemplate->Base58Prefix(CNetworkTemplate::SCRIPT_ADDRESS);
-        this->base58Prefixes[CNetworkTemplate::SECRET_KEY]     = param_netTemplate->Base58Prefix(CNetworkTemplate::SECRET_KEY);
-        this->base58Prefixes[CNetworkTemplate::EXT_PUBLIC_KEY] = param_netTemplate->Base58Prefix(CNetworkTemplate::EXT_PUBLIC_KEY);
-        this->base58Prefixes[CNetworkTemplate::EXT_SECRET_KEY] = param_netTemplate->Base58Prefix(CNetworkTemplate::EXT_SECRET_KEY);
+        this->base58Prefixes[CNetworkTemplate::PUBKEY_ADDRESS] =
+            param_netTemplate->Base58Prefix(CNetworkTemplate::PUBKEY_ADDRESS);
+        this->base58Prefixes[CNetworkTemplate::SCRIPT_ADDRESS] =
+            param_netTemplate->Base58Prefix(CNetworkTemplate::SCRIPT_ADDRESS);
+        this->base58Prefixes[CNetworkTemplate::SECRET_KEY] =
+            param_netTemplate->Base58Prefix(CNetworkTemplate::SECRET_KEY);
+        this->base58Prefixes[CNetworkTemplate::EXT_PUBLIC_KEY] =
+            param_netTemplate->Base58Prefix(CNetworkTemplate::EXT_PUBLIC_KEY);
+        this->base58Prefixes[CNetworkTemplate::EXT_SECRET_KEY] =
+            param_netTemplate->Base58Prefix(CNetworkTemplate::EXT_SECRET_KEY);
 
         this->nDefaultPort = param_netTemplate->GetDefaultPort();
         this->nRPCPort = param_netTemplate->GetRPCPort();
@@ -149,7 +150,6 @@ public:
         this->checkpointData = param_netTemplate->Checkpoints();
         this->nStakeMaxAge = param_netTemplate->getStakeMaxAge();
         this->nStakeMinAge = param_netTemplate->getStakeMinAge();
-
     }
 };
 

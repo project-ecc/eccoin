@@ -16,6 +16,9 @@ import pdb        # BU added
 import shutil
 import tempfile
 import traceback
+from os.path import basename
+import string
+from sys import argv
 
 from .util import (
     initialize_chain,
@@ -30,18 +33,22 @@ from .util import (
     check_json_precision,
     initialize_chain_clean,
     PortSeed,
+    UtilOptions
 )
+
+
 from .authproxy import JSONRPCException
 
 
 class BitcoinTestFramework(object):
     drop_to_pdb = os.getenv("DROP_TO_PDB", "")
-
+    bins = None
     # These may be over-ridden by subclasses:
     def run_test(self):
         for node in self.nodes:
             assert_equal(node.getblockcount(), 200)
-            assert_equal(node.getbalance(), 25*50)
+            # Eccoind cant check for static balance due to randomness in pow reward
+            #assert_equal(node.getbalance(), 25*50)
 
     def add_options(self, parser):
         pass
@@ -50,7 +57,7 @@ class BitcoinTestFramework(object):
         """
         Sets up the blockchain for the bitcoin nodes.  It also sets up the daemon configuration.
         bitcoinConfDict:  Pass a dictionary of values you want written to bitcoin.conf.  If you have a key with multiple values, pass a list of the values as the value, for example:
-        { "debug":["net","blk","thin","lck","mempool","req","bench","evict"] }        
+        { "debug":["net","blk","thin","lck","mempool","req","bench","evict"] }
         This framework provides values for the necessary fields (like regtest=1).  But you can override these
         defaults by setting them in this dictionary.
 
@@ -58,7 +65,7 @@ class BitcoinTestFramework(object):
         before starting the node.
         """
         print("Initializing test directory ", self.options.tmpdir, "Bitcoin conf: ", str(bitcoinConfDict), "walletfiles: ", wallets)
-        initialize_chain(self.options.tmpdir,bitcoinConfDict, wallets)
+        initialize_chain(self.options.tmpdir,bitcoinConfDict, wallets, self.bins)
 
     def setup_nodes(self):
         return start_nodes(4, self.options.tmpdir)
@@ -139,8 +146,17 @@ class BitcoinTestFramework(object):
                           help="Don't stop bitcoinds after the test execution")
         parser.add_option("--srcdir", dest="srcdir", default=os.path.normpath(os.path.dirname(os.path.realpath(__file__))+"/../../../src"),
                           help="Source directory containing bitcoind/bitcoin-cli (default: %default)")
-        parser.add_option("--tmpdir", dest="tmpdir", default=tempfile.mkdtemp(prefix="test"),
-                          help="Root directory for datadirs")
+
+
+        testname = "".join(
+            filter(lambda x : x in string.ascii_lowercase, basename(argv[0])))
+
+        default_tempdir = tempfile.mkdtemp(prefix="test_"+testname+"_")
+
+        parser.add_option("--tmppfx", dest="tmppfx", default=default_tempdir,
+                          help="Directory prefix for data directories")
+        parser.add_option("--tmpdir", dest="tmpdir", default=None,
+                          help="Root directory for data directories. If specified, overrides tmppfx.")
         parser.add_option("--tracerpc", dest="trace_rpc", default=False, action="store_true",
                           help="Print out all RPC calls as they are made")
         parser.add_option("--portseed", dest="port_seed", default=os.getpid(), type='int',
@@ -150,8 +166,14 @@ class BitcoinTestFramework(object):
         # BU: added for tests using randomness (e.g. excessive.py)
         parser.add_option("--randomseed", dest="randomseed",
                           help="Set RNG seed for tests that use randomness (ignored otherwise)")
+        parser.add_option("--no-ipv6-rpc-listen", dest="no_ipv6_rpc_listen", default=False, action="store_true",
+                          help="Switch off listening on the IPv6 ::1 localhost RPC port. "
+                          "This is meant to deal with travis which is currently not supporting IPv6 sockets.")
+
         self.add_options(parser)
         (self.options, self.args) = parser.parse_args(argsOverride)
+
+        UtilOptions.no_ipv6_rpc_listen = self.options.no_ipv6_rpc_listen
 
         # BU: initialize RNG seed based on time if no seed specified
         if self.options.randomseed:
@@ -161,7 +183,8 @@ class BitcoinTestFramework(object):
         random.seed(self.randomseed)
         print("Random seed: %s" % self.randomseed)
 
-        self.options.tmpdir = os.path.join(self.options.tmpdir, str(self.options.port_seed))
+        if self.options.tmpdir is None:
+            self.options.tmpdir = os.path.join(self.options.tmppfx, str(self.options.port_seed))
 
         if self.options.trace_rpc:
             logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
@@ -215,7 +238,8 @@ class BitcoinTestFramework(object):
 
         if not self.options.noshutdown:
             print("Stopping nodes")
-            stop_nodes(self.nodes)
+            if hasattr(self, "nodes"):  # nodes may not exist if there's a startup error
+                stop_nodes(self.nodes)
             wait_bitcoinds()
         else:
             print("Note: bitcoinds were not stopped and may still be running")
@@ -259,10 +283,10 @@ class ComparisonTestFramework(BitcoinTestFramework):
 
     def add_options(self, parser):
         parser.add_option("--testbinary", dest="testbinary",
-                          default=os.getenv("BITCOIND", "bitcoind"),
+                          default=os.getenv("BITCOIND", "eccoind"),
                           help="bitcoind binary to test")
         parser.add_option("--refbinary", dest="refbinary",
-                          default=os.getenv("BITCOIND", "bitcoind"),
+                          default=os.getenv("BITCOIND", "eccoind"),
                           help="bitcoind binary to use for reference nodes (if any)")
 
     def setup_chain(self,bitcoinConfDict=None, wallets=None):  # BU add config params

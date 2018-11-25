@@ -1,5 +1,5 @@
 /*
- * This file is part of the ECC project
+ * This file is part of the Eccoin project
  * Copyright (c) 2017-2018 Greg Griffith
  *
  * This program is free software: you can redistribute it and/or modify
@@ -21,21 +21,21 @@
 
 #include <unordered_map>
 
-#include "networks/networktemplate.h"
 #include "chain.h"
+#include "networks/networktemplate.h"
 #include "txdb.h"
 
 
 struct BlockHasher
 {
-    size_t operator()(const uint256& hash) const { return hash.GetCheapHash(); }
+    size_t operator()(const uint256 &hash) const { return hash.GetCheapHash(); }
 };
-typedef std::unordered_map<uint256, CBlockIndex*, BlockHasher> BlockMap;
+typedef std::unordered_map<uint256, CBlockIndex *, BlockHasher> BlockMap;
 
 
 /** Manages the BlockMap and CChain's for a given protocol. */
-class CChainManager {
-
+class CChainManager
+{
 public:
     /** map containing all block indexs ever seen for this chain */
     BlockMap mapBlockIndex;
@@ -56,8 +56,8 @@ private:
     bool LoadBlockIndexDB();
 
 public:
-
-    CChainManager(){
+    CChainManager()
+    {
         mapBlockIndex.clear();
         chainActive = CChain();
         pindexBestHeader = NULL;
@@ -77,7 +77,7 @@ public:
         pblocktree.reset();
     }
 
-    void operator=(const CChainManager& oldMan)
+    void operator=(const CChainManager &oldMan)
     {
         mapBlockIndex = oldMan.mapBlockIndex;
         chainActive = oldMan.chainActive;
@@ -88,31 +88,28 @@ public:
 
 
     /** Add a new block index entry for a given block recieved from the network */
-    CBlockIndex* AddToBlockIndex(const CBlockHeader& block);
+    CBlockIndex *AddToBlockIndex(const CBlockHeader &block);
 
     /** Find the last common block between the parameter chain and a locator. */
-    CBlockIndex* FindForkInGlobalIndex(const CChain& chain, const CBlockLocator& locator);
+    CBlockIndex *FindForkInGlobalIndex(const CChain &chain, const CBlockLocator &locator);
 
     /** Check whether we are doing an initial block download (synchronizing from disk or network) */
     bool IsInitialBlockDownload();
 
     /** Initialize a new block tree database + block data on disk */
-    bool InitBlockIndex(const CNetworkTemplate& chainparams);
+    bool InitBlockIndex(const CNetworkTemplate &chainparams);
 
     /** Create a new block index entry for a given block hash loaded from disk*/
-    CBlockIndex* InsertBlockIndex(uint256 hash);
+    CBlockIndex *InsertBlockIndex(uint256 hash);
 
     /** Load the block tree and coins database from disk */
     bool LoadBlockIndex();
 
     /** Import blocks from an external file */
-    bool LoadExternalBlockFile(const CNetworkTemplate& chainparams, FILE* fileIn, CDiskBlockPos *dbp = NULL);
+    bool LoadExternalBlockFile(const CNetworkTemplate &chainparams, FILE *fileIn, CDiskBlockPos *dbp = NULL);
 
     /** Unload database information */
     void UnloadBlockIndex();
-
-
-
 };
 
 #endif // CHAINMAN_H

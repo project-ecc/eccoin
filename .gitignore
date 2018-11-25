@@ -99,6 +99,9 @@ qrc_*.cpp
 .DS_Store
 build
 
+# IDEs
+.vs
+
 #lcov
 *.gcno
 *.gcda

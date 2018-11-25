@@ -9,8 +9,8 @@
 #include "script/script.h"
 #include "test/test_bitcoin.h"
 #include "uint256.h"
-#include "util.h"
-#include "utilstrencodings.h"
+#include "util/util.h"
+#include "util/utilstrencodings.h"
 
 #include <string>
 #include <vector>

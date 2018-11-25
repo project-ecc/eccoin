@@ -3,10 +3,10 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "hash.h"
+#include "crypto/hash.h"
 #include "random.h"
 #include "test/test_bitcoin.h"
-#include "utilstrencodings.h"
+#include "util/utilstrencodings.h"
 
 #include <vector>
 
@@ -123,7 +123,7 @@ BOOST_AUTO_TEST_CASE(siphash)
     }
 
     CHashWriter ss(SER_DISK, CLIENT_VERSION);
-    CMutableTransaction tx;
+    CTransaction tx;
     // Note these tests were originally written with tx.nVersion=1
     // and the test would be affected by default tx version bumps if not fixed.
     tx.nVersion = 1;

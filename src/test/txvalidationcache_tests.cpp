@@ -7,13 +7,12 @@
 #include "key.h"
 #include "main.h"
 #include "miner.h"
-#include "parallel.h"
 #include "pubkey.h"
 #include "random.h"
 #include "script/standard.h"
 #include "test/test_bitcoin.h"
 #include "txmempool.h"
-#include "utiltime.h"
+#include "util/utiltime.h"
 
 #include <boost/test/unit_test.hpp>
 
@@ -24,7 +23,7 @@ extern void LimitMempoolSize(CTxMemPool &pool, size_t limit, unsigned long age);
 
 BOOST_AUTO_TEST_SUITE(txvalidationcache_tests) // BU harmonize suite name with filename
 
-static bool ToMemPool(CMutableTransaction &tx)
+static bool ToMemPool(CTransaction &tx)
 {
     LOCK(cs_main);
 
@@ -43,11 +42,9 @@ BOOST_FIXTURE_TEST_CASE(tx_mempool_block_doublespend, TestChain100Setup)
 
 
     unsigned int sighashType = SIGHASH_ALL;
-    if (chainActive.Tip()->IsforkActiveOnNextBlock(miningForkTime.value))
-        sighashType |= SIGHASH_FORKID;
 
     // Create a double-spend of mature coinbase txn:
-    std::vector<CMutableTransaction> spends;
+    std::vector<CTransaction> spends;
     spends.resize(2);
     for (int i = 0; i < 2; i++)
     {
@@ -85,7 +82,7 @@ BOOST_FIXTURE_TEST_CASE(tx_mempool_block_doublespend, TestChain100Setup)
     mempool.clear();
 
     // Final sanity test: first spend in mempool, second in block, that's OK:
-    std::vector<CMutableTransaction> oneSpend;
+    std::vector<CTransaction> oneSpend;
     oneSpend.push_back(spends[0]);
     BOOST_CHECK(ToMemPool(spends[1]));
     block = CreateAndProcessBlock(oneSpend, scriptPubKey);
@@ -114,7 +111,7 @@ BOOST_FIXTURE_TEST_CASE(uncache_coins, TestChain100Setup)
     if (chainActive.Tip()->IsforkActiveOnNextBlock(miningForkTime.value))
         sighashType |= SIGHASH_FORKID;
 
-    std::vector<CMutableTransaction> spends;
+    std::vector<CTransaction> spends;
 
     // Add valid txns to the memory pool.  The coins should be present in the coins cache.
     spends.resize(1);

@@ -2,7 +2,7 @@
 # Copyright (c) 2015-2016 The Bitcoin Core developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
-
+import test_framework.loginit
 from test_framework.mininode import *
 from test_framework.test_framework import BitcoinTestFramework
 from test_framework.util import *
@@ -104,10 +104,10 @@ class MaxUploadTest(BitcoinTestFramework):
     def __init__(self):
         self.utxo = []
         self.txouts = gen_return_txouts()
- 
+
     def add_options(self, parser):
         parser.add_option("--testbinary", dest="testbinary",
-                          default=os.getenv("BITCOIND", "bitcoind"),
+                          default=os.getenv("BITCOIND", "eccoind"),
                           help="bitcoind binary to test")
 
     def setup_chain(self):
@@ -195,6 +195,12 @@ class MaxUploadTest(BitcoinTestFramework):
 
         # Test logic begins here
 
+        # Must reset these settings because since the May152018 hardfork the minimum EB is set to 32MB on startup,
+        # but in order for this test to run properly and in a reasonable amount of time we set these values back
+        # to something smaller.
+        self.nodes[0].setminingmaxblock(self.blockmaxsize);
+        self.nodes[0].setexcessiveblock(EXCESSIVE_BLOCKSIZE, 1)
+
         # Now mine a big block
         self.mine_big_block(self.nodes[0], self.nodes[0].getnewaddress())
 
@@ -243,7 +249,7 @@ class MaxUploadTest(BitcoinTestFramework):
         assert_equal(len(self.nodes[0].getpeerinfo()), 3)
         print ("Peer 0 still connected after downloading old block %d times" % (successcount - compensation))
 
-        # At most a couple more tries should succeed (depending on how long 
+        # At most a couple more tries should succeed (depending on how long
         # the test has been running so far).
         i = 1
         while True:

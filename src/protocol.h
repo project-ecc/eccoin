@@ -1,8 +1,8 @@
 /*
- * This file is part of the ECC project
+ * This file is part of the Eccoin project
  * Copyright (c) 2009-2010 Satoshi Nakamoto
  * Copyright (c) 2009-2016 The Bitcoin Core developers
- * Copyright (c) 2014-2018 The ECC developers
+ * Copyright (c) 2014-2018 The Eccoin developers
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -42,9 +42,11 @@
  * (4) size.
  * (4) checksum.
  */
-class CMessageHeader {
+class CMessageHeader
+{
 public:
-    enum {
+    enum
+    {
         MESSAGE_START_SIZE = 4,
         COMMAND_SIZE = 12,
         MESSAGE_SIZE_SIZE = 4,
@@ -52,14 +54,12 @@ public:
 
         MESSAGE_SIZE_OFFSET = MESSAGE_START_SIZE + COMMAND_SIZE,
         CHECKSUM_OFFSET = MESSAGE_SIZE_OFFSET + MESSAGE_SIZE_SIZE,
-        HEADER_SIZE = MESSAGE_START_SIZE + COMMAND_SIZE + MESSAGE_SIZE_SIZE +
-                      CHECKSUM_SIZE
+        HEADER_SIZE = MESSAGE_START_SIZE + COMMAND_SIZE + MESSAGE_SIZE_SIZE + CHECKSUM_SIZE
     };
     typedef std::array<uint8_t, MESSAGE_START_SIZE> MessageMagic;
 
     CMessageHeader(const MessageMagic &pchMessageStartIn);
-    CMessageHeader(const MessageMagic &pchMessageStartIn,
-                   const char *pszCommand, unsigned int nMessageSizeIn);
+    CMessageHeader(const MessageMagic &pchMessageStartIn, const char *pszCommand, unsigned int nMessageSizeIn);
 
     std::string GetCommand() const;
     bool IsValid(const MessageMagic &messageStart) const;
@@ -67,7 +67,8 @@ public:
     ADD_SERIALIZE_METHODS;
 
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream &s, Operation ser_action) {
+    inline void SerializationOp(Stream &s, Operation ser_action)
+    {
         READWRITE(FLATDATA(pchMessageStart));
         READWRITE(FLATDATA(pchCommand));
         READWRITE(nMessageSize);
@@ -84,8 +85,8 @@ public:
  * Bitcoin protocol message types. When adding new message types, don't forget
  * to update allNetMessageTypes in protocol.cpp.
  */
-namespace NetMsgType {
-
+namespace NetMsgType
+{
 /**
  * The version message provides information about the transmitting node to the
  * receiving node at the beginning of a connection.
@@ -244,7 +245,8 @@ extern const char *SENDHEADERS;
 const std::vector<std::string> &getAllNetMessageTypes();
 
 /** nServices flags */
-enum ServiceFlags : uint64_t {
+enum ServiceFlags : uint64_t
+{
     // Nothing
     NODE_NONE = 0,
     // NODE_NETWORK means that the node is capable of serving the block chain. It is currently
@@ -281,7 +283,7 @@ public:
     ADD_SERIALIZE_METHODS
 
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action)
+    inline void SerializationOp(Stream &s, Operation ser_action)
     {
         if (ser_action.ForRead())
             Init();
@@ -293,7 +295,7 @@ public:
         uint64_t nServicesInt = nServices;
         READWRITE(nServicesInt);
         nServices = (ServiceFlags)nServicesInt;
-        READWRITE(*(CService*)this);
+        READWRITE(*(CService *)this);
     }
 
     // TODO: make private (improves encapsulation)
@@ -309,22 +311,22 @@ class CInv
 {
 public:
     CInv();
-    CInv(int typeIn, const uint256& hashIn);
-    CInv(const std::string& strType, const uint256& hashIn);
+    CInv(int typeIn, const uint256 &hashIn);
+    CInv(const std::string &strType, const uint256 &hashIn);
 
     ADD_SERIALIZE_METHODS
 
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action)
+    inline void SerializationOp(Stream &s, Operation ser_action)
     {
         READWRITE(type);
         READWRITE(hash);
     }
 
-    friend bool operator<(const CInv& a, const CInv& b);
+    friend bool operator<(const CInv &a, const CInv &b);
 
     bool IsKnownType() const;
-    const char* GetCommand() const;
+    const char *GetCommand() const;
     std::string ToString() const;
 
     // TODO: make private (improves encapsulation)
@@ -333,7 +335,8 @@ public:
     uint256 hash;
 };
 
-enum {
+enum
+{
     MSG_TX = 1,
     MSG_BLOCK,
     // Nodes may always request a MSG_FILTERED_BLOCK in a getdata, however,

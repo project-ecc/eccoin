@@ -1,8 +1,8 @@
 /*
- * This file is part of the ECC project
+ * This file is part of the Eccoin project
  * Copyright (c) 2009-2010 Satoshi Nakamoto
  * Copyright (c) 2009-2016 The Bitcoin Core developers
- * Copyright (c) 2014-2018 The ECC developers
+ * Copyright (c) 2014-2018 The Eccoin developers
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,7 +32,8 @@
 #include <string>
 #include <vector>
 
-enum Network {
+enum Network
+{
     NET_UNROUTABLE = 0,
     NET_IPV4,
     NET_IPV6,
@@ -42,7 +43,8 @@ enum Network {
 };
 
 /** IP address (IPv6, or IPv4 using mapped IPv6 range (::FFFF:0:0/96)) */
-class CNetAddr {
+class CNetAddr
+{
 protected:
     // in network byte order
     uint8_t ip[16];
@@ -118,14 +120,16 @@ public:
     ADD_SERIALIZE_METHODS;
 
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream &s, Operation ser_action) {
+    inline void SerializationOp(Stream &s, Operation ser_action)
+    {
         READWRITE(FLATDATA(ip));
     }
 
     friend class CSubNet;
 };
 
-class CSubNet {
+class CSubNet
+{
 protected:
     /// Network (base) address
     CNetAddr network;
@@ -154,7 +158,8 @@ public:
     ADD_SERIALIZE_METHODS;
 
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream &s, Operation ser_action) {
+    inline void SerializationOp(Stream &s, Operation ser_action)
+    {
         READWRITE(network);
         READWRITE(FLATDATA(netmask));
         READWRITE(FLATDATA(valid));
@@ -162,7 +167,8 @@ public:
 };
 
 /** A combination of a network address (CNetAddr) and a (TCP) port */
-class CService : public CNetAddr {
+class CService : public CNetAddr
+{
 protected:
     // host order
     unsigned short port;
@@ -191,11 +197,13 @@ public:
     ADD_SERIALIZE_METHODS;
 
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream &s, Operation ser_action) {
+    inline void SerializationOp(Stream &s, Operation ser_action)
+    {
         READWRITE(FLATDATA(ip));
         unsigned short portN = htons(port);
         READWRITE(FLATDATA(portN));
-        if (ser_action.ForRead()) port = ntohs(portN);
+        if (ser_action.ForRead())
+            port = ntohs(portN);
     }
 };
 

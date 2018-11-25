@@ -1,7 +1,7 @@
 /*
- * This file is part of the ECC project
+ * This file is part of the Eccoin project
  * Copyright (c) 2014-2016 The Bitcoin Core developers
- * Copyright (c) 2014-2018 The ECC developers
+ * Copyright (c) 2014-2018 The Eccoin developers
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,7 +27,7 @@
 
 class CNetAddr;
 
-/** 
+/**
  * Median filter over a stream of values.
  * Returns the median of the last N numbers
  */
@@ -49,7 +49,8 @@ public:
 
     void input(T value)
     {
-        if (vValues.size() == nSize) {
+        if (vValues.size() == nSize)
+        {
             vValues.erase(vValues.begin());
         }
         vValues.push_back(value);
@@ -66,26 +67,20 @@ public:
         if (size & 1) // Odd number of elements
         {
             return vSorted[size / 2];
-        } else // Even number of elements
+        }
+        else // Even number of elements
         {
             return (vSorted[size / 2 - 1] + vSorted[size / 2]) / 2;
         }
     }
 
-    int size() const
-    {
-        return vValues.size();
-    }
-
-    std::vector<T> sorted() const
-    {
-        return vSorted;
-    }
+    int size() const { return vValues.size(); }
+    std::vector<T> sorted() const { return vSorted; }
 };
 
 /** Functions to keep track of adjusted P2P time */
 int64_t GetTimeOffset();
 int64_t GetAdjustedTime();
-void AddTimeData(const CNetAddr& ip, int64_t nTime);
+void AddTimeData(const CNetAddr &ip, int64_t nTime);
 
 #endif // BITCOIN_TIMEDATA_H

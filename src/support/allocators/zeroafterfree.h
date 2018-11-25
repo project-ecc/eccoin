@@ -1,5 +1,5 @@
 /*
- * This file is part of the ECC project
+ * This file is part of the Eccoin project
  * Copyright (c) 2009-2010 Satoshi Nakamoto
  * Copyright (c) 2009-2017 The Bitcoin Core developers
  *
@@ -26,7 +26,8 @@
 #include <vector>
 
 template <typename T>
-struct zero_after_free_allocator : public std::allocator<T> {
+struct zero_after_free_allocator : public std::allocator<T>
+{
     // MSVC8 default copy constructor is broken
     typedef std::allocator<T> base;
     typedef typename base::size_type size_type;
@@ -37,18 +38,19 @@ struct zero_after_free_allocator : public std::allocator<T> {
     typedef typename base::const_reference const_reference;
     typedef typename base::value_type value_type;
     zero_after_free_allocator() throw() {}
-    zero_after_free_allocator(const zero_after_free_allocator& a) throw() : base(a) {}
+    zero_after_free_allocator(const zero_after_free_allocator &a) throw() : base(a) {}
     template <typename U>
-    zero_after_free_allocator(const zero_after_free_allocator<U>& a) throw() : base(a)
+    zero_after_free_allocator(const zero_after_free_allocator<U> &a) throw() : base(a)
     {
     }
     ~zero_after_free_allocator() throw() {}
     template <typename _Other>
-    struct rebind {
+    struct rebind
+    {
         typedef zero_after_free_allocator<_Other> other;
     };
 
-    void deallocate(T* p, std::size_t n)
+    void deallocate(T *p, std::size_t n)
     {
         if (p != NULL)
             memory_cleanse(p, sizeof(T) * n);
