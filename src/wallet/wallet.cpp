@@ -1789,9 +1789,7 @@ CAmount CWallet::GetImmatureWatchOnlyBalance() const
     return nTotal;
 }
 
-void CWallet::AvailableCoins(std::vector<COutput> &vCoins,
-    bool fOnlyConfirmed,
-    bool fIncludeZeroValue) const
+void CWallet::AvailableCoins(std::vector<COutput> &vCoins, bool fOnlyConfirmed, bool fIncludeZeroValue) const
 {
     vCoins.clear();
 

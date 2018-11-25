@@ -602,9 +602,7 @@ public:
      * populate vCoins with vector of available COutputs.
      */
     void AvailableCoinsByOwner(std::vector<COutput> &vCoins, const CRecipient &recipient) const;
-    void AvailableCoins(std::vector<COutput> &vCoins,
-        bool fOnlyConfirmed = true,
-        bool fIncludeZeroValue = false) const;
+    void AvailableCoins(std::vector<COutput> &vCoins, bool fOnlyConfirmed = true, bool fIncludeZeroValue = false) const;
 
     /**
      * Shuffle and select coins until nTargetValue is reached while avoiding
