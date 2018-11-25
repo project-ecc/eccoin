@@ -53,7 +53,7 @@ class MintingTest (BitcoinTestFramework):
 
         self.sync_blocks()
 
-        time.sleep(75)
+        time.sleep(45)
 
         # check that nodes across different db's have the same data
         for x in range(0, self.blockstotest):
