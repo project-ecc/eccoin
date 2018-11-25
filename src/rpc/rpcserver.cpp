@@ -683,14 +683,7 @@ public:
     UniValue PrepareRequest(const std::string &method, const std::vector<std::string> &args) override
     {
         UniValue params;
-        if (gArgs.GetBoolArg("-named", DEFAULT_NAMED))
-        {
-            params = RPCConvertNamedValues(method, args);
-        }
-        else
-        {
-            params = RPCConvertValues(method, args);
-        }
+        params = RPCConvertValues(method, args);
         return JSONRPCRequestObj(method, params, 1);
     }
 
