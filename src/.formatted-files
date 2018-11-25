@@ -37,7 +37,6 @@ chain/txout.h
 checkqueue.h
 clientversion.cpp
 clientversion.h
-coincontrol.h
 coins.cpp
 coins.h
 compat.h
