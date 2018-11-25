@@ -86,7 +86,6 @@ static const bool DEFAULT_WALLETBROADCAST = true;
 extern const char *DEFAULT_WALLET_DAT;
 
 class CBlockIndex;
-class CCoinControl;
 class COutput;
 class CReserveKey;
 class CScript;
@@ -481,9 +480,8 @@ class CWallet : public CCryptoKeyStore, public CValidationInterface
 {
 private:
     /**
-     * Select a set of coins such that nValueRet >= nTargetValue and at least
-     * all coins from coinControl are selected; Never select unconfirmed coins
-     * if they are not ours
+     * Select a set of coins such that nValueRet >= nTargetValue;
+     * Never select unconfirmed coin if they are not ours
      */
     bool SelectCoinsByOwner(const CAmount &nTargetValue,
         const CRecipient &recipient,
@@ -491,13 +489,11 @@ private:
         CAmount &nValueRet) const;
     bool SelectCoins(const CAmount &nTargetValue,
         std::set<std::pair<const CWalletTx *, unsigned int> > &setCoinsRet,
-        CAmount &nValueRet,
-        const CCoinControl *coinControl = NULL) const;
+        CAmount &nValueRet) const;
     bool SelectCoins(CAmount nTargetValue,
         unsigned int nSpendTime,
         std::set<std::pair<const CWalletTx *, unsigned int> > &setCoinsRet,
-        int64_t &nValueRet,
-        const CCoinControl *coinControl = NULL) const;
+        int64_t &nValueRet) const;
 
 
     CWalletDB *pwalletdbEncryption;
@@ -608,7 +604,6 @@ public:
     void AvailableCoinsByOwner(std::vector<COutput> &vCoins, const CRecipient &recipient) const;
     void AvailableCoins(std::vector<COutput> &vCoins,
         bool fOnlyConfirmed = true,
-        const CCoinControl *coinControl = NULL,
         bool fIncludeZeroValue = false) const;
 
     /**
@@ -738,7 +733,6 @@ public:
         CAmount &nFeeRet,
         int &nChangePosRet,
         std::string &strFailReason,
-        const CCoinControl *coinControl = NULL,
         bool sign = true);
 
     /**
