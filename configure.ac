@@ -12,7 +12,7 @@ AC_PREREQ([2.60])
 define(_CLIENT_VERSION_MAJOR, 0)
 define(_CLIENT_VERSION_MINOR, 2)
 define(_CLIENT_VERSION_REVISION, 5)
-define(_CLIENT_VERSION_BUILD, 12)  # version 99 here indicates an unreleased version
+define(_CLIENT_VERSION_BUILD, 13)  # version 99 here indicates an unreleased version
 define(_CLIENT_VERSION_IS_RELEASE, true)
 define(_COPYRIGHT_YEAR, 2018)
 define(_COPYRIGHT_HOLDERS,[The %s developers])
