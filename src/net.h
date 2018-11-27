@@ -698,13 +698,9 @@ public:
 
     // Inventory based relay.
     CRollingBloomFilter filterInventoryKnown;
-    CRollingBloomFilter filterServiceDataKnown;
     // Set of transaction ids we still have to announce. They are sorted by the
     // mempool before relay, so the order is not important.
     std::set<uint256> setInventoryTxToSend;
-    // Set of service transaction ids we still have to announce. They are sorted by the
-    // mempool before relay, so the order is not important.
-    std::set<uint256> setInventoryStxToSend;
     // List of block ids we still have announce. There is no final sorting
     // before sending, as they are always sent immediately and in the order
     // requested.
@@ -828,13 +824,6 @@ public:
             if (!filterInventoryKnown.contains(inv.hash))
             {
                 setInventoryTxToSend.insert(inv.hash);
-            }
-        }
-        else if (inv.type == MSG_STX)
-        {
-            if (!filterServiceDataKnown.contains(inv.hash))
-            {
-                setInventoryStxToSend.insert(inv.hash);
             }
         }
         else if (inv.type == MSG_BLOCK)

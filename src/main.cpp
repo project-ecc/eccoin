@@ -46,7 +46,6 @@
 #include "script/script.h"
 #include "script/sigcache.h"
 #include "script/standard.h"
-#include "services/mempool.h"
 #include "tinyformat.h"
 #include "txdb.h"
 #include "txmempool.h"
@@ -1632,32 +1631,6 @@ bool CheckBlock(const CBlock &block, CValidationState &state, bool fCheckPOW, bo
         }
         if (tx->nVersion == 2)
         {
-            CServiceTransaction stx;
-            if (!g_stxmempool->lookup(tx->serviceReferenceHash, stx))
-            {
-                LogPrintf("tx with hash %s pays for service transaction with hash %s but none can be found \n",
-                    tx->GetHash().GetHex().c_str(), tx->serviceReferenceHash.GetHex().c_str());
-                // we should request this stx
-                LogPrintf("Requesting stx %s\n", tx->serviceReferenceHash.GetHex().c_str());
-                {
-                    CInv inv(MSG_STX, tx->serviceReferenceHash);
-                    g_connman->ForEachNode([&inv](CNode *pnode) { pnode->AskFor(inv); });
-                }
-                // this will be reprocessed when we get the stx. if the stx is invalid but they paid for it, oh well
-            }
-            else
-            {
-                if (!CheckServiceTransaction(stx, *tx, state))
-                {
-                    // we dont want the block to fail on an ans error if everything was valid coin wise
-                    LogPrintf("CheckBlock(): CheckServiceTransaction of %s failed with %s. This is a non fatal error\n",
-                        tx->GetHash().ToString(), FormatStateMessage(state));
-                }
-                else
-                {
-                    ProcessServiceCommand(stx, *tx, state, &block);
-                }
-            }
         }
         // PoS: check transaction timestamp
         if (block.GetBlockTime() < (int64_t)tx->nTime)
