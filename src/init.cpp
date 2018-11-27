@@ -42,8 +42,6 @@
 #include "scheduler.h"
 #include "script/sigcache.h"
 #include "script/standard.h"
-#include "services/ans.h"
-#include "services/mempool.h"
 #include "torcontrol.h"
 #include "txdb.h"
 #include "txmempool.h"
@@ -266,8 +264,6 @@ void Shutdown()
 
     delete pwalletMain;
     pwalletMain = nullptr;
-    g_ans.reset();
-    g_stxmempool.reset();
     globalVerifyHandle.reset();
     ECC_Stop();
     LogPrintf("%s: done\n", __func__);
@@ -1561,13 +1557,6 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
                 {
                     fs::create_directory(servicesFolder);
                 }
-
-                // load the services
-                g_stxmempool.reset();
-                g_stxmempool.reset(new CStxMemPool());
-                pansMain = new CAnsZone();
-                g_ans.reset();
-                g_ans.reset(new CServiceDB("ans", nBlockTreeDBCache, false, false));
 
                 // verify the blocks
 
