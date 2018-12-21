@@ -1369,6 +1369,8 @@ void CWallet::ReacceptWalletTransactions()
     }
 }
 
+void RelayTransaction(const CTransaction &tx, CConnman &connman);
+
 bool CWalletTx::RelayWalletTransaction(CConnman *connman)
 {
     assert(pwallet->GetBroadcastTransactions());
@@ -1376,19 +1378,8 @@ bool CWalletTx::RelayWalletTransaction(CConnman *connman)
     {
         return false;
     }
-
-    // GetDepthInMainChain already catches known conflicts.
-    if (InMempool())
-    {
-        LogPrintf("Relaying wtx %s\n", tx->GetHash().ToString().c_str());
-        if (connman)
-        {
-            CInv inv(MSG_TX, tx->GetId());
-            connman->ForEachNode([&inv](CNode *pnode) { pnode->PushInventory(inv); });
-            return true;
-        }
-    }
-    return false;
+    RelayTransaction(*tx, *connman);
+    return true;
 }
 
 std::set<uint256> CWalletTx::GetConflicts() const
