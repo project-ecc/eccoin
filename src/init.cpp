@@ -899,15 +899,11 @@ void InitLogging()
     LogPrintf("Eccoin version %s (%s)\n", FormatFullVersion(), CLIENT_DATE);
 }
 
-namespace
-{ // Variables internal to initialization process only
+int initMaxConnections;
+int initUserMaxConnections;
+int initFD;
 
-ServiceFlags nRelevantServices = NODE_NETWORK;
-int nMaxConnections;
-int nUserMaxConnections;
-int nFD;
-ServiceFlags nLocalServices = NODE_NETWORK;
-} // namespace
+
 
 void GenerateNetworkTemplates()
 {
@@ -987,21 +983,23 @@ bool AppInit2(thread_group &threadGroup)
     // Make sure enough file descriptors are available
     int nBind = std::max((int)gArgs.IsArgSet("-bind") + (int)gArgs.IsArgSet("-whitebind"), 1);
     int nUserMaxConnections = gArgs.GetArg("-maxconnections", DEFAULT_MAX_PEER_CONNECTIONS);
-    nMaxConnections = std::max(nUserMaxConnections, 0);
+    initMaxConnections = std::max(nUserMaxConnections, 0);
 
     // Trim requested connection counts, to fit into system limitations
-    nMaxConnections = std::max(std::min(nMaxConnections, (int)(FD_SETSIZE - nBind - MIN_CORE_FILEDESCRIPTORS)), 0);
-    int nFD = RaiseFileDescriptorLimit(nMaxConnections + MIN_CORE_FILEDESCRIPTORS);
-    if (nFD < MIN_CORE_FILEDESCRIPTORS)
+    initMaxConnections = std::max(std::min(initMaxConnections, (int)(FD_SETSIZE - nBind - MIN_CORE_FILEDESCRIPTORS)), 0);
+    initFD = RaiseFileDescriptorLimit(initMaxConnections + MIN_CORE_FILEDESCRIPTORS);
+    if (initFD < MIN_CORE_FILEDESCRIPTORS)
+    {
         return InitError(_("Not enough file descriptors available."));
-    nMaxConnections = std::min(nFD - MIN_CORE_FILEDESCRIPTORS, nMaxConnections);
+    }
+    initMaxConnections = std::min(initFD - MIN_CORE_FILEDESCRIPTORS, initMaxConnections);
 
-    if (nMaxConnections < nUserMaxConnections)
+    if (initMaxConnections < nUserMaxConnections)
     {
         LogPrintf("Reducing -maxconnections from %d to %d, because of system limitations.", nUserMaxConnections,
-            nMaxConnections);
+            initMaxConnections);
         InitWarning(strprintf(_("Reducing -maxconnections from %d to %d, because of system limitations."),
-            nUserMaxConnections, nMaxConnections));
+            nUserMaxConnections, initMaxConnections));
     }
 
     // ********************************************************* Step 3: parameter-to-internal-flags
@@ -1159,9 +1157,6 @@ bool AppInit2(thread_group &threadGroup)
     // Option to startup with mocktime set (used for regression testing):
     SetMockTime(gArgs.GetArg("-mocktime", 0)); // SetMockTime(0) is a no-op
 
-    if (gArgs.GetBoolArg("-peerbloomfilters", true))
-        nLocalServices = ServiceFlags(nLocalServices | NODE_BLOOM);
-
     fEnableReplacement = gArgs.GetBoolArg("-mempoolreplacement", DEFAULT_ENABLE_REPLACEMENT);
     if ((!fEnableReplacement) && gArgs.IsArgSet("-mempoolreplacement"))
     {
@@ -1225,7 +1220,7 @@ bool AppInit2(thread_group &threadGroup)
     LogPrintf("Default data directory %s\n", GetDefaultDataDir().string());
     LogPrintf("Using data directory %s\n", strDataDir);
     LogPrintf("Using config file %s\n", gArgs.GetConfigFile().string());
-    LogPrintf("Using at most %i connections (%i file descriptors available)\n", nMaxConnections, nFD);
+    LogPrintf("Using at most %i connections (%i file descriptors available)\n", initMaxConnections, initFD);
     std::ostringstream strErrors;
 
     LogPrintf("Using %u threads for script verification\n", nScriptCheckThreads);
@@ -1257,7 +1252,7 @@ bool AppInit2(thread_group &threadGroup)
     if (!fDisableWallet)
     {
         LogPrintf("Using wallet %s\n", strWalletFile);
-        uiInterface.InitMessage(_("Verifying wallet..."));
+        LogPrintf("Verifying wallet...");
 
         std::string warningString;
         std::string errorString;
@@ -1439,14 +1434,6 @@ bool AppInit2(thread_group &threadGroup)
         }
     }
 
-    uint64_t nMaxOutboundLimit = 0;
-    uint64_t nMaxOutboundTimeframe = MAX_UPLOAD_TIMEFRAME;
-
-    if (gArgs.IsArgSet("-maxuploadtarget"))
-    {
-        nMaxOutboundLimit = gArgs.GetArg("-maxuploadtarget", DEFAULT_MAX_UPLOAD_TARGET) * 1024 * 1024;
-    }
-
     // ********************************************************* Step 7: load block chain
 
     fReindex = gArgs.GetBoolArg("-reindex", false);
@@ -1506,7 +1493,6 @@ bool AppInit2(thread_group &threadGroup)
         bool fReset = fReindex;
         std::string strLoadError;
 
-        uiInterface.InitMessage(_("Loading block index..."));
         LogPrintf("Loading block index...");
         nStart = GetTimeMillis();
         do
@@ -1574,8 +1560,6 @@ bool AppInit2(thread_group &threadGroup)
                 }
 
                 // verify the blocks
-
-                uiInterface.InitMessage(_("Verifying blocks..."));
                 LogPrintf("Verifying blocks...");
 
                 {
@@ -1672,7 +1656,7 @@ bool AppInit2(thread_group &threadGroup)
     if (gArgs.IsArgSet("-blocknotify"))
         uiInterface.NotifyBlockTip.connect(BlockNotifyCallback);
 
-    uiInterface.InitMessage(_("Activating best chain..."));
+    LogPrintf("Activating best chain...");
 
     std::vector<fs::path> vImportFiles;
     if (gArgs.IsArgSet("-loadblock"))
@@ -1718,22 +1702,7 @@ bool AppInit2(thread_group &threadGroup)
     MapPort(gArgs.GetBoolArg("-upnp", DEFAULT_UPNP));
 
     std::string strNodeError;
-    CConnman::Options connOptions;
-    connOptions.nLocalServices = nLocalServices;
-    connOptions.nRelevantServices = nRelevantServices;
-    connOptions.nMaxConnections = nMaxConnections;
-    connOptions.nMaxOutbound = std::min(MAX_OUTBOUND_CONNECTIONS, connOptions.nMaxConnections);
-    connOptions.nMaxAddnode = MAX_ADDNODE_CONNECTIONS;
-    connOptions.nMaxFeeler = 1;
-    connOptions.nBestHeight = pnetMan->getChainActive()->chainActive.Height();
-    connOptions.uiInterface = &uiInterface;
-    connOptions.nSendBufferMaxSize = 1000 * gArgs.GetArg("-maxsendbuffer", DEFAULT_MAXSENDBUFFER);
-    connOptions.nReceiveFloodSize = 1000 * gArgs.GetArg("-maxreceivebuffer", DEFAULT_MAXRECEIVEBUFFER);
-
-    connOptions.nMaxOutboundTimeframe = nMaxOutboundTimeframe;
-    connOptions.nMaxOutboundLimit = nMaxOutboundLimit;
-
-    if (!connman.Start(strNodeError, connOptions))
+    if (!connman.Start(strNodeError))
     {
         return InitError(strNodeError);
     }
@@ -1751,7 +1720,7 @@ bool AppInit2(thread_group &threadGroup)
     // ********************************************************* Step 12: finished
 
     SetRPCWarmupFinished();
-    uiInterface.InitMessage(_("Done loading"));
+    LogPrintf("Done loading");
 
 
     if (pwalletMain)

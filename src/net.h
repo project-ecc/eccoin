@@ -155,24 +155,9 @@ public:
         CONNECTIONS_ALL = (CONNECTIONS_IN | CONNECTIONS_OUT),
     };
 
-    struct Options
-    {
-        ServiceFlags nLocalServices = NODE_NONE;
-        ServiceFlags nRelevantServices = NODE_NONE;
-        int nMaxConnections = 0;
-        int nMaxOutbound = 0;
-        int nMaxAddnode = 0;
-        int nMaxFeeler = 0;
-        int nBestHeight = 0;
-        CClientUIInterface *uiInterface = nullptr;
-        unsigned int nSendBufferMaxSize = 0;
-        unsigned int nReceiveFloodSize = 0;
-        uint64_t nMaxOutboundTimeframe = 0;
-        uint64_t nMaxOutboundLimit = 0;
-    };
     CConnman(uint64_t seed0, uint64_t seed1);
     ~CConnman();
-    bool Start(std::string &strNodeError, Options options);
+    bool Start(std::string &strNodeError);
     void Stop();
     void Interrupt();
     bool BindListenPort(const CService &bindAddr, std::string &strError, bool fWhitelisted = false);
@@ -418,7 +403,6 @@ private:
     int nMaxAddnode;
     int nMaxFeeler;
     std::atomic<int> nBestHeight;
-    CClientUIInterface *clientInterface;
 
     /** SipHasher seeds for deterministic randomness */
     const uint64_t nSeed0, nSeed1;

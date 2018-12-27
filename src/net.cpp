@@ -467,10 +467,12 @@ void CConnman::ClearBanned()
 
     // Store banlist to disk.
     DumpBanlist();
+    /*
     if (clientInterface)
     {
         clientInterface->BannedListChanged();
     }
+    */
 }
 
 bool CConnman::IsBanned(CNetAddr ip)
@@ -539,12 +541,12 @@ void CConnman::Ban(const CSubNet &subNet, const BanReason &banReason, int64_t ba
             return;
         }
     }
-
+/*
     if (clientInterface)
     {
         clientInterface->BannedListChanged();
     }
-
+*/
     {
         LOCK(cs_vNodes);
         for (CNode *pnode : vNodes)
@@ -579,12 +581,12 @@ bool CConnman::Unban(const CSubNet &subNet)
         }
         setBannedIsDirty = true;
     }
-
+/*
     if (clientInterface)
     {
         clientInterface->BannedListChanged();
     }
-
+*/
     // Store banlist to disk immediately.
     DumpBanlist();
     return true;
@@ -1351,10 +1353,12 @@ void CConnman::ThreadSocketHandler()
         if (vNodesSize != nPrevNodeCount)
         {
             nPrevNodeCount = vNodesSize;
+            /*
             if (clientInterface)
             {
                 clientInterface->NotifyNumConnectionsChanged(nPrevNodeCount);
             }
+            */
         }
 
         //
@@ -2592,39 +2596,50 @@ CConnman::CConnman(uint64_t nSeed0In, uint64_t nSeed1In) : nSeed0(nSeed0In), nSe
     nMaxOutbound = 0;
     nMaxAddnode = 0;
     nBestHeight = 0;
-    clientInterface = nullptr;
     flagInterruptMsgProc = false;
     interruptNet.store(false);
 }
 
 NodeId CConnman::GetNewNodeId() { return nLastNodeId.fetch_add(1, std::memory_order_relaxed); }
-bool CConnman::Start(std::string &strNodeError, Options connOptions)
+
+ServiceFlags DEFAULT_RELEVANT_SERVICES = NODE_NETWORK;
+ServiceFlags DEFAULT_LOCAL_SERVICES = NODE_NETWORK;
+
+extern int initMaxConnections;
+
+bool CConnman::Start(std::string &strNodeError)
 {
     nTotalBytesRecv = 0;
     nTotalBytesSent = 0;
     nMaxOutboundTotalBytesSentInCycle = 0;
     nMaxOutboundCycleStartTime = 0;
 
-    nRelevantServices = connOptions.nRelevantServices;
-    nLocalServices = connOptions.nLocalServices;
-    nMaxConnections = connOptions.nMaxConnections;
-    nMaxOutbound = std::min((connOptions.nMaxOutbound), nMaxConnections);
-    nMaxAddnode = connOptions.nMaxAddnode;
-    nMaxFeeler = connOptions.nMaxFeeler;
-
-    nSendBufferMaxSize = connOptions.nSendBufferMaxSize;
-    nReceiveFloodSize = connOptions.nReceiveFloodSize;
-
-    nMaxOutboundLimit = connOptions.nMaxOutboundLimit;
-    nMaxOutboundTimeframe = connOptions.nMaxOutboundTimeframe;
-
-    SetBestHeight(connOptions.nBestHeight);
-
-    clientInterface = connOptions.uiInterface;
-    if (clientInterface)
+    nRelevantServices = DEFAULT_RELEVANT_SERVICES;
+    nLocalServices = DEFAULT_LOCAL_SERVICES;
+    if (gArgs.GetBoolArg("-peerbloomfilters", true))
     {
-        clientInterface->InitMessage(_("Loading addresses..."));
+        nLocalServices = ServiceFlags(nLocalServices | NODE_BLOOM);
     }
+
+    nMaxConnections = initMaxConnections;
+    nMaxOutbound = std::min(MAX_OUTBOUND_CONNECTIONS, nMaxConnections);
+    nMaxAddnode = MAX_ADDNODE_CONNECTIONS;
+    nMaxFeeler = 1;
+
+    nSendBufferMaxSize = 1000 * gArgs.GetArg("-maxsendbuffer", DEFAULT_MAXSENDBUFFER);
+    nReceiveFloodSize = 1000 * gArgs.GetArg("-maxreceivebuffer", DEFAULT_MAXRECEIVEBUFFER);
+
+    nMaxOutboundLimit = 0;
+
+    if (gArgs.IsArgSet("-maxuploadtarget"))
+    {
+        nMaxOutboundLimit = gArgs.GetArg("-maxuploadtarget", DEFAULT_MAX_UPLOAD_TARGET) * 1024 * 1024;
+    }
+    nMaxOutboundTimeframe = MAX_UPLOAD_TIMEFRAME;
+
+    SetBestHeight(pnetMan->getChainActive()->chainActive.Height());
+
+    LogPrintf("Loading addresses...");
     // Load addresses from peers.dat
     int64_t nStart = GetTimeMillis();
     {
@@ -2641,10 +2656,7 @@ bool CConnman::Start(std::string &strNodeError, Options connOptions)
             DumpAddresses();
         }
     }
-    if (clientInterface)
-    {
-        clientInterface->InitMessage(_("Loading banlist..."));
-    }
+    LogPrintf("Loading banlist...");
     // Load addresses from banlist.dat
     nStart = GetTimeMillis();
     CBanDB bandb;
@@ -2669,7 +2681,7 @@ bool CConnman::Start(std::string &strNodeError, Options connOptions)
         DumpBanlist();
     }
 
-    uiInterface.InitMessage(_("Starting network threads..."));
+    LogPrintf("Starting network threads...");
 
     fAddressesInitialized = true;
 
