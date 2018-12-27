@@ -1352,14 +1352,18 @@ bool static ProcessMessage(CNode *pfrom,
         pfrom->fSuccessfullyConnected = true;
     }
 
-    /*
-        else if (!pfrom->fSuccessfullyConnected) {
-            // Must have a verack message before anything else
-            LOCK(cs_main);
-            Misbehaving(pfrom, 1, "missing-verack");
-            return false;
-        }
-    */
+    else if (!pfrom->fSuccessfullyConnected)
+    {
+        // Must have a verack message before anything else
+        LOCK(cs_main);
+        Misbehaving(pfrom, 1, "missing-verack");
+        // update connection tracker which is used by the connection slot algorithm.
+        LOCK(cs_mapInboundConnectionTracker);
+        CNetAddr ipAddress = (CNetAddr)pfrom->addr;
+        mapInboundConnectionTracker[ipAddress].nEvictions += 1;
+        mapInboundConnectionTracker[ipAddress].nLastEvictionTime = GetTime();
+        return false;
+    }
 
     else if (strCommand == NetMsgType::ADDR)
     {

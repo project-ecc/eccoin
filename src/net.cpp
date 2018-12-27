@@ -94,6 +94,10 @@ limitedmap<uint256, int64_t> mapAlreadyAskedFor(MAX_INV_SZ);
 
 std::string strSubVersion;
 
+// Connection Slot mitigation - used to determine how many connection attempts over time
+CCriticalSection cs_mapInboundConnectionTracker;
+std::map<CNetAddr, ConnectionHistory> mapInboundConnectionTracker;
+
 // Signals for message handling
 static CNodeSignals g_signals;
 CNodeSignals &GetNodeSignals() { return g_signals; }
@@ -801,6 +805,7 @@ bool CNode::ReceiveMsgBytes(const char *pch, unsigned int nBytes, bool &complete
             {
                 i = mapRecvBytesPerMsgCmd.find(NET_MESSAGE_COMMAND_OTHER);
             }
+            nActivityBytes += msg.hdr.nMessageSize;
 
             assert(i != mapRecvBytesPerMsgCmd.end());
             i->second += msg.hdr.nMessageSize + CMessageHeader::HEADER_SIZE;
@@ -815,21 +820,7 @@ bool CNode::ReceiveMsgBytes(const char *pch, unsigned int nBytes, bool &complete
 
 void CNode::SetSendVersion(int nVersionIn)
 {
-    // Send version may only be changed in the version message, and only one
-    // version message is allowed per session. We can therefore treat this value
-    // as const and even atomic as long as it's only used once a version message
-    // has been successfully processed. Any attempt to set this twice is an
-    // error.
-    if (nSendVersion != 0)
-    {
-        error("Send version already set for node: %i. Refusing to change from "
-              "%i to %i",
-            id, nSendVersion, nVersionIn);
-    }
-    else
-    {
-        nSendVersion = nVersionIn;
-    }
+    nSendVersion = nVersionIn;
 }
 
 int CNode::GetSendVersion() const
@@ -980,200 +971,83 @@ size_t CConnman::SocketSendData(CNode *pnode) const
     return nSentSize;
 }
 
-struct NodeEvictionCandidate
+static bool CompareNodeActivityBytes(const CNodeRef &a, const CNodeRef &b)
 {
-    NodeId id;
-    int64_t nTimeConnected;
-    int64_t nMinPingUsecTime;
-    int64_t nLastBlockTime;
-    int64_t nLastTXTime;
-    bool fRelevantServices;
-    bool fRelayTxes;
-    bool fBloomFilter;
-    CAddress addr;
-    uint64_t nKeyedNetGroup;
-};
-
-static bool ReverseCompareNodeMinPingTime(const NodeEvictionCandidate &a, const NodeEvictionCandidate &b)
-{
-    return a.nMinPingUsecTime > b.nMinPingUsecTime;
+    return a->nActivityBytes < b->nActivityBytes;
 }
 
-static bool ReverseCompareNodeTimeConnected(const NodeEvictionCandidate &a, const NodeEvictionCandidate &b)
-{
-    return a.nTimeConnected > b.nTimeConnected;
-}
-
-static bool CompareNetGroupKeyed(const NodeEvictionCandidate &a, const NodeEvictionCandidate &b)
-{
-    return a.nKeyedNetGroup < b.nKeyedNetGroup;
-}
-
-static bool CompareNodeBlockTime(const NodeEvictionCandidate &a, const NodeEvictionCandidate &b)
-{
-    // There is a fall-through here because it is common for a node to have many
-    // peers which have not yet relayed a block.
-    if (a.nLastBlockTime != b.nLastBlockTime)
-    {
-        return a.nLastBlockTime < b.nLastBlockTime;
-    }
-
-    if (a.fRelevantServices != b.fRelevantServices)
-    {
-        return b.fRelevantServices;
-    }
-
-    return a.nTimeConnected > b.nTimeConnected;
-}
-
-static bool CompareNodeTXTime(const NodeEvictionCandidate &a, const NodeEvictionCandidate &b)
-{
-    // There is a fall-through here because it is common for a node to have more
-    // than a few peers that have not yet relayed txn.
-    if (a.nLastTXTime != b.nLastTXTime)
-    {
-        return a.nLastTXTime < b.nLastTXTime;
-    }
-
-    if (a.fRelayTxes != b.fRelayTxes)
-    {
-        return b.fRelayTxes;
-    }
-
-    if (a.fBloomFilter != b.fBloomFilter)
-    {
-        return a.fBloomFilter;
-    }
-
-    return a.nTimeConnected > b.nTimeConnected;
-}
-
-/**
- * Try to find a connection to evict when the node is full. Extreme care must be
- * taken to avoid opening the node to attacker triggered network partitioning.
- * The strategy used here is to protect a small number of peers for each of
- * several distinct characteristics which are difficult to forge. In order to
- * partition a node the attacker must be simultaneously better at all of them
- * than honest peers.
- */
 bool CConnman::AttemptToEvictConnection()
 {
-    std::vector<NodeEvictionCandidate> vEvictionCandidates;
+    std::vector<CNodeRef> vEvictionCandidates;
+    std::vector<CNodeRef> vEvictionCandidatesByActivity;
     {
         LOCK(cs_vNodes);
-
+        static int64_t nLastTime = GetTime();
         for (CNode *node : vNodes)
         {
+            int64_t nNow = GetTime();
+            node->nActivityBytes *= pow(1.0 - 1.0 / 7200, (double)(nNow - nLastTime)); // exponential 2 hour decay
+
             if (node->fWhitelisted || !node->fInbound || node->fDisconnect)
             {
                 continue;
             }
-            NodeEvictionCandidate candidate = {node->id, node->nTimeConnected, node->nMinPingUsecTime,
-                node->nLastBlockTime, node->nLastTXTime, (node->nServices & nRelevantServices) == nRelevantServices,
-                node->fRelayTxes, node->pfilter != nullptr, node->addr, node->nKeyedNetGroup};
-            vEvictionCandidates.push_back(candidate);
+            vEvictionCandidates.push_back(CNodeRef(node));
         }
+        nLastTime = GetTime();
     }
+    vEvictionCandidatesByActivity = vEvictionCandidates;
 
     if (vEvictionCandidates.empty())
     {
         return false;
     }
 
-    // Protect connections with certain characteristics
+    // If we get here then we prioritize connections based on activity.  The least active incoming peer is
+    // de-prioritized based on bytes in and bytes out.  A whitelisted peer will always get a connection and there is
+    // no need here to check whether the peer is whitelisted or not.
+    std::sort(vEvictionCandidatesByActivity.begin(), vEvictionCandidatesByActivity.end(), CompareNodeActivityBytes);
+    vEvictionCandidatesByActivity[0]->fDisconnect = true;
 
-    // Deterministically select 4 peers to protect by netgroup. An attacker
-    // cannot predict which netgroups will be protected.
-    std::sort(vEvictionCandidates.begin(), vEvictionCandidates.end(), CompareNetGroupKeyed);
-    vEvictionCandidates.erase(vEvictionCandidates.end() - std::min(4, static_cast<int>(vEvictionCandidates.size())),
-        vEvictionCandidates.end());
-
-    if (vEvictionCandidates.empty())
+    // BU - update the connection tracker
     {
-        return false;
-    }
-
-    // Protect the 8 nodes with the lowest minimum ping time. An attacker cannot
-    // manipulate this metric without physically moving nodes closer to the
-    // target.
-    std::sort(vEvictionCandidates.begin(), vEvictionCandidates.end(), ReverseCompareNodeMinPingTime);
-    vEvictionCandidates.erase(vEvictionCandidates.end() - std::min(8, static_cast<int>(vEvictionCandidates.size())),
-        vEvictionCandidates.end());
-
-    if (vEvictionCandidates.empty())
-    {
-        return false;
-    }
-
-    // Protect 4 nodes that most recently sent us transactions. An attacker
-    // cannot manipulate this metric without performing useful work.
-    std::sort(vEvictionCandidates.begin(), vEvictionCandidates.end(), CompareNodeTXTime);
-    vEvictionCandidates.erase(vEvictionCandidates.end() - std::min(4, static_cast<int>(vEvictionCandidates.size())),
-        vEvictionCandidates.end());
-
-    if (vEvictionCandidates.empty())
-    {
-        return false;
-    }
-
-    // Protect 4 nodes that most recently sent us blocks. An attacker cannot
-    // manipulate this metric without performing useful work.
-    std::sort(vEvictionCandidates.begin(), vEvictionCandidates.end(), CompareNodeBlockTime);
-    vEvictionCandidates.erase(vEvictionCandidates.end() - std::min(4, static_cast<int>(vEvictionCandidates.size())),
-        vEvictionCandidates.end());
-
-    if (vEvictionCandidates.empty())
-    {
-        return false;
-    }
-
-    // Protect the half of the remaining nodes which have been connected the
-    // longest. This replicates the non-eviction implicit behavior, and
-    // precludes attacks that start later.
-    std::sort(vEvictionCandidates.begin(), vEvictionCandidates.end(), ReverseCompareNodeTimeConnected);
-    vEvictionCandidates.erase(
-        vEvictionCandidates.end() - static_cast<int>(vEvictionCandidates.size() / 2), vEvictionCandidates.end());
-
-    if (vEvictionCandidates.empty())
-    {
-        return false;
-    }
-
-    // Identify the network group with the most connections and youngest member.
-    // (vEvictionCandidates is already sorted by reverse connect time)
-    uint64_t naMostConnections;
-    unsigned int nMostConnections = 0;
-    int64_t nMostConnectionsTime = 0;
-    std::map<uint64_t, std::vector<NodeEvictionCandidate> > mapNetGroupNodes;
-    for (const NodeEvictionCandidate &node : vEvictionCandidates)
-    {
-        mapNetGroupNodes[node.nKeyedNetGroup].push_back(node);
-        int64_t grouptime = mapNetGroupNodes[node.nKeyedNetGroup][0].nTimeConnected;
-        size_t groupsize = mapNetGroupNodes[node.nKeyedNetGroup].size();
-
-        if (groupsize > nMostConnections || (groupsize == nMostConnections && grouptime > nMostConnectionsTime))
+        double nEvictions = 0;
+        LOCK(cs_mapInboundConnectionTracker);
+        CNetAddr ipAddress = (CNetAddr)vEvictionCandidatesByActivity[0]->addr;
+        if (mapInboundConnectionTracker.count(ipAddress))
         {
-            nMostConnections = groupsize;
-            nMostConnectionsTime = grouptime;
-            naMostConnections = node.nKeyedNetGroup;
+            // Decay the current number of evictions (over 1800 seconds) depending on the last eviction
+            int64_t nTimeElapsed = GetTime() - mapInboundConnectionTracker[ipAddress].nLastEvictionTime;
+            double nRatioElapsed = (double)nTimeElapsed / 1800;
+            nEvictions = mapInboundConnectionTracker[ipAddress].nEvictions -
+                         (nRatioElapsed * mapInboundConnectionTracker[ipAddress].nEvictions);
+            if (nEvictions < 0)
+                nEvictions = 0;
         }
-    }
 
-    // Reduce to the network group with the most connections
-    vEvictionCandidates = std::move(mapNetGroupNodes[naMostConnections]);
+        nEvictions += 1;
+        mapInboundConnectionTracker[ipAddress].nEvictions = nEvictions;
+        mapInboundConnectionTracker[ipAddress].nLastEvictionTime = GetTime();
 
-    // Disconnect from the network group with the most connections
-    NodeId evicted = vEvictionCandidates.front().id;
-    LOCK(cs_vNodes);
-    for (std::vector<CNode *>::const_iterator it(vNodes.begin()); it != vNodes.end(); ++it)
-    {
-        if ((*it)->GetId() == evicted)
+        LogPrint("EVICT", "Number of Evictions is %f for %s\n", nEvictions, vEvictionCandidatesByActivity[0]->addr.ToString());
+        if (nEvictions > 15)
         {
-            (*it)->fDisconnect = true;
-            return true;
+            int nHoursToBan = 4;
+            Ban(ipAddress, BanReasonNodeMisbehaving, nHoursToBan * 60 * 60);
+            LogPrintf("Banning %s for %d hours: Too many evictions - connection dropped\n",
+                vEvictionCandidatesByActivity[0]->addr.ToString(), nHoursToBan);
         }
     }
-    return false;
+
+    LogPrint("EVICT", "Node disconnected because too inactive:%d bytes of activity for peer %s\n",
+        vEvictionCandidatesByActivity[0]->nActivityBytes, vEvictionCandidatesByActivity[0]->addrName);
+    for (unsigned int i = 0; i < vEvictionCandidatesByActivity.size(); i++)
+    {
+        LogPrint("EVICT", "Node %s bytes %d candidate %d\n", vEvictionCandidatesByActivity[i]->addrName,
+            vEvictionCandidatesByActivity[i]->nActivityBytes, i);
+    }
+
+    return true;
 }
 
 void CConnman::AcceptConnection(const ListenSocket &hListenSocket)
@@ -1245,6 +1119,50 @@ void CConnman::AcceptConnection(const ListenSocket &hListenSocket)
             // No connection to evict, disconnect the new connection
             LogPrintf("failed to find an eviction candidate - "
                       "connection dropped (full)\n");
+            CloseSocket(hSocket);
+            return;
+        }
+    }
+
+    // If connection attempts exceeded within allowable timeframe then ban peer
+    {
+        double nConnections = 0;
+        LOCK(cs_mapInboundConnectionTracker);
+        int64_t now = GetTime();
+        CNetAddr ipAddress = (CNetAddr)addr;
+        if (mapInboundConnectionTracker.count(ipAddress))
+        {
+            // Decay the current number of connections (over 60 seconds) depending on the last connection attempt
+            int64_t nTimeElapsed = now - mapInboundConnectionTracker[ipAddress].nLastConnectionTime;
+            if (nTimeElapsed < 0)
+                nTimeElapsed = 0;
+            double nRatioElapsed = (double)nTimeElapsed / 60;
+            nConnections = mapInboundConnectionTracker[ipAddress].nConnections -
+                           (nRatioElapsed * mapInboundConnectionTracker[ipAddress].nConnections);
+            if (nConnections < 0)
+                nConnections = 0;
+        }
+        else
+        {
+            ConnectionHistory ch;
+            ch.nConnections = 0.0;
+            ch.nLastConnectionTime = now;
+            ch.nEvictions = 0.0;
+            ch.nLastEvictionTime = now;
+            mapInboundConnectionTracker[ipAddress] = ch;
+        }
+
+        nConnections += 1;
+        mapInboundConnectionTracker[ipAddress].nConnections = nConnections;
+        mapInboundConnectionTracker[ipAddress].nLastConnectionTime = GetTime();
+
+        LogPrint("EVICT", "Number of connection attempts is %f for %s\n", nConnections, addr.ToString());
+        if (nConnections > 4 && !whitelisted && !addr.IsLocal()) // local connections are auto-whitelisted
+        {
+            int nHoursToBan = 4;
+            Ban((CNetAddr)addr, BanReasonNodeMisbehaving, nHoursToBan * 60 * 60);
+            LogPrintf("Banning %s for %d hours: Too many connection attempts - connection dropped\n", addr.ToString(),
+                nHoursToBan);
             CloseSocket(hSocket);
             return;
         }
@@ -3071,6 +2989,7 @@ CNode::CNode(NodeId idIn,
     nLastRecv = 0;
     nSendBytes = 0;
     nRecvBytes = 0;
+    nActivityBytes = 0;
     nTimeOffset = 0;
     addrName = addrNameIn == "" ? addr.ToStringIPPort() : addrNameIn;
     nVersion = 0;
@@ -3220,6 +3139,13 @@ void CConnman::PushMessage(CNode *pnode, CSerializedNetMsg &&msg)
         if (nMessageSize)
         {
             pnode->vSendMsg.push_back(std::move(msg.data));
+        }
+        const char* strCommand = msg.command.c_str();
+        if (strcmp(strCommand, NetMsgType::PING) != 0 && strcmp(strCommand, NetMsgType::PONG) != 0 &&
+            strcmp(strCommand, NetMsgType::ADDR) != 0 && strcmp(strCommand, NetMsgType::VERSION) != 0 &&
+            strcmp(strCommand, NetMsgType::VERACK) != 0 && strcmp(strCommand, NetMsgType::INV) != 0)
+        {
+            pnode->nActivityBytes += nMessageSize;
         }
 
         // If write queue empty, attempt "optimistic write"

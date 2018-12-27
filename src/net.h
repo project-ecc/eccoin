@@ -600,6 +600,8 @@ public:
     // Offset inside the first vSendMsg already sent.
     size_t nSendOffset;
     uint64_t nSendBytes;
+    // Total bytes sent and received
+    uint64_t nActivityBytes;
     std::deque<std::vector<uint8_t> > vSendMsg;
     CCriticalSection cs_vSend;
     CCriticalSection cs_hSocket;
@@ -824,6 +826,63 @@ public:
     std::string GetAddrName() const;
     //! Sets the addrName only if it was not previously set
     void MaybeSetAddrName(const std::string &addrNameIn);
+};
+
+// Exception-safe class for holding a reference to a CNode
+class CNodeRef
+{
+    void AddRef()
+    {
+        if (_pnode)
+            _pnode->AddRef();
+    }
+
+    void Release()
+    {
+        if (_pnode)
+        {
+            // Make the noderef null before releasing, to ensure a user can't get freed memory from us
+            CNode *tmp = _pnode;
+            _pnode = nullptr;
+            tmp->Release();
+        }
+    }
+
+public:
+    CNodeRef(CNode *pnode = nullptr) : _pnode(pnode) { AddRef(); }
+    CNodeRef(const CNodeRef &other) : _pnode(other._pnode) { AddRef(); }
+    ~CNodeRef() { Release(); }
+    CNode &operator*() const { return *_pnode; };
+    CNode *operator->() const { return _pnode; };
+    // Returns true if this reference is not null
+    explicit operator bool() const { return _pnode; }
+    // Access the raw pointer
+    CNode *get() const { return _pnode; }
+    // Assignment -- destroys any reference to the current node and adds a ref to the new one
+    CNodeRef &operator=(CNode *pnode)
+    {
+        if (pnode != _pnode)
+        {
+            Release();
+            _pnode = pnode;
+            AddRef();
+        }
+        return *this;
+    }
+    // Assignment -- destroys any reference to the current node and adds a ref to the new one
+    CNodeRef &operator=(const CNodeRef &other) { return operator=(other._pnode); }
+private:
+    CNode *_pnode;
+};
+
+// Connection Slot mitigation - used to track connection attempts and evictions
+struct ConnectionHistory
+{
+    double nConnections; // number of connection attempts made within 1 minute
+    int64_t nLastConnectionTime; // the time the last connection attempt was made
+
+    double nEvictions; // number of times a connection was de-prioritized and disconnected in last 30 minutes
+    int64_t nLastEvictionTime; // the time the last eviction occurred.
 };
 
 /**
