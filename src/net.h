@@ -54,11 +54,6 @@
 class CNode;
 class CScheduler;
 
-namespace boost
-{
-class thread_group;
-} // namespace boost
-
 /** Time between pings automatically sent out for latency probing and keepalive
  * (in seconds). */
 static const int PING_INTERVAL = 2 * 60;
@@ -161,8 +156,6 @@ public:
     void Stop();
     void Interrupt();
     bool BindListenPort(const CService &bindAddr, std::string &strError, bool fWhitelisted = false);
-    bool GetNetworkActive() const { return fNetworkActive; };
-    void SetNetworkActive(bool active);
     bool OpenNetworkConnection(const CAddress &addrConnect,
         bool fCountFailure,
         CSemaphoreGrant *grantOutbound = nullptr,
@@ -375,7 +368,6 @@ private:
     unsigned int nReceiveFloodSize;
 
     std::vector<ListenSocket> vhListenSocket;
-    std::atomic<bool> fNetworkActive;
     banmap_t setBanned;
     CCriticalSection cs_setBanned;
     bool setBannedIsDirty;

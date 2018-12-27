@@ -1226,13 +1226,6 @@ void CConnman::AcceptConnection(const ListenSocket &hListenSocket)
         return;
     }
 
-    if (!fNetworkActive)
-    {
-        LogPrintf("connection from %s dropped: not accepting new connections\n", addr.ToString());
-        CloseSocket(hSocket);
-        return;
-    }
-
     if (!IsSelectableSocket(hSocket))
     {
         LogPrintf("connection from %s dropped: non-selectable socket\n", addr.ToString());
@@ -2275,10 +2268,6 @@ bool CConnman::OpenNetworkConnection(const CAddress &addrConnect,
     {
         return false;
     }
-    if (!fNetworkActive)
-    {
-        return false;
-    }
     if (!pszDest)
     {
         if (IsLocal(addrConnect) || FindNode((CNetAddr)addrConnect) || IsBanned(addrConnect) ||
@@ -2561,30 +2550,8 @@ void Discover(thread_group &threadGroup)
 #endif
 }
 
-void CConnman::SetNetworkActive(bool active)
-{
-    LogPrintf("SetNetworkActive: %s\n", active);
-
-    if (!active)
-    {
-        fNetworkActive = false;
-
-        LOCK(cs_vNodes);
-        // Close sockets to all nodes
-        for (CNode *pnode : vNodes)
-        {
-            pnode->CloseSocketDisconnect();
-        }
-    }
-    else
-    {
-        fNetworkActive = true;
-    }
-}
-
 CConnman::CConnman(uint64_t nSeed0In, uint64_t nSeed1In) : nSeed0(nSeed0In), nSeed1(nSeed1In)
 {
-    fNetworkActive = true;
     setBannedIsDirty = false;
     fAddressesInitialized = false;
     nLastNodeId = 0;
