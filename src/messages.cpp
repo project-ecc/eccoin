@@ -95,7 +95,8 @@ static uint256 most_recent_block_hash;
 std::map<NodeId, CNodeState> mapNodeState;
 
 uint64_t nLocalHostNonce = 0;
-
+extern CCriticalSection cs_mapInboundConnectionTracker;
+extern std::map<CNetAddr, ConnectionHistory> mapInboundConnectionTracker;
 
 // Requires cs_main.
 CNodeState *State(NodeId pnode)
@@ -1354,14 +1355,18 @@ bool static ProcessMessage(CNode *pfrom,
 
     else if (!pfrom->fSuccessfullyConnected)
     {
-        // Must have a verack message before anything else
-        LOCK(cs_main);
-        Misbehaving(pfrom, 1, "missing-verack");
-        // update connection tracker which is used by the connection slot algorithm.
-        LOCK(cs_mapInboundConnectionTracker);
-        CNetAddr ipAddress = (CNetAddr)pfrom->addr;
-        mapInboundConnectionTracker[ipAddress].nEvictions += 1;
-        mapInboundConnectionTracker[ipAddress].nLastEvictionTime = GetTime();
+        {
+            // Must have a verack message before anything else
+            LOCK(cs_main);
+            Misbehaving(pfrom, 1, "missing-verack");
+        }
+        {
+            // update connection tracker which is used by the connection slot algorithm.
+            LOCK(cs_mapInboundConnectionTracker);
+            CNetAddr ipAddress = (CNetAddr)pfrom->addr;
+            mapInboundConnectionTracker[ipAddress].nEvictions += 1;
+            mapInboundConnectionTracker[ipAddress].nLastEvictionTime = GetTime();
+        }
         return false;
     }
 
