@@ -235,7 +235,6 @@ init:
     {
         fs::path ConfPath = GetDataDir(false) / "eccoin.conf";
         FILE *ConfFile = fopen(ConfPath.string().c_str(), "w");
-        fprintf(ConfFile, "maxconnections=100\n");
         fprintf(ConfFile, "rpcuser=yourusername\n");
         fprintf(ConfFile, "rpcpassword=yourpassword\n");
         fprintf(ConfFile, "rpcport=19119\n");

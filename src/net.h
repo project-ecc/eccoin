@@ -76,10 +76,12 @@ static const unsigned int MAX_ADDR_TO_SEND = 1000;
 static const unsigned int MAX_PROTOCOL_MESSAGE_LENGTH = 32 * 1000 * 1000;
 /** Maximum length of strSubVer in `version` message */
 static const unsigned int MAX_SUBVERSION_LENGTH = 256;
+/** The maximum number of peer connections to maintain. */
+static const unsigned int DEFAULT_MAX_PEER_CONNECTIONS = 125;
 /** Maximum number of automatic outgoing nodes */
-static const int MAX_OUTBOUND_CONNECTIONS = 8;
+static const int MAX_OUTBOUND_CONNECTIONS = DEFAULT_MAX_PEER_CONNECTIONS * 3 / 5;
 /** Maximum number of addnode outgoing nodes */
-static const int MAX_ADDNODE_CONNECTIONS = 8;
+static const int MAX_ADDNODE_CONNECTIONS = 16;
 /** -listen default */
 static const bool DEFAULT_LISTEN = true;
 /** -upnp default */
@@ -92,8 +94,6 @@ static const bool DEFAULT_UPNP = false;
 static const size_t MAPASKFOR_MAX_SZ = MAX_INV_SZ;
 /** The maximum number of entries in setAskFor (larger due to getdata latency)*/
 static const size_t SETASKFOR_MAX_SZ = 2 * MAX_INV_SZ;
-/** The maximum number of peer connections to maintain. */
-static const unsigned int DEFAULT_MAX_PEER_CONNECTIONS = 125;
 /** The default for -maxuploadtarget. 0 = Unlimited */
 static const uint64_t DEFAULT_MAX_UPLOAD_TARGET = 0;
 /** The default timeframe for -maxuploadtarget. 1 day. */
