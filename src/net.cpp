@@ -335,17 +335,6 @@ CNode *CConnman::FindNode(const CService &addr)
     return nullptr;
 }
 
-bool CConnman::CheckIncomingNonce(uint64_t nonce)
-{
-    LOCK(cs_vNodes);
-    for (CNode *pnode : vNodes)
-    {
-        if (!pnode->fSuccessfullyConnected && !pnode->fInbound && pnode->GetLocalNonce() == nonce)
-            return false;
-    }
-    return true;
-}
-
 CNode *CConnman::ConnectNode(CAddress addrConnect, const char *pszDest, bool fCountFailure)
 {
     if (pszDest == nullptr)
@@ -3071,7 +3060,7 @@ CNode::CNode(NodeId idIn,
     bool fInboundIn)
     : nTimeConnected(GetSystemTimeInSeconds()), addr(addrIn), fInbound(fInboundIn), id(idIn),
       nKeyedNetGroup(nKeyedNetGroupIn), addrKnown(5000, 0.001), filterInventoryKnown(50000, 0.000001),
-      nLocalHostNonce(nLocalHostNonceIn), nLocalServices(nLocalServicesIn), nMyStartingHeight(nMyStartingHeightIn),
+      nLocalServices(nLocalServicesIn), nMyStartingHeight(nMyStartingHeightIn),
       nSendVersion(0)
 {
     nServices = NODE_NONE;

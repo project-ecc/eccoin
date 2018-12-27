@@ -50,6 +50,7 @@
 
 #include <boost/filesystem/path.hpp>
 #include <boost/signals2/signal.hpp>
+#include <boost/thread.hpp>
 
 class CNode;
 class CScheduler;
@@ -163,7 +164,6 @@ public:
         bool fOneShot = false,
         bool fFeeler = false,
         bool fAddnode = false);
-    bool CheckIncomingNonce(uint64_t nonce);
 
     bool ForNode(NodeId id, std::function<bool(CNode *pnode)> func);
 
@@ -727,7 +727,6 @@ private:
     CNode(const CNode &);
     void operator=(const CNode &);
 
-    const uint64_t nLocalHostNonce;
     // Services offered to this peer
     const ServiceFlags nLocalServices;
     const int nMyStartingHeight;
@@ -743,7 +742,6 @@ private:
 
 public:
     NodeId GetId() const { return id; }
-    uint64_t GetLocalNonce() const { return nLocalHostNonce; }
     int GetMyStartingHeight() const { return nMyStartingHeight; }
     int GetRefCount()
     {

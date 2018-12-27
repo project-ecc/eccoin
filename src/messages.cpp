@@ -94,6 +94,8 @@ static uint256 most_recent_block_hash;
 /** Map maintaining per-node state. Requires cs_main. */
 std::map<NodeId, CNodeState> mapNodeState;
 
+uint64_t nLocalHostNonce = 0;
+
 
 // Requires cs_main.
 CNodeState *State(NodeId pnode)
@@ -116,7 +118,6 @@ uint32_t GetFetchFlags(CNode *pfrom, const CBlockIndex *pprev, const Consensus::
 void PushNodeVersion(CNode *pnode, CConnman &connman, int64_t nTime)
 {
     ServiceFlags nLocalNodeServices = pnode->GetLocalServices();
-    uint64_t nonce = pnode->GetLocalNonce();
     int nNodeStartingHeight = pnode->GetMyStartingHeight();
     NodeId nodeid = pnode->GetId();
     CAddress addr = pnode->addr;
@@ -124,9 +125,11 @@ void PushNodeVersion(CNode *pnode, CConnman &connman, int64_t nTime)
     CAddress addrYou = (addr.IsRoutable() && !IsProxy(addr) ? addr : CAddress(CService(), addr.nServices));
     CAddress addrMe = CAddress(CService(), nLocalNodeServices);
 
+    GetRandBytes((unsigned char *)&nLocalHostNonce, sizeof(nLocalHostNonce));
+
     connman.PushMessage(pnode, CNetMsgMaker(MIN_PROTO_VERSION)
                                    .Make(NetMsgType::VERSION, PROTOCOL_VERSION, (uint64_t)nLocalNodeServices, nTime,
-                                       addrYou, addrMe, nonce, strSubVersion, nNodeStartingHeight, ::fRelayTxes));
+                                       addrYou, addrMe, nLocalHostNonce, strSubVersion, nNodeStartingHeight, ::fRelayTxes));
 
     if (fLogIPs)
     {
@@ -1216,7 +1219,7 @@ bool static ProcessMessage(CNode *pfrom,
             vRecv >> fRelay;
         }
         // Disconnect if we connected to ourself
-        if (pfrom->fInbound && !connman.CheckIncomingNonce(nNonce))
+        if (nNonce == nLocalHostNonce && nNonce > 1)
         {
             LogPrintf("connected to self at %s, disconnecting\n", pfrom->addr.ToString());
             pfrom->fDisconnect = true;
