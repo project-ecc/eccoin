@@ -422,7 +422,7 @@ bool CheckWork(const std::shared_ptr<const CBlock> pblock,
 void EccMiner(CWallet *pwallet)
 {
     void *scratchbuf = scrypt_buffer_alloc();
-    LogPrintf("CPUMiner started for proof-of-%s\n", "stake");
+    LogPrintf("CPUMiner started for proof-of-%s\n", "work");
     SetThreadPriority(THREAD_PRIORITY_LOWEST);
     // Make this thread recognisable as the mining thread
     RenameThread("ecc-miner");
