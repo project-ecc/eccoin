@@ -83,6 +83,8 @@ main.h
 memusage.h
 merkleblock.cpp
 merkleblock.h
+messages.cpp
+messages.h
 net.cpp
 net.h
 netaddress.cpp
@@ -118,7 +120,6 @@ random.h
 rest.cpp
 reverselock.h
 rpc/events.h
-rpc/rpcans.cpp
 rpc/rpcblockchain.cpp
 rpc/rpcclient.cpp
 rpc/rpcclient.h
@@ -151,16 +152,6 @@ script/stakescript.h
 script/standard.cpp
 script/standard.h
 serialize.h
-services/ans.cpp
-services/ans.h
-services/ansrecord.cpp
-services/ansrecord.h
-services/mempool.cpp
-services/mempool.h
-services/servicedb.cpp
-services/servicedb.h
-services/servicetx.cpp
-services/servicetx.h
 streams.h
 support/allocators/secure.h
 support/allocators/zeroafterfree.h

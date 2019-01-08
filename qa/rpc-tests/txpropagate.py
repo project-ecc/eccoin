@@ -1,12 +1,7 @@
 #!/usr/bin/env python3
-# Copyright (c) 2015-2018 The Bitcoin Unlimited developers
+# Copyright (c) 2015-2018 The Eccoin developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
-
-"""Test the block storage methods
-WARNING:
-This test may take 10 mins or more to complete if not in fastRun mode
-"""
 
 import test_framework.loginit
 
@@ -21,22 +16,19 @@ from test_framework.util import *
 from random import randint
 
 
-class AnsRegistrationTest (BitcoinTestFramework):
-
-    def __init__(self, fastRun=True):
-        self.generatedblocks = 100
+class TxPropagationTest (BitcoinTestFramework):
 
     def setup_chain(self, bitcoinConfDict=None, wallets=None):
         print("Initializing test directory "+self.options.tmpdir)
-        initialize_chain_clean(self.options.tmpdir, 2, bitcoinConfDict, wallets)
+        initialize_chain_clean(self.options.tmpdir, 3, bitcoinConfDict, wallets)
 
     def setup_network(self, split=False):
         self.nodes = []
-        # Start 3 nodes, 0 will be mining and connected to a leveldb node(1)
-        # the leveldb node will be connected to a third node running sequential(2)
-        self.nodes.append(start_node(0, self.options.tmpdir, []))
-        self.nodes.append(start_node(1, self.options.tmpdir, []))
+        self.nodes.append(start_node(0, self.options.tmpdir, ))
+        self.nodes.append(start_node(1, self.options.tmpdir, ))
+        self.nodes.append(start_node(2, self.options.tmpdir, ))
         connect_nodes_bi(self.nodes, 0, 1)
+        connect_nodes_bi(self.nodes, 1, 2)
         self.is_network_split = False
         self.sync_all()
 
@@ -44,39 +36,35 @@ class AnsRegistrationTest (BitcoinTestFramework):
 
         self.sync_blocks()
 
-        # generate blocks on the mining node
-        for x in range(0, self.generatedblocks):
+        # generate non-empty blocks on the mining node to get a balance
+        for x in range(0, 50):
             self.nodes[0].generate(1)
 
-        sync_blocks(self.nodes[0:2])
-
-        addrgrps = self.nodes[0].listaddressgroupings()
-        coinaddr = addrgrps[0][0][0]
-
-        #try to register ans addr
-        registrationTx = self.nodes[0].registerans(coinaddr, "testname")
-        # mine another few blocks for validity
-        self.nodes[0].generate(5)
         self.sync_blocks()
 
-        #the synced blocks should have propogated the ans name by now
-        #try to fetch it
-        records = self.nodes[1].getansrecord("testname", "A");
-        assert(records[0]["Code"] == '11-1')
-        assert(records[0]["Address"] != '')
-        assert(records[0]["paymentHash"] != '')
-        assert(records[0]["ServiceHash"] != '')
-        
-
-        
+        self.nodes[0].sendtoaddress(self.nodes[1].getnewaddress(), 100)
+        time.sleep(1)
+        time.sleep(1)
+        time.sleep(1)
+        self.nodes[0].resendwallettransactions()
+        time.sleep(1)
+        time.sleep(1)
+        time.sleep(1)
+        self.nodes[1].resendwallettransactions()
+        time.sleep(1)
+        time.sleep(1)
+        time.sleep(1)
+        # test tx propagated to second node
+        assert_equal(self.nodes[0].getrawmempool(), self.nodes[1].getrawmempool())
+        assert_equal(self.nodes[1].getrawmempool(), self.nodes[2].getrawmempool())
 
 
 if __name__ == '__main__':
-    AnsRegistrationTest().main()
+    TxPropagationTest().main()
 
 
 def Test():
-    t = AnsRegistrationTest(False)
+    t = TxPropagationTest()
     bitcoinConf = {
         "debug": ["net", "blk", "thin", "mempool", "req", "bench", "evict"],
         "blockprioritysize": 2000000  # we don't want any transactions rejected due to insufficient fees...
