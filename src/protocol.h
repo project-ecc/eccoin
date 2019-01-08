@@ -142,11 +142,6 @@ extern const char *GETHEADERS;
  */
 extern const char *TX;
 /**
- * The tx message transmits a single service transaction.
- * @see https://bitcoin.org/en/developer-reference#tx
- */
-extern const char *STX;
-/**
  * The headers message sends one or more block headers to a node which
  * previously requested certain headers with a getheaders message.
  * @since protocol version 31800.
@@ -342,7 +337,6 @@ enum
     // Nodes may always request a MSG_FILTERED_BLOCK in a getdata, however,
     // MSG_FILTERED_BLOCK should not appear in any invs except as a part of getdata.
     MSG_FILTERED_BLOCK,
-    MSG_STX,
 };
 
 #endif // BITCOIN_PROTOCOL_H
