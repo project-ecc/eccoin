@@ -72,16 +72,11 @@ $(OSX_APP)/Contents/Resources/empty.lproj:
 	$(MKDIR_P) $(@D)
 	@touch $@
 
-$(OSX_APP)/Contents/Info.plist:
-	$(MKDIR_P) $(@D)
-	$(INSTALL_DATA) $< $@
-
 $(OSX_APP)/Contents/Resources/Base.lproj/InfoPlist.strings:
 	$(MKDIR_P) $(@D)
 	echo '{	CFBundleDisplayName = "$(PACKAGE_NAME)"; CFBundleName = "$(PACKAGE_NAME)"; }' > $@
 
 OSX_APP_BUILT=$(OSX_APP)/Contents/PkgInfo $(OSX_APP)/Contents/Resources/empty.lproj \
-  $(OSX_APP)/Contents/Info.plist \
   $(OSX_APP)/Contents/MacOS/Bitcoin-Qt $(OSX_APP)/Contents/Resources/Base.lproj/InfoPlist.strings
 
 osx_volname:
