@@ -189,6 +189,7 @@ testScripts = [ RpcTest(t) for t in [
     'mintingtest',
     'nodehandling',
     'proxy_test',
+    'txpropagate',
     #
     Disabled('abandonconflict', "FAILS"),
     Disabled('bip68-112-113-p2p', "FAILS"),
