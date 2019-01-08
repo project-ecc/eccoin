@@ -30,7 +30,6 @@ OSX_BACKGROUND_IMAGE_DPIS=36 72
 OSX_DSSTORE_GEN=$(top_srcdir)/contrib/macdeploy/custom_dsstore.py
 OSX_DEPLOY_SCRIPT=$(top_srcdir)/contrib/macdeploy/macdeployqtplus
 OSX_FANCY_PLIST=$(top_srcdir)/contrib/macdeploy/fancy.plist
-OSX_PLIST=$(top_builddir)/share/qt/Info.plist #not installed
 
 DIST_DOCS = $(wildcard doc/*.md) $(wildcard doc/release-notes/*.md)
 
@@ -39,7 +38,7 @@ BIN_CHECKS=$(top_srcdir)/contrib/devtools/symbol-check.py \
 
 WINDOWS_PACKAGING = $(top_srcdir)/share/pixmaps/bitcoin.ico \
   $(top_srcdir)/share/pixmaps/nsis-header.bmp \
-  $(top_srcdir)/share/pixmaps/nsis-wizard.bmp 
+  $(top_srcdir)/share/pixmaps/nsis-wizard.bmp
 
 OSX_PACKAGING = $(OSX_DEPLOY_SCRIPT) $(OSX_FANCY_PLIST) $(OSX_INSTALLER_ICONS) \
   $(top_srcdir)/contrib/macdeploy/$(OSX_BACKGROUND_SVG) \
@@ -73,7 +72,7 @@ $(OSX_APP)/Contents/Resources/empty.lproj:
 	$(MKDIR_P) $(@D)
 	@touch $@
 
-$(OSX_APP)/Contents/Info.plist: $(OSX_PLIST)
+$(OSX_APP)/Contents/Info.plist:
 	$(MKDIR_P) $(@D)
 	$(INSTALL_DATA) $< $@
 
