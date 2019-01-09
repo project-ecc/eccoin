@@ -37,6 +37,7 @@
 #include "crypto/hash.h"
 #include "limitedmap.h"
 #include "netbase.h"
+#include "networks/netman.h"
 #include "protocol.h"
 #include "random.h"
 #include "streams.h"
@@ -113,6 +114,8 @@ static const unsigned int DEFAULT_MISBEHAVING_BANTIME = 60 * 60 * 24;
 /** Subversion as sent to the P2P network in `version` messages */
 extern std::string strSubVersion;
 
+extern CNetworkManager *pnetMan;
+
 typedef int64_t NodeId;
 
 struct AddedNodeInfo
@@ -126,19 +129,6 @@ struct AddedNodeInfo
 class CTransaction;
 class CNodeStats;
 class CClientUIInterface;
-
-struct CSerializedNetMsg
-{
-    CSerializedNetMsg() = default;
-    CSerializedNetMsg(CSerializedNetMsg &&) = default;
-    CSerializedNetMsg &operator=(CSerializedNetMsg &&) = default;
-    // No copying, only moves.
-    CSerializedNetMsg(const CSerializedNetMsg &msg) = delete;
-    CSerializedNetMsg &operator=(const CSerializedNetMsg &) = delete;
-
-    std::vector<uint8_t> data;
-    std::string command;
-};
 
 class CConnman
 {
@@ -167,7 +157,60 @@ public:
 
     bool ForNode(NodeId id, std::function<bool(CNode *pnode)> func);
 
-    void PushMessage(CNode *pnode, CSerializedNetMsg &&msg);
+    template <typename... Args>
+    void PushMessage(CNode *pnode, std::string sCommand, Args &&... args)
+    {
+        std::vector<uint8_t> data;
+        CVectorWriter{SER_NETWORK, pnode->GetSendVersion(), data, 0, std::forward<Args>(args)...};
+        size_t nMessageSize = data.size();
+        size_t nTotalSize = nMessageSize + CMessageHeader::HEADER_SIZE;
+        LogPrintf("sending %s (%d bytes) peer=%d\n", SanitizeString(sCommand.c_str()), nMessageSize, pnode->id);
+
+        std::vector<uint8_t> serializedHeader;
+        serializedHeader.reserve(CMessageHeader::HEADER_SIZE);
+        uint256 hash = Hash(data.data(), data.data() + nMessageSize);
+        CMessageHeader hdr(pnetMan->getActivePaymentNetwork()->MessageStart(), sCommand.c_str(), nMessageSize);
+        memcpy(hdr.pchChecksum, hash.begin(), CMessageHeader::CHECKSUM_SIZE);
+
+        CVectorWriter{SER_NETWORK, MIN_PROTO_VERSION, serializedHeader, 0, hdr};
+
+        size_t nBytesSent = 0;
+        {
+            LOCK(pnode->cs_vSend);
+            bool optimisticSend(pnode->vSendMsg.empty());
+
+            // log total amount of bytes per command
+            pnode->mapSendBytesPerMsgCmd[sCommand] += nTotalSize;
+            pnode->nSendSize += nTotalSize;
+
+            if (pnode->nSendSize > nSendBufferMaxSize)
+            {
+                pnode->fPauseSend = true;
+            }
+            pnode->vSendMsg.push_back(std::move(serializedHeader));
+            if (nMessageSize)
+            {
+                pnode->vSendMsg.push_back(std::move(data));
+            }
+            const char* strCommand = sCommand.c_str();
+            if (strcmp(strCommand, NetMsgType::PING) != 0 && strcmp(strCommand, NetMsgType::PONG) != 0 &&
+                strcmp(strCommand, NetMsgType::ADDR) != 0 && strcmp(strCommand, NetMsgType::VERSION) != 0 &&
+                strcmp(strCommand, NetMsgType::VERACK) != 0 && strcmp(strCommand, NetMsgType::INV) != 0)
+            {
+                pnode->nActivityBytes += nMessageSize;
+            }
+
+            // If write queue empty, attempt "optimistic write"
+            if (optimisticSend == true)
+            {
+                nBytesSent = SocketSendData(pnode);
+            }
+        }
+        if (nBytesSent)
+        {
+            RecordBytesSent(nBytesSent);
+        }
+    }
 
     template <typename Callable>
     void ForEachNode(Callable &&func)

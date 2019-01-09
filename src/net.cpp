@@ -3108,58 +3108,6 @@ bool CConnman::NodeFullyConnected(const CNode *pnode)
     return pnode && pnode->fSuccessfullyConnected && !pnode->fDisconnect;
 }
 
-void CConnman::PushMessage(CNode *pnode, CSerializedNetMsg &&msg)
-{
-    size_t nMessageSize = msg.data.size();
-    size_t nTotalSize = nMessageSize + CMessageHeader::HEADER_SIZE;
-    LogPrintf("sending %s (%d bytes) peer=%d\n", SanitizeString(msg.command.c_str()), nMessageSize, pnode->id);
-
-    std::vector<uint8_t> serializedHeader;
-    serializedHeader.reserve(CMessageHeader::HEADER_SIZE);
-    uint256 hash = Hash(msg.data.data(), msg.data.data() + nMessageSize);
-    CMessageHeader hdr(pnetMan->getActivePaymentNetwork()->MessageStart(), msg.command.c_str(), nMessageSize);
-    memcpy(hdr.pchChecksum, hash.begin(), CMessageHeader::CHECKSUM_SIZE);
-
-    CVectorWriter{SER_NETWORK, MIN_PROTO_VERSION, serializedHeader, 0, hdr};
-
-    size_t nBytesSent = 0;
-    {
-        LOCK(pnode->cs_vSend);
-        bool optimisticSend(pnode->vSendMsg.empty());
-
-        // log total amount of bytes per command
-        pnode->mapSendBytesPerMsgCmd[msg.command] += nTotalSize;
-        pnode->nSendSize += nTotalSize;
-
-        if (pnode->nSendSize > nSendBufferMaxSize)
-        {
-            pnode->fPauseSend = true;
-        }
-        pnode->vSendMsg.push_back(std::move(serializedHeader));
-        if (nMessageSize)
-        {
-            pnode->vSendMsg.push_back(std::move(msg.data));
-        }
-        const char* strCommand = msg.command.c_str();
-        if (strcmp(strCommand, NetMsgType::PING) != 0 && strcmp(strCommand, NetMsgType::PONG) != 0 &&
-            strcmp(strCommand, NetMsgType::ADDR) != 0 && strcmp(strCommand, NetMsgType::VERSION) != 0 &&
-            strcmp(strCommand, NetMsgType::VERACK) != 0 && strcmp(strCommand, NetMsgType::INV) != 0)
-        {
-            pnode->nActivityBytes += nMessageSize;
-        }
-
-        // If write queue empty, attempt "optimistic write"
-        if (optimisticSend == true)
-        {
-            nBytesSent = SocketSendData(pnode);
-        }
-    }
-    if (nBytesSent)
-    {
-        RecordBytesSent(nBytesSent);
-    }
-}
-
 bool CConnman::ForNode(NodeId id, std::function<bool(CNode *pnode)> func)
 {
     CNode *found = nullptr;
