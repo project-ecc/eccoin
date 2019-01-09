@@ -44,9 +44,13 @@ static const int NO_BLOOM_VERSION = 60034;
  * Versioning for network services
  */
 
-// version of the service transaction resolution code
-static const int NETWORK_SERVICE_VERSION = 10003;
+ #define NETWORK_SERVICE_VERSION_MAJOR 0
+ #define NETWORK_SERVICE_VERSION_MINOR 1
+ #define NETWORK_SERVICE_VERSION_REVISION 0
 
-static const int ANS_VERSION = 10000;
+// version of the service transaction resolution code
+static const int NETWORK_SERVICE_VERSION =  10000 * NETWORK_SERVICE_VERSION_MAJOR +
+                                            100 * NETWORK_SERVICE_VERSION_MINOR +
+                                            1 * NETWORK_SERVICE_VERSION_REVISION;
 
 #endif // BITCOIN_VERSION_H
