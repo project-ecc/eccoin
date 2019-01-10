@@ -505,19 +505,19 @@ bool TryCreateDirectory(const fs::path &p)
     return false;
 }
 
-void FileCommit(FILE *fileout)
+void FileCommit(FILE *_fileout)
 {
-    fflush(fileout); // harmless if redundantly called
+    fflush(_fileout); // harmless if redundantly called
 #ifdef WIN32
-    HANDLE hFile = (HANDLE)_get_osfhandle(_fileno(fileout));
+    HANDLE hFile = (HANDLE)_get_osfhandle(_fileno(_fileout));
     FlushFileBuffers(hFile);
 #else
 #if defined(__linux__) || defined(__NetBSD__)
-    fdatasync(fileno(fileout));
+    fdatasync(fileno(_fileout));
 #elif defined(__APPLE__) && defined(F_FULLFSYNC)
-    fcntl(fileno(fileout), F_FULLFSYNC, 0);
+    fcntl(fileno(_fileout), F_FULLFSYNC, 0);
 #else
-    fsync(fileno(fileout));
+    fsync(fileno(_fileout));
 #endif
 #endif
 }
