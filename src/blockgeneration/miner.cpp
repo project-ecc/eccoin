@@ -151,7 +151,8 @@ std::unique_ptr<CBlockTemplate> CreateNewPoWBlock(CWallet *pwallet, const CScrip
     CTxMemPool::setEntries waitSet;
 
     // ppcoin: if coinstake available add coinstake tx
-    static int64_t nLastCoinStakeSearchTime = GetAdjustedTime(); // only initialized at startup
+    // Commented out unused variable assuming no side effect within GetAdjustedTime()
+    // static int64_t nLastCoinStakeSearchTime = GetAdjustedTime(); // only initialized at startup
     CBlockIndex *pindexPrev = pnetMan->getChainActive()->chainActive.Tip();
 
 
@@ -172,10 +173,10 @@ std::unique_ptr<CBlockTemplate> CreateNewPoWBlock(CWallet *pwallet, const CScrip
     // Collect memory pool transactions into the block
     {
         LOCK2(cs_main, mempool.cs);
-        CBlockIndex *pindexPrev = pnetMan->getChainActive()->chainActive.Tip();
-        const int nHeight = pindexPrev->nHeight + 1;
+        CBlockIndex *_pindexPrev = pnetMan->getChainActive()->chainActive.Tip();
+        const int nHeight = _pindexPrev->nHeight + 1;
         pblock->nTime = GetAdjustedTime();
-        const int64_t nMedianTimePast = pindexPrev->GetMedianTimePast();
+        const int64_t nMedianTimePast = _pindexPrev->GetMedianTimePast();
 
         pblock->nVersion = 4;
 
@@ -323,12 +324,12 @@ std::unique_ptr<CBlockTemplate> CreateNewPoWBlock(CWallet *pwallet, const CScrip
         nLastBlockSize = nBlockSize;
 
         // Fill in header
-        pblock->hashPrevBlock = pindexPrev->GetBlockHash();
-        pblock->nTime = std::max(pindexPrev->GetMedianTimePast() + 1, pblock->GetMaxTransactionTime());
-        pblock->nTime = std::max(pblock->GetBlockTime(), pindexPrev->GetBlockTime() - nMaxClockDrift);
-        UpdateTime(pblock, pnetMan->getActivePaymentNetwork()->GetConsensus(), pindexPrev);
+        pblock->hashPrevBlock = _pindexPrev->GetBlockHash();
+        pblock->nTime = std::max(_pindexPrev->GetMedianTimePast() + 1, pblock->GetMaxTransactionTime());
+        pblock->nTime = std::max(pblock->GetBlockTime(), _pindexPrev->GetBlockTime() - nMaxClockDrift);
+        UpdateTime(pblock, pnetMan->getActivePaymentNetwork()->GetConsensus(), _pindexPrev);
         pblock->vtx[0]->vout[0].nValue =
-            GetProofOfWorkReward(nFees, pindexPrev->nHeight + 1, pindexPrev->GetBlockHash());
+            GetProofOfWorkReward(nFees, _pindexPrev->nHeight + 1, _pindexPrev->GetBlockHash());
         pblock->nNonce = 0;
     }
 
