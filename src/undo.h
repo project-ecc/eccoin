@@ -1,70 +1,127 @@
-// Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2013 The Bitcoin Core developers
-// Distributed under the MIT software license, see the accompanying
-// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+/*
+ * This file is part of the Eccoin project
+ * Copyright (c) 2009-2010 Satoshi Nakamoto
+ * Copyright (c) 2009-2016 The Bitcoin Core developers
+ * Copyright (c) 2014-2018 The Eccoin developers
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #ifndef BITCOIN_UNDO_H
 #define BITCOIN_UNDO_H
 
-#include "compressor.h" 
-#include "primitives/transaction.h"
+#include "chain/tx.h"
+#include "compressor.h"
 #include "serialize.h"
 
 /** Undo information for a CTxIn
  *
- *  Contains the prevout's CTxOut being spent, and if this was the
- *  last output of the affected transaction, its metadata as well
- *  (coinbase or not, height, transaction version)
+ *  Contains the prevout's CTxOut being spent, and its metadata as well
+ *  (coinbase or not, height). The serialization contains a dummy value of
+ *  zero. This is be compatible with older versions which expect to see
+ *  the transaction version there.
  */
-class CTxInUndo
+class TxInUndoSerializer
 {
+    const Coin *txout;
+
 public:
-    CTxOut txout;         // the txout data before being spent
-    bool fCoinBase;       // if the outpoint was the last unspent: whether it belonged to a coinbase
-    unsigned int nHeight; // if the outpoint was the last unspent: its height
-    int nVersion;         // if the outpoint was the last unspent: its version
-
-    CTxInUndo() : txout(), fCoinBase(false), nHeight(0), nVersion(0) {}
-    CTxInUndo(const CTxOut &txoutIn, bool fCoinBaseIn = false, unsigned int nHeightIn = 0, int nVersionIn = 0) : txout(txoutIn), fCoinBase(fCoinBaseIn), nHeight(nHeightIn), nVersion(nVersionIn) { }
-
-    unsigned int GetSerializeSize(int nType, int nVersion) const {
-        return ::GetSerializeSize(VARINT(nHeight*2+(fCoinBase ? 1 : 0)), nType, nVersion) +
-               (nHeight > 0 ? ::GetSerializeSize(VARINT(this->nVersion), nType, nVersion) : 0) +
-               ::GetSerializeSize(CTxOutCompressor(REF(txout)), nType, nVersion);
+    template <typename Stream>
+    void Serialize(Stream &s) const
+    {
+        ::Serialize(s, VARINT(txout->nHeight * 4 + (txout->fCoinBase ? 1 : 0) + (txout->fCoinStake ? 2 : 0),
+                           VarIntMode::NONNEGATIVE_SIGNED));
+        // Required to maintain compatibility with older undo format
+        ::Serialize(s, (unsigned char)0);
+        if (txout->nHeight > 0)
+        {
+            // Required to maintain compatibility with older undo format
+            ::Serialize(s, (unsigned char)0);
+        }
+        ::Serialize(s, CTxOutCompressor(REF(txout->out)));
     }
 
-    template<typename Stream>
-    void Serialize(Stream &s, int nType, int nVersion) const {
-        ::Serialize(s, VARINT(nHeight*2+(fCoinBase ? 1 : 0)), nType, nVersion);
-        if (nHeight > 0)
-            ::Serialize(s, VARINT(this->nVersion), nType, nVersion);
-        ::Serialize(s, CTxOutCompressor(REF(txout)), nType, nVersion);
-    }
-
-    template<typename Stream>
-    void Unserialize(Stream &s, int nType, int nVersion) {
-        unsigned int nCode = 0;
-        ::Unserialize(s, VARINT(nCode), nType, nVersion);
-        nHeight = nCode / 2;
-        fCoinBase = nCode & 1;
-        if (nHeight > 0)
-            ::Unserialize(s, VARINT(this->nVersion), nType, nVersion);
-        ::Unserialize(s, REF(CTxOutCompressor(REF(txout))), nType, nVersion);
-    }
+    TxInUndoSerializer(const Coin *coin) : txout(coin) {}
 };
+
+class TxInUndoDeserializer
+{
+    Coin *txout;
+
+public:
+    template <typename Stream>
+    void Unserialize(Stream &s)
+    {
+        unsigned int nCode = 0;
+        ::Unserialize(s, VARINT(nCode));
+        txout->nHeight = nCode / 4;
+        txout->fCoinBase = nCode & 1;
+        txout->fCoinStake = nCode & 2;
+        unsigned int nTimeDummy;
+        ::Unserialize(s, VARINT(nTimeDummy));
+        if (txout->nHeight > 0)
+        {
+            // Old versions stored the version number for the last spend of
+            // a transaction's outputs. Non-final spends were indicated with
+            // height = 0.
+            unsigned int nVersionDummy;
+            ::Unserialize(s, VARINT(nVersionDummy));
+        }
+        ::Unserialize(s, REF(CTxOutCompressor(REF(txout->out))));
+    }
+
+    TxInUndoDeserializer(Coin *coin) : txout(coin) {}
+};
+
+
+static const size_t MAX_INPUTS_PER_BLOCK =
+    std::numeric_limits<long long>::max() / ::GetSerializeSize(CTxIn(), SER_NETWORK, PROTOCOL_VERSION);
 
 /** Undo information for a CTransaction */
 class CTxUndo
 {
 public:
     // undo information for all txins
-    std::vector<CTxInUndo> vprevout;
+    std::vector<Coin> vprevout;
 
-    ADD_SERIALIZE_METHODS
+    template <typename Stream>
+    void Serialize(Stream &s) const
+    {
+        // TODO: avoid reimplementing vector serializer
+        uint64_t count = vprevout.size();
+        ::Serialize(s, COMPACTSIZE(REF(count)));
+        for (const auto &prevout : vprevout)
+        {
+            ::Serialize(s, REF(TxInUndoSerializer(&prevout)));
+        }
+    }
 
-    template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
-        READWRITE(vprevout);
+    template <typename Stream>
+    void Unserialize(Stream &s)
+    {
+        // TODO: avoid reimplementing vector deserializer
+        uint64_t count = 0;
+        ::Unserialize(s, COMPACTSIZE(count));
+        if (count > MAX_INPUTS_PER_BLOCK)
+        {
+            throw std::ios_base::failure("Too many input undo records");
+        }
+        vprevout.resize(count);
+        for (auto &prevout : vprevout)
+        {
+            ::Unserialize(s, REF(TxInUndoDeserializer(&prevout)));
+        }
     }
 };
 
@@ -77,9 +134,20 @@ public:
     ADD_SERIALIZE_METHODS
 
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
+    inline void SerializationOp(Stream &s, Operation ser_action)
+    {
         READWRITE(vtxundo);
     }
+};
+
+enum DisconnectResult
+{
+    // All good.
+    DISCONNECT_OK,
+    // Rolled back, but UTXO set was inconsistent with block.
+    DISCONNECT_UNCLEAN,
+    // Something else went wrong.
+    DISCONNECT_FAILED,
 };
 
 #endif // BITCOIN_UNDO_H

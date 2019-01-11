@@ -1,6 +1,21 @@
-// Copyright (c) 2015 The Bitcoin developers
-// Distributed under the MIT software license, see the accompanying
-// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+/*
+ * This file is part of the Eccoin project
+ * Copyright (c) 2015-2017 The Bitcoin Core developers
+ * Copyright (c) 2017-2018 The Eccoin developers
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #ifndef BITCOIN_MEMUSAGE_H
 #define BITCOIN_MEMUSAGE_H
@@ -11,28 +26,37 @@
 #include <set>
 #include <vector>
 
-#include <boost/unordered_set.hpp>
 #include <boost/unordered_map.hpp>
+#include <boost/unordered_set.hpp>
+#include <unordered_map>
+#include <unordered_set>
 
 namespace memusage
 {
-
 /** Compute the total memory used by allocating alloc bytes. */
 static size_t MallocUsage(size_t alloc);
 
 /** Dynamic memory usage for built-in types is zero. */
-static inline size_t DynamicUsage(const int8_t& v) { return 0; }
-static inline size_t DynamicUsage(const uint8_t& v) { return 0; }
-static inline size_t DynamicUsage(const int16_t& v) { return 0; }
-static inline size_t DynamicUsage(const uint16_t& v) { return 0; }
-static inline size_t DynamicUsage(const int32_t& v) { return 0; }
-static inline size_t DynamicUsage(const uint32_t& v) { return 0; }
-static inline size_t DynamicUsage(const int64_t& v) { return 0; }
-static inline size_t DynamicUsage(const uint64_t& v) { return 0; }
-static inline size_t DynamicUsage(const float& v) { return 0; }
-static inline size_t DynamicUsage(const double& v) { return 0; }
-template<typename X> static inline size_t DynamicUsage(X * const &v) { return 0; }
-template<typename X> static inline size_t DynamicUsage(const X * const &v) { return 0; }
+static inline size_t DynamicUsage(const int8_t &v) { return 0; }
+static inline size_t DynamicUsage(const uint8_t &v) { return 0; }
+static inline size_t DynamicUsage(const int16_t &v) { return 0; }
+static inline size_t DynamicUsage(const uint16_t &v) { return 0; }
+static inline size_t DynamicUsage(const int32_t &v) { return 0; }
+static inline size_t DynamicUsage(const uint32_t &v) { return 0; }
+static inline size_t DynamicUsage(const int64_t &v) { return 0; }
+static inline size_t DynamicUsage(const uint64_t &v) { return 0; }
+static inline size_t DynamicUsage(const float &v) { return 0; }
+static inline size_t DynamicUsage(const double &v) { return 0; }
+template <typename X>
+static inline size_t DynamicUsage(X *const &v)
+{
+    return 0;
+}
+template <typename X>
+static inline size_t DynamicUsage(const X *const &v)
+{
+    return 0;
+}
 
 /** Compute the memory used for dynamically allocated but owned data structures.
  *  For generic data types, this is *not* recursive. DynamicUsage(vector<vector<int> >)
@@ -45,87 +69,138 @@ template<typename X> static inline size_t DynamicUsage(const X * const &v) { ret
 static inline size_t MallocUsage(size_t alloc)
 {
     // Measured on libc6 2.19 on Linux.
-    if (alloc == 0) {
+    if (alloc == 0)
+    {
         return 0;
-    } else if (sizeof(void*) == 8) {
+    }
+    else if (sizeof(void *) == 8)
+    {
         return ((alloc + 31) >> 4) << 4;
-    } else if (sizeof(void*) == 4) {
+    }
+    else if (sizeof(void *) == 4)
+    {
         return ((alloc + 15) >> 3) << 3;
-    } else {
+    }
+    else
+    {
         assert(0);
     }
 }
 
 // STL data structures
 
-template<typename X>
+template <typename X>
 struct stl_tree_node
 {
 private:
     int color;
-    void* parent;
-    void* left;
-    void* right;
+    void *parent;
+    void *left;
+    void *right;
     X x;
 };
 
-template<typename X>
-static inline size_t DynamicUsage(const std::vector<X>& v)
+struct stl_shared_counter
+{
+    /**
+     * Various platforms use different sized counters here.
+     * Conservatively assume that they won't be larger than size_t.
+     */
+    void *class_type;
+    size_t use_count;
+    size_t weak_count;
+};
+
+
+template <typename X>
+static inline size_t DynamicUsage(const std::vector<X> &v)
 {
     return MallocUsage(v.capacity() * sizeof(X));
 }
 
-template<unsigned int N, typename X, typename S, typename D>
-static inline size_t DynamicUsage(const prevector<N, X, S, D>& v)
+template <unsigned int N, typename X, typename S, typename D>
+static inline size_t DynamicUsage(const prevector<N, X, S, D> &v)
 {
     return MallocUsage(v.allocated_memory());
 }
 
-template<typename X, typename Y>
-static inline size_t DynamicUsage(const std::set<X, Y>& s)
+template <typename X, typename Y>
+static inline size_t DynamicUsage(const std::set<X, Y> &s)
 {
     return MallocUsage(sizeof(stl_tree_node<X>)) * s.size();
 }
 
-template<typename X, typename Y>
-static inline size_t IncrementalDynamicUsage(const std::set<X, Y>& s)
+template <typename X, typename Y>
+static inline size_t IncrementalDynamicUsage(const std::set<X, Y> &s)
 {
     return MallocUsage(sizeof(stl_tree_node<X>));
 }
 
-template<typename X, typename Y, typename Z>
-static inline size_t DynamicUsage(const std::map<X, Y, Z>& m)
+template <typename X, typename Y, typename Z>
+static inline size_t DynamicUsage(const std::map<X, Y, Z> &m)
 {
     return MallocUsage(sizeof(stl_tree_node<std::pair<const X, Y> >)) * m.size();
 }
 
-template<typename X, typename Y, typename Z>
-static inline size_t IncrementalDynamicUsage(const std::map<X, Y, Z>& m)
+template <typename X, typename Y, typename Z>
+static inline size_t IncrementalDynamicUsage(const std::map<X, Y, Z> &m)
 {
     return MallocUsage(sizeof(stl_tree_node<std::pair<const X, Y> >));
 }
 
+template <typename X>
+static inline size_t DynamicUsage(const std::shared_ptr<X> &p)
+{
+    // A shared_ptr can either use a single continuous memory block for both the
+    // counter and the storage (when using std::make_shared), or separate. We
+    // can't observe the difference, however, so assume the worst.
+    return p ? MallocUsage(sizeof(X)) + MallocUsage(sizeof(stl_shared_counter)) : 0;
+}
+
+
 // Boost data structures
 
-template<typename X>
+template <typename X>
 struct boost_unordered_node : private X
 {
 private:
-    void* ptr;
+    void *ptr;
 };
 
-template<typename X, typename Y>
-static inline size_t DynamicUsage(const boost::unordered_set<X, Y>& s)
+template <typename X>
+struct unordered_node : private X
 {
-    return MallocUsage(sizeof(boost_unordered_node<X>)) * s.size() + MallocUsage(sizeof(void*) * s.bucket_count());
+private:
+    void *ptr;
+};
+
+
+template <typename X, typename Y>
+static inline size_t DynamicUsage(const boost::unordered_set<X, Y> &s)
+{
+    return MallocUsage(sizeof(boost_unordered_node<X>)) * s.size() + MallocUsage(sizeof(void *) * s.bucket_count());
 }
 
-template<typename X, typename Y, typename Z>
-static inline size_t DynamicUsage(const boost::unordered_map<X, Y, Z>& m)
+template <typename X, typename Y, typename Z>
+static inline size_t DynamicUsage(const boost::unordered_map<X, Y, Z> &m)
 {
-    return MallocUsage(sizeof(boost_unordered_node<std::pair<const X, Y> >)) * m.size() + MallocUsage(sizeof(void*) * m.bucket_count());
+    return MallocUsage(sizeof(boost_unordered_node<std::pair<const X, Y> >)) * m.size() +
+           MallocUsage(sizeof(void *) * m.bucket_count());
 }
 
+
+template <typename X, typename Y>
+static inline size_t DynamicUsage(const std::unordered_set<X, Y> &s)
+{
+    return MallocUsage(sizeof(unordered_node<X>)) * s.size() + MallocUsage(sizeof(void *) * s.bucket_count());
+}
+
+template <typename X, typename Y, typename Z>
+static inline size_t DynamicUsage(const std::unordered_map<X, Y, Z> &m)
+{
+    return MallocUsage(sizeof(unordered_node<std::pair<const X, Y> >)) * m.size() +
+           MallocUsage(sizeof(void *) * m.bucket_count());
+}
 }
 
 #endif // BITCOIN_MEMUSAGE_H

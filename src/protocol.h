@@ -1,7 +1,22 @@
-// Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2015 The Bitcoin Core developers
-// Distributed under the MIT software license, see the accompanying
-// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+/*
+ * This file is part of the Eccoin project
+ * Copyright (c) 2009-2010 Satoshi Nakamoto
+ * Copyright (c) 2009-2016 The Bitcoin Core developers
+ * Copyright (c) 2014-2018 The Eccoin developers
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #ifndef __cplusplus
 #error This header can only be compiled as C++.
@@ -15,12 +30,13 @@
 #include "uint256.h"
 #include "version.h"
 
+#include <array>
 #include <stdint.h>
 #include <string>
 
-#define MESSAGE_START_SIZE 4
 
-/** Message header.
+/**
+ * Message header.
  * (4) message start.
  * (12) command.
  * (4) size.
@@ -29,48 +45,48 @@
 class CMessageHeader
 {
 public:
-    typedef unsigned char MessageStartChars[MESSAGE_START_SIZE];
-
-    CMessageHeader(const MessageStartChars& pchMessageStartIn);
-    CMessageHeader(const MessageStartChars& pchMessageStartIn, const char* pszCommand, unsigned int nMessageSizeIn);
-
-    std::string GetCommand() const;
-    bool IsValid(const MessageStartChars& messageStart) const;
-
-    ADD_SERIALIZE_METHODS
-
-    template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion)
+    enum
     {
-        READWRITE(FLATDATA(pchMessageStart));
-        READWRITE(FLATDATA(pchCommand));
-        READWRITE(nMessageSize);
-        READWRITE(nChecksum);
-    }
-
-    // TODO: make private (improves encapsulation)
-public:
-    enum {
+        MESSAGE_START_SIZE = 4,
         COMMAND_SIZE = 12,
-        MESSAGE_SIZE_SIZE = sizeof(int),
-        CHECKSUM_SIZE = sizeof(int),
+        MESSAGE_SIZE_SIZE = 4,
+        CHECKSUM_SIZE = 4,
 
         MESSAGE_SIZE_OFFSET = MESSAGE_START_SIZE + COMMAND_SIZE,
         CHECKSUM_OFFSET = MESSAGE_SIZE_OFFSET + MESSAGE_SIZE_SIZE,
         HEADER_SIZE = MESSAGE_START_SIZE + COMMAND_SIZE + MESSAGE_SIZE_SIZE + CHECKSUM_SIZE
     };
-    char pchMessageStart[MESSAGE_START_SIZE];
+    typedef std::array<uint8_t, MESSAGE_START_SIZE> MessageMagic;
+
+    CMessageHeader(const MessageMagic &pchMessageStartIn);
+    CMessageHeader(const MessageMagic &pchMessageStartIn, const char *pszCommand, unsigned int nMessageSizeIn);
+
+    std::string GetCommand() const;
+    bool IsValid(const MessageMagic &messageStart) const;
+
+    ADD_SERIALIZE_METHODS;
+
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action)
+    {
+        READWRITE(FLATDATA(pchMessageStart));
+        READWRITE(FLATDATA(pchCommand));
+        READWRITE(nMessageSize);
+        READWRITE(FLATDATA(pchChecksum));
+    }
+
+    MessageMagic pchMessageStart;
     char pchCommand[COMMAND_SIZE];
-    unsigned int nMessageSize;
-    unsigned int nChecksum;
+    uint32_t nMessageSize;
+    uint8_t pchChecksum[CHECKSUM_SIZE];
 };
 
 /**
  * Bitcoin protocol message types. When adding new message types, don't forget
  * to update allNetMessageTypes in protocol.cpp.
  */
-namespace NetMsgType {
-
+namespace NetMsgType
+{
 /**
  * The version message provides information about the transmitting node to the
  * receiving node at the beginning of a connection.
@@ -218,14 +234,16 @@ extern const char *REJECT;
  * @see https://bitcoin.org/en/developer-reference#sendheaders
  */
 extern const char *SENDHEADERS;
-
 };
 
 /* Get a vector of all valid message types (see above) */
 const std::vector<std::string> &getAllNetMessageTypes();
 
 /** nServices flags */
-enum {
+enum ServiceFlags : uint64_t
+{
+    // Nothing
+    NODE_NONE = 0,
     // NODE_NETWORK means that the node is capable of serving the block chain. It is currently
     // set by all Bitcoin Core nodes, and is unset by SPV clients or other peers that just want
     // network services but don't provide them.
@@ -260,18 +278,19 @@ public:
     ADD_SERIALIZE_METHODS
 
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion)
-    {
+    inline void SerializationOp(Stream &s, Operation ser_action)
     {
         if (ser_action.ForRead())
             Init();
-        if (nType & SER_DISK)
+        int nVersion = s.GetVersion();
+        if (s.GetType() & SER_DISK)
             READWRITE(nVersion);
-        if ((nType & SER_DISK) || !(nType & SER_GETHASH))
+        if ((s.GetType() & SER_DISK) || !(s.GetType() & SER_GETHASH))
             READWRITE(nTime);
-        READWRITE(nServices);
-        READWRITE(*(CService*)this);
-    }
+        uint64_t nServicesInt = nServices;
+        READWRITE(nServicesInt);
+        nServices = (ServiceFlags)nServicesInt;
+        READWRITE(*(CService *)this);
     }
 
     // TODO: make private (improves encapsulation)
@@ -287,22 +306,22 @@ class CInv
 {
 public:
     CInv();
-    CInv(int typeIn, const uint256& hashIn);
-    CInv(const std::string& strType, const uint256& hashIn);
+    CInv(int typeIn, const uint256 &hashIn);
+    CInv(const std::string &strType, const uint256 &hashIn);
 
     ADD_SERIALIZE_METHODS
 
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion)
+    inline void SerializationOp(Stream &s, Operation ser_action)
     {
         READWRITE(type);
         READWRITE(hash);
     }
 
-    friend bool operator<(const CInv& a, const CInv& b);
+    friend bool operator<(const CInv &a, const CInv &b);
 
     bool IsKnownType() const;
-    const char* GetCommand() const;
+    const char *GetCommand() const;
     std::string ToString() const;
 
     // TODO: make private (improves encapsulation)
@@ -311,7 +330,8 @@ public:
     uint256 hash;
 };
 
-enum {
+enum
+{
     MSG_TX = 1,
     MSG_BLOCK,
     // Nodes may always request a MSG_FILTERED_BLOCK in a getdata, however,

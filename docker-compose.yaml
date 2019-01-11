@@ -1,0 +1,28 @@
+version: '3'
+
+services:
+  node1:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    image: 'project-ecc/eccoind'
+    networks:
+      - private
+  node2:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    image: 'project-ecc/eccoind'
+    networks:
+      - private
+  node3:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    image: 'project-ecc/eccoind'
+    networks:
+      - private
+
+networks:
+  private:
+    internal: true

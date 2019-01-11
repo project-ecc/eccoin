@@ -1,76 +1,35 @@
-// Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2015 The Bitcoin Core developers
-// Distributed under the MIT software license, see the accompanying
-// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+/*
+ * This file is part of the Eccoin project
+ * Copyright (c) 2009-2010 Satoshi Nakamoto
+ * Copyright (c) 2009-2016 The Bitcoin Core developers
+ * Copyright (c) 2014-2018 The Eccoin developers
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #include "pow.h"
 
 #include "arith_uint256.h"
-#include "chain.h"
-#include "primitives/block.h"
-#include "uint256.h"
-#include "util.h"
+#include "chain/chain.h"
 #include "main.h"
+#include "networks/netman.h"
+#include "uint256.h"
+#include "util/util.h"
 
-unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const Consensus::Params& params, bool fProofOfStake)
+bool CheckProofOfWork(uint256 hash, unsigned int nBits, const Consensus::Params &params)
 {
-    CBigNum bnTargetLimit = CBigNum(params.powLimit);
-
-    if(fProofOfStake)
-    {
-        // Proof-of-Stake blocks has own target limit since nVersion=3 supermajority on mainNet and always on testNet
-        bnTargetLimit = CBigNum(params.posLimit);
-    }
-
-    if (pindexLast == NULL)
-        return bnTargetLimit.GetCompact(); // genesis block
-
-    const CBlockIndex* pindexPrev = GetLastBlockIndex(pindexLast, fProofOfStake);
-    if (pindexPrev->pprev == NULL)
-        return bnTargetLimit.GetCompact(); // first block
-    const CBlockIndex* pindexPrevPrev = GetLastBlockIndex(pindexPrev->pprev, fProofOfStake);
-    if (pindexPrevPrev->pprev == NULL)
-        return bnTargetLimit.GetCompact(); // second block
-
-    int64_t nActualSpacing = pindexPrev->GetBlockTime() - pindexPrevPrev->GetBlockTime();
-    if(nActualSpacing < 0)
-    {
-        nActualSpacing = 1;
-    }
-    else if(nActualSpacing > params.nTargetTimespan)
-    {
-        nActualSpacing = params.nTargetTimespan;
-    }
-
-    // ppcoin: target change every block
-    // ppcoin: retarget with exponential moving toward target spacing
-    CBigNum bnNew;
-    bnNew.SetCompact(pindexPrev->nBits);
-    int64_t spacing;
-    if (fProofOfStake)
-    {
-        spacing = params.nTargetSpacing;
-    }
-    else
-    {
-        spacing =  std::min( (3 * (int64_t) params.nTargetSpacing), ((int64_t) params.nTargetSpacing * (1 + pindexLast->nHeight - pindexPrev->nHeight)) );
-    }
-    int64_t nTargetSpacingNext = spacing;
-    int64_t nInterval = params.nTargetTimespan / nTargetSpacingNext;
-    bnNew *= ((nInterval - 1) * nTargetSpacingNext + nActualSpacing + nActualSpacing);
-    bnNew /= ((nInterval + 1) * nTargetSpacingNext);
-
-    if (bnNew > bnTargetLimit)
-    {
-        bnNew = bnTargetLimit;
-    }
-
-    return bnNew.GetCompact();
-}
-
-bool CheckProofOfWork(uint256 hash, unsigned int nBits, const Consensus::Params& params)
-{
-    if(hash == params.hashGenesisBlock)
+    if (hash == params.hashGenesisBlock)
         return true;
 
     bool fNegative;
@@ -86,19 +45,18 @@ bool CheckProofOfWork(uint256 hash, unsigned int nBits, const Consensus::Params&
     // Check proof of work matches claimed amount
     if (UintToArith256(hash) > bnTarget)
     {
-        LogPrintf("%s > %s and it should not be \n",hash.ToString().c_str(), bnTarget.ToString().c_str());
         return error("CheckProofOfWork(): hash doesn't match nBits");
     }
 
     return true;
 }
 
-arith_uint256 GetBlockProof(const CBlockIndex& block)
+arith_uint256 GetBlockProof(const CBlockIndex &index)
 {
     arith_uint256 bnTarget;
     bool fNegative;
     bool fOverflow;
-    bnTarget.SetCompact(block.nBits, &fNegative, &fOverflow);
+    bnTarget.SetCompact(index.nBits, &fNegative, &fOverflow);
     if (fNegative || fOverflow || bnTarget == 0)
         return 0;
     // We need to compute 2**256 / (bnTarget+1), but we can't represent 2**256
@@ -108,18 +66,30 @@ arith_uint256 GetBlockProof(const CBlockIndex& block)
     return (~bnTarget / (bnTarget + 1)) + 1;
 }
 
-int64_t GetBlockProofEquivalentTime(const CBlockIndex& to, const CBlockIndex& from, const CBlockIndex& tip, const Consensus::Params& params)
+int64_t GetBlockProofEquivalentTime(const CBlockIndex &to,
+    const CBlockIndex &from,
+    const CBlockIndex &tip,
+    const Consensus::Params &params)
 {
     arith_uint256 r;
     int sign = 1;
-    if (to.nChainWork > from.nChainWork) {
+    if (to.nChainWork > from.nChainWork)
+    {
         r = to.nChainWork - from.nChainWork;
-    } else {
+    }
+    else
+    {
         r = from.nChainWork - to.nChainWork;
         sign = -1;
     }
-    r = r * arith_uint256(params.nTargetSpacing) / GetBlockProof(tip);
-    if (r.bits() > 63) {
+    int64_t targetSpacing = params.nTargetSpacing;
+    if (tip.GetMedianTimePast() > SERVICE_UPGRADE_HARDFORK)
+    {
+        targetSpacing = 150;
+    }
+    r = r * arith_uint256(targetSpacing) / GetBlockProof(tip);
+    if (r.bits() > 63)
+    {
         return sign * std::numeric_limits<int64_t>::max();
     }
     return sign * r.GetLow64();

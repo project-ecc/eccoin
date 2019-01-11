@@ -1,12 +1,28 @@
-// Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2015 The Bitcoin Core developers
-// Distributed under the MIT software license, see the accompanying
-// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+/*
+ * This file is part of the Eccoin project
+ * Copyright (c) 2009-2010 Satoshi Nakamoto
+ * Copyright (c) 2009-2016 The Bitcoin Core developers
+ * Copyright (c) 2014-2018 The Eccoin developers
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #ifndef BITCOIN_WALLET_DB_H
 #define BITCOIN_WALLET_DB_H
 
 #include "clientversion.h"
+#include "fs.h"
 #include "serialize.h"
 #include "streams.h"
 #include "sync.h"
@@ -40,7 +56,7 @@ public:
     mutable CCriticalSection cs_db;
     DbEnv *dbenv;
     std::map<std::string, int> mapFileUseCount;
-    std::map<std::string, Db*> mapDb;
+    std::map<std::string, Db *> mapDb;
 
     CDBEnv();
     ~CDBEnv();
@@ -48,17 +64,19 @@ public:
 
     void MakeMock();
     bool IsMock() { return fMockDb; }
-
     /**
      * Verify that database file strFile is OK. If it is not,
      * call the callback to try to recover.
      * This must be called BEFORE strFile is opened.
      * Returns true if strFile is OK.
      */
-    enum VerifyResult { VERIFY_OK,
-                        RECOVER_OK,
-                        RECOVER_FAIL };
-    VerifyResult Verify(const std::string& strFile, bool (*recoverFunc)(CDBEnv& dbenv, const std::string& strFile));
+    enum VerifyResult
+    {
+        VERIFY_OK,
+        RECOVER_OK,
+        RECOVER_FAIL
+    };
+    VerifyResult Verify(const std::string &strFile, bool (*recoverFunc)(CDBEnv &dbenv, const std::string &strFile));
     /**
      * Salvage data from a file that Verify says is bad.
      * fAggressive sets the DB_AGGRESSIVE flag (see berkeley DB->verify() method documentation).
@@ -67,19 +85,19 @@ public:
      * for huge databases.
      */
     typedef std::pair<std::vector<unsigned char>, std::vector<unsigned char> > KeyValPair;
-    bool Salvage(const std::string& strFile, bool fAggressive, std::vector<KeyValPair>& vResult);
+    bool Salvage(const std::string &strFile, bool fAggressive, std::vector<KeyValPair> &vResult);
 
-    bool Open(const boost::filesystem::path& path);
+    bool Open(const fs::path &path);
     void Close();
     void Flush(bool fShutdown);
-    void CheckpointLSN(const std::string& strFile);
+    void CheckpointLSN(const std::string &strFile);
 
-    void CloseDb(const std::string& strFile);
-    bool RemoveDb(const std::string& strFile);
+    void CloseDb(const std::string &strFile);
+    bool RemoveDb(const std::string &strFile);
 
-    DbTxn* TxnBegin(int flags = DB_TXN_WRITE_NOSYNC)
+    DbTxn *TxnBegin(int flags = DB_TXN_WRITE_NOSYNC)
     {
-        DbTxn* ptxn = NULL;
+        DbTxn *ptxn = NULL;
         int ret = dbenv->txn_begin(NULL, &ptxn, flags);
         if (!ptxn || ret != 0)
             return NULL;
@@ -94,26 +112,25 @@ extern CDBEnv bitdb;
 class CDB
 {
 protected:
-    Db* pdb;
+    Db *pdb;
     std::string strFile;
-    DbTxn* activeTxn;
+    DbTxn *activeTxn;
     bool fReadOnly;
     bool fFlushOnClose;
 
-    explicit CDB(const std::string& strFilename, const char* pszMode = "r+", bool fFlushOnCloseIn=true);
+    explicit CDB(const std::string &strFilename, const char *pszMode = "r+", bool fFlushOnCloseIn = true);
     ~CDB() { Close(); }
-
 public:
     void Flush();
     void Close();
 
 private:
-    CDB(const CDB&);
-    void operator=(const CDB&);
+    CDB(const CDB &);
+    void operator=(const CDB &);
 
 protected:
     template <typename K, typename T>
-    bool Read(const K& key, T& value)
+    bool Read(const K &key, T &value)
     {
         if (!pdb)
             return false;
@@ -133,10 +150,14 @@ protected:
             return false;
 
         // Unserialize value
-        try {
-            CDataStream ssValue((char*)datValue.get_data(), (char*)datValue.get_data() + datValue.get_size(), SER_DISK, CLIENT_VERSION);
+        try
+        {
+            CDataStream ssValue((char *)datValue.get_data(), (char *)datValue.get_data() + datValue.get_size(),
+                SER_DISK, CLIENT_VERSION);
             ssValue >> value;
-        } catch (const std::exception&) {
+        }
+        catch (const std::exception &)
+        {
             return false;
         }
 
@@ -147,7 +168,7 @@ protected:
     }
 
     template <typename K, typename T>
-    bool Write(const K& key, const T& value, bool fOverwrite = true)
+    bool Write(const K &key, const T &value, bool fOverwrite = true)
     {
         if (!pdb)
             return false;
@@ -176,7 +197,7 @@ protected:
     }
 
     template <typename K>
-    bool Erase(const K& key)
+    bool Erase(const K &key)
     {
         if (!pdb)
             return false;
@@ -198,7 +219,7 @@ protected:
     }
 
     template <typename K>
-    bool Exists(const K& key)
+    bool Exists(const K &key)
     {
         if (!pdb)
             return false;
@@ -217,27 +238,29 @@ protected:
         return (ret == 0);
     }
 
-    Dbc* GetCursor()
+    Dbc *GetCursor()
     {
         if (!pdb)
             return NULL;
-        Dbc* pcursor = NULL;
+        Dbc *pcursor = NULL;
         int ret = pdb->cursor(NULL, &pcursor, 0);
         if (ret != 0)
             return NULL;
         return pcursor;
     }
 
-    int ReadAtCursor(Dbc* pcursor, CDataStream& ssKey, CDataStream& ssValue, unsigned int fFlags = DB_NEXT)
+    int ReadAtCursor(Dbc *pcursor, CDataStream &ssKey, CDataStream &ssValue, unsigned int fFlags = DB_NEXT)
     {
         // Read at cursor
         Dbt datKey;
-        if (fFlags == DB_SET || fFlags == DB_SET_RANGE || fFlags == DB_GET_BOTH || fFlags == DB_GET_BOTH_RANGE) {
+        if (fFlags == DB_SET || fFlags == DB_SET_RANGE || fFlags == DB_GET_BOTH || fFlags == DB_GET_BOTH_RANGE)
+        {
             datKey.set_data(&ssKey[0]);
             datKey.set_size(ssKey.size());
         }
         Dbt datValue;
-        if (fFlags == DB_GET_BOTH || fFlags == DB_GET_BOTH_RANGE) {
+        if (fFlags == DB_GET_BOTH || fFlags == DB_GET_BOTH_RANGE)
+        {
             datValue.set_data(&ssValue[0]);
             datValue.set_size(ssValue.size());
         }
@@ -252,10 +275,10 @@ protected:
         // Convert to streams
         ssKey.SetType(SER_DISK);
         ssKey.clear();
-        ssKey.write((char*)datKey.get_data(), datKey.get_size());
+        ssKey.write((char *)datKey.get_data(), datKey.get_size());
         ssValue.SetType(SER_DISK);
         ssValue.clear();
-        ssValue.write((char*)datValue.get_data(), datValue.get_size());
+        ssValue.write((char *)datValue.get_data(), datValue.get_size());
 
         // Clear and free memory
         memset(datKey.get_data(), 0, datKey.get_size());
@@ -270,7 +293,7 @@ public:
     {
         if (!pdb || activeTxn)
             return false;
-        DbTxn* ptxn = bitdb.TxnBegin();
+        DbTxn *ptxn = bitdb.TxnBegin();
         if (!ptxn)
             return false;
         activeTxn = ptxn;
@@ -295,18 +318,14 @@ public:
         return (ret == 0);
     }
 
-    bool ReadVersion(int& nVersion)
+    bool ReadVersion(int &nVersion)
     {
         nVersion = 0;
         return Read(std::string("version"), nVersion);
     }
 
-    bool WriteVersion(int nVersion)
-    {
-        return Write(std::string("version"), nVersion);
-    }
-
-    bool static Rewrite(const std::string& strFile, const char* pszSkip = NULL);
+    bool WriteVersion(int nVersion) { return Write(std::string("version"), nVersion); }
+    bool static Rewrite(const std::string &strFile, const char *pszSkip = NULL);
 };
 
 #endif // BITCOIN_WALLET_DB_H

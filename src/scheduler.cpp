@@ -1,6 +1,21 @@
-// Copyright (c) 2015 The Bitcoin Core developers
-// Distributed under the MIT software license, see the accompanying
-// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+/*
+ * This file is part of the Eccoin project
+ * Copyright (c) 2015-2016 The Bitcoin Core developers
+ * Copyright (c) 2014-2018 The Eccoin developers
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #include "scheduler.h"
 
@@ -10,18 +25,10 @@
 #include <boost/bind.hpp>
 #include <utility>
 
-CScheduler::CScheduler() : nThreadsServicingQueue(0), stopRequested(false), stopWhenEmpty(false)
-{
-}
-
-CScheduler::~CScheduler()
-{
-    assert(nThreadsServicingQueue == 0);
-}
-
-
+CScheduler::CScheduler() : nThreadsServicingQueue(0), stopRequested(false), stopWhenEmpty(false) {}
+CScheduler::~CScheduler() { assert(nThreadsServicingQueue == 0); }
 #if BOOST_VERSION < 105000
-static boost::system_time toPosixTime(const boost::chrono::system_clock::time_point& t)
+static boost::system_time toPosixTime(const boost::chrono::system_clock::time_point &t)
 {
     return boost::posix_time::from_time_t(boost::chrono::system_clock::to_time_t(t));
 }
@@ -35,27 +42,32 @@ void CScheduler::serviceQueue()
     // newTaskMutex is locked throughout this loop EXCEPT
     // when the thread is waiting or when the user's function
     // is called.
-    while (!shouldStop()) {
-        try {
-            while (!shouldStop() && taskQueue.empty()) {
+    while (!shouldStop())
+    {
+        try
+        {
+            while (!shouldStop() && taskQueue.empty())
+            {
                 // Wait until there is something to do.
                 newTaskScheduled.wait(lock);
             }
 
-            // Wait until either there is a new task, or until
-            // the time of the first item on the queue:
+// Wait until either there is a new task, or until
+// the time of the first item on the queue:
 
 // wait_until needs boost 1.50 or later; older versions have timed_wait:
 #if BOOST_VERSION < 105000
             while (!shouldStop() && !taskQueue.empty() &&
-                   newTaskScheduled.timed_wait(lock, toPosixTime(taskQueue.begin()->first))) {
+                   newTaskScheduled.timed_wait(lock, toPosixTime(taskQueue.begin()->first)))
+            {
                 // Keep waiting until timeout
             }
 #else
             // Some boost versions have a conflicting overload of wait_until that returns void.
             // Explicitly use a template here to avoid hitting that overload.
             while (!shouldStop() && !taskQueue.empty() &&
-                   newTaskScheduled.wait_until<>(lock, taskQueue.begin()->first) != boost::cv_status::timeout) {
+                   newTaskScheduled.wait_until<>(lock, taskQueue.begin()->first) != boost::cv_status::timeout)
+            {
                 // Keep waiting until timeout
             }
 #endif
@@ -73,7 +85,9 @@ void CScheduler::serviceQueue()
                 reverse_lock<boost::unique_lock<boost::mutex> > rlock(lock);
                 f();
             }
-        } catch (...) {
+        }
+        catch (...)
+        {
             --nThreadsServicingQueue;
             throw;
         }
@@ -107,7 +121,7 @@ void CScheduler::scheduleFromNow(CScheduler::Function f, int64_t deltaSeconds)
     schedule(f, boost::chrono::system_clock::now() + boost::chrono::seconds(deltaSeconds));
 }
 
-static void Repeat(CScheduler* s, CScheduler::Function f, int64_t deltaSeconds)
+static void Repeat(CScheduler *s, CScheduler::Function f, int64_t deltaSeconds)
 {
     f();
     s->scheduleFromNow(boost::bind(&Repeat, s, f, deltaSeconds), deltaSeconds);
@@ -119,11 +133,12 @@ void CScheduler::scheduleEvery(CScheduler::Function f, int64_t deltaSeconds)
 }
 
 size_t CScheduler::getQueueInfo(boost::chrono::system_clock::time_point &first,
-                             boost::chrono::system_clock::time_point &last) const
+    boost::chrono::system_clock::time_point &last) const
 {
     boost::unique_lock<boost::mutex> lock(newTaskMutex);
     size_t result = taskQueue.size();
-    if (!taskQueue.empty()) {
+    if (!taskQueue.empty())
+    {
         first = taskQueue.begin()->first;
         last = taskQueue.rbegin()->first;
     }

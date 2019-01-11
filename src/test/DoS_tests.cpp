@@ -1,146 +1,310 @@
-//
+// Copyright (c) 2011-2015 The Bitcoin Core developers
+// Copyright (c) 2015-2017 The Bitcoin Unlimited developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 // Unit tests for denial-of-service detection/prevention code
-//
-#include <algorithm>
 
-#include <boost/assign/list_of.hpp> // for 'map_list_of()'
-#include <boost/date_time/posix_time/posix_time_types.hpp>
-#include <boost/test/unit_test.hpp>
-
+#include "dosman.h"
+#include "keystore.h"
 #include "main.h"
-#include "wallet.h"
 #include "net.h"
-#include "util.h"
+#include "pow.h"
+#include "script/sign.h"
+#include "serialize.h"
+#include "util/util.h"
+
+#include "test/test_bitcoin.h"
 
 #include <stdint.h>
 
+#include <boost/assign/list_of.hpp> // for 'map_list_of()'
+#include <boost/date_time/posix_time/posix_time_types.hpp>
+#include <boost/foreach.hpp>
+#include <boost/test/unit_test.hpp>
+
 // Tests this internal-to-main.cpp method:
-extern bool AddOrphanTx(const CDataStream& vMsg);
-extern unsigned int LimitOrphanTxSize(unsigned int nMaxOrphans);
-extern std::map<uint256, CDataStream*> mapOrphanTransactions;
-extern std::map<uint256, std::map<uint256, CDataStream*> > mapOrphanTransactionsByPrev;
+extern bool AddOrphanTx(const CTransaction &tx, NodeId peer);
+extern void EraseOrphansFor(NodeId peer);
+extern void EraseOrphansByTime();
+extern unsigned int LimitOrphanTxSize(unsigned int nMaxOrphans, uint64_t nMaxBytes);
 
 CService ip(uint32_t i)
 {
     struct in_addr s;
     s.s_addr = i;
-    return CService(CNetAddr(s), GetDefaultPort());
+    return CService(CNetAddr(s), Params().GetDefaultPort());
 }
 
-BOOST_AUTO_TEST_SUITE(DoS_tests)
+BOOST_FIXTURE_TEST_SUITE(DoS_tests, TestingSetup)
 
-BOOST_AUTO_TEST_CASE(DoS_banning)
+size_t GetNumberBanEntries()
 {
-    CNode::ClearBanned();
+    banmap_t banmap;
+    dosMan.GetBanned(banmap);
+    return banmap.size();
+}
+
+bool DoesBanlistFileExist() { return fs::exists(fs::path(GetDataDir() / "banlist.dat")); }
+bool RemoveBanlistFile()
+{
+    fs::path path(GetDataDir() / "banlist.dat");
+    try
+    {
+        if (fs::exists(path))
+        {
+            // if the file already exists, remove it
+            fs::remove(path);
+        }
+
+        // if we get here, we either successfully deleted the file, or it didn't exist
+        return true;
+    }
+    catch (const std::exception &e)
+    {
+        // there was an error deleting the file
+        return false;
+    }
+}
+
+void SetKnownBanlistContents()
+{
+    // empty out any current entries
+    dosMan.ClearBanned();
+
+    // Add test ban of specific IP
+    dosMan.Ban(CNetAddr("192.168.1.1"), BanReasonNodeMisbehaving, DEFAULT_MISBEHAVING_BANTIME, false);
+
+    // Add test ban of specific subnet
+    dosMan.Ban(CSubNet("10.168.1.0/28"), BanReasonManuallyAdded, DEFAULT_MISBEHAVING_BANTIME, false);
+}
+
+BOOST_AUTO_TEST_CASE(DoS_persistence_tests)
+{
+    // 1. Test handling when banlist cannot be loaded from disk (reason doesn't matter)
+    // Ensure we don't have a banlist on the file system currently
+    BOOST_CHECK(RemoveBanlistFile());
+
+    // Initialize banlist to have 2 specific known entries
+    SetKnownBanlistContents();
+
+    // The current implementation does not touch the in-memory banlist if load from disk fails
+    dosMan.LoadBanlist();
+    // Verify that since we couldn't load from disk, the in-memory values weren't overridden
+    BOOST_CHECK(GetNumberBanEntries() == 2);
+    // Also ensure we didn't write a file to disk
+    BOOST_CHECK(!DoesBanlistFileExist());
+
+    // 2. Test handling when banlist can be loaded from disk
+    dosMan.ClearBanned();
+    // write an empty banlist file to disk
+    dosMan.DumpBanlist();
+    // Initialize banlist to have 2 specific known entries
+    SetKnownBanlistContents();
+    // Ensure that before load, we have 2 ban entries in the banlist
+    BOOST_CHECK(GetNumberBanEntries() == 2);
+    // Read from file, this should succeed and overwrite the in-memory banlist
+    // NOTE: LoadBanlist calls SweepBanned, which will clear out any expired ban entries so ensure
+    //       that the test ban entries expire far enough in the future that it doesn't break this test
+    dosMan.LoadBanlist();
+    // Ensure that we overwrote the in-memory banlist and now have no entries
+    BOOST_CHECK(GetNumberBanEntries() == 0);
+
+    // 3. Test handling when reading from disk a second time without writing out changes
+    // Initialize banlist to have 2 specific known entries
+    SetKnownBanlistContents();
+    // Ensure that before load, we have 2 ban entries in the banlist
+    BOOST_CHECK(GetNumberBanEntries() == 2);
+    // Read from file, this should succeed and overwrite the in-memory banlist
+    dosMan.LoadBanlist();
+    // Ensure that we overwrote the in-memory banlist and now have no entries
+    BOOST_CHECK(GetNumberBanEntries() == 0);
+
+    // 4. Test writing out to file then reading back in
+    // Initialize banlist to have 2 specific known entries
+    SetKnownBanlistContents();
+    // Ensure that before load, we have 2 ban entries in the banlist
+    BOOST_CHECK(GetNumberBanEntries() == 2);
+    // Now write out to file
+    dosMan.DumpBanlist();
+    // Verify the contents in-memory haven't changed
+    // NOTE: GetBanned calls SweepBanned, this will clear out any expired ban entries so ensure
+    //       that the test ban entries expire far enough in the future that it doesn't break this test
+    BOOST_CHECK(GetNumberBanEntries() == 2);
+    // Clear in-memory banlist, then load from file and ensure we the 2 entries back
+    dosMan.ClearBanned();
+    BOOST_CHECK(GetNumberBanEntries() == 0);
+    dosMan.LoadBanlist();
+    BOOST_CHECK(GetNumberBanEntries() == 2);
+
+    // Clean up in-memory banlist
+    dosMan.ClearBanned();
+    // Clean up on-disk banlist
+    RemoveBanlistFile();
+}
+
+BOOST_AUTO_TEST_CASE(DoS_basic_ban_tests)
+{
+    // Ensure in-memory banlist is empty
+    dosMan.ClearBanned();
+    BOOST_CHECK(GetNumberBanEntries() == 0);
+
+    // Add a CNetAddr entry to banlist
+    dosMan.Ban(CNetAddr("192.168.1.1"), BanReasonNodeMisbehaving, DEFAULT_MISBEHAVING_BANTIME, false);
+    // Ensure we have exactly 1 entry in our banlist
+    BOOST_CHECK(GetNumberBanEntries() == 1);
+    // Add a CSubNet entry to banlist
+    dosMan.Ban(CSubNet("10.168.1.0/28"), BanReasonManuallyAdded, DEFAULT_MISBEHAVING_BANTIME, false);
+    // Ensure we have exactly 2 entries in our banlist
+    BOOST_CHECK(GetNumberBanEntries() == 2);
+
+    // Verify IsBanned works for single IP directly specified
+    BOOST_CHECK(dosMan.IsBanned(CNetAddr("192.168.1.1")));
+    // Verify IsBanned works for single IP not banned
+    BOOST_CHECK(!dosMan.IsBanned(CNetAddr("192.168.1.2")));
+    // Verify IsBanned works for single IP banned as part of subnet
+    BOOST_CHECK(dosMan.IsBanned(CNetAddr("10.168.1.1")));
+    // Verify IsBanned works for single IP not banned as part of subnet
+    BOOST_CHECK(!dosMan.IsBanned(CNetAddr("10.168.1.19")));
+    // Verify IsBanned works for subnet exact match
+    BOOST_CHECK(dosMan.IsBanned(CSubNet("10.168.1.0/28")));
+    // Verify IsBanned works for subnet not banned
+    BOOST_CHECK(!dosMan.IsBanned(CSubNet("10.168.1.64/30")));
+
+    // REVISIT: Currently subnets require EXACT matches, so the encompassed case should return not banned.
+    BOOST_CHECK(!dosMan.IsBanned(CSubNet("10.168.1.4/30")));
+
+    // Verify unbanning an IP not banned doesn't change banlist contents
+    dosMan.Unban(CNetAddr("192.168.10.1"));
+    // Ensure we still have exactly 2 entries in our banlist
+    BOOST_CHECK(GetNumberBanEntries() == 2);
+
+    // Verify unbanning an IP that is within a subnet, but not directly banned, doesn't
+    // change our banlist conents
+    dosMan.Unban(CNetAddr("10.168.1.1"));
+    // Ensure we still have exactly 2 entries in our banlist
+    BOOST_CHECK(GetNumberBanEntries() == 2);
+    // Verify that the IP we just "unbanned" still shows as banned since it still falls within banned subnet
+    BOOST_CHECK(dosMan.IsBanned(CNetAddr("10.168.1.1")));
+
+    // Verify that unbanning an IP that is banned works
+    dosMan.Unban(CNetAddr("192.168.1.1"));
+    // Ensure we now have exactly 1 entry in our banlist
+    BOOST_CHECK(GetNumberBanEntries() == 1);
+
+    // Verify that unbanning a subnet that is inside a banned subnet doesn't change our banlist contents
+    dosMan.Unban(CSubNet("10.168.1.4/30"));
+    // Ensure we still have exactly 1 entry in our banlist
+    BOOST_CHECK(GetNumberBanEntries() == 1);
+
+    // Verify that unbanning a subnet that encompasses a banned subnet doesn't change our banlist conents
+    dosMan.Unban(CSubNet("10.168.1.0/24"));
+    // Ensure we still have exactly 1 entry in our banlist
+    BOOST_CHECK(GetNumberBanEntries() == 1);
+
+    // Verify that unbanning a subnet that exactly matches a banned subnet updates our banlist conents
+    dosMan.Unban(CSubNet("10.168.1.0/28"));
+    // Ensure we now have exactly 0 entries in our banlist
+    BOOST_CHECK(GetNumberBanEntries() == 0);
+
+    // Re-add ban entries so we can test ClearBanned()
+    SetKnownBanlistContents();
+    // Ensure we have exactly 2 entries in our banlist
+    BOOST_CHECK(GetNumberBanEntries() == 2);
+
+    // Clear the in-memory banlist
+    dosMan.ClearBanned();
+    // Ensure in-memory banlist is now empty
+    BOOST_CHECK(GetNumberBanEntries() == 0);
+}
+
+BOOST_AUTO_TEST_CASE(DoS_misbehaving_ban_tests)
+{
+    dosMan.ClearBanned();
     CAddress addr1(ip(0xa0b0c001));
     CNode dummyNode1(INVALID_SOCKET, addr1, "", true);
-    dummyNode1.Misbehaving(100); // Should get banned
-    BOOST_CHECK(CNode::IsBanned(addr1));
-    BOOST_CHECK(!CNode::IsBanned(ip(0xa0b0c001|0x0000ff00))); // Different IP, not banned
+    dummyNode1.nVersion = 1;
+    dosMan.Misbehaving(&dummyNode1, 100); // Should get banned
+    SendMessages(&dummyNode1);
+    BOOST_CHECK(dosMan.IsBanned(addr1));
+    BOOST_CHECK(!dosMan.IsBanned(ip(0xa0b0c001 | 0x0000ff00))); // Different IP, not banned
 
     CAddress addr2(ip(0xa0b0c002));
     CNode dummyNode2(INVALID_SOCKET, addr2, "", true);
-    dummyNode2.Misbehaving(50);
-    BOOST_CHECK(!CNode::IsBanned(addr2)); // 2 not banned yet...
-    BOOST_CHECK(CNode::IsBanned(addr1));  // ... but 1 still should be
-    dummyNode2.Misbehaving(50);
-    BOOST_CHECK(CNode::IsBanned(addr2));
-}    
+    dummyNode2.nVersion = 1;
+    dosMan.Misbehaving(&dummyNode2, 50);
+    SendMessages(&dummyNode2);
+    BOOST_CHECK(!dosMan.IsBanned(addr2)); // 2 not banned yet...
+    BOOST_CHECK(dosMan.IsBanned(addr1)); // ... but 1 still should be
+    dosMan.Misbehaving(&dummyNode2, 50);
+    SendMessages(&dummyNode2);
+    BOOST_CHECK(dosMan.IsBanned(addr2));
+}
 
-BOOST_AUTO_TEST_CASE(DoS_banscore)
+BOOST_AUTO_TEST_CASE(DoS_non_default_banscore)
 {
-    CNode::ClearBanned();
+    dosMan.ClearBanned();
     mapArgs["-banscore"] = "111"; // because 11 is my favorite number
     CAddress addr1(ip(0xa0b0c001));
     CNode dummyNode1(INVALID_SOCKET, addr1, "", true);
-    dummyNode1.Misbehaving(100);
-    BOOST_CHECK(!CNode::IsBanned(addr1));
-    dummyNode1.Misbehaving(10);
-    BOOST_CHECK(!CNode::IsBanned(addr1));
-    dummyNode1.Misbehaving(1);
-    BOOST_CHECK(CNode::IsBanned(addr1));
+    dosMan.HandleCommandLine();
+    dummyNode1.nVersion = 1;
+    dosMan.Misbehaving(&dummyNode1, 100);
+    SendMessages(&dummyNode1);
+    BOOST_CHECK(!dosMan.IsBanned(addr1));
+    dosMan.Misbehaving(&dummyNode1, 10);
+    SendMessages(&dummyNode1);
+    BOOST_CHECK(!dosMan.IsBanned(addr1));
+    dosMan.Misbehaving(&dummyNode1, 1);
+    SendMessages(&dummyNode1);
+    BOOST_CHECK(dosMan.IsBanned(addr1));
     mapArgs.erase("-banscore");
+    dosMan.HandleCommandLine();
 }
 
-BOOST_AUTO_TEST_CASE(DoS_bantime)
+BOOST_AUTO_TEST_CASE(DoS_bantime_expiration)
 {
-    CNode::ClearBanned();
-    int64 nStartTime = GetTime();
+    dosMan.ClearBanned();
+    int64_t nStartTime = GetTime();
     SetMockTime(nStartTime); // Overrides future calls to GetTime()
 
     CAddress addr(ip(0xa0b0c001));
     CNode dummyNode(INVALID_SOCKET, addr, "", true);
+    dummyNode.nVersion = 1;
 
-    dummyNode.Misbehaving(100);
-    BOOST_CHECK(CNode::IsBanned(addr));
+    dosMan.Misbehaving(&dummyNode, 100);
+    SendMessages(&dummyNode);
+    BOOST_CHECK(dosMan.IsBanned(addr));
 
-    SetMockTime(nStartTime+60*60);
-    BOOST_CHECK(CNode::IsBanned(addr));
+    // Verify that SweepBanned does not remove the entry
+    dosMan.SweepBanned();
+    // Ensure we still have exactly 1 entry in our banlist
+    BOOST_CHECK(GetNumberBanEntries() == 1);
 
-    SetMockTime(nStartTime+60*60*24+1);
-    BOOST_CHECK(!CNode::IsBanned(addr));
-}
+    SetMockTime(nStartTime + 60 * 60);
+    BOOST_CHECK(dosMan.IsBanned(addr));
 
-static bool CheckNBits(unsigned int nbits1, int64 time1, unsigned int nbits2, int64 time2)\
-{
-    if (time1 > time2)
-        return CheckNBits(nbits2, time2, nbits1, time1);
-    int64 deltaTime = time2-time1;
+    // Verify that SweepBanned still does not remove the entry
+    dosMan.SweepBanned();
+    // Ensure we still have exactly 1 entry in our banlist
+    BOOST_CHECK(GetNumberBanEntries() == 1);
 
-    CBigNum required;
-    required.SetCompact(ComputeMinWork(nbits1, deltaTime));
-    CBigNum have;
-    have.SetCompact(nbits2);
-    return (have <= required);
-}
+    SetMockTime(nStartTime + 60 * 60 * 24 + 1);
+    BOOST_CHECK(!dosMan.IsBanned(addr));
 
-BOOST_AUTO_TEST_CASE(DoS_checknbits)
-{
-    using namespace boost::assign; // for 'map_list_of()'
-
-    // Timestamps,nBits from the bitcoin blockchain.
-    // These are the block-chain checkpoint blocks
-    typedef std::map<int64, unsigned int> BlockData;
-    BlockData chainData =
-        map_list_of(1239852051,486604799)(1262749024,486594666)
-        (1279305360,469854461)(1280200847,469830746)(1281678674,469809688)
-        (1296207707,453179945)(1302624061,453036989)(1309640330,437004818)
-        (1313172719,436789733);
-
-    // Make sure CheckNBits considers every combination of block-chain-lock-in-points
-    // "sane":
-    for (auto const& i: chainData)
-    {
-        for (auto const& j: chainData)
-        {
-            BOOST_CHECK(CheckNBits(i.second, i.first, j.second, j.first));
-        }
-    }
-
-    // Test a couple of insane combinations:
-    BlockData::value_type firstcheck = *(chainData.begin());
-    BlockData::value_type lastcheck = *(chainData.rbegin());
-
-    // First checkpoint difficulty at or a while after the last checkpoint time should fail when
-    // compared to last checkpoint
-    BOOST_CHECK(!CheckNBits(firstcheck.second, lastcheck.first+60*10, lastcheck.second, lastcheck.first));
-    BOOST_CHECK(!CheckNBits(firstcheck.second, lastcheck.first+60*60*24*14, lastcheck.second, lastcheck.first));
-
-    // ... but OK if enough time passed for difficulty to adjust downward:
-    BOOST_CHECK(CheckNBits(firstcheck.second, lastcheck.first+60*60*24*365*4, lastcheck.second, lastcheck.first));
-    
+    // Verify that SweepBanned does remove the entry this time as it is expired
+    dosMan.SweepBanned();
+    // Ensure we now have exactly 0 entries in our banlist
+    BOOST_CHECK(GetNumberBanEntries() == 0);
 }
 
 CTransaction RandomOrphan()
 {
-    std::map<uint256, CDataStream*>::iterator it;
+    std::map<uint256, COrphanTx>::iterator it;
     it = mapOrphanTransactions.lower_bound(GetRandHash());
     if (it == mapOrphanTransactions.end())
         it = mapOrphanTransactions.begin();
-    const CDataStream* pvMsg = it->second;
-    CTransaction tx;
-    CDataStream(*pvMsg) >> tx;
-    return tx;
+    return it->second.tx;
 }
 
 BOOST_AUTO_TEST_CASE(DoS_mapOrphans)
@@ -150,21 +314,49 @@ BOOST_AUTO_TEST_CASE(DoS_mapOrphans)
     CBasicKeyStore keystore;
     keystore.AddKey(key);
 
-    // 50 orphan transactions:
+    // Test LimitOrphanTxSize() function: limit by orphan pool bytes
+    // add 50 orphan transactions:
     for (int i = 0; i < 50; i++)
     {
-        CTransaction tx;
+        CMutableTransaction tx;
         tx.vin.resize(1);
         tx.vin[0].prevout.n = 0;
         tx.vin[0].prevout.hash = GetRandHash();
         tx.vin[0].scriptSig << OP_1;
         tx.vout.resize(1);
-        tx.vout[0].nValue = 1*CENT;
-        tx.vout[0].scriptPubKey.SetDestination(key.GetPubKey().GetID());
+        tx.vout[0].nValue = 1 * CENT;
+        tx.vout[0].scriptPubKey = GetScriptForDestination(key.GetPubKey().GetID());
 
-        CDataStream ds(SER_DISK, CLIENT_VERSION);
-        ds << tx;
-        AddOrphanTx(ds);
+        LOCK(cs_orphancache);
+        AddOrphanTx(tx, i);
+    }
+
+    {
+        LOCK(cs_orphancache);
+        LimitOrphanTxSize(50, 8000);
+        BOOST_CHECK_EQUAL(mapOrphanTransactions.size(), 50);
+        LimitOrphanTxSize(50, 6300);
+        BOOST_CHECK(mapOrphanTransactions.size() <= 49);
+        LimitOrphanTxSize(50, 1000);
+        BOOST_CHECK(mapOrphanTransactions.size() <= 8);
+        LimitOrphanTxSize(50, 0);
+        BOOST_CHECK(mapOrphanTransactions.empty());
+    }
+
+    // 50 orphan transactions:
+    for (int i = 0; i < 50; i++)
+    {
+        CMutableTransaction tx;
+        tx.vin.resize(1);
+        tx.vin[0].prevout.n = 0;
+        tx.vin[0].prevout.hash = GetRandHash();
+        tx.vin[0].scriptSig << OP_1;
+        tx.vout.resize(1);
+        tx.vout[0].nValue = 1 * CENT;
+        tx.vout[0].scriptPubKey = GetScriptForDestination(key.GetPubKey().GetID());
+
+        LOCK(cs_orphancache);
+        AddOrphanTx(tx, i);
     }
 
     // ... and 50 that depend on other orphans:
@@ -172,29 +364,28 @@ BOOST_AUTO_TEST_CASE(DoS_mapOrphans)
     {
         CTransaction txPrev = RandomOrphan();
 
-        CTransaction tx;
+        CMutableTransaction tx;
         tx.vin.resize(1);
         tx.vin[0].prevout.n = 0;
         tx.vin[0].prevout.hash = txPrev.GetHash();
         tx.vout.resize(1);
-        tx.vout[0].nValue = 1*CENT;
-        tx.vout[0].scriptPubKey.SetDestination(key.GetPubKey().GetID());
+        tx.vout[0].nValue = 1 * CENT;
+        tx.vout[0].scriptPubKey = GetScriptForDestination(key.GetPubKey().GetID());
         SignSignature(keystore, txPrev, tx, 0);
 
-        CDataStream ds(SER_DISK, CLIENT_VERSION);
-        ds << tx;
-        AddOrphanTx(ds);
+        LOCK(cs_orphancache);
+        AddOrphanTx(tx, i);
     }
 
     // This really-big orphan should be ignored:
-    for (int i = 0; i < 10; i++)
+    for (int i = 0; i < 1; i++)
     {
         CTransaction txPrev = RandomOrphan();
 
-        CTransaction tx;
+        CMutableTransaction tx;
         tx.vout.resize(1);
-        tx.vout[0].nValue = 1*CENT;
-        tx.vout[0].scriptPubKey.SetDestination(key.GetPubKey().GetID());
+        tx.vout[0].nValue = 1 * CENT;
+        tx.vout[0].scriptPubKey = GetScriptForDestination(key.GetPubKey().GetID());
         tx.vin.resize(500);
         for (unsigned int j = 0; j < tx.vin.size(); j++)
         {
@@ -207,107 +398,80 @@ BOOST_AUTO_TEST_CASE(DoS_mapOrphans)
         for (unsigned int j = 1; j < tx.vin.size(); j++)
             tx.vin[j].scriptSig = tx.vin[0].scriptSig;
 
-        CDataStream ds(SER_DISK, CLIENT_VERSION);
-        ds << tx;
-        BOOST_CHECK(!AddOrphanTx(ds));
+        LOCK(cs_orphancache);
+        // BU, we keep orphans up to the configured memory limit to help xthin compression so this should succeed
+        // whereas it fails in other clients
+        BOOST_CHECK(AddOrphanTx(tx, i));
     }
 
-    // Test LimitOrphanTxSize() function:
-    LimitOrphanTxSize(40);
-    BOOST_CHECK(mapOrphanTransactions.size() <= 40);
-    LimitOrphanTxSize(10);
-    BOOST_CHECK(mapOrphanTransactions.size() <= 10);
-    LimitOrphanTxSize(0);
-    BOOST_CHECK(mapOrphanTransactions.empty());
-    BOOST_CHECK(mapOrphanTransactionsByPrev.empty());
-}
-
-BOOST_AUTO_TEST_CASE(DoS_checkSig)
-{
-    // Test signature caching code (see key.cpp Verify() methods)
-
-    CKey key;
-    key.MakeNewKey(true);
-    CBasicKeyStore keystore;
-    keystore.AddKey(key);
-
-    // 100 orphan transactions:
-    static const int NPREV=100;
-    CTransaction orphans[NPREV];
-    for (int i = 0; i < NPREV; i++)
+    // Test LimitOrphanTxSize() function: limit by number of txns
     {
-        CTransaction& tx = orphans[i];
-        tx.vin.resize(1);
-        tx.vin[0].prevout.n = 0;
-        tx.vin[0].prevout.hash = GetRandHash();
-        tx.vin[0].scriptSig << OP_1;
-        tx.vout.resize(1);
-        tx.vout[0].nValue = 1*CENT;
-        tx.vout[0].scriptPubKey.SetDestination(key.GetPubKey().GetID());
-
-        CDataStream ds(SER_DISK, CLIENT_VERSION);
-        ds << tx;
-        AddOrphanTx(ds);
+        LOCK(cs_orphancache);
+        LimitOrphanTxSize(40, 10000000);
+        BOOST_CHECK_EQUAL(mapOrphanTransactions.size(), 40);
+        LimitOrphanTxSize(10, 10000000);
+        BOOST_CHECK_EQUAL(mapOrphanTransactions.size(), 10);
+        LimitOrphanTxSize(0, 10000000);
+        BOOST_CHECK(mapOrphanTransactions.empty());
+        BOOST_CHECK(mapOrphanTransactionsByPrev.empty());
     }
 
-    // Create a transaction that depends on orphans:
-    CTransaction tx;
-    tx.vout.resize(1);
-    tx.vout[0].nValue = 1*CENT;
-    tx.vout[0].scriptPubKey.SetDestination(key.GetPubKey().GetID());
-    tx.vin.resize(NPREV);
-    for (unsigned int j = 0; j < tx.vin.size(); j++)
+    // Test EraseOrphansByTime():
     {
-        tx.vin[j].prevout.n = 0;
-        tx.vin[j].prevout.hash = orphans[j].GetHash();
+        LOCK(cs_orphancache);
+        int64_t nStartTime = GetTime();
+        nLastOrphanCheck = nStartTime;
+        SetMockTime(nStartTime); // Overrides future calls to GetTime()
+        for (int i = 0; i < 50; i++)
+        {
+            CMutableTransaction tx;
+            tx.vin.resize(1);
+            tx.vin[0].prevout.n = 0;
+            tx.vin[0].prevout.hash = GetRandHash();
+            tx.vin[0].scriptSig << OP_1;
+            tx.vout.resize(1);
+            tx.vout[0].nValue = 1 * CENT;
+            tx.vout[0].scriptPubKey = GetScriptForDestination(key.GetPubKey().GetID());
+
+            AddOrphanTx(tx, i);
+        }
+        BOOST_CHECK(mapOrphanTransactions.size() == 50);
+        EraseOrphansByTime();
+        BOOST_CHECK(mapOrphanTransactions.size() == 50);
+
+        // Advance the clock 1 minute
+        SetMockTime(nStartTime + 60);
+        EraseOrphansByTime();
+        BOOST_CHECK(mapOrphanTransactions.size() == 50);
+
+        // Advance the clock 10 minutes
+        SetMockTime(nStartTime + 60 * 10);
+        EraseOrphansByTime();
+        BOOST_CHECK(mapOrphanTransactions.size() == 50);
+
+        // Advance the clock 1 hour
+        SetMockTime(nStartTime + 60 * 60);
+        EraseOrphansByTime();
+        BOOST_CHECK(mapOrphanTransactions.size() == 50);
+
+        // Advance the clock DEFAULT_ORPHANPOOL_EXPIRY hours
+        SetMockTime(nStartTime + 60 * 60 * DEFAULT_ORPHANPOOL_EXPIRY);
+        EraseOrphansByTime();
+        BOOST_CHECK(mapOrphanTransactions.size() == 50);
+
+        /** Test the boundary where orphans should get purged. **/
+        // Advance the clock DEFAULT_ORPHANPOOL_EXPIRY hours plus 4 minutes 59 seconds
+        SetMockTime(nStartTime + 60 * 60 * DEFAULT_ORPHANPOOL_EXPIRY + 299);
+        EraseOrphansByTime();
+        BOOST_CHECK(mapOrphanTransactions.size() == 50);
+
+        // Advance the clock DEFAULT_ORPHANPOOL_EXPIRY hours plus 5 minutes
+        SetMockTime(nStartTime + 60 * 60 * DEFAULT_ORPHANPOOL_EXPIRY + 300);
+        EraseOrphansByTime();
+        BOOST_CHECK(mapOrphanTransactions.size() == 0);
+
+        SetMockTime(0);
     }
-    // Creating signatures primes the cache:
-    boost::posix_time::ptime mst1 = boost::posix_time::microsec_clock::local_time();
-    for (unsigned int j = 0; j < tx.vin.size(); j++)
-        BOOST_CHECK(SignSignature(keystore, orphans[j], tx, j));
-    boost::posix_time::ptime mst2 = boost::posix_time::microsec_clock::local_time();
-    boost::posix_time::time_duration msdiff = mst2 - mst1;
-    long nOneValidate = msdiff.total_milliseconds();
-    if (fDebug) printf("DoS_Checksig sign: %ld\n", nOneValidate);
-
-    // ... now validating repeatedly should be quick:
-    // 2.8GHz machine, -g build: Sign takes ~760ms,
-    // uncached Verify takes ~250ms, cached Verify takes ~50ms
-    // (for 100 single-signature inputs)
-    mst1 = boost::posix_time::microsec_clock::local_time();
-    for (unsigned int i = 0; i < 5; i++)
-        for (unsigned int j = 0; j < tx.vin.size(); j++)
-            BOOST_CHECK(VerifySignature(orphans[j], tx, j, true, SIGHASH_ALL));
-    mst2 = boost::posix_time::microsec_clock::local_time();
-    msdiff = mst2 - mst1;
-    long nManyValidate = msdiff.total_milliseconds();
-    if (fDebug) printf("DoS_Checksig five: %ld\n", nManyValidate);
-
-    BOOST_CHECK_MESSAGE(nManyValidate < nOneValidate, "Signature cache timing failed");
-
-    // Empty a signature, validation should fail:
-    CScript save = tx.vin[0].scriptSig;
-    tx.vin[0].scriptSig = CScript();
-    BOOST_CHECK(!VerifySignature(orphans[0], tx, 0, true, SIGHASH_ALL));
-    tx.vin[0].scriptSig = save;
-
-    // Swap signatures, validation should fail:
-    std::swap(tx.vin[0].scriptSig, tx.vin[1].scriptSig);
-    BOOST_CHECK(!VerifySignature(orphans[0], tx, 0, true, SIGHASH_ALL));
-    BOOST_CHECK(!VerifySignature(orphans[1], tx, 1, true, SIGHASH_ALL));
-    std::swap(tx.vin[0].scriptSig, tx.vin[1].scriptSig);
-
-    // Exercise -maxsigcachesize code:
-    mapArgs["-maxsigcachesize"] = "10";
-    // Generate a new, different signature for vin[0] to trigger cache clear:
-    CScript oldSig = tx.vin[0].scriptSig;
-    BOOST_CHECK(SignSignature(keystore, orphans[0], tx, 0));
-    BOOST_CHECK(tx.vin[0].scriptSig != oldSig);
-    for (unsigned int j = 0; j < tx.vin.size(); j++)
-        BOOST_CHECK(VerifySignature(orphans[j], tx, j, true, SIGHASH_ALL));
-    mapArgs.erase("-maxsigcachesize");
-
-    LimitOrphanTxSize(0);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
