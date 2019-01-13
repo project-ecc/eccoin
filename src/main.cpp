@@ -62,7 +62,7 @@
 #include <boost/math/distributions/poisson.hpp>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_int_distribution.hpp>
-#include <boost/thread.hpp>
+
 #include <random>
 #include <random>
 #include <sstream>

@@ -90,7 +90,6 @@
 #include <boost/algorithm/string/case_conv.hpp> // for to_lower()
 #include <boost/algorithm/string/predicate.hpp> // for startswith() and endswith()
 #include <boost/program_options/detail/config_file.hpp>
-#include <boost/thread.hpp>
 #include <openssl/conf.h>
 #include <openssl/crypto.h>
 #include <openssl/rand.h>

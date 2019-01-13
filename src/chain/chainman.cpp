@@ -28,7 +28,6 @@
 #include "processheader.h"
 #include "txmempool.h"
 #include "undo.h"
-#include <boost/thread.hpp>
 
 CBlockIndex *CChainManager::AddToBlockIndex(const CBlockHeader &block)
 {
@@ -189,10 +188,17 @@ bool CChainManager::LoadBlockIndexDB()
 {
     int64_t nStart = GetTimeMillis();
     if (!pblocktree->LoadBlockIndexGuts())
+    {
         return false;
+    }
+
     LogPrintf("LoadBlockIndexGuts %15dms\n", GetTimeMillis() - nStart);
 
-    boost::this_thread::interruption_point();
+    if (shutdown_threads.load())
+    {
+        LogPrintf("LoadBlockIndexDB(): Shutdown requested. returning...\n");
+        return false;
+    }
 
     // Calculate nChainWork
     std::vector<std::pair<int, CBlockIndex *> > vSortedByHeight;
@@ -324,7 +330,10 @@ bool CChainManager::LoadExternalBlockFile(const CNetworkTemplate &chainparams, F
         uint64_t nRewind = blkdat.GetPos();
         while (!blkdat.eof())
         {
-            boost::this_thread::interruption_point();
+            if (shutdown_threads.load())
+            {
+                break;
+            }
 
             blkdat.SetPos(nRewind);
             nRewind++; // start one byte further next time, in case of failure

@@ -24,6 +24,7 @@
 #include "args.h"
 #include "crypto/hash.h"
 #include "protocol.h"
+#include "threadgroup.h"
 #include "util/util.h"
 #include "util/utilstrencodings.h"
 
@@ -80,7 +81,9 @@ void CDBEnv::Close() { EnvShutdown(); }
 bool CDBEnv::Open(const fs::path &pathIn)
 {
     if (fDbEnvInit)
+    {
         return true;
+    }
 
     boost::this_thread::interruption_point();
 
@@ -118,7 +121,9 @@ bool CDBEnv::Open(const fs::path &pathIn)
 void CDBEnv::MakeMock()
 {
     if (fDbEnvInit)
+    {
         throw std::runtime_error("CDBEnv::MakeMock: Already initialized");
+    }
 
     boost::this_thread::interruption_point();
 

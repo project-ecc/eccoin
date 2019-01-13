@@ -159,7 +159,7 @@ std::unique_ptr<CBlockTemplate> CreateNewPoSBlock(CWallet *pwallet, const CScrip
             nLastCoinStakeSearchTime = nSearchTime;
         }
         MilliSleep(100);
-        if (fShutdown)
+        if (shutdown_threads.load())
             return nullptr;
     }
 
@@ -352,19 +352,19 @@ void EccMinter(CWallet *pwallet)
     unsigned int nExtraNonce = 0;
     while (true)
     {
-        if (fShutdown)
+        if (shutdown_threads.load())
             return;
         if (!g_connman)
         {
             MilliSleep(1000);
-            if (fShutdown)
+            if (shutdown_threads.load())
                 return;
         }
         while (g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL) < 6 ||
                pnetMan->getChainActive()->IsInitialBlockDownload() || pwallet->IsLocked())
         {
             MilliSleep(1000);
-            if (fShutdown)
+            if (shutdown_threads.load())
                 return;
         }
         CBlockIndex *pindexPrev = pnetMan->getChainActive()->chainActive.Tip();

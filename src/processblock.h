@@ -50,6 +50,7 @@ bool UndoReadFromDisk(CBlockUndo &blockundo, const CDiskBlockPos &pos, const uin
 
 /** Run an instance of the script checking thread */
 void ThreadScriptCheck();
+void InterruptScriptCheck();
 
 /** Apply the effects of this block (with given index) on the UTXO set represented by coins */
 bool ConnectBlock(const CBlock &block,

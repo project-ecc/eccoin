@@ -133,8 +133,6 @@ rpc/rpcrawtransaction.cpp
 rpc/rpcserver.cpp
 rpc/rpcserver.h
 rpc/rpcwallet.cpp
-scheduler.cpp
-scheduler.h
 script/bitcoinconsensus.cpp
 script/bitcoinconsensus.h
 script/interpreter.cpp
@@ -161,8 +159,7 @@ support/pagelocker.cpp
 support/pagelocker.h
 sync.cpp
 sync.h
-threadinterrupt.cpp
-threadinterrupt.h
+threadgroup.h
 threadsafety.h
 timedata.cpp
 timedata.h
@@ -235,7 +232,6 @@ test/prevector_tests.cpp
 test/reverselock_tests.cpp
 test/rpc_tests.cpp
 test/sanity_tests.cpp
-test/scheduler_tests.cpp
 test/scriptnum10.h
 test/scriptnum_tests.cpp
 test/script_P2SH_tests.cpp

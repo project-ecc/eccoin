@@ -18,12 +18,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <boost/thread.hpp>
 
+#include "verifydb.h"
 #include "init.h"
 #include "main.h"
 #include "processblock.h"
-#include "verifydb.h"
 
 
 CVerifyDB::CVerifyDB() { uiInterface.ShowProgress(_("Verifying blocks..."), 0); }
@@ -50,7 +49,11 @@ bool CVerifyDB::VerifyDB(const CNetworkTemplate &chainparams, CCoinsView *coinsv
     for (CBlockIndex *pindex = pnetMan->getChainActive()->chainActive.Tip(); pindex && pindex->pprev;
          pindex = pindex->pprev)
     {
-        boost::this_thread::interruption_point();
+        if (shutdown_threads.load())
+        {
+            LogPrintf("VerifyDB(): Shutdown requested. Exiting.\n");
+            return false;
+        }
         uiInterface.ShowProgress(_("Verifying blocks..."),
             std::max(1, std::min(
                             99, (int)(((double)(pnetMan->getChainActive()->chainActive.Height() - pindex->nHeight)) /
@@ -112,7 +115,11 @@ bool CVerifyDB::VerifyDB(const CNetworkTemplate &chainparams, CCoinsView *coinsv
         CBlockIndex *pindex = pindexState;
         while (pindex != pnetMan->getChainActive()->chainActive.Tip())
         {
-            boost::this_thread::interruption_point();
+            if (shutdown_threads.load())
+            {
+                LogPrintf("VerifyDB(): [lower] Shutdown requested. Exiting.\n");
+                return false;
+            }
             uiInterface.ShowProgress(_("Verifying blocks..."),
                 std::max(1, std::min(99, 100 - (int)(((double)(pnetMan->getChainActive()->chainActive.Height() -
                                                                pindex->nHeight)) /

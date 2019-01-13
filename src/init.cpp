@@ -39,7 +39,6 @@
 #include "policy/policy.h"
 #include "processblock.h"
 #include "rpc/rpcserver.h"
-#include "scheduler.h"
 #include "script/sigcache.h"
 #include "script/standard.h"
 #include "torcontrol.h"
@@ -71,10 +70,9 @@
 #include <boost/filesystem.hpp>
 #include <boost/function.hpp>
 #include <boost/interprocess/sync/file_lock.hpp>
-#include <boost/thread.hpp>
+
 #include <openssl/crypto.h>
 
-bool fShutdown = false;
 CWallet *pwalletMain = nullptr;
 CNetworkManager *pnetMan = nullptr;
 
@@ -120,7 +118,7 @@ CClientUIInterface uiInterface; // Declared but not defined in ui_interface.h
 // created by AppInit() or the Qt main() function.
 //
 // A clean exit happens when StartShutdown() or the SIGTERM
-// signal handler sets fRequestShutdown, which triggers
+// signal handler sets shutdown_threads, which triggers
 // the DetectShutdownThread(), which interrupts the main thread group.
 // DetectShutdownThread() then exits, which causes AppInit() to
 // continue (it .joins the shutdown thread).
@@ -133,15 +131,22 @@ CClientUIInterface uiInterface; // Declared but not defined in ui_interface.h
 // before adding any threads to the threadGroup, so .join_all() returns
 // immediately and the parent exits from main().
 //
-// Shutdown for Qt is very similar, only it uses a QTimer to detect
-// fRequestShutdown getting set, and then does the normal Qt
-// shutdown thing.
 //
 
-volatile bool fRequestShutdown = false;
 
-void StartShutdown() { fRequestShutdown = true; }
-bool ShutdownRequested() { return fRequestShutdown; }
+std::atomic<bool> shutdown_threads(false);
+
+void StartShutdown()
+{
+    // use one atomic bool for shutdowns
+    shutdown_threads.store(true);
+}
+bool ShutdownRequested()
+{
+    // use one atomic bool for shutdowns
+    return shutdown_threads.load();
+}
+
 class CCoinsViewErrorCatcher final : public CCoinsViewBacked
 {
 public:
@@ -171,15 +176,16 @@ std::unique_ptr<CCoinsViewDB> pcoinsdbview;
 std::unique_ptr<CCoinsViewErrorCatcher> pcoinscatcher;
 static boost::scoped_ptr<ECCVerifyHandle> globalVerifyHandle;
 
-void Interrupt(boost::thread_group &threadGroup)
+void Interrupt(thread_group &threadGroup)
 {
-    fShutdown = true;
+    threadGroup.interrupt_all();
+    g_connman->Interrupt();
     InterruptHTTPServer();
     InterruptHTTPRPC();
     InterruptRPC();
     InterruptREST();
     InterruptTorControl();
-    threadGroup.interrupt_all();
+    InterruptScriptCheck();
 }
 
 void Shutdown()
@@ -188,7 +194,9 @@ void Shutdown()
     static CCriticalSection cs_Shutdown;
     TRY_LOCK(cs_Shutdown, lockShutdown);
     if (!lockShutdown)
+    {
         return;
+    }
 
     /// Note: Shutdown() must be able to handle cases in which AppInit2() failed part of the way,
     /// for example if the data directory was found to be locked.
@@ -204,15 +212,20 @@ void Shutdown()
 
     if (pwalletMain)
         pwalletMain->Flush(false);
+
     // shut off pos miner
     ThreadGeneration(pwalletMain, true, true);
     // shut off pow miner
     ThreadGeneration(pwalletMain, true, false);
+
     MapPort(false);
     UnregisterValidationInterface(peerLogic.get());
     peerLogic.reset();
+
     g_connman.reset();
+
     StopTorControl();
+
     UnregisterNodeSignals(GetNodeSignals());
 
     if (fFeeEstimatesInitialized)
@@ -230,25 +243,28 @@ void Shutdown()
         LOCK(cs_main);
         if (pnetMan)
         {
-            if (pnetMan->getChainActive()->pcoinsTip != NULL)
+            if (pnetMan->getChainActive()->pcoinsTip != nullptr)
             {
                 FlushStateToDisk();
             }
             pnetMan->getChainActive()->pcoinsTip.reset();
+            pnetMan->getChainActive()->pcoinsTip = nullptr;
         }
         pcoinscatcher.reset();
-        pcoinscatcher = NULL;
+        pcoinscatcher = nullptr;
         pcoinsdbview.reset();
-        pcoinsdbview = NULL;
+        pcoinsdbview = nullptr;
         if (pnetMan)
         {
             pnetMan->getChainActive()->pblocktree.reset();
-            pnetMan->getChainActive()->pblocktree = NULL;
+            pnetMan->getChainActive()->pblocktree = nullptr;
         }
     }
 
     if (pwalletMain)
+    {
         pwalletMain->Flush(true);
+    }
 
 #ifndef WIN32
     try
@@ -272,7 +288,7 @@ void Shutdown()
 /**
  * Signal handlers are very limited in what they are allowed to do, so:
  */
-void HandleSIGTERM(int) { fRequestShutdown = true; }
+void HandleSIGTERM(int) { shutdown_threads.store(true); }
 void HandleSIGHUP(int) { fReopenDebugLog = true; }
 bool static InitError(const std::string &str)
 {
@@ -666,7 +682,7 @@ static void BlockNotifyCallback(bool initialSync, const CBlockIndex *pBlockIndex
     std::string strCmd = gArgs.GetArg("-blocknotify", "");
 
     boost::replace_all(strCmd, "%s", pBlockIndex->GetBlockHash().GetHex());
-    boost::thread t(runCommand, strCmd); // thread runs free
+    std::thread t(runCommand, strCmd); // thread runs free
 }
 
 struct CImportingNow
@@ -771,7 +787,7 @@ bool InitSanityCheck(void)
     return true;
 }
 
-bool AppInitServers(boost::thread_group &threadGroup)
+bool AppInitServers(thread_group &threadGroup)
 {
     RPCServer::OnStopped(&OnRPCStopped);
     RPCServer::OnPreCommand(&OnRPCPreCommand);
@@ -902,7 +918,7 @@ void GenerateNetworkTemplates()
 /** Initialize bitcoin.
  *  @pre Parameters should be parsed and config file should be read.
  */
-bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
+bool AppInit2(thread_group &threadGroup)
 {
 // ********************************************************* Step 1: setup
 #ifdef _MSC_VER
@@ -1216,12 +1232,11 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
     if (nScriptCheckThreads)
     {
         for (int i = 0; i < nScriptCheckThreads - 1; i++)
-            threadGroup.create_thread(&ThreadScriptCheck);
+        {
+            std::string name = "scriptCheck" + std::to_string(i);
+            threadGroup.create_thread(name, &ThreadScriptCheck);
+        }
     }
-
-    // Start the lightweight task scheduler thread
-    CScheduler::Function serviceLoop = boost::bind(&CScheduler::serviceQueue, &scheduler);
-    threadGroup.create_thread(boost::bind(&TraceThread<CScheduler::Function>, "scheduler", serviceLoop));
 
     /* Start the RPC server already.  It will be started in "warmup" mode
      * and not really process calls already (but it will signify connections
@@ -1606,7 +1621,7 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
                 if (fRet)
                 {
                     fReindex = true;
-                    fRequestShutdown = false;
+                    shutdown_threads.store(false);
                 }
                 else
                 {
@@ -1624,7 +1639,7 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
     // As LoadBlockIndex can take several minutes, it's possible the user
     // requested to kill the GUI during the last operation. If so, exit.
     // As the program has not fully started yet, Shutdown() is possibly overkill.
-    if (fRequestShutdown)
+    if (shutdown_threads.load())
     {
         LogPrintf("Shutdown requested. Exiting.\n");
         return false;
@@ -1665,13 +1680,15 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
         for (auto const &strFile : gArgs.GetArgs("-loadblock"))
             vImportFiles.push_back(strFile);
     }
-    threadGroup.create_thread(boost::bind(&ThreadImport, vImportFiles));
-    /// THIS FOR LOOP IS STUCK FOREVER BECAUSE CHAIN TIP IS NEVER ACTIVATED
+    threadGroup.create_thread("importFiles", &ThreadImport, vImportFiles);
+
     if (pnetMan->getChainActive()->chainActive.Tip() == NULL)
     {
         LogPrintf("Waiting for genesis block to be imported...\n");
-        while (!fRequestShutdown && pnetMan->getChainActive()->chainActive.Tip() == NULL)
+        while (!shutdown_threads.load() && pnetMan->getChainActive()->chainActive.Tip() == NULL)
+        {
             MilliSleep(10);
+        }
     }
 
     // ********************************************************* Step 11: start node
@@ -1693,7 +1710,7 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
     LogPrintf("mapAddressBook.size() = %u\n", pwalletMain ? pwalletMain->mapAddressBook.size() : 0);
 
     if (gArgs.GetBoolArg("-listenonion", DEFAULT_LISTEN_ONION))
-        StartTorControl(threadGroup, scheduler);
+        StartTorControl(threadGroup);
 
     Discover(threadGroup);
 
@@ -1716,7 +1733,7 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
     connOptions.nMaxOutboundTimeframe = nMaxOutboundTimeframe;
     connOptions.nMaxOutboundLimit = nMaxOutboundLimit;
 
-    if (!connman.Start(scheduler, strNodeError, connOptions))
+    if (!connman.Start(strNodeError, connOptions))
     {
         return InitError(strNodeError);
     }
@@ -1743,8 +1760,8 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
         pwalletMain->ReacceptWalletTransactions();
 
         // Run a thread to flush wallet periodically
-        threadGroup.create_thread(boost::bind(&ThreadFlushWalletDB, boost::ref(pwalletMain->strWalletFile)));
+        threadGroup.create_thread("flushWalletDB", &ThreadFlushWalletDB, boost::ref(pwalletMain->strWalletFile));
     }
 
-    return !fRequestShutdown;
+    return !shutdown_threads.load();
 }

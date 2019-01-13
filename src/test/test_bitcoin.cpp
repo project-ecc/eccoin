@@ -30,7 +30,6 @@
 
 #include <memory>
 
-#include <boost/thread.hpp>
 
 extern bool fPrintToConsole;
 extern void noui_connect();

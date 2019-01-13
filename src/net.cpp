@@ -29,7 +29,6 @@
 #include "crypto/hash.h"
 #include "init.h"
 #include "networks/netman.h"
-#include "scheduler.h"
 #include "ui_interface.h"
 #include "util/utilstrencodings.h"
 
@@ -47,7 +46,7 @@
 #endif
 
 #include <boost/filesystem.hpp>
-#include <boost/thread.hpp>
+
 #include <memory>
 
 #include <cmath>
@@ -1288,7 +1287,7 @@ void CConnman::AcceptConnection(const ListenSocket &hListenSocket)
 void CConnman::ThreadSocketHandler()
 {
     unsigned int nPrevNodeCount = 0;
-    while (!interruptNet)
+    while (interruptNet.load() == false)
     {
         //
         // Disconnect nodes
@@ -1428,7 +1427,7 @@ void CConnman::ThreadSocketHandler()
         }
 
         int nSelect = select(have_fds ? hSocketMax + 1 : 0, &fdsetRecv, &fdsetSend, &fdsetError, &timeout);
-        if (interruptNet)
+        if (interruptNet.load() == true)
         {
             return;
         }
@@ -1446,7 +1445,8 @@ void CConnman::ThreadSocketHandler()
             }
             FD_ZERO(&fdsetSend);
             FD_ZERO(&fdsetError);
-            if (!interruptNet.sleep_for(std::chrono::milliseconds(timeout.tv_usec / 1000)))
+            MilliSleep(timeout.tv_usec / 1000);
+            if (interruptNet.load() == true)
             {
                 return;
             }
@@ -1477,7 +1477,7 @@ void CConnman::ThreadSocketHandler()
         }
         for (CNode *pnode : vNodesCopy)
         {
-            if (interruptNet)
+            if (interruptNet.load() == true)
             {
                 return;
             }
@@ -1632,6 +1632,8 @@ void CConnman::WakeMessageHandler()
     condMsgProc.notify_one();
 }
 
+std::atomic<bool> upnp_thread_shutdown(false);
+
 #ifdef USE_UPNP
 void ThreadMapPort()
 {
@@ -1712,9 +1714,21 @@ void ThreadMapPort()
                 {
                     LogPrintf("UPnP Port Mapping successful.\n");
                 }
-
+                if (upnp_thread_shutdown.load())
+                {
+                    return;
+                }
+                int64_t nStart = GetTime();
+                int64_t nFinish = nStart + (20 * 60 * 1000);
                 // Refresh every 20 minutes
-                MilliSleep(20 * 60 * 1000);
+                while (nStart <= nFinish && upnp_thread_shutdown.load() == false)
+                {
+                    MilliSleep(10000);
+                }
+                if (upnp_thread_shutdown.load())
+                {
+                    return;
+                }
             }
         }
         catch (const boost::thread_interrupted &)
@@ -1741,21 +1755,22 @@ void ThreadMapPort()
 
 void MapPort(bool fUseUPnP)
 {
-    static boost::thread *upnp_thread = nullptr;
+    static std::thread *upnp_thread = nullptr;
 
     if (fUseUPnP)
     {
         if (upnp_thread)
         {
-            upnp_thread->interrupt();
+            upnp_thread_shutdown.store(true);
             upnp_thread->join();
             delete upnp_thread;
+            upnp_thread = nullptr;
         }
-        upnp_thread = new boost::thread(boost::bind(&TraceThread<void (*)()>, "upnp", &ThreadMapPort));
+        upnp_thread = new std::thread(&TraceThread<void (*)()>, "upnp", &ThreadMapPort);
     }
     else if (upnp_thread)
     {
-        upnp_thread->interrupt();
+        upnp_thread_shutdown.store(true);
         upnp_thread->join();
         delete upnp_thread;
         upnp_thread = nullptr;
@@ -1792,7 +1807,8 @@ void CConnman::ThreadDNSAddressSeed()
     // less influence on the network topology, and reduces traffic to the seeds.
     if ((addrman.size() > 0) && (!gArgs.GetBoolArg("-forcednsseed", DEFAULT_FORCEDNSSEED)))
     {
-        if (!interruptNet.sleep_for(std::chrono::seconds(11)))
+        MilliSleep(5000);
+        if (interruptNet.load() == true)
         {
             return;
         }
@@ -1866,10 +1882,29 @@ void CConnman::DumpAddresses()
     LogPrintf("Flushed %d addresses to peers.dat  %dms\n", addrman.size(), GetTimeMillis() - nStart);
 }
 
-void CConnman::DumpData()
+void CConnman::_DumpData()
 {
     DumpAddresses();
     DumpBanlist();
+}
+
+void CConnman::DumpData(int64_t seconds_between_runs)
+{
+    while (interruptNet.load() == false)
+    {
+        // this has the potential to be a long sleep. so do it in chunks incase of node shutdown
+        int64_t nStart = GetTime();
+        int64_t nEnd = nStart + seconds_between_runs;
+        while (nStart < nEnd)
+        {
+            if (interruptNet.load() == true)
+            {
+                break;
+            }
+            std::this_thread::sleep_for(std::chrono::seconds(2));
+        }
+        _DumpData();
+    }
 }
 
 void CConnman::ProcessOneShot()
@@ -1909,13 +1944,15 @@ void CConnman::ThreadOpenConnections()
                 OpenNetworkConnection(addr, false, nullptr, strAddr.c_str());
                 for (int i = 0; i < 10 && i < nLoop; i++)
                 {
-                    if (!interruptNet.sleep_for(std::chrono::milliseconds(500)))
+                    MilliSleep(500);
+                    if (interruptNet.load() == true)
                     {
                         return;
                     }
                 }
             }
-            if (!interruptNet.sleep_for(std::chrono::milliseconds(500)))
+            MilliSleep(500);
+            if (interruptNet.load() == true)
             {
                 return;
             }
@@ -1927,17 +1964,18 @@ void CConnman::ThreadOpenConnections()
 
     // Minimum time before next feeler connection (in microseconds).
     int64_t nNextFeeler = PoissonNextSend(nStart * 1000 * 1000, FEELER_INTERVAL);
-    while (!interruptNet)
+    while (interruptNet.load() == false)
     {
         ProcessOneShot();
 
-        if (!interruptNet.sleep_for(std::chrono::milliseconds(500)))
+        MilliSleep(500);
+        if (interruptNet.load() == true)
         {
             return;
         }
 
         CSemaphoreGrant grant(*semOutbound);
-        if (interruptNet)
+        if (interruptNet.load() == true)
         {
             return;
         }
@@ -2015,7 +2053,7 @@ void CConnman::ThreadOpenConnections()
 
         int64_t nANow = GetAdjustedTime();
         int nTries = 0;
-        while (!interruptNet)
+        while (interruptNet.load() == false)
         {
             CAddrInfo addr = addrman.Select(fFeeler);
 
@@ -2079,9 +2117,12 @@ void CConnman::ThreadOpenConnections()
                 // Add small amount of random noise before connection to avoid
                 // synchronization.
                 int randsleep = GetRandInt(FEELER_SLEEP_WINDOW * 1000);
-                if (!interruptNet.sleep_for(std::chrono::milliseconds(randsleep)))
+                MilliSleep(randsleep);
                 {
-                    return;
+                    if (interruptNet.load() == true)
+                    {
+                        return;
+                    }
                 }
                 LogPrintf("Making feeler connection to %s\n", addrConnect.ToString());
             }
@@ -2196,7 +2237,8 @@ void CConnman::ThreadOpenAddedConnections()
                     LookupNumeric(info.strAddedNode.c_str(), pnetMan->getActivePaymentNetwork()->GetDefaultPort()));
                 OpenNetworkConnection(
                     CAddress(service, NODE_NONE), false, &grant, info.strAddedNode.c_str(), false, false, true);
-                if (!interruptNet.sleep_for(std::chrono::milliseconds(500)))
+                MilliSleep(500);
+                if (interruptNet.load() == true)
                 {
                     return;
                 }
@@ -2205,7 +2247,8 @@ void CConnman::ThreadOpenAddedConnections()
         }
         // Retry every 60 seconds if a connection was attempted, otherwise two
         // seconds.
-        if (!interruptNet.sleep_for(std::chrono::seconds(tried ? 60 : 2)))
+        MilliSleep((tried ? 60 : 2) * 1000);
+        if (interruptNet.load() == true)
         {
             return;
         }
@@ -2224,7 +2267,7 @@ bool CConnman::OpenNetworkConnection(const CAddress &addrConnect,
     //
     // Initiate outbound network connection
     //
-    if (interruptNet)
+    if (interruptNet.load() == true)
     {
         return false;
     }
@@ -2454,7 +2497,7 @@ bool CConnman::BindListenPort(const CService &addrBind, std::string &strError, b
     return true;
 }
 
-void Discover(boost::thread_group &threadGroup)
+void Discover(thread_group &threadGroup)
 {
     if (!fDiscover)
     {
@@ -2551,10 +2594,11 @@ CConnman::CConnman(uint64_t nSeed0In, uint64_t nSeed1In) : nSeed0(nSeed0In), nSe
     nBestHeight = 0;
     clientInterface = nullptr;
     flagInterruptMsgProc = false;
+    interruptNet.store(false);
 }
 
 NodeId CConnman::GetNewNodeId() { return nLastNodeId.fetch_add(1, std::memory_order_relaxed); }
-bool CConnman::Start(CScheduler &scheduler, std::string &strNodeError, Options connOptions)
+bool CConnman::Start(std::string &strNodeError, Options connOptions)
 {
     nTotalBytesRecv = 0;
     nTotalBytesSent = 0;
@@ -2645,8 +2689,8 @@ bool CConnman::Start(CScheduler &scheduler, std::string &strNodeError, Options c
     // Start threads
     //
     InterruptSocks5(false);
-    interruptNet.reset();
     flagInterruptMsgProc = false;
+    interruptNet.store(false);
 
     {
         std::unique_lock<std::mutex> lock(mutexMsgProc);
@@ -2683,7 +2727,8 @@ bool CConnman::Start(CScheduler &scheduler, std::string &strNodeError, Options c
         std::function<void()>(std::bind(&CConnman::ThreadMessageHandler, this)));
 
     // Dump network addresses
-    scheduler.scheduleEvery(std::bind(&CConnman::DumpData, this), DUMP_ADDRESSES_INTERVAL * 1000);
+    threadDumpData = std::thread(&TraceThread<std::function<void()> >, "dumpdata",
+        std::function<void()>(std::bind(&CConnman::DumpData, this, DUMP_ADDRESSES_INTERVAL)));
 
     return true;
 }
@@ -2708,8 +2753,7 @@ void CConnman::Interrupt()
         flagInterruptMsgProc = true;
     }
     condMsgProc.notify_all();
-
-    interruptNet();
+    interruptNet.store(true);
     InterruptSocks5(true);
 
     if (semOutbound)
@@ -2751,10 +2795,14 @@ void CConnman::Stop()
     {
         threadSocketHandler.join();
     }
+    if (threadDumpData.joinable())
+    {
+        threadDumpData.join();
+    }
 
     if (fAddressesInitialized)
     {
-        DumpData();
+        _DumpData();
         fAddressesInitialized = false;
     }
 

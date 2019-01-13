@@ -110,7 +110,6 @@ BITCOIN_CORE_H = \
   rpc/rpcclient.h \
   rpc/rpcprotocol.h \
   rpc/rpcserver.h \
-  scheduler.h \
   script/interpreter.h \
   script/script.h \
   script/script_error.h \
@@ -126,7 +125,7 @@ BITCOIN_CORE_H = \
   support/cleanse.h \
   support/pagelocker.h \
   sync.h \
-  threadinterrupt.h \
+  threadgroup.h \
   threadsafety.h \
   timedata.h \
   tinyformat.h \
@@ -218,7 +217,6 @@ libbitcoin_server_a_SOURCES = \
   chain/tx.cpp \
   protocol.cpp \
   pubkey.cpp \
-  scheduler.cpp \
   pbkdf2.cpp \
   script/interpreter.cpp \
   script/script.cpp \
@@ -271,7 +269,6 @@ libbitcoin_server_a_SOURCES = \
   wallet/wallet_ismine.cpp \
   wallet/walletdb.cpp \
   rpc/rpcclient.cpp \
-  threadinterrupt.cpp \
   $(BITCOIN_CORE_H)
 
 if GLIBC_BACK_COMPAT

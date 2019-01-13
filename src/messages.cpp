@@ -46,12 +46,10 @@
 #include "version.h"
 
 #include <algorithm>
-#include <boost/foreach.hpp>
-#include <boost/range/adaptor/reversed.hpp>
-#include <boost/thread.hpp>
 #include <map>
-#include <string>
 #include <vector>
+
+#include <boost/range/adaptor/reversed.hpp>
 
 //////////////////////////////////////////////////////////////////////////////
 //
