@@ -340,10 +340,6 @@ std::string HelpMessage()
     std::string strUsage = HelpMessageGroup(_("Options:"));
     strUsage += HelpMessageOpt("-?", _("This help message"));
     strUsage += HelpMessageOpt("-version", _("Print version and exit"));
-    strUsage +=
-        HelpMessageOpt("-alerts", strprintf(_("Receive and display P2P network alerts (default: %u)"), DEFAULT_ALERTS));
-    strUsage += HelpMessageOpt("-alertnotify=<cmd>", _("Execute command when a relevant alert is received or we see a "
-                                                       "really long fork (%s in cmd is replaced by message)"));
     strUsage += HelpMessageOpt(
         "-blocknotify=<cmd>", _("Execute command when the best block changes (%s in cmd is replaced by block hash)"));
     strUsage += HelpMessageOpt("-checkblocks=<n>",
@@ -378,10 +374,6 @@ std::string HelpMessage()
     strUsage += HelpMessageOpt("-pid=<file>", strprintf(_("Specify pid file (default: %s)"), PID_FILENAME));
 #endif
     strUsage += HelpMessageOpt("-reindex", _("Rebuild block chain index from current blk000??.dat files on startup"));
-#ifndef WIN32
-    strUsage += HelpMessageOpt("-sysperms", _("Create new files with system default permissions, instead of umask 077 "
-                                              "(only effective with disabled wallet functionality)"));
-#endif
 
     strUsage += HelpMessageGroup(_("Connection options:"));
     strUsage += HelpMessageOpt("-addnode=<ip>", _("Add a node to connect to and attempt to keep the connection open"));
@@ -418,9 +410,6 @@ std::string HelpMessage()
         "-permitbaremultisig", strprintf(_("Relay non-P2SH multisig (default: %u)"), DEFAULT_PERMIT_BAREMULTISIG));
     strUsage += HelpMessageOpt("-peerbloomfilters",
         strprintf(_("Support filtering of blocks and transaction with bloom filters (default: %u)"), 1));
-    if (showDebug)
-        strUsage += HelpMessageOpt("-enforcenodebloom",
-            strprintf("Enforce minimum protocol version to limit use of bloom filters (default: %u)", 0));
     strUsage += HelpMessageOpt("-port=<port>", strprintf(_("Listen for connections on <port> (default: %u)"),
                                                    pnetMan->getActivePaymentNetwork()->GetDefaultPort()));
     strUsage += HelpMessageOpt("-proxy=<ip:port>", _("Connect through SOCKS5 proxy"));
@@ -466,7 +455,6 @@ std::string HelpMessage()
 
 
     strUsage += HelpMessageGroup(_("Wallet options:"));
-    strUsage += HelpMessageOpt("-disablewallet", _("Do not load the wallet and disable wallet RPC calls"));
     strUsage +=
         HelpMessageOpt("-keypool=<n>", strprintf(_("Set key pool size to <n> (default: %u)"), DEFAULT_KEYPOOL_SIZE));
     strUsage += HelpMessageOpt("-fallbackfee=<amt>",
@@ -535,6 +523,7 @@ std::string HelpMessage()
             "-flushwallet", strprintf("Run a thread to flush wallet periodically (default: %u)", DEFAULT_FLUSHWALLET));
         strUsage += HelpMessageOpt("-stopafterblockimport",
             strprintf("Stop running after importing blocks from disk (default: %u)", DEFAULT_STOPAFTERBLOCKIMPORT));
+
         strUsage += HelpMessageOpt("-limitancestorcount=<n>",
             strprintf("Do not accept transactions if number of in-mempool ancestors is <n> or more (default: %u)",
                                        DEFAULT_ANCESTOR_LIMIT));
@@ -575,9 +564,6 @@ std::string HelpMessage()
         strUsage += HelpMessageOpt("-limitfreerelay=<n>",
             strprintf("Continuously rate-limit free transactions to <n>*1000 bytes per minute (default: %u)",
                                        DEFAULT_LIMITFREERELAY));
-        strUsage += HelpMessageOpt(
-            "-relaypriority", strprintf("Require high priority for relaying free or low-fee transactions (default: %u)",
-                                  DEFAULT_RELAYPRIORITY));
         strUsage += HelpMessageOpt("-maxsigcachesize=<n>",
             strprintf("Limit size of signature cache to <n> MiB (default: %u)", DEFAULT_MAX_SIG_CACHE_SIZE));
     }
@@ -595,8 +581,6 @@ std::string HelpMessage()
         strUsage += HelpMessageOpt("-privdb",
             strprintf("Sets the DB_PRIVATE flag in the wallet db environment (default: %u)", DEFAULT_WALLET_PRIVDB));
     }
-    strUsage +=
-        HelpMessageOpt("-shrinkdebugfile", _("Shrink debug.log file on client startup (default: 1 when no -debug)"));
 
     strUsage += HelpMessageGroup(_("Node relay options:"));
 
@@ -614,17 +598,8 @@ std::string HelpMessage()
     strUsage += HelpMessageOpt("-datacarriersize",
         strprintf(_("Maximum size of data in data carrier transactions we relay and mine (default: %u)"),
                                    MAX_OP_RETURN_RELAY));
-    strUsage += HelpMessageOpt("-mempoolreplacement",
-        strprintf(_("Enable transaction replacement in the memory pool (default: %u)"), DEFAULT_ENABLE_REPLACEMENT));
 
     strUsage += HelpMessageGroup(_("Block creation options:"));
-    strUsage += HelpMessageOpt(
-        "-blockminsize=<n>", strprintf(_("Set minimum block size in bytes (default: %u)"), DEFAULT_BLOCK_MIN_SIZE));
-    strUsage += HelpMessageOpt(
-        "-blockmaxsize=<n>", strprintf(_("Set maximum block size in bytes (default: %d)"), DEFAULT_BLOCK_MAX_SIZE));
-    strUsage += HelpMessageOpt("-blockprioritysize=<n>",
-        strprintf(_("Set maximum size of high-priority/low-fee transactions in bytes (default: %d)"),
-                                   DEFAULT_BLOCK_PRIORITY_SIZE));
     if (showDebug)
         strUsage += HelpMessageOpt("-blockversion=<n>", "Override block version to test forking scenarios");
 
@@ -945,15 +920,7 @@ bool AppInit2(thread_group &threadGroup)
         return InitError("Initializing networking failed");
 
 #ifndef WIN32
-    if (gArgs.GetBoolArg("-sysperms", false))
-    {
-        if (!gArgs.GetBoolArg("-disablewallet", false))
-            return InitError("-sysperms is not allowed in combination with enabled wallet functionality");
-    }
-    else
-    {
-        umask(077);
-    }
+    umask(077);
 
     // Clean shutdown on SIGTERM
     struct sigaction sa;
@@ -1056,8 +1023,6 @@ bool AppInit2(thread_group &threadGroup)
 
     fServer = gArgs.GetBoolArg("-server", false);
 
-    bool fDisableWallet = gArgs.GetBoolArg("-disablewallet", false);
-
     nConnectTimeout = gArgs.GetArg("-timeout", DEFAULT_CONNECT_TIMEOUT);
     if (nConnectTimeout <= 0)
         nConnectTimeout = DEFAULT_CONNECT_TIMEOUT;
@@ -1152,21 +1117,8 @@ bool AppInit2(thread_group &threadGroup)
     fAcceptDatacarrier = gArgs.GetBoolArg("-datacarrier", DEFAULT_ACCEPT_DATACARRIER);
     nMaxDatacarrierBytes = gArgs.GetArg("-datacarriersize", nMaxDatacarrierBytes);
 
-    fAlerts = gArgs.GetBoolArg("-alerts", DEFAULT_ALERTS);
-
     // Option to startup with mocktime set (used for regression testing):
     SetMockTime(gArgs.GetArg("-mocktime", 0)); // SetMockTime(0) is a no-op
-
-    fEnableReplacement = gArgs.GetBoolArg("-mempoolreplacement", DEFAULT_ENABLE_REPLACEMENT);
-    if ((!fEnableReplacement) && gArgs.IsArgSet("-mempoolreplacement"))
-    {
-        // Minimal effort at forwards compatibility
-        std::string strReplacementModeList = gArgs.GetArg("-mempoolreplacement", ""); // default is impossible
-        std::vector<std::string> vstrReplacementModes;
-        boost::split(vstrReplacementModes, strReplacementModeList, boost::is_any_of(","));
-        fEnableReplacement =
-            (std::find(vstrReplacementModes.begin(), vstrReplacementModes.end(), "fee") != vstrReplacementModes.end());
-    }
 
     // ********************************************************* Step 4: application initialization: dir lock,
     // daemonize, pidfile, debug log
@@ -1207,8 +1159,6 @@ bool AppInit2(thread_group &threadGroup)
 #ifndef WIN32
     CreatePidFile(GetPidFile(), getpid());
 #endif
-    if (gArgs.GetBoolArg("-shrinkdebugfile", !fDebug))
-        ShrinkDebugFile();
 
     if (fPrintToDebugLog)
         OpenDebugLog();
@@ -1249,23 +1199,20 @@ bool AppInit2(thread_group &threadGroup)
 
     // ********************************************************* Step 5: verify wallet database integrity
 
-    if (!fDisableWallet)
-    {
-        LogPrintf("Using wallet %s\n", strWalletFile);
-        LogPrintf("Verifying wallet...");
 
-        std::string warningString;
-        std::string errorString;
+    LogPrintf("Using wallet %s\n", strWalletFile);
+    uiInterface.InitMessage(_("Verifying wallet..."));
 
-        if (!CWallet::Verify(strWalletFile, warningString, errorString))
-            return false;
+    std::string warningString;
+    std::string errorString;
 
-        if (!warningString.empty())
-            InitWarning(warningString);
-        if (!errorString.empty())
-            return InitError(errorString);
+    if (!CWallet::Verify(strWalletFile, warningString, errorString))
+        return false;
+    if (!warningString.empty())
+        InitWarning(warningString);
+    if (!errorString.empty())
+        return InitError(errorString);
 
-    } // (!fDisableWallet)
     // ********************************************************* Step 6: network initialization
 
     assert(!g_connman);
@@ -1639,17 +1586,9 @@ bool AppInit2(thread_group &threadGroup)
 
     // ********************************************************* Step 8: load wallet
 
-    if (fDisableWallet)
-    {
-        pwalletMain = NULL;
-        LogPrintf("Wallet disabled!\n");
-    }
-    else
-    {
-        CWallet::InitLoadWallet();
-        if (!pwalletMain)
-            return false;
-    }
+    CWallet::InitLoadWallet();
+    if (!pwalletMain)
+        return false;
 
     // ********************************************************* Step 10: import blocks
 

@@ -1124,7 +1124,7 @@ bool static ProcessMessage(CNode *pfrom,
             Misbehaving(pfrom->GetId(), 100, "no-bloom-version");
             return false;
         }
-        else if (gArgs.GetBoolArg("-enforcenodebloom", false))
+        else
         {
             pfrom->fDisconnect = true;
             return false;

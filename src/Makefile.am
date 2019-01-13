@@ -98,7 +98,7 @@ BITCOIN_CORE_H = \
   prevector.h \
   chain/block.h \
   chain/tx.h \
-  pbkdf2.h \
+  crypto/pbkdf2.h \
   processblock.h \
   processheader.h \
   processtx.h \
@@ -216,7 +216,7 @@ libbitcoin_server_a_SOURCES = \
   chain/tx.cpp \
   net/protocol.cpp \
   pubkey.cpp \
-  pbkdf2.cpp \
+  crypto/pbkdf2.cpp \
   script/interpreter.cpp \
   script/script.cpp \
   script/script_error.cpp \
