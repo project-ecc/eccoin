@@ -35,9 +35,6 @@
 #include <boost/filesystem.hpp>
 #include <boost/scoped_ptr.hpp>
 
-
-static uint64_t nAccountingEntryNumber = 0;
-
 //
 // CWalletDB
 //

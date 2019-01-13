@@ -696,7 +696,7 @@ bool CWallet::AddToWallet(const CWalletTx &wtxIn, bool fFromLoadWallet, CWalletD
                             CWalletTx *const pwtx = (*it).second;
                             if (pwtx == &wtx)
                                 continue;
-                            int64_t nSmartTime=0;
+                            int64_t nSmartTime = 0;
                             if (pwtx)
                             {
                                 nSmartTime = pwtx->nTimeSmart;
