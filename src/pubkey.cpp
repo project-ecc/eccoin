@@ -359,13 +359,13 @@ void CExtPubKey::Decode(const unsigned char code[74])
     pubkey.Set(code + 41, code + 74);
 }
 
-bool CExtPubKey::Derive(CExtPubKey &out, unsigned int nChild) const
+bool CExtPubKey::Derive(CExtPubKey &out, unsigned int _nChild) const
 {
     out.nDepth = nDepth + 1;
     CKeyID id = pubkey.GetID();
     memcpy(&out.vchFingerprint[0], &id, 4);
-    out.nChild = nChild;
-    return pubkey.Derive(out.pubkey, out.vchChainCode, nChild, vchChainCode);
+    out.nChild = _nChild;
+    return pubkey.Derive(out.pubkey, out.vchChainCode, _nChild, vchChainCode);
 }
 
 

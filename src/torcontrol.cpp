@@ -137,7 +137,7 @@ private:
     static void eventcb(struct bufferevent *bev, short what, void *ctx);
 };
 
-TorControlConnection::TorControlConnection(struct event_base *base) : base(base), b_conn(0) {}
+TorControlConnection::TorControlConnection(struct event_base *_base) : base(_base), b_conn(0) {}
 TorControlConnection::~TorControlConnection()
 {
     if (b_conn)
@@ -217,8 +217,8 @@ void TorControlConnection::eventcb(struct bufferevent *bev, short what, void *ct
 }
 
 bool TorControlConnection::Connect(const std::string &target,
-    const ConnectionCB &connected,
-    const ConnectionCB &disconnected)
+    const ConnectionCB &_connected,
+    const ConnectionCB &_disconnected)
 {
     if (b_conn)
         Disconnect();
@@ -237,8 +237,8 @@ bool TorControlConnection::Connect(const std::string &target,
         return false;
     bufferevent_setcb(b_conn, TorControlConnection::readcb, NULL, TorControlConnection::eventcb, this);
     bufferevent_enable(b_conn, EV_READ | EV_WRITE);
-    this->connected = connected;
-    this->disconnected = disconnected;
+    this->connected = _connected;
+    this->disconnected = _disconnected;
 
     // Finally, connect to target
     if (bufferevent_socket_connect(b_conn, (struct sockaddr *)&connect_to_addr, connect_to_addrlen) < 0)
@@ -431,12 +431,12 @@ private:
     static void reconnect_cb(evutil_socket_t fd, short what, void *arg);
 };
 
-TorController::TorController(struct event_base *base, const std::string &target)
-    : base(base), target(target), conn(base), reconnect(true), reconnect_ev(0),
+TorController::TorController(struct event_base *_base, const std::string &_target)
+    : base(_base), target(_target), conn(base), reconnect(true), reconnect_ev(0),
       reconnect_timeout(RECONNECT_TIMEOUT_START)
 {
     // Start connection attempts immediately
-    if (!conn.Connect(target, boost::bind(&TorController::connected_cb, this, _1),
+    if (!conn.Connect(_target, boost::bind(&TorController::connected_cb, this, _1),
             boost::bind(&TorController::disconnected_cb, this, _1)))
     {
         LogPrintf("tor: Initiating connection to Tor control port %s failed\n", target);
@@ -497,7 +497,7 @@ void TorController::add_onion_cb(TorControlConnection &_conn, const TorControlRe
         LogPrintf("tor: Add onion failed; error code %d\n", reply.code);
     }
 }
-void TorController::auth_cb(TorControlConnection &conn, const TorControlReply &reply)
+void TorController::auth_cb(TorControlConnection &_conn, const TorControlReply &reply)
 {
     if (reply.code == 250)
     {
@@ -519,7 +519,7 @@ void TorController::auth_cb(TorControlConnection &conn, const TorControlReply &r
         // Request hidden service, redirect port.
         // Note that the 'virtual' port doesn't have to be the same as our internal port, but this is just a convenient
         // choice.  TODO; refactor the shutdown sequence some day.
-        conn.Command(strprintf("ADD_ONION %s Port=%i,127.0.0.1:%i", private_key, GetListenPort(), GetListenPort()),
+        _conn.Command(strprintf("ADD_ONION %s Port=%i,127.0.0.1:%i", private_key, GetListenPort(), GetListenPort()),
             boost::bind(&TorController::add_onion_cb, this, _1, _2));
     }
     else
@@ -558,7 +558,7 @@ static std::vector<uint8_t> ComputeResponse(const std::string &key,
     return computedHash;
 }
 
-void TorController::authchallenge_cb(TorControlConnection &conn, const TorControlReply &reply)
+void TorController::authchallenge_cb(TorControlConnection &_conn, const TorControlReply &reply)
 {
     if (reply.code == 250)
     {
@@ -588,7 +588,7 @@ void TorController::authchallenge_cb(TorControlConnection &conn, const TorContro
 
             std::vector<uint8_t> computedClientHash =
                 ComputeResponse(TOR_SAFE_CLIENTKEY, cookie, clientNonce, serverNonce);
-            conn.Command(
+            _conn.Command(
                 "AUTHENTICATE " + HexStr(computedClientHash), boost::bind(&TorController::auth_cb, this, _1, _2));
         }
         else
@@ -602,7 +602,7 @@ void TorController::authchallenge_cb(TorControlConnection &conn, const TorContro
     }
 }
 
-void TorController::protocolinfo_cb(TorControlConnection &conn, const TorControlReply &reply)
+void TorController::protocolinfo_cb(TorControlConnection &_conn, const TorControlReply &reply)
 {
     if (reply.code == 250)
     {
@@ -650,7 +650,7 @@ void TorController::protocolinfo_cb(TorControlConnection &conn, const TorControl
         if (methods.count("NULL"))
         {
             LogPrint("tor", "tor: Using NULL authentication\n");
-            conn.Command("AUTHENTICATE", boost::bind(&TorController::auth_cb, this, _1, _2));
+            _conn.Command("AUTHENTICATE", boost::bind(&TorController::auth_cb, this, _1, _2));
         }
         else if (methods.count("SAFECOOKIE"))
         {
@@ -660,12 +660,12 @@ void TorController::protocolinfo_cb(TorControlConnection &conn, const TorControl
             std::pair<bool, std::string> status_cookie = ReadBinaryFile(cookiefile, TOR_COOKIE_SIZE);
             if (status_cookie.first && status_cookie.second.size() == TOR_COOKIE_SIZE)
             {
-                // conn.Command("AUTHENTICATE " + HexStr(status_cookie.second), boost::bind(&TorController::auth_cb,
+                // _conn.Command("AUTHENTICATE " + HexStr(status_cookie.second), boost::bind(&TorController::auth_cb,
                 // this, _1, _2));
                 cookie = std::vector<uint8_t>(status_cookie.second.begin(), status_cookie.second.end());
                 clientNonce = std::vector<uint8_t>(TOR_NONCE_SIZE, 0);
                 GetRandBytes(&clientNonce[0], TOR_NONCE_SIZE);
-                conn.Command("AUTHCHALLENGE SAFECOOKIE " + HexStr(clientNonce),
+                _conn.Command("AUTHCHALLENGE SAFECOOKIE " + HexStr(clientNonce),
                     boost::bind(&TorController::authchallenge_cb, this, _1, _2));
             }
             else
@@ -687,7 +687,7 @@ void TorController::protocolinfo_cb(TorControlConnection &conn, const TorControl
             {
                 LogPrint("tor", "tor: Using HASHEDPASSWORD authentication\n");
                 boost::replace_all(torpassword, "\"", "\\\"");
-                conn.Command(
+                _conn.Command(
                     "AUTHENTICATE \"" + torpassword + "\"", boost::bind(&TorController::auth_cb, this, _1, _2));
             }
             else
@@ -706,15 +706,15 @@ void TorController::protocolinfo_cb(TorControlConnection &conn, const TorControl
     }
 }
 
-void TorController::connected_cb(TorControlConnection &conn)
+void TorController::connected_cb(TorControlConnection &_conn)
 {
     reconnect_timeout = RECONNECT_TIMEOUT_START;
     // First send a PROTOCOLINFO command to figure out what authentication is expected
-    if (!conn.Command("PROTOCOLINFO 1", boost::bind(&TorController::protocolinfo_cb, this, _1, _2)))
+    if (!_conn.Command("PROTOCOLINFO 1", boost::bind(&TorController::protocolinfo_cb, this, _1, _2)))
         LogPrintf("tor: Error sending initial protocolinfo command\n");
 }
 
-void TorController::disconnected_cb(TorControlConnection &conn)
+void TorController::disconnected_cb(TorControlConnection &_conn)
 {
     // Stop advertizing service when disconnected
     if (service.IsValid())
