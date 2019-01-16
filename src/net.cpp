@@ -19,8 +19,8 @@
  */
 
 #include "net.h"
-#include "args.h"
 
+#include "args.h"
 #include "addrman.h"
 #include "chain/tx.h"
 #include "clientversion.h"
@@ -460,12 +460,6 @@ void CConnman::ClearBanned()
 
     // Store banlist to disk.
     DumpBanlist();
-    /*
-    if (clientInterface)
-    {
-        clientInterface->BannedListChanged();
-    }
-    */
 }
 
 bool CConnman::IsBanned(CNetAddr ip)
@@ -534,12 +528,7 @@ void CConnman::Ban(const CSubNet &subNet, const BanReason &banReason, int64_t ba
             return;
         }
     }
-/*
-    if (clientInterface)
-    {
-        clientInterface->BannedListChanged();
-    }
-*/
+
     {
         LOCK(cs_vNodes);
         for (CNode *pnode : vNodes)
@@ -574,12 +563,6 @@ bool CConnman::Unban(const CSubNet &subNet)
         }
         setBannedIsDirty = true;
     }
-/*
-    if (clientInterface)
-    {
-        clientInterface->BannedListChanged();
-    }
-*/
     // Store banlist to disk immediately.
     DumpBanlist();
     return true;
@@ -1253,12 +1236,6 @@ void CConnman::ThreadSocketHandler()
         if (vNodesSize != nPrevNodeCount)
         {
             nPrevNodeCount = vNodesSize;
-            /*
-            if (clientInterface)
-            {
-                clientInterface->NotifyNumConnectionsChanged(nPrevNodeCount);
-            }
-            */
         }
 
         //
