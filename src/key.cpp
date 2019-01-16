@@ -442,9 +442,10 @@ void ECC_Start()
 
     {
         // Pass in a random blinding seed to the secp256k1 context.
-        std::vector<unsigned char, secure_allocator<unsigned char> > vseed(32);
-        GetRandBytes(vseed.data(), 32);
-        bool ret = secp256k1_context_randomize(ctx, vseed.data());
+        uint8_t seed[32];
+        LockObject(seed);
+        GetRandBytes(seed, 32);
+        bool ret = secp256k1_context_randomize(ctx, seed);
         assert(ret);
     }
 
