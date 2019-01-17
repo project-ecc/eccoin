@@ -636,8 +636,6 @@ public:
 
     unsigned int GetReceiveFloodSize() const;
 
-    void WakeMessageHandler();
-
 private:
     struct ListenSocket
     {
@@ -741,13 +739,6 @@ private:
     /** SipHasher seeds for deterministic randomness */
     const uint64_t nSeed0, nSeed1;
 
-    /** flag for waking the message processor. */
-    bool fMsgProcWake;
-
-    std::condition_variable condMsgProc;
-    std::mutex mutexMsgProc;
-    std::atomic<bool> flagInterruptMsgProc;
-
     std::atomic<bool> interruptNet;
     thread_group netThreads;
 };
@@ -781,8 +772,8 @@ struct CombinerAll
 // Signals for message handling
 struct CNodeSignals
 {
-    boost::signals2::signal<bool(CNode *, CConnman &, std::atomic<bool> &), CombinerAll> ProcessMessages;
-    boost::signals2::signal<bool(CNode *, CConnman &, std::atomic<bool> &), CombinerAll> SendMessages;
+    boost::signals2::signal<bool(CNode *, CConnman &), CombinerAll> ProcessMessages;
+    boost::signals2::signal<bool(CNode *, CConnman &), CombinerAll> SendMessages;
     boost::signals2::signal<void(CNode *, CConnman &)> InitializeNode;
     boost::signals2::signal<void(NodeId, bool &)> FinalizeNode;
 };

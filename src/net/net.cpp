@@ -1419,7 +1419,6 @@ void CConnman::ThreadSocketHandler()
                             pnode->nProcessQueueSize += nSizeAdded;
                             pnode->fPauseRecv = pnode->nProcessQueueSize > nReceiveFloodSize;
                         }
-                        WakeMessageHandler();
                     }
                 }
                 else if (nBytes == 0)
@@ -1502,15 +1501,6 @@ void CConnman::ThreadSocketHandler()
             }
         }
     }
-}
-
-void CConnman::WakeMessageHandler()
-{
-    {
-        std::lock_guard<std::mutex> lock(mutexMsgProc);
-        fMsgProcWake = true;
-    }
-    condMsgProc.notify_one();
 }
 
 std::atomic<bool> upnp_thread_shutdown(false);
@@ -2199,7 +2189,7 @@ bool CConnman::OpenNetworkConnection(const CAddress &addrConnect,
 
 void CConnman::ThreadMessageHandler()
 {
-    while (!flagInterruptMsgProc)
+    while (interruptNet.load() == false)
     {
         std::vector<CNode *> vNodesCopy;
         {
@@ -2221,21 +2211,13 @@ void CConnman::ThreadMessageHandler()
             }
 
             // Receive messages
-            bool fMoreNodeWork = GetNodeSignals().ProcessMessages(pnode, *this, flagInterruptMsgProc);
+            bool fMoreNodeWork = GetNodeSignals().ProcessMessages(pnode, *this);
             fMoreWork |= (fMoreNodeWork && !pnode->fPauseSend);
-            if (flagInterruptMsgProc)
-            {
-                return;
-            }
 
             // Send messages
             {
                 LOCK(pnode->cs_sendProcessing);
-                GetNodeSignals().SendMessages(pnode, *this, flagInterruptMsgProc);
-            }
-            if (flagInterruptMsgProc)
-            {
-                return;
+                GetNodeSignals().SendMessages(pnode, *this);
             }
         }
 
@@ -2247,13 +2229,10 @@ void CConnman::ThreadMessageHandler()
             }
         }
 
-        std::unique_lock<std::mutex> lock(mutexMsgProc);
         if (!fMoreWork)
         {
-            condMsgProc.wait_until(lock, std::chrono::steady_clock::now() + std::chrono::milliseconds(100),
-                [this] { return fMsgProcWake; });
+            MilliSleep(100);
         }
-        fMsgProcWake = false;
     }
 }
 
@@ -2447,7 +2426,6 @@ CConnman::CConnman(uint64_t nSeed0In, uint64_t nSeed1In) : nSeed0(nSeed0In), nSe
     nMaxOutbound = 0;
     nMaxAddnode = 0;
     nBestHeight = 0;
-    flagInterruptMsgProc = false;
     interruptNet.store(false);
 }
 
@@ -2553,13 +2531,7 @@ bool CConnman::Start(std::string &strNodeError)
     // Start threads
     //
     InterruptSocks5(false);
-    flagInterruptMsgProc = false;
     interruptNet.store(false);
-
-    {
-        std::unique_lock<std::mutex> lock(mutexMsgProc);
-        fMsgProcWake = false;
-    }
 
     // Send and receive from sockets, accept connections
     netThreads.create_thread("net", &CConnman::ThreadSocketHandler, this);
@@ -2606,11 +2578,6 @@ public:
 
 void CConnman::Interrupt()
 {
-    {
-        std::lock_guard<std::mutex> lock(mutexMsgProc);
-        flagInterruptMsgProc = true;
-    }
-    condMsgProc.notify_all();
     interruptNet.store(true);
     InterruptSocks5(true);
 

@@ -20,7 +20,6 @@
 
 #include "init.h"
 
-#include "net/addrman.h"
 #include "amount.h"
 #include "args.h"
 #include "blockgeneration/blockgeneration.h"
@@ -32,6 +31,7 @@
 #include "httpserver.h"
 #include "key.h"
 #include "main.h"
+#include "net/addrman.h"
 #include "net/messages.h"
 #include "net/net.h"
 #include "networks/netman.h"
@@ -904,7 +904,6 @@ int initUserMaxConnections;
 int initFD;
 
 
-
 void GenerateNetworkTemplates()
 {
     pnetMan = new CNetworkManager();
@@ -986,7 +985,8 @@ bool AppInit2(thread_group &threadGroup)
     initMaxConnections = std::max(nUserMaxConnections, 0);
 
     // Trim requested connection counts, to fit into system limitations
-    initMaxConnections = std::max(std::min(initMaxConnections, (int)(FD_SETSIZE - nBind - MIN_CORE_FILEDESCRIPTORS)), 0);
+    initMaxConnections =
+        std::max(std::min(initMaxConnections, (int)(FD_SETSIZE - nBind - MIN_CORE_FILEDESCRIPTORS)), 0);
     initFD = RaiseFileDescriptorLimit(initMaxConnections + MIN_CORE_FILEDESCRIPTORS);
     if (initFD < MIN_CORE_FILEDESCRIPTORS)
     {

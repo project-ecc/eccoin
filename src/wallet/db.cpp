@@ -20,9 +20,9 @@
 
 #include "db.h"
 
-#include "net/addrman.h"
 #include "args.h"
 #include "crypto/hash.h"
+#include "net/addrman.h"
 #include "net/protocol.h"
 #include "threadgroup.h"
 #include "util/util.h"

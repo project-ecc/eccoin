@@ -852,7 +852,6 @@ void PeerLogicValidation::UpdatedBlockTip(const CBlockIndex *pindexNew,
                 }
             }
         });
-        connman->WakeMessageHandler();
     }
 
     nTimeBestReceived = GetTime();
@@ -916,8 +915,7 @@ bool AlreadyHave(const CInv &inv) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
 
 void static ProcessGetData(CNode *pfrom,
     CConnman &connman,
-    const Consensus::Params &consensusParams,
-    const std::atomic<bool> &interruptMsgProc)
+    const Consensus::Params &consensusParams)
 {
     std::deque<CInv>::iterator it = pfrom->vRecvGetData.begin();
 
@@ -933,11 +931,6 @@ void static ProcessGetData(CNode *pfrom,
         }
 
         const CInv &inv = *it;
-
-        if (interruptMsgProc)
-        {
-            return;
-        }
 
         it++;
 
@@ -1113,8 +1106,7 @@ bool static ProcessMessage(CNode *pfrom,
     std::string strCommand,
     CDataStream &vRecv,
     int64_t nTimeReceived,
-    CConnman &connman,
-    const std::atomic<bool> &interruptMsgProc)
+    CConnman &connman)
 {
     const CNetworkTemplate &chainparams = pnetMan->getActivePaymentNetwork();
     RandAddSeedPerfmon();
@@ -1455,11 +1447,6 @@ bool static ProcessMessage(CNode *pfrom,
         {
             CInv &inv = vInv[nInv];
 
-            if (interruptMsgProc)
-            {
-                return true;
-            }
-
             bool fAlreadyHave = AlreadyHave(inv);
             LogPrintf("got inv: %s  %s peer=%d\n", inv.ToString(), fAlreadyHave ? "have" : "new", pfrom->id);
 
@@ -1541,7 +1528,7 @@ bool static ProcessMessage(CNode *pfrom,
         }
 
         pfrom->vRecvGetData.insert(pfrom->vRecvGetData.end(), vInv.begin(), vInv.end());
-        ProcessGetData(pfrom, connman, chainparams.GetConsensus(), interruptMsgProc);
+        ProcessGetData(pfrom, connman, chainparams.GetConsensus());
     }
 
 
@@ -2297,7 +2284,7 @@ bool static ProcessMessage(CNode *pfrom,
     return true;
 }
 
-bool ProcessMessages(CNode *pfrom, CConnman &connman, const std::atomic<bool> &interruptMsgProc)
+bool ProcessMessages(CNode *pfrom, CConnman &connman)
 {
     //
     // Message format
@@ -2311,7 +2298,7 @@ bool ProcessMessages(CNode *pfrom, CConnman &connman, const std::atomic<bool> &i
 
     if (!pfrom->vRecvGetData.empty())
     {
-        ProcessGetData(pfrom, connman, pnetMan->getActivePaymentNetwork()->GetConsensus(), interruptMsgProc);
+        ProcessGetData(pfrom, connman, pnetMan->getActivePaymentNetwork()->GetConsensus());
     }
 
     if (pfrom->fDisconnect)
@@ -2384,11 +2371,7 @@ bool ProcessMessages(CNode *pfrom, CConnman &connman, const std::atomic<bool> &i
     bool fRet = false;
     try
     {
-        fRet = ProcessMessage(pfrom, strCommand, vRecv, msg.nTime, connman, interruptMsgProc);
-        if (interruptMsgProc)
-        {
-            return false;
-        }
+        fRet = ProcessMessage(pfrom, strCommand, vRecv, msg.nTime, connman);
         if (!pfrom->vRecvGetData.empty())
         {
             fMoreWork = true;
@@ -2442,7 +2425,7 @@ bool ProcessMessages(CNode *pfrom, CConnman &connman, const std::atomic<bool> &i
     return fMoreWork;
 }
 
-bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interruptMsgProc)
+bool SendMessages(CNode *pto, CConnman &connman)
 {
     const Consensus::Params &consensusParams = pnetMan->getActivePaymentNetwork()->GetConsensus();
 

@@ -752,7 +752,6 @@ bool ActivateBestChain(CValidationState &state,
                         }
                     }
                 });
-                g_connman->WakeMessageHandler();
                 // Notify external listeners about the new tip.
                 if (!vHashes.empty())
                 {

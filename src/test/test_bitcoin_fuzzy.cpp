@@ -6,11 +6,11 @@
 #include "config/bitcoin-config.h"
 #endif
 
-#include "net/addrman.h"
 #include "chain/chain.h"
 #include "coins.h"
 #include "compressor.h"
 #include "consensus/merkle.h"
+#include "net/addrman.h"
 #include "net/net.h"
 #include "net/protocol.h"
 #include "pubkey.h"

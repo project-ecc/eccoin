@@ -23,8 +23,8 @@
 #include "args.h"
 #include "base58.h"
 #include "consensus/validation.h"
-#include "processtx.h" // For CheckTransaction
 #include "net/protocol.h"
+#include "processtx.h" // For CheckTransaction
 #include "serialize.h"
 #include "sync.h"
 #include "util/util.h"
