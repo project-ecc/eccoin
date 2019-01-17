@@ -24,7 +24,7 @@
 #include "amount.h"
 #include "chain/chain.h"
 #include "coins.h"
-#include "net.h"
+#include "net/net.h"
 #include "script/script_error.h"
 #include "sync.h"
 #include "uint256.h"

@@ -22,7 +22,7 @@
 #include "init.h"
 #include "kernel.h"
 #include "main.h"
-#include "messages.h"
+#include "net/messages.h"
 #include "networks/netman.h"
 #include "processblock.h"
 #include "processheader.h"

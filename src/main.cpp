@@ -20,7 +20,6 @@
 
 #include "main.h"
 
-#include "addrman.h"
 #include "args.h"
 #include "arith_uint256.h"
 #include "chain/chain.h"
@@ -33,8 +32,9 @@
 #include "init.h"
 #include "kernel.h"
 #include "merkleblock.h"
-#include "messages.h"
-#include "net.h"
+#include "net/addrman.h"
+#include "net/messages.h"
+#include "net/net.h"
 #include "networks/netman.h"
 #include "networks/networktemplate.h"
 #include "policy/policy.h"

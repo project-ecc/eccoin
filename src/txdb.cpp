@@ -369,8 +369,7 @@ bool CCoinsViewDB::Upgrade()
         return true;
     }
 
-    LogPrintf("Upgrading database...\n");
-    uiInterface.InitMessage(_("Upgrading database...this may take a while"));
+    LogPrintf("Upgrading database...this may take a while\n");
     size_t batch_size = 1 << 24;
     CDBBatch batch(db);
 

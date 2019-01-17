@@ -24,7 +24,7 @@
 
 #include <atomic>
 
-#include "netbase.h"
+#include "net/netbase.h"
 
 #include "crypto/hash.h"
 #include "random.h"

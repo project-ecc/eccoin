@@ -33,7 +33,7 @@
 #include "scrypt.h"
 #include "pbkdf2.h"
 
-#include "net.h"
+#include "net/net.h"
 
 #define SCRYPT_BUFFER_SIZE (131072 + 63)
 

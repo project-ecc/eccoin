@@ -34,8 +34,8 @@
 #include "init.h"
 #include "kernel.h"
 #include "main.h"
-#include "messages.h"
-#include "net.h"
+#include "net/messages.h"
+#include "net/net.h"
 #include "networks/netman.h"
 #include "networks/networktemplate.h"
 #include "policy/policy.h"
@@ -752,7 +752,6 @@ bool ActivateBestChain(CValidationState &state,
                         }
                     }
                 });
-                g_connman->WakeMessageHandler();
                 // Notify external listeners about the new tip.
                 if (!vHashes.empty())
                 {

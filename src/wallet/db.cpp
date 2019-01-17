@@ -20,10 +20,10 @@
 
 #include "db.h"
 
-#include "addrman.h"
 #include "args.h"
 #include "crypto/hash.h"
-#include "protocol.h"
+#include "net/addrman.h"
+#include "net/protocol.h"
 #include "threadgroup.h"
 #include "util/util.h"
 #include "util/utilstrencodings.h"

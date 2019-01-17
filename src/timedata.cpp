@@ -19,7 +19,7 @@
 
 #include "timedata.h"
 
-#include "netbase.h"
+#include "net/netbase.h"
 #include "sync.h"
 #include "ui_interface.h"
 #include "util/util.h"

@@ -33,7 +33,7 @@
 #include "key.h"
 #include "keystore.h"
 #include "main.h"
-#include "net.h"
+#include "net/net.h"
 #include "policy/policy.h"
 #include "script/script.h"
 #include "script/sign.h"
@@ -3668,7 +3668,7 @@ bool CWallet::InitLoadWallet()
 
     if (gArgs.GetBoolArg("-zapwallettxes", false))
     {
-        uiInterface.InitMessage(_("Zapping all transactions from wallet..."));
+        LogPrintf("Zapping all transactions from wallet...");
 
         CWallet *tempWallet = new CWallet(walletFile);
         DBErrors nZapWalletRet = tempWallet->ZapWalletTx(vWtx);
@@ -3681,7 +3681,7 @@ bool CWallet::InitLoadWallet()
         tempWallet = nullptr;
     }
 
-    uiInterface.InitMessage(_("Loading wallet..."));
+    LogPrintf("Loading wallet...");
 
     int64_t nStart = GetTimeMillis();
     bool fFirstRun = true;
@@ -3724,7 +3724,9 @@ bool CWallet::InitLoadWallet()
             walletInstance->SetMinVersion(FEATURE_LATEST); // permanently upgrade the wallet immediately
         }
         else
+        {
             LogPrintf("Allowing wallet upgrade up to %i\n", nMaxVersion);
+        }
         if (nMaxVersion < walletInstance->GetVersion())
         {
             return UIError(_("Cannot downgrade wallet"));
@@ -3764,7 +3766,6 @@ bool CWallet::InitLoadWallet()
     }
     if (pnetMan->getChainActive()->chainActive.Tip() && pnetMan->getChainActive()->chainActive.Tip() != pindexRescan)
     {
-        uiInterface.InitMessage(_("Rescanning..."));
         LogPrintf("Rescanning last %i blocks (from block %i)...\n",
             pnetMan->getChainActive()->chainActive.Height() - pindexRescan->nHeight, pindexRescan->nHeight);
         nStart = GetTimeMillis();

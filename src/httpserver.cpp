@@ -23,7 +23,7 @@
 
 #include "args.h"
 #include "init.h"
-#include "netbase.h"
+#include "net/netbase.h"
 #include "networks/netman.h"
 #include "rpc/rpcprotocol.h" // For HTTP status codes
 #include "sync.h"

@@ -82,7 +82,7 @@ void ThreadMiner(void *parg, bool shutdownOnly)
     {
         return;
     }
-    minerThreads = new thread_group();
+    minerThreads = new thread_group(&shutdown_threads);
     CWallet *pwallet = (CWallet *)parg;
     try
     {
@@ -116,7 +116,7 @@ void ThreadMinter(void *parg, bool shutdownOnly)
     {
         return;
     }
-    minterThreads = new thread_group();
+    minterThreads = new thread_group(&shutdown_threads);
     CWallet *pwallet = (CWallet *)parg;
     try
     {

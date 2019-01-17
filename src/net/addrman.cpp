@@ -17,7 +17,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "addrman.h"
+#include "net/addrman.h"
 
 #include "crypto/hash.h"
 #include "serialize.h"

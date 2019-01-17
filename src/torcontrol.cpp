@@ -21,7 +21,7 @@
 #include "torcontrol.h"
 #include "args.h"
 #include "crypto/hmac_sha256.h"
-#include "net.h"
+#include "net/net.h"
 #include "util/util.h"
 #include "util/utilstrencodings.h"
 

@@ -26,7 +26,7 @@
 #include "init.h"
 #include "kernel.h"
 #include "main.h"
-#include "net.h"
+#include "net/net.h"
 #include "networks/netman.h"
 #include "networks/networktemplate.h"
 #include "script/stakescript.h"
