@@ -27,7 +27,7 @@
 #include "crypto/scrypt.h"
 #include "init.h"
 #include "kernel.h"
-#include "net.h"
+#include "net/net.h"
 #include "networks/netman.h"
 #include "networks/networktemplate.h"
 #include "policy/policy.h"

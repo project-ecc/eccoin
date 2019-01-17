@@ -20,7 +20,7 @@
 
 #include "init.h"
 
-#include "addrman.h"
+#include "net/addrman.h"
 #include "amount.h"
 #include "args.h"
 #include "blockgeneration/blockgeneration.h"
@@ -32,8 +32,8 @@
 #include "httpserver.h"
 #include "key.h"
 #include "main.h"
-#include "messages.h"
-#include "net.h"
+#include "net/messages.h"
+#include "net/net.h"
 #include "networks/netman.h"
 #include "networks/networktemplate.h"
 #include "policy/policy.h"

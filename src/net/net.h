@@ -30,15 +30,15 @@
 #include <thread>
 
 #include "addrdb.h"
-#include "addrman.h"
+#include "net/addrman.h"
 #include "amount.h"
 #include "bloom.h"
 #include "compat.h"
 #include "crypto/hash.h"
 #include "limitedmap.h"
-#include "netbase.h"
+#include "net/netbase.h"
 #include "networks/netman.h"
-#include "protocol.h"
+#include "net/protocol.h"
 #include "random.h"
 #include "streams.h"
 #include "sync.h"
@@ -753,6 +753,7 @@ private:
 };
 
 extern std::unique_ptr<CConnman> g_connman;
+
 void Discover(thread_group &threadGroup);
 void MapPort(bool fUseUPnP);
 unsigned short GetListenPort();

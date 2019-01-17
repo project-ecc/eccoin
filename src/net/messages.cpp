@@ -18,9 +18,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "messages.h"
+#include "net/messages.h"
 
-#include "addrman.h"
+#include "net/addrman.h"
 #include "args.h"
 #include "chain/chain.h"
 #include "chain/tx.h"
@@ -35,7 +35,7 @@
 #include "processblock.h"
 #include "processheader.h"
 #include "processtx.h"
-#include "protocol.h"
+#include "net/protocol.h"
 #include "serialize.h"
 #include "sync.h"
 #include "txmempool.h"

@@ -24,7 +24,7 @@
 #include "base58.h"
 #include "consensus/validation.h"
 #include "processtx.h" // For CheckTransaction
-#include "protocol.h"
+#include "net/protocol.h"
 #include "serialize.h"
 #include "sync.h"
 #include "util/util.h"

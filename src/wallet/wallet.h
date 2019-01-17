@@ -23,7 +23,7 @@
 
 #include "amount.h"
 #include "consensus/consensus.h"
-#include "net.h"
+#include "net/net.h"
 #include "policy/policy.h"
 #include "streams.h"
 #include "tinyformat.h"

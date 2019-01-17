@@ -18,10 +18,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "net.h"
+#include "net/net.h"
 
 #include "args.h"
-#include "addrman.h"
+#include "net/addrman.h"
 #include "chain/tx.h"
 #include "clientversion.h"
 #include "consensus/consensus.h"

@@ -28,7 +28,7 @@
 #include "core_io.h"
 #include "init.h"
 #include "main.h"
-#include "net.h"
+#include "net/net.h"
 #include "networks/netman.h"
 #include "pow.h"
 #include "processblock.h"

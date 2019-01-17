@@ -22,7 +22,7 @@
 #define MESSAGES_H
 
 #include "chain/blockindex.h"
-#include "net.h"
+#include "net/net.h"
 #include "validationinterface.h"
 
 

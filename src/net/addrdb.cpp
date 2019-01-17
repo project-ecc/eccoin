@@ -20,7 +20,7 @@
 
 #include "addrdb.h"
 
-#include "addrman.h"
+#include "net/addrman.h"
 #include "clientversion.h"
 #include "crypto/hash.h"
 #include "init.h"

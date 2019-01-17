@@ -6,7 +6,7 @@
 #include "rpc/rpcserver.h"
 
 #include "base58.h"
-#include "netbase.h"
+#include "net/netbase.h"
 
 #include "test/test_bitcoin.h"
 
