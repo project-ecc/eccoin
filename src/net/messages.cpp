@@ -20,7 +20,6 @@
 
 #include "net/messages.h"
 
-#include "net/addrman.h"
 #include "args.h"
 #include "chain/chain.h"
 #include "chain/tx.h"
@@ -28,6 +27,8 @@
 #include "init.h"
 #include "main.h"
 #include "merkleblock.h"
+#include "net/addrman.h"
+#include "net/protocol.h"
 #include "networks/netman.h"
 #include "networks/networktemplate.h"
 #include "policy/fees.h"
@@ -35,7 +36,6 @@
 #include "processblock.h"
 #include "processheader.h"
 #include "processtx.h"
-#include "net/protocol.h"
 #include "serialize.h"
 #include "sync.h"
 #include "txmempool.h"
@@ -127,8 +127,8 @@ void PushNodeVersion(CNode *pnode, CConnman &connman, int64_t nTime)
 
     GetRandBytes((unsigned char *)&nLocalHostNonce, sizeof(nLocalHostNonce));
 
-    connman.PushMessage(pnode, NetMsgType::VERSION, PROTOCOL_VERSION, (uint64_t)nLocalNodeServices, nTime,
-                            addrYou, addrMe, nLocalHostNonce, strSubVersion, nNodeStartingHeight, ::fRelayTxes);
+    connman.PushMessage(pnode, NetMsgType::VERSION, PROTOCOL_VERSION, (uint64_t)nLocalNodeServices, nTime, addrYou,
+        addrMe, nLocalHostNonce, strSubVersion, nNodeStartingHeight, ::fRelayTxes);
 
     if (fLogIPs)
     {
@@ -684,7 +684,7 @@ static bool SendRejectsAndCheckIfBanned(CNode *pnode, CConnman &connman)
     for (const CBlockReject &reject : state.rejects)
     {
         connman.PushMessage(pnode, NetMsgType::REJECT, std::string(NetMsgType::BLOCK), reject.chRejectCode,
-                                reject.strRejectReason, reject.hashBlock);
+            reject.strRejectReason, reject.hashBlock);
     }
     state.rejects.clear();
 
@@ -794,8 +794,7 @@ void PeerLogicValidation::NewPoWValidBlock(const CBlockIndex *pindex, const std:
         most_recent_block_hash = hashBlock;
         most_recent_block = pblock;
     }
-    connman->ForEachNode([this, pindex, &hashBlock](CNode *pnode)
-    {
+    connman->ForEachNode([this, pindex, &hashBlock](CNode *pnode) {
         // TODO: Avoid the repeated-serialization here
         if (pnode->fDisconnect)
         {
@@ -913,9 +912,7 @@ bool AlreadyHave(const CInv &inv) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
     return true;
 }
 
-void static ProcessGetData(CNode *pfrom,
-    CConnman &connman,
-    const Consensus::Params &consensusParams)
+void static ProcessGetData(CNode *pfrom, CConnman &connman, const Consensus::Params &consensusParams)
 {
     std::deque<CInv>::iterator it = pfrom->vRecvGetData.begin();
 
@@ -1140,8 +1137,8 @@ bool static ProcessMessage(CNode *pfrom,
         // Each connection can only send one version message
         if (pfrom->nVersion != 0)
         {
-            connman.PushMessage(pfrom,
-                NetMsgType::REJECT, strCommand, REJECT_DUPLICATE, std::string("Duplicate version message"));
+            connman.PushMessage(
+                pfrom, NetMsgType::REJECT, strCommand, REJECT_DUPLICATE, std::string("Duplicate version message"));
             LOCK(cs_main);
             Misbehaving(pfrom, 1, "multiple-version");
             return false;
@@ -1172,7 +1169,7 @@ bool static ProcessMessage(CNode *pfrom,
             LogPrintf("peer=%d does not offer the expected services (%08x offered, %08x expected); disconnecting\n",
                 pfrom->id, nServices, pfrom->nServicesExpected);
             connman.PushMessage(pfrom, NetMsgType::REJECT, strCommand, REJECT_NONSTANDARD,
-                                               strprintf("Expected to offer services %08x", pfrom->nServicesExpected));
+                strprintf("Expected to offer services %08x", pfrom->nServicesExpected));
             pfrom->fDisconnect = true;
             return false;
         }
@@ -1182,7 +1179,7 @@ bool static ProcessMessage(CNode *pfrom,
             // disconnect from peers older than this proto version
             LogPrintf("peer=%d using obsolete version %i; disconnecting\n", pfrom->id, nVersion);
             connman.PushMessage(pfrom, NetMsgType::REJECT, strCommand, REJECT_OBSOLETE,
-                                               strprintf("Version must be %d or greater", MIN_PROTO_VERSION));
+                strprintf("Version must be %d or greater", MIN_PROTO_VERSION));
             pfrom->fDisconnect = true;
             return false;
         }
@@ -1466,10 +1463,9 @@ bool static ProcessMessage(CNode *pfrom,
                     // should get the headers for first, we now only provide a
                     // getheaders response here. When we receive the headers, we
                     // will then ask for the blocks we need.
-                    connman.PushMessage(
-                        pfrom, NetMsgType::GETHEADERS, pnetMan->getChainActive()->chainActive.GetLocator(
-                                                                         pnetMan->getChainActive()->pindexBestHeader),
-                                   inv.hash);
+                    connman.PushMessage(pfrom, NetMsgType::GETHEADERS,
+                        pnetMan->getChainActive()->chainActive.GetLocator(pnetMan->getChainActive()->pindexBestHeader),
+                        inv.hash);
                     CNodeState *nodestate = State(pfrom->GetId());
                     if (CanDirectFetch(chainparams.GetConsensus()) &&
                         nodestate->nBlocksInFlight < MAX_BLOCKS_IN_TRANSIT_PER_PEER)
@@ -1864,7 +1860,7 @@ bool static ProcessMessage(CNode *pfrom,
             if (state.GetRejectCode() > 0 && state.GetRejectCode() < REJECT_INTERNAL)
             {
                 connman.PushMessage(pfrom, NetMsgType::REJECT, strCommand, uint8_t(state.GetRejectCode()),
-                                               state.GetRejectReason().substr(0, MAX_REJECT_MESSAGE_LENGTH), inv.hash);
+                    state.GetRejectReason().substr(0, MAX_REJECT_MESSAGE_LENGTH), inv.hash);
             }
             if (nDoS > 0)
             {
@@ -1934,7 +1930,7 @@ bool static ProcessMessage(CNode *pfrom,
             LogPrint("net", "more getheaders (%d) to end to peer=%d (startheight:%d)\n", pindexLast->nHeight, pfrom->id,
                 pfrom->nStartingHeight);
             connman.PushMessage(pfrom, NetMsgType::GETHEADERS,
-                                           pnetMan->getChainActive()->chainActive.GetLocator(pindexLast), uint256());
+                pnetMan->getChainActive()->chainActive.GetLocator(pindexLast), uint256());
         }
 
         bool fCanDirectFetch = CanDirectFetch(chainparams.GetConsensus());
@@ -2025,9 +2021,8 @@ bool static ProcessMessage(CNode *pfrom,
         if (state.IsInvalid(nDoS))
         {
             assert(state.GetRejectCode() < REJECT_INTERNAL); // Blocks are never rejected with internal reject codes
-            connman.PushMessage(
-                pfrom, NetMsgType::REJECT, strCommand, (unsigned char)state.GetRejectCode(),
-                           state.GetRejectReason().substr(0, MAX_REJECT_MESSAGE_LENGTH), hash);
+            connman.PushMessage(pfrom, NetMsgType::REJECT, strCommand, (unsigned char)state.GetRejectCode(),
+                state.GetRejectReason().substr(0, MAX_REJECT_MESSAGE_LENGTH), hash);
             if (nDoS > 0)
             {
                 LOCK(cs_main);
@@ -2553,8 +2548,8 @@ bool SendMessages(CNode *pto, CConnman &connman)
 
             LogPrint("net", "initial getheaders (%d) to peer=%d (startheight:%d)\n", pindexStart->nHeight, pto->id,
                 pto->nStartingHeight);
-            connman.PushMessage(pto, NetMsgType::GETHEADERS,
-                                         pnetMan->getChainActive()->chainActive.GetLocator(pindexStart), uint256());
+            connman.PushMessage(
+                pto, NetMsgType::GETHEADERS, pnetMan->getChainActive()->chainActive.GetLocator(pindexStart), uint256());
         }
     }
 

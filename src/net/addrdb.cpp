@@ -20,10 +20,10 @@
 
 #include "addrdb.h"
 
-#include "net/addrman.h"
 #include "clientversion.h"
 #include "crypto/hash.h"
 #include "init.h"
+#include "net/addrman.h"
 #include "random.h"
 #include "streams.h"
 #include "tinyformat.h"

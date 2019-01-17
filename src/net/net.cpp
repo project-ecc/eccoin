@@ -21,13 +21,13 @@
 #include "net/net.h"
 
 #include "args.h"
-#include "net/addrman.h"
 #include "chain/tx.h"
 #include "clientversion.h"
 #include "consensus/consensus.h"
 #include "crypto/common.h"
 #include "crypto/hash.h"
 #include "init.h"
+#include "net/addrman.h"
 #include "networks/netman.h"
 #include "ui_interface.h"
 #include "util/utilstrencodings.h"
@@ -801,11 +801,7 @@ bool CNode::ReceiveMsgBytes(const char *pch, unsigned int nBytes, bool &complete
     return true;
 }
 
-void CNode::SetSendVersion(int nVersionIn)
-{
-    nSendVersion = nVersionIn;
-}
-
+void CNode::SetSendVersion(int nVersionIn) { nSendVersion = nVersionIn; }
 int CNode::GetSendVersion() const
 {
     // The send version should always be explicitly set to INIT_PROTO_VERSION
@@ -1012,7 +1008,8 @@ bool CConnman::AttemptToEvictConnection()
         mapInboundConnectionTracker[ipAddress].nEvictions = nEvictions;
         mapInboundConnectionTracker[ipAddress].nLastEvictionTime = GetTime();
 
-        LogPrint("EVICT", "Number of Evictions is %f for %s\n", nEvictions, vEvictionCandidatesByActivity[0]->addr.ToString());
+        LogPrint("EVICT", "Number of Evictions is %f for %s\n", nEvictions,
+            vEvictionCandidatesByActivity[0]->addr.ToString());
         if (nEvictions > 15)
         {
             int nHoursToBan = 4;
@@ -2430,7 +2427,6 @@ CConnman::CConnman(uint64_t nSeed0In, uint64_t nSeed1In) : nSeed0(nSeed0In), nSe
 }
 
 NodeId CConnman::GetNewNodeId() { return nLastNodeId.fetch_add(1, std::memory_order_relaxed); }
-
 ServiceFlags DEFAULT_RELEVANT_SERVICES = NODE_NETWORK;
 ServiceFlags DEFAULT_LOCAL_SERVICES = NODE_NETWORK;
 
@@ -2895,8 +2891,7 @@ CNode::CNode(NodeId idIn,
     bool fInboundIn)
     : nTimeConnected(GetSystemTimeInSeconds()), addr(addrIn), fInbound(fInboundIn), id(idIn),
       nKeyedNetGroup(nKeyedNetGroupIn), addrKnown(5000, 0.001), filterInventoryKnown(50000, 0.000001),
-      nLocalServices(nLocalServicesIn), nMyStartingHeight(nMyStartingHeightIn),
-      nSendVersion(0)
+      nLocalServices(nLocalServicesIn), nMyStartingHeight(nMyStartingHeightIn), nSendVersion(0)
 {
     nServices = NODE_NONE;
     nServicesExpected = NODE_NONE;

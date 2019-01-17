@@ -30,15 +30,15 @@
 #include <thread>
 
 #include "addrdb.h"
-#include "net/addrman.h"
 #include "amount.h"
 #include "bloom.h"
 #include "compat.h"
 #include "crypto/hash.h"
 #include "limitedmap.h"
+#include "net/addrman.h"
 #include "net/netbase.h"
-#include "networks/netman.h"
 #include "net/protocol.h"
+#include "networks/netman.h"
 #include "random.h"
 #include "streams.h"
 #include "sync.h"
@@ -491,7 +491,7 @@ public:
             {
                 pnode->vSendMsg.push_back(std::move(data));
             }
-            const char* strCommand = sCommand.c_str();
+            const char *strCommand = sCommand.c_str();
             if (strcmp(strCommand, NetMsgType::PING) != 0 && strcmp(strCommand, NetMsgType::PONG) != 0 &&
                 strcmp(strCommand, NetMsgType::ADDR) != 0 && strcmp(strCommand, NetMsgType::VERSION) != 0 &&
                 strcmp(strCommand, NetMsgType::VERACK) != 0 && strcmp(strCommand, NetMsgType::INV) != 0)

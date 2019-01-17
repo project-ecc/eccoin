@@ -26,13 +26,7 @@
 #include "wallet/wallet.h"
 #include <string>
 
-class CScheduler;
 class CWallet;
-
-namespace boost
-{
-class thread_group;
-} // namespace boost
 
 extern CWallet *pwalletMain;
 extern CNetworkManager *pnetMan;
