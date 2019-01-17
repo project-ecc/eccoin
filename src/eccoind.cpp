@@ -55,7 +55,7 @@ void WaitForShutdown(thread_group *threadGroup)
 //
 bool AppInit(int argc, char *argv[])
 {
-    thread_group threadGroup;
+    thread_group threadGroup(&shutdown_threads);
 
     bool fRet = false;
 

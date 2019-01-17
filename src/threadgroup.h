@@ -13,9 +13,19 @@ class thread_group
 private:
     std::vector<std::thread> threads;
     std::vector<std::string> names;
+    std::atomic<bool>* killswitch;
 
 public:
-    void interrupt_all() { shutdown_threads.store(true); }
+    thread_group(std::atomic<bool>* _killswitch)
+    {
+        killswitch = _killswitch;
+    }
+
+    void interrupt_all()
+    {
+        killswitch->store(true);
+    }
+
     template <class Fn, class... Args>
     void create_thread(std::string name, Fn &&f, Args &&... args)
     {
@@ -23,7 +33,19 @@ public:
         names.push_back(name);
     }
 
-    bool empty() { return threads.empty(); }
+    void clear()
+    {
+        interrupt_all();
+        join_all();
+        threads.clear();
+        names.clear();
+    }
+
+    bool empty()
+    {
+        return threads.empty();
+    }
+    
     void join_all()
     {
         // printf("num threads = %u \n", threads.size());

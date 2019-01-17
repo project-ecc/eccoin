@@ -2434,7 +2434,7 @@ void Discover(thread_group &threadGroup)
 #endif
 }
 
-CConnman::CConnman(uint64_t nSeed0In, uint64_t nSeed1In) : nSeed0(nSeed0In), nSeed1(nSeed1In)
+CConnman::CConnman(uint64_t nSeed0In, uint64_t nSeed1In) : nSeed0(nSeed0In), nSeed1(nSeed1In), netThreads(&interruptNet)
 {
     setBannedIsDirty = false;
     fAddressesInitialized = false;
@@ -2460,6 +2460,7 @@ extern int initMaxConnections;
 
 bool CConnman::Start(std::string &strNodeError)
 {
+    netThreads.clear();
     nTotalBytesRecv = 0;
     nTotalBytesSent = 0;
     nMaxOutboundTotalBytesSentInCycle = 0;
@@ -2561,8 +2562,7 @@ bool CConnman::Start(std::string &strNodeError)
     }
 
     // Send and receive from sockets, accept connections
-    threadSocketHandler = std::thread(&TraceThread<std::function<void()> >, "net",
-        std::function<void()>(std::bind(&CConnman::ThreadSocketHandler, this)));
+    netThreads.create_thread("net", &CConnman::ThreadSocketHandler, this);
 
     if (!gArgs.GetBoolArg("-dnsseed", true))
     {
@@ -2570,28 +2570,23 @@ bool CConnman::Start(std::string &strNodeError)
     }
     else
     {
-        threadDNSAddressSeed = std::thread(&TraceThread<std::function<void()> >, "dnsseed",
-            std::function<void()>(std::bind(&CConnman::ThreadDNSAddressSeed, this)));
+        netThreads.create_thread("dnsseed", &CConnman::ThreadDNSAddressSeed, this);
     }
 
     // Initiate outbound connections from -addnode
-    threadOpenAddedConnections = std::thread(&TraceThread<std::function<void()> >, "addcon",
-        std::function<void()>(std::bind(&CConnman::ThreadOpenAddedConnections, this)));
+    netThreads.create_thread("addcon", &CConnman::ThreadOpenAddedConnections, this);
 
     // Initiate outbound connections unless connect=0
     if (!gArgs.IsArgSet("-connect") || gArgs.GetArgs("-connect").size() != 1 || gArgs.GetArgs("-connect")[0] != "0")
     {
-        threadOpenConnections = std::thread(&TraceThread<std::function<void()> >, "opencon",
-            std::function<void()>(std::bind(&CConnman::ThreadOpenConnections, this)));
+        netThreads.create_thread("opencon", &CConnman::ThreadOpenConnections, this);
     }
 
     // Process messages
-    threadMessageHandler = std::thread(&TraceThread<std::function<void()> >, "msghand",
-        std::function<void()>(std::bind(&CConnman::ThreadMessageHandler, this)));
+    netThreads.create_thread("msghand", &CConnman::ThreadMessageHandler, this);
 
     // Dump network addresses
-    threadDumpData = std::thread(&TraceThread<std::function<void()> >, "dumpdata",
-        std::function<void()>(std::bind(&CConnman::DumpData, this, DUMP_ADDRESSES_INTERVAL)));
+    netThreads.create_thread("dumpdata", &CConnman::DumpData, this, DUMP_ADDRESSES_INTERVAL);
 
     return true;
 }
@@ -2638,30 +2633,8 @@ void CConnman::Interrupt()
 
 void CConnman::Stop()
 {
-    if (threadMessageHandler.joinable())
-    {
-        threadMessageHandler.join();
-    }
-    if (threadOpenConnections.joinable())
-    {
-        threadOpenConnections.join();
-    }
-    if (threadOpenAddedConnections.joinable())
-    {
-        threadOpenAddedConnections.join();
-    }
-    if (threadDNSAddressSeed.joinable())
-    {
-        threadDNSAddressSeed.join();
-    }
-    if (threadSocketHandler.joinable())
-    {
-        threadSocketHandler.join();
-    }
-    if (threadDumpData.joinable())
-    {
-        threadDumpData.join();
-    }
+    netThreads.interrupt_all();
+    netThreads.join_all();
 
     if (fAddressesInitialized)
     {
