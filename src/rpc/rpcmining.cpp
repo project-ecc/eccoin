@@ -336,9 +336,6 @@ UniValue generatetoaddress(const UniValue &params, bool fHelp)
         throw JSONRPCError(RPC_METHOD_NOT_FOUND, "This method can only be used on regtest");
     }
 
-    int nHeightStart = 0;
-    int nHeightEnd = 0;
-    int nHeight = 0;
     int nGenerate = params[0].get_int();
 
     uint64_t nMaxTries = 1000000;
@@ -387,9 +384,6 @@ UniValue generatepostoaddress(const UniValue &params, bool fHelp)
         throw JSONRPCError(RPC_METHOD_NOT_FOUND, "This method can only be used on regtest");
     }
 
-    int nHeightStart = 0;
-    int nHeightEnd = 0;
-    int nHeight = 0;
     int nGenerate = params[0].get_int();
 
     uint64_t nMaxTries = 1000000;
