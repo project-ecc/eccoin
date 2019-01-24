@@ -19,7 +19,7 @@ RUN apt-get update && apt-get install -y libdb-dev libdb++-dev build-essential l
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 #build from latest master branch code
-RUN git clone https://github.com/project-ecc/eccoin.git && cd eccoin && ./autogen.sh && ./configure --with-incompatible-bdb && make
+RUN git clone https://github.com/AltJ/eccoin.git && cd eccoin && ./autogen.sh && ./configure --with-incompatible-bdb && make
 
 
 RUN mkdir /root/.eccoin/
