@@ -43,8 +43,6 @@
 
 #include <univalue.h>
 
-#include <boost/thread/thread.hpp> // boost::thread::interrupt
-
 extern void TxToJSON(const CTransaction &tx, const uint256 hashBlock, UniValue &entry);
 void ScriptPubKeyToJSON(const CScript &scriptPubKey, UniValue &out, bool fIncludeHex);
 
@@ -489,7 +487,11 @@ static bool GetUTXOStats(CCoinsView *view, CCoinsStats &stats)
     std::map<uint32_t, Coin> outputs;
     while (pcursor->Valid())
     {
-        boost::this_thread::interruption_point();
+        if (shutdown_threads.load())
+        {
+            LogPrintf("GetUTXOStats(): Shutdown requested. Exiting.\n");
+            return false;
+        }
         COutPoint key;
         Coin coin;
         if (pcursor->GetKey(key) && pcursor->GetValue(coin))

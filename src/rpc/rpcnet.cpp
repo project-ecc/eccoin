@@ -22,11 +22,11 @@
 
 #include "clientversion.h"
 #include "main.h"
-#include "messages.h"
-#include "net.h"
-#include "netbase.h"
+#include "net/messages.h"
+#include "net/net.h"
+#include "net/netbase.h"
+#include "net/protocol.h"
 #include "networks/netman.h"
-#include "protocol.h"
 #include "sync.h"
 #include "timedata.h"
 #include "ui_interface.h"
@@ -463,7 +463,6 @@ UniValue getnetworkinfo(const UniValue &params, bool fHelp)
     obj.push_back(Pair("timeoffset", GetTimeOffset()));
     if (g_connman)
     {
-        obj.push_back(Pair("networkactive", g_connman->GetNetworkActive()));
         obj.push_back(Pair("connections", (int)g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL)));
     }
     obj.push_back(Pair("networks", GetNetworksInfo()));

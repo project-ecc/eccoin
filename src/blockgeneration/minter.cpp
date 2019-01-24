@@ -159,17 +159,17 @@ std::unique_ptr<CBlockTemplate> CreateNewPoSBlock(CWallet *pwallet, const CScrip
             nLastCoinStakeSearchTime = nSearchTime;
         }
         MilliSleep(100);
-        if (fShutdown)
+        if (shutdown_threads.load())
             return nullptr;
     }
 
     // Collect memory pool transactions into the block
     {
         LOCK2(cs_main, mempool.cs);
-        CBlockIndex *pindexPrev = pnetMan->getChainActive()->chainActive.Tip();
-        const int nHeight = pindexPrev->nHeight + 1;
+        CBlockIndex *_pindexPrev = pnetMan->getChainActive()->chainActive.Tip();
+        const int nHeight = _pindexPrev->nHeight + 1;
         pblock->nTime = GetAdjustedTime();
-        const int64_t nMedianTimePast = pindexPrev->GetMedianTimePast();
+        const int64_t nMedianTimePast = _pindexPrev->GetMedianTimePast();
 
         pblock->nVersion = 4;
 
@@ -316,9 +316,9 @@ std::unique_ptr<CBlockTemplate> CreateNewPoSBlock(CWallet *pwallet, const CScrip
         nLastBlockSize = nBlockSize;
 
         // Fill in header
-        pblock->hashPrevBlock = pindexPrev->GetBlockHash();
-        pblock->nTime = std::max(pindexPrev->GetMedianTimePast() + 1, pblock->GetMaxTransactionTime());
-        pblock->nTime = std::max(pblock->GetBlockTime(), pindexPrev->GetBlockTime() - nMaxClockDrift);
+        pblock->hashPrevBlock = _pindexPrev->GetBlockHash();
+        pblock->nTime = std::max(_pindexPrev->GetMedianTimePast() + 1, pblock->GetMaxTransactionTime());
+        pblock->nTime = std::max(pblock->GetBlockTime(), _pindexPrev->GetBlockTime() - nMaxClockDrift);
         pblock->nNonce = 0;
         if (!pblock->IsProofOfStake())
         {
@@ -352,19 +352,19 @@ void EccMinter(CWallet *pwallet)
     unsigned int nExtraNonce = 0;
     while (true)
     {
-        if (fShutdown)
+        if (shutdown_threads.load())
             return;
         if (!g_connman)
         {
             MilliSleep(1000);
-            if (fShutdown)
+            if (shutdown_threads.load())
                 return;
         }
         while (g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL) < 6 ||
                pnetMan->getChainActive()->IsInitialBlockDownload() || pwallet->IsLocked())
         {
             MilliSleep(1000);
-            if (fShutdown)
+            if (shutdown_threads.load())
                 return;
         }
         CBlockIndex *pindexPrev = pnetMan->getChainActive()->chainActive.Tip();

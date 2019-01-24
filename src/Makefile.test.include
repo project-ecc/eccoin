@@ -85,7 +85,6 @@ BITCOIN_TESTS = \
   test/pmt_tests.cpp \
   test/reverselock_tests.cpp \
   test/sanity_tests.cpp \
-  test/scheduler_tests.cpp \
   test/scriptnum_tests.cpp \
   test/serialize_tests.cpp \
   test/sigopcount_tests.cpp \
@@ -96,7 +95,7 @@ BITCOIN_TESTS = \
   test/univalue_tests.cpp
 
 BITCOIN_TESTS += \
-  wallet/test/wallet_tests.cpp 
+  wallet/test/wallet_tests.cpp
 #  wallet/test/walletdb_tests.cpp \
 #  wallet/test/crypto_tests.cpp
 

@@ -23,8 +23,8 @@
 #include "args.h"
 #include "base58.h"
 #include "consensus/validation.h"
+#include "net/protocol.h"
 #include "processtx.h" // For CheckTransaction
-#include "protocol.h"
 #include "serialize.h"
 #include "sync.h"
 #include "util/util.h"
@@ -34,9 +34,6 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/scoped_ptr.hpp>
-#include <boost/thread.hpp>
-
-static uint64_t nAccountingEntryNumber = 0;
 
 //
 // CWalletDB
@@ -737,6 +734,10 @@ void ThreadFlushWalletDB(const std::string &strFile)
     while (true)
     {
         MilliSleep(500);
+        if (shutdown_threads.load())
+        {
+            return;
+        }
 
         if (nLastSeen != nWalletDBUpdated)
         {
@@ -760,7 +761,10 @@ void ThreadFlushWalletDB(const std::string &strFile)
 
                 if (nRefCount == 0)
                 {
-                    boost::this_thread::interruption_point();
+                    if (shutdown_threads.load())
+                    {
+                        return;
+                    }
                     std::map<std::string, int>::iterator mi = bitdb.mapFileUseCount.find(strFile);
                     if (mi != bitdb.mapFileUseCount.end())
                     {
@@ -777,6 +781,10 @@ void ThreadFlushWalletDB(const std::string &strFile)
                     }
                 }
             }
+        }
+        if (shutdown_threads.load())
+        {
+            return;
         }
     }
 }

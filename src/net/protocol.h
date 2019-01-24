@@ -25,7 +25,7 @@
 #ifndef BITCOIN_PROTOCOL_H
 #define BITCOIN_PROTOCOL_H
 
-#include "netbase.h"
+#include "net/netbase.h"
 #include "serialize.h"
 #include "uint256.h"
 #include "version.h"

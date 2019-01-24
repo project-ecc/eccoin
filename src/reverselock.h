@@ -26,7 +26,7 @@ template <typename Lock>
 class reverse_lock
 {
 public:
-    explicit reverse_lock(Lock &lock) : lock(lock) { lock.unlock(); }
+    explicit reverse_lock(Lock &_lock) : lock(_lock) { _lock.unlock(); }
     ~reverse_lock() { lock.lock(); }
 private:
     reverse_lock(reverse_lock const &);

@@ -22,8 +22,6 @@
 #include "consensus/params.h"
 #include "wallet/wallet.h"
 
-#include <boost/thread.hpp>
-
 #ifndef ECCOIN_BLOCKGENERATION_H
 #define ECCOIN_BLOCKGENERATION_H
 
@@ -45,7 +43,7 @@ std::unique_ptr<CBlockTemplate> CreateNewBlock(CWallet *pwallet, const CScript &
 
 void ThreadGeneration(void *parg, bool shutdownOnly = false, bool fProofOfStake = false);
 
-extern boost::thread_group *minerThreads;
-extern boost::thread_group *minterThreads;
+extern thread_group *minerThreads;
+extern thread_group *minterThreads;
 
 #endif // ECCOIN_BLOCKGENERATION_H

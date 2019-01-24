@@ -21,7 +21,7 @@
 #include "base58.h"
 #include "consensus/consensus.h"
 #include "main.h"
-#include "messages.h"
+#include "net/messages.h"
 #include "script/standard.h"
 
 bool CheckTransaction(const CTransaction &tx, CValidationState &state)

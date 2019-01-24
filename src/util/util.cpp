@@ -91,6 +91,7 @@
 #include <boost/program_options/detail/config_file.hpp>
 #include <boost/program_options/parsers.hpp>
 #include <boost/thread.hpp>
+
 #include <openssl/conf.h>
 #include <openssl/crypto.h>
 #include <openssl/rand.h>
@@ -504,19 +505,19 @@ bool TryCreateDirectory(const fs::path &p)
     return false;
 }
 
-void FileCommit(FILE *fileout)
+void FileCommit(FILE *_fileout)
 {
-    fflush(fileout); // harmless if redundantly called
+    fflush(_fileout); // harmless if redundantly called
 #ifdef WIN32
-    HANDLE hFile = (HANDLE)_get_osfhandle(_fileno(fileout));
+    HANDLE hFile = (HANDLE)_get_osfhandle(_fileno(_fileout));
     FlushFileBuffers(hFile);
 #else
 #if defined(__linux__) || defined(__NetBSD__)
-    fdatasync(fileno(fileout));
+    fdatasync(fileno(_fileout));
 #elif defined(__APPLE__) && defined(F_FULLFSYNC)
-    fcntl(fileno(fileout), F_FULLFSYNC, 0);
+    fcntl(fileno(_fileout), F_FULLFSYNC, 0);
 #else
-    fsync(fileno(fileout));
+    fsync(fileno(_fileout));
 #endif
 #endif
 }
@@ -740,15 +741,7 @@ void SetThreadPriority(int nPriority)
 #endif // WIN32
 }
 
-int GetNumCores()
-{
-#if BOOST_VERSION >= 105600
-    return boost::thread::physical_concurrency();
-#else // Must fall back to hardware_concurrency, which unfortunately counts virtual cores
-    return boost::thread::hardware_concurrency();
-#endif
-}
-
+int GetNumCores() { return std::thread::hardware_concurrency(); }
 bool WildcardMatch(const char *psz, const char *mask)
 {
     while (true)

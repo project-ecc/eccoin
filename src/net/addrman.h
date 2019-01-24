@@ -19,8 +19,8 @@
 #ifndef BITCOIN_ADDRMAN_H
 #define BITCOIN_ADDRMAN_H
 
-#include "netbase.h"
-#include "protocol.h"
+#include "net/netbase.h"
+#include "net/protocol.h"
 #include "random.h"
 #include "sync.h"
 #include "timedata.h"

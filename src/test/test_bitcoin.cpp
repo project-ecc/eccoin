@@ -16,7 +16,7 @@
 #include "init.h"
 #include "key.h"
 #include "main.h"
-#include "messages.h"
+#include "net/messages.h"
 #include "processblock.h"
 #include "pubkey.h"
 #include "random.h"
@@ -30,7 +30,6 @@
 
 #include <memory>
 
-#include <boost/thread.hpp>
 
 extern bool fPrintToConsole;
 extern void noui_connect();

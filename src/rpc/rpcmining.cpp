@@ -28,7 +28,7 @@
 #include "core_io.h"
 #include "init.h"
 #include "main.h"
-#include "net.h"
+#include "net/net.h"
 #include "networks/netman.h"
 #include "pow.h"
 #include "processblock.h"
@@ -428,8 +428,8 @@ UniValue setgenerate(const UniValue &params, bool fHelp)
                                  "\nToggle the pow generation\n" +
                                  HelpExampleCli("setgenerate", ""));
 
-    if (pnetMan->getActivePaymentNetwork()->MineBlocksOnDemand())
-        throw JSONRPCError(RPC_METHOD_NOT_FOUND, "Use the generate method instead of setgenerate on this network");
+    // if (pnetMan->getActivePaymentNetwork()->MineBlocksOnDemand())
+    //    throw JSONRPCError(RPC_METHOD_NOT_FOUND, "Use the generate method instead of setgenerate on this network");
 
     ThreadGeneration(pwalletMain, false, false);
 

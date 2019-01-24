@@ -20,7 +20,6 @@
 
 #include "init.h"
 
-#include "addrman.h"
 #include "amount.h"
 #include "args.h"
 #include "blockgeneration/blockgeneration.h"
@@ -32,14 +31,14 @@
 #include "httpserver.h"
 #include "key.h"
 #include "main.h"
-#include "messages.h"
-#include "net.h"
+#include "net/addrman.h"
+#include "net/messages.h"
+#include "net/net.h"
 #include "networks/netman.h"
 #include "networks/networktemplate.h"
 #include "policy/policy.h"
 #include "processblock.h"
 #include "rpc/rpcserver.h"
-#include "scheduler.h"
 #include "script/sigcache.h"
 #include "script/standard.h"
 #include "torcontrol.h"
@@ -71,10 +70,9 @@
 #include <boost/filesystem.hpp>
 #include <boost/function.hpp>
 #include <boost/interprocess/sync/file_lock.hpp>
-#include <boost/thread.hpp>
+
 #include <openssl/crypto.h>
 
-bool fShutdown = false;
 CWallet *pwalletMain = nullptr;
 CNetworkManager *pnetMan = nullptr;
 
@@ -120,7 +118,7 @@ CClientUIInterface uiInterface; // Declared but not defined in ui_interface.h
 // created by AppInit() or the Qt main() function.
 //
 // A clean exit happens when StartShutdown() or the SIGTERM
-// signal handler sets fRequestShutdown, which triggers
+// signal handler sets shutdown_threads, which triggers
 // the DetectShutdownThread(), which interrupts the main thread group.
 // DetectShutdownThread() then exits, which causes AppInit() to
 // continue (it .joins the shutdown thread).
@@ -133,15 +131,22 @@ CClientUIInterface uiInterface; // Declared but not defined in ui_interface.h
 // before adding any threads to the threadGroup, so .join_all() returns
 // immediately and the parent exits from main().
 //
-// Shutdown for Qt is very similar, only it uses a QTimer to detect
-// fRequestShutdown getting set, and then does the normal Qt
-// shutdown thing.
 //
 
-volatile bool fRequestShutdown = false;
 
-void StartShutdown() { fRequestShutdown = true; }
-bool ShutdownRequested() { return fRequestShutdown; }
+std::atomic<bool> shutdown_threads(false);
+
+void StartShutdown()
+{
+    // use one atomic bool for shutdowns
+    shutdown_threads.store(true);
+}
+bool ShutdownRequested()
+{
+    // use one atomic bool for shutdowns
+    return shutdown_threads.load();
+}
+
 class CCoinsViewErrorCatcher final : public CCoinsViewBacked
 {
 public:
@@ -171,15 +176,16 @@ std::unique_ptr<CCoinsViewDB> pcoinsdbview;
 std::unique_ptr<CCoinsViewErrorCatcher> pcoinscatcher;
 static boost::scoped_ptr<ECCVerifyHandle> globalVerifyHandle;
 
-void Interrupt(boost::thread_group &threadGroup)
+void Interrupt(thread_group &threadGroup)
 {
-    fShutdown = true;
+    threadGroup.interrupt_all();
+    g_connman->Interrupt();
     InterruptHTTPServer();
     InterruptHTTPRPC();
     InterruptRPC();
     InterruptREST();
     InterruptTorControl();
-    threadGroup.interrupt_all();
+    InterruptScriptCheck();
 }
 
 void Shutdown()
@@ -188,7 +194,9 @@ void Shutdown()
     static CCriticalSection cs_Shutdown;
     TRY_LOCK(cs_Shutdown, lockShutdown);
     if (!lockShutdown)
+    {
         return;
+    }
 
     /// Note: Shutdown() must be able to handle cases in which AppInit2() failed part of the way,
     /// for example if the data directory was found to be locked.
@@ -204,15 +212,20 @@ void Shutdown()
 
     if (pwalletMain)
         pwalletMain->Flush(false);
+
     // shut off pos miner
     ThreadGeneration(pwalletMain, true, true);
     // shut off pow miner
     ThreadGeneration(pwalletMain, true, false);
+
     MapPort(false);
     UnregisterValidationInterface(peerLogic.get());
     peerLogic.reset();
+
     g_connman.reset();
+
     StopTorControl();
+
     UnregisterNodeSignals(GetNodeSignals());
 
     if (fFeeEstimatesInitialized)
@@ -230,25 +243,28 @@ void Shutdown()
         LOCK(cs_main);
         if (pnetMan)
         {
-            if (pnetMan->getChainActive()->pcoinsTip != NULL)
+            if (pnetMan->getChainActive()->pcoinsTip != nullptr)
             {
                 FlushStateToDisk();
             }
             pnetMan->getChainActive()->pcoinsTip.reset();
+            pnetMan->getChainActive()->pcoinsTip = nullptr;
         }
         pcoinscatcher.reset();
-        pcoinscatcher = NULL;
+        pcoinscatcher = nullptr;
         pcoinsdbview.reset();
-        pcoinsdbview = NULL;
+        pcoinsdbview = nullptr;
         if (pnetMan)
         {
             pnetMan->getChainActive()->pblocktree.reset();
-            pnetMan->getChainActive()->pblocktree = NULL;
+            pnetMan->getChainActive()->pblocktree = nullptr;
         }
     }
 
     if (pwalletMain)
+    {
         pwalletMain->Flush(true);
+    }
 
 #ifndef WIN32
     try
@@ -272,7 +288,7 @@ void Shutdown()
 /**
  * Signal handlers are very limited in what they are allowed to do, so:
  */
-void HandleSIGTERM(int) { fRequestShutdown = true; }
+void HandleSIGTERM(int) { shutdown_threads.store(true); }
 void HandleSIGHUP(int) { fReopenDebugLog = true; }
 bool static InitError(const std::string &str)
 {
@@ -666,7 +682,7 @@ static void BlockNotifyCallback(bool initialSync, const CBlockIndex *pBlockIndex
     std::string strCmd = gArgs.GetArg("-blocknotify", "");
 
     boost::replace_all(strCmd, "%s", pBlockIndex->GetBlockHash().GetHex());
-    boost::thread t(runCommand, strCmd); // thread runs free
+    std::thread t(runCommand, strCmd); // thread runs free
 }
 
 struct CImportingNow
@@ -771,7 +787,7 @@ bool InitSanityCheck(void)
     return true;
 }
 
-bool AppInitServers(boost::thread_group &threadGroup)
+bool AppInitServers(thread_group &threadGroup)
 {
     RPCServer::OnStopped(&OnRPCStopped);
     RPCServer::OnPreCommand(&OnRPCPreCommand);
@@ -883,15 +899,10 @@ void InitLogging()
     LogPrintf("Eccoin version %s (%s)\n", FormatFullVersion(), CLIENT_DATE);
 }
 
-namespace
-{ // Variables internal to initialization process only
+int initMaxConnections;
+int initUserMaxConnections;
+int initFD;
 
-ServiceFlags nRelevantServices = NODE_NETWORK;
-int nMaxConnections;
-int nUserMaxConnections;
-int nFD;
-ServiceFlags nLocalServices = NODE_NETWORK;
-} // namespace
 
 void GenerateNetworkTemplates()
 {
@@ -902,7 +913,7 @@ void GenerateNetworkTemplates()
 /** Initialize bitcoin.
  *  @pre Parameters should be parsed and config file should be read.
  */
-bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
+bool AppInit2(thread_group &threadGroup)
 {
 // ********************************************************* Step 1: setup
 #ifdef _MSC_VER
@@ -971,21 +982,24 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
     // Make sure enough file descriptors are available
     int nBind = std::max((int)gArgs.IsArgSet("-bind") + (int)gArgs.IsArgSet("-whitebind"), 1);
     int nUserMaxConnections = gArgs.GetArg("-maxconnections", DEFAULT_MAX_PEER_CONNECTIONS);
-    nMaxConnections = std::max(nUserMaxConnections, 0);
+    initMaxConnections = std::max(nUserMaxConnections, 0);
 
     // Trim requested connection counts, to fit into system limitations
-    nMaxConnections = std::max(std::min(nMaxConnections, (int)(FD_SETSIZE - nBind - MIN_CORE_FILEDESCRIPTORS)), 0);
-    int nFD = RaiseFileDescriptorLimit(nMaxConnections + MIN_CORE_FILEDESCRIPTORS);
-    if (nFD < MIN_CORE_FILEDESCRIPTORS)
+    initMaxConnections =
+        std::max(std::min(initMaxConnections, (int)(FD_SETSIZE - nBind - MIN_CORE_FILEDESCRIPTORS)), 0);
+    initFD = RaiseFileDescriptorLimit(initMaxConnections + MIN_CORE_FILEDESCRIPTORS);
+    if (initFD < MIN_CORE_FILEDESCRIPTORS)
+    {
         return InitError(_("Not enough file descriptors available."));
-    nMaxConnections = std::min(nFD - MIN_CORE_FILEDESCRIPTORS, nMaxConnections);
+    }
+    initMaxConnections = std::min(initFD - MIN_CORE_FILEDESCRIPTORS, initMaxConnections);
 
-    if (nMaxConnections < nUserMaxConnections)
+    if (initMaxConnections < nUserMaxConnections)
     {
         LogPrintf("Reducing -maxconnections from %d to %d, because of system limitations.", nUserMaxConnections,
-            nMaxConnections);
+            initMaxConnections);
         InitWarning(strprintf(_("Reducing -maxconnections from %d to %d, because of system limitations."),
-            nUserMaxConnections, nMaxConnections));
+            nUserMaxConnections, initMaxConnections));
     }
 
     // ********************************************************* Step 3: parameter-to-internal-flags
@@ -1143,9 +1157,6 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
     // Option to startup with mocktime set (used for regression testing):
     SetMockTime(gArgs.GetArg("-mocktime", 0)); // SetMockTime(0) is a no-op
 
-    if (gArgs.GetBoolArg("-peerbloomfilters", true))
-        nLocalServices = ServiceFlags(nLocalServices | NODE_BLOOM);
-
     fEnableReplacement = gArgs.GetBoolArg("-mempoolreplacement", DEFAULT_ENABLE_REPLACEMENT);
     if ((!fEnableReplacement) && gArgs.IsArgSet("-mempoolreplacement"))
     {
@@ -1209,19 +1220,18 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
     LogPrintf("Default data directory %s\n", GetDefaultDataDir().string());
     LogPrintf("Using data directory %s\n", strDataDir);
     LogPrintf("Using config file %s\n", gArgs.GetConfigFile().string());
-    LogPrintf("Using at most %i connections (%i file descriptors available)\n", nMaxConnections, nFD);
+    LogPrintf("Using at most %i connections (%i file descriptors available)\n", initMaxConnections, initFD);
     std::ostringstream strErrors;
 
     LogPrintf("Using %u threads for script verification\n", nScriptCheckThreads);
     if (nScriptCheckThreads)
     {
         for (int i = 0; i < nScriptCheckThreads - 1; i++)
-            threadGroup.create_thread(&ThreadScriptCheck);
+        {
+            std::string name = "scriptCheck" + std::to_string(i);
+            threadGroup.create_thread(name, &ThreadScriptCheck);
+        }
     }
-
-    // Start the lightweight task scheduler thread
-    CScheduler::Function serviceLoop = boost::bind(&CScheduler::serviceQueue, &scheduler);
-    threadGroup.create_thread(boost::bind(&TraceThread<CScheduler::Function>, "scheduler", serviceLoop));
 
     /* Start the RPC server already.  It will be started in "warmup" mode
      * and not really process calls already (but it will signify connections
@@ -1242,7 +1252,7 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
     if (!fDisableWallet)
     {
         LogPrintf("Using wallet %s\n", strWalletFile);
-        uiInterface.InitMessage(_("Verifying wallet..."));
+        LogPrintf("Verifying wallet...");
 
         std::string warningString;
         std::string errorString;
@@ -1424,14 +1434,6 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
         }
     }
 
-    uint64_t nMaxOutboundLimit = 0;
-    uint64_t nMaxOutboundTimeframe = MAX_UPLOAD_TIMEFRAME;
-
-    if (gArgs.IsArgSet("-maxuploadtarget"))
-    {
-        nMaxOutboundLimit = gArgs.GetArg("-maxuploadtarget", DEFAULT_MAX_UPLOAD_TARGET) * 1024 * 1024;
-    }
-
     // ********************************************************* Step 7: load block chain
 
     fReindex = gArgs.GetBoolArg("-reindex", false);
@@ -1491,7 +1493,6 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
         bool fReset = fReindex;
         std::string strLoadError;
 
-        uiInterface.InitMessage(_("Loading block index..."));
         LogPrintf("Loading block index...");
         nStart = GetTimeMillis();
         do
@@ -1559,8 +1560,6 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
                 }
 
                 // verify the blocks
-
-                uiInterface.InitMessage(_("Verifying blocks..."));
                 LogPrintf("Verifying blocks...");
 
                 {
@@ -1606,7 +1605,7 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
                 if (fRet)
                 {
                     fReindex = true;
-                    fRequestShutdown = false;
+                    shutdown_threads.store(false);
                 }
                 else
                 {
@@ -1624,7 +1623,7 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
     // As LoadBlockIndex can take several minutes, it's possible the user
     // requested to kill the GUI during the last operation. If so, exit.
     // As the program has not fully started yet, Shutdown() is possibly overkill.
-    if (fRequestShutdown)
+    if (shutdown_threads.load())
     {
         LogPrintf("Shutdown requested. Exiting.\n");
         return false;
@@ -1657,7 +1656,7 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
     if (gArgs.IsArgSet("-blocknotify"))
         uiInterface.NotifyBlockTip.connect(BlockNotifyCallback);
 
-    uiInterface.InitMessage(_("Activating best chain..."));
+    LogPrintf("Activating best chain...");
 
     std::vector<fs::path> vImportFiles;
     if (gArgs.IsArgSet("-loadblock"))
@@ -1665,13 +1664,15 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
         for (auto const &strFile : gArgs.GetArgs("-loadblock"))
             vImportFiles.push_back(strFile);
     }
-    threadGroup.create_thread(boost::bind(&ThreadImport, vImportFiles));
-    /// THIS FOR LOOP IS STUCK FOREVER BECAUSE CHAIN TIP IS NEVER ACTIVATED
+    threadGroup.create_thread("importFiles", &ThreadImport, vImportFiles);
+
     if (pnetMan->getChainActive()->chainActive.Tip() == NULL)
     {
         LogPrintf("Waiting for genesis block to be imported...\n");
-        while (!fRequestShutdown && pnetMan->getChainActive()->chainActive.Tip() == NULL)
+        while (!shutdown_threads.load() && pnetMan->getChainActive()->chainActive.Tip() == NULL)
+        {
             MilliSleep(10);
+        }
     }
 
     // ********************************************************* Step 11: start node
@@ -1693,7 +1694,7 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
     LogPrintf("mapAddressBook.size() = %u\n", pwalletMain ? pwalletMain->mapAddressBook.size() : 0);
 
     if (gArgs.GetBoolArg("-listenonion", DEFAULT_LISTEN_ONION))
-        StartTorControl(threadGroup, scheduler);
+        StartTorControl(threadGroup);
 
     Discover(threadGroup);
 
@@ -1701,22 +1702,7 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
     MapPort(gArgs.GetBoolArg("-upnp", DEFAULT_UPNP));
 
     std::string strNodeError;
-    CConnman::Options connOptions;
-    connOptions.nLocalServices = nLocalServices;
-    connOptions.nRelevantServices = nRelevantServices;
-    connOptions.nMaxConnections = nMaxConnections;
-    connOptions.nMaxOutbound = std::min(MAX_OUTBOUND_CONNECTIONS, connOptions.nMaxConnections);
-    connOptions.nMaxAddnode = MAX_ADDNODE_CONNECTIONS;
-    connOptions.nMaxFeeler = 1;
-    connOptions.nBestHeight = pnetMan->getChainActive()->chainActive.Height();
-    connOptions.uiInterface = &uiInterface;
-    connOptions.nSendBufferMaxSize = 1000 * gArgs.GetArg("-maxsendbuffer", DEFAULT_MAXSENDBUFFER);
-    connOptions.nReceiveFloodSize = 1000 * gArgs.GetArg("-maxreceivebuffer", DEFAULT_MAXRECEIVEBUFFER);
-
-    connOptions.nMaxOutboundTimeframe = nMaxOutboundTimeframe;
-    connOptions.nMaxOutboundLimit = nMaxOutboundLimit;
-
-    if (!connman.Start(scheduler, strNodeError, connOptions))
+    if (!connman.Start(strNodeError))
     {
         return InitError(strNodeError);
     }
@@ -1734,7 +1720,7 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
     // ********************************************************* Step 12: finished
 
     SetRPCWarmupFinished();
-    uiInterface.InitMessage(_("Done loading"));
+    LogPrintf("Done loading");
 
 
     if (pwalletMain)
@@ -1743,8 +1729,8 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler)
         pwalletMain->ReacceptWalletTransactions();
 
         // Run a thread to flush wallet periodically
-        threadGroup.create_thread(boost::bind(&ThreadFlushWalletDB, boost::ref(pwalletMain->strWalletFile)));
+        threadGroup.create_thread("flushWalletDB", &ThreadFlushWalletDB, boost::ref(pwalletMain->strWalletFile));
     }
 
-    return !fRequestShutdown;
+    return !shutdown_threads.load();
 }

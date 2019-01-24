@@ -18,7 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "protocol.h"
+#include "net/protocol.h"
 
 #include "util/util.h"
 #include "util/utilstrencodings.h"

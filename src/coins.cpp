@@ -510,6 +510,7 @@ double CCoinsViewCache::GetPriority(const CTransaction &tx, int nHeight, CAmount
 CCoinsViewCursor::~CCoinsViewCursor() {}
 static const size_t nMaxOutputsPerBlock =
     DEFAULT_LARGEST_TRANSACTION / ::GetSerializeSize(CTxOut(), SER_NETWORK, PROTOCOL_VERSION);
+
 const Coin &AccessByTxid(const CCoinsViewCache &view, const uint256 &txid)
 {
     COutPoint iter(txid, 0);

@@ -22,7 +22,7 @@
 #define MESSAGES_H
 
 #include "chain/blockindex.h"
-#include "net.h"
+#include "net/net.h"
 #include "validationinterface.h"
 
 
@@ -193,10 +193,10 @@ void Misbehaving(NodeId nodeid, int howmuch, const std::string &reason);
 
 
 /** Process protocol messages received from a given node */
-bool ProcessMessages(CNode *pfrom, CConnman &connman, const std::atomic<bool> &interrupt);
+bool ProcessMessages(CNode *pfrom, CConnman &connman);
 
 /**Send queued protocol messages to be sent to a give node. */
-bool SendMessages(CNode *pto, CConnman &connman, const std::atomic<bool> &interrupt);
+bool SendMessages(CNode *pto, CConnman &connman);
 
 /** Returns a bool indicating whether we requested this block. If we did request it, marks it as receieved and removes
  * block from in flight list*/

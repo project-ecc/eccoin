@@ -10,6 +10,7 @@
 
 #include <boost/thread.hpp>
 
+
 extern CNetworkManager *pnetman;
 
 /** Basic testing setup.

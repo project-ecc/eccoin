@@ -20,10 +20,11 @@
 
 #include "db.h"
 
-#include "addrman.h"
 #include "args.h"
 #include "crypto/hash.h"
-#include "protocol.h"
+#include "net/addrman.h"
+#include "net/protocol.h"
+#include "threadgroup.h"
 #include "util/util.h"
 #include "util/utilstrencodings.h"
 
@@ -80,7 +81,9 @@ void CDBEnv::Close() { EnvShutdown(); }
 bool CDBEnv::Open(const fs::path &pathIn)
 {
     if (fDbEnvInit)
+    {
         return true;
+    }
 
     boost::this_thread::interruption_point();
 
@@ -118,7 +121,9 @@ bool CDBEnv::Open(const fs::path &pathIn)
 void CDBEnv::MakeMock()
 {
     if (fDbEnvInit)
+    {
         throw std::runtime_error("CDBEnv::MakeMock: Already initialized");
+    }
 
     boost::this_thread::interruption_point();
 
@@ -381,13 +386,13 @@ bool CDB::Rewrite(const std::string &strFile, const char *pszSkip)
                         {
                             CDataStream ssKey(SER_DISK, CLIENT_VERSION);
                             CDataStream ssValue(SER_DISK, CLIENT_VERSION);
-                            int ret = db.ReadAtCursor(pcursor, ssKey, ssValue, DB_NEXT);
-                            if (ret == DB_NOTFOUND)
+                            int ret1 = db.ReadAtCursor(pcursor, ssKey, ssValue, DB_NEXT);
+                            if (ret1 == DB_NOTFOUND)
                             {
                                 pcursor->close();
                                 break;
                             }
-                            else if (ret != 0)
+                            else if (ret1 != 0)
                             {
                                 pcursor->close();
                                 fSuccess = false;

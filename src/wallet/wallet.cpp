@@ -33,7 +33,7 @@
 #include "key.h"
 #include "keystore.h"
 #include "main.h"
-#include "net.h"
+#include "net/net.h"
 #include "policy/policy.h"
 #include "script/script.h"
 #include "script/sign.h"
@@ -46,7 +46,7 @@
 #include <assert.h>
 
 #include <boost/algorithm/string/replace.hpp>
-#include <boost/thread.hpp>
+
 
 const char *DEFAULT_WALLET_DAT = "wallet.dat";
 
@@ -239,7 +239,7 @@ bool CWallet::LoadWatchOnly(const CScript &dest) { return CCryptoKeyStore::AddWa
 bool CWallet::Unlock(const SecureString &strWalletPassphrase)
 {
     CCrypter crypter;
-    CKeyingMaterial vMasterKey;
+    CKeyingMaterial _vMasterKey;
 
     {
         LOCK(cs_wallet);
@@ -248,9 +248,9 @@ bool CWallet::Unlock(const SecureString &strWalletPassphrase)
             if (!crypter.SetKeyFromPassphrase(strWalletPassphrase, pMasterKey.second.vchSalt,
                     pMasterKey.second.nDeriveIterations, pMasterKey.second.nDerivationMethod))
                 return false;
-            if (!crypter.Decrypt(pMasterKey.second.vchCryptedKey, vMasterKey))
+            if (!crypter.Decrypt(pMasterKey.second.vchCryptedKey, _vMasterKey))
                 continue; // try another master key
-            if (CCryptoKeyStore::Unlock(vMasterKey))
+            if (CCryptoKeyStore::Unlock(_vMasterKey))
                 return true;
         }
     }
@@ -267,15 +267,15 @@ bool CWallet::ChangeWalletPassphrase(const SecureString &strOldWalletPassphrase,
         Lock();
 
         CCrypter crypter;
-        CKeyingMaterial vMasterKey;
+        CKeyingMaterial _vMasterKey;
         for (auto &pMasterKey : mapMasterKeys)
         {
             if (!crypter.SetKeyFromPassphrase(strOldWalletPassphrase, pMasterKey.second.vchSalt,
                     pMasterKey.second.nDeriveIterations, pMasterKey.second.nDerivationMethod))
                 return false;
-            if (!crypter.Decrypt(pMasterKey.second.vchCryptedKey, vMasterKey))
+            if (!crypter.Decrypt(pMasterKey.second.vchCryptedKey, _vMasterKey))
                 return false;
-            if (CCryptoKeyStore::Unlock(vMasterKey))
+            if (CCryptoKeyStore::Unlock(_vMasterKey))
             {
                 int64_t nStartTime = GetTimeMillis();
                 crypter.SetKeyFromPassphrase(strNewWalletPassphrase, pMasterKey.second.vchSalt,
@@ -300,7 +300,7 @@ bool CWallet::ChangeWalletPassphrase(const SecureString &strOldWalletPassphrase,
                 if (!crypter.SetKeyFromPassphrase(strNewWalletPassphrase, pMasterKey.second.vchSalt,
                         pMasterKey.second.nDeriveIterations, pMasterKey.second.nDerivationMethod))
                     return false;
-                if (!crypter.Encrypt(vMasterKey, pMasterKey.second.vchCryptedKey))
+                if (!crypter.Encrypt(_vMasterKey, pMasterKey.second.vchCryptedKey))
                     return false;
                 CWalletDB(strWalletFile).WriteMasterKey(pMasterKey.first, pMasterKey.second);
                 if (fWasLocked)
@@ -375,8 +375,8 @@ std::set<uint256> CWallet::GetConflicts(const uint256 &txid) const
         if (mapTxSpends.count(txin.prevout) <= 1)
             continue; // No conflict if zero or one spends
         range = mapTxSpends.equal_range(txin.prevout);
-        for (TxSpends::const_iterator it = range.first; it != range.second; ++it)
-            result.insert(it->second);
+        for (TxSpends::const_iterator _it = range.first; _it != range.second; ++_it)
+            result.insert(_it->second);
     }
     return result;
 }
@@ -523,11 +523,11 @@ bool CWallet::EncryptWallet(const SecureString &strWalletPassphrase)
     if (IsCrypted())
         return false;
 
-    CKeyingMaterial vMasterKey;
+    CKeyingMaterial _vMasterKey;
     RandAddSeedPerfmon();
 
-    vMasterKey.resize(WALLET_CRYPTO_KEY_SIZE);
-    GetRandBytes(&vMasterKey[0], WALLET_CRYPTO_KEY_SIZE);
+    _vMasterKey.resize(WALLET_CRYPTO_KEY_SIZE);
+    GetRandBytes(&_vMasterKey[0], WALLET_CRYPTO_KEY_SIZE);
 
     CMasterKey kMasterKey;
     RandAddSeedPerfmon();
@@ -555,7 +555,7 @@ bool CWallet::EncryptWallet(const SecureString &strWalletPassphrase)
     if (!crypter.SetKeyFromPassphrase(
             strWalletPassphrase, kMasterKey.vchSalt, kMasterKey.nDeriveIterations, kMasterKey.nDerivationMethod))
         return false;
-    if (!crypter.Encrypt(vMasterKey, kMasterKey.vchCryptedKey))
+    if (!crypter.Encrypt(_vMasterKey, kMasterKey.vchCryptedKey))
         return false;
 
     {
@@ -574,7 +574,7 @@ bool CWallet::EncryptWallet(const SecureString &strWalletPassphrase)
             pwalletdbEncryption->WriteMasterKey(nMasterKeyMaxID, kMasterKey);
         }
 
-        if (!EncryptKeys(vMasterKey))
+        if (!EncryptKeys(_vMasterKey))
         {
             if (fFileBacked)
             {
@@ -696,7 +696,7 @@ bool CWallet::AddToWallet(const CWalletTx &wtxIn, bool fFromLoadWallet, CWalletD
                             CWalletTx *const pwtx = (*it).second;
                             if (pwtx == &wtx)
                                 continue;
-                            int64_t nSmartTime;
+                            int64_t nSmartTime = 0;
                             if (pwtx)
                             {
                                 nSmartTime = pwtx->nTimeSmart;
@@ -775,7 +775,7 @@ bool CWallet::AddToWallet(const CWalletTx &wtxIn, bool fFromLoadWallet, CWalletD
         if (!strCmd.empty())
         {
             boost::replace_all(strCmd, "%s", wtxIn.tx->GetHash().GetHex());
-            boost::thread t(runCommand, strCmd); // thread runs free
+            std::thread t(runCommand, strCmd); // thread runs free
         }
     }
     return true;
@@ -1167,9 +1167,9 @@ int CWalletTx::GetRequestCount() const
                 // How about the block it's in?
                 if (nRequests == 0 && !hashUnset())
                 {
-                    std::map<uint256, int>::const_iterator mi = pwallet->mapRequestCount.find(hashBlock);
-                    if (mi != pwallet->mapRequestCount.end())
-                        nRequests = (*mi).second;
+                    std::map<uint256, int>::const_iterator mj = pwallet->mapRequestCount.find(hashBlock);
+                    if (mj != pwallet->mapRequestCount.end())
+                        nRequests = (*mj).second;
                     else
                         nRequests = 1; // If it's in someone else's block it must have got out
                 }
@@ -1607,10 +1607,10 @@ bool CWalletTx::IsTrusted() const
     return true;
 }
 
-bool CWalletTx::IsEquivalentTo(const CWalletTx &tx) const
+bool CWalletTx::IsEquivalentTo(const CWalletTx &_tx) const
 {
     CTransaction tx1 = *(this->tx);
-    CTransaction tx2 = *(tx.tx);
+    CTransaction tx2 = *(_tx.tx);
     for (unsigned int i = 0; i < tx1.vin.size(); i++)
         tx1.vin[i].scriptSig = CScript();
     for (unsigned int i = 0; i < tx2.vin.size(); i++)
@@ -2908,17 +2908,17 @@ std::set<std::set<CTxDestination> > CWallet::GetAddressGroupings()
 
     std::set<std::set<CTxDestination> *> uniqueGroupings; // a set of pointers to groups of addresses
     std::map<CTxDestination, std::set<CTxDestination> *> setmap; // map addresses to the unique group containing it
-    for (auto grouping : groupings)
+    for (auto _grouping : groupings)
     {
         // make a set of all the groups hit by this new group
         std::set<std::set<CTxDestination> *> hits;
         std::map<CTxDestination, std::set<CTxDestination> *>::iterator it;
-        for (auto address : grouping)
+        for (auto address : _grouping)
             if ((it = setmap.find(address)) != setmap.end())
                 hits.insert((*it).second);
 
         // merge all hit groups into a new single group and delete old groups
-        std::set<CTxDestination> *merged = new std::set<CTxDestination>(grouping);
+        std::set<CTxDestination> *merged = new std::set<CTxDestination>(_grouping);
         for (auto *hit : hits)
         {
             merged->insert(hit->begin(), hit->end());
@@ -3611,14 +3611,14 @@ bool CWallet::CreateCoinStake(const CKeyStore &keystore,
     // Calculate coin age reward
     {
         uint64_t nCoinAge;
-        const CBlockIndex *pIndex0 = GetLastBlockIndex(pnetMan->getChainActive()->chainActive.Tip(), false);
+        const CBlockIndex *_pIndex0 = GetLastBlockIndex(pnetMan->getChainActive()->chainActive.Tip(), false);
 
         if (!txNew.GetCoinAge(nCoinAge))
         {
             return error("CreateCoinStake : failed to calculate coin age");
         }
 
-        int64_t nCreditReward = GetProofOfStakeReward(txNew.GetCoinAge(nCoinAge, true), pIndex0->nHeight);
+        int64_t nCreditReward = GetProofOfStakeReward(txNew.GetCoinAge(nCoinAge, true), _pIndex0->nHeight);
         LogPrintf("nCreditReward create=%d \n", nCreditReward);
         nCredit = nCredit + nCreditReward;
     }
@@ -3668,7 +3668,7 @@ bool CWallet::InitLoadWallet()
 
     if (gArgs.GetBoolArg("-zapwallettxes", false))
     {
-        uiInterface.InitMessage(_("Zapping all transactions from wallet..."));
+        LogPrintf("Zapping all transactions from wallet...");
 
         CWallet *tempWallet = new CWallet(walletFile);
         DBErrors nZapWalletRet = tempWallet->ZapWalletTx(vWtx);
@@ -3681,7 +3681,7 @@ bool CWallet::InitLoadWallet()
         tempWallet = nullptr;
     }
 
-    uiInterface.InitMessage(_("Loading wallet..."));
+    LogPrintf("Loading wallet...");
 
     int64_t nStart = GetTimeMillis();
     bool fFirstRun = true;
@@ -3724,7 +3724,9 @@ bool CWallet::InitLoadWallet()
             walletInstance->SetMinVersion(FEATURE_LATEST); // permanently upgrade the wallet immediately
         }
         else
+        {
             LogPrintf("Allowing wallet upgrade up to %i\n", nMaxVersion);
+        }
         if (nMaxVersion < walletInstance->GetVersion())
         {
             return UIError(_("Cannot downgrade wallet"));
@@ -3764,7 +3766,6 @@ bool CWallet::InitLoadWallet()
     }
     if (pnetMan->getChainActive()->chainActive.Tip() && pnetMan->getChainActive()->chainActive.Tip() != pindexRescan)
     {
-        uiInterface.InitMessage(_("Rescanning..."));
         LogPrintf("Rescanning last %i blocks (from block %i)...\n",
             pnetMan->getChainActive()->chainActive.Height() - pindexRescan->nHeight, pindexRescan->nHeight);
         nStart = GetTimeMillis();

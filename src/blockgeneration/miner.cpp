@@ -27,7 +27,7 @@
 #include "crypto/scrypt.h"
 #include "init.h"
 #include "kernel.h"
-#include "net.h"
+#include "net/net.h"
 #include "networks/netman.h"
 #include "networks/networktemplate.h"
 #include "policy/policy.h"
@@ -151,7 +151,8 @@ std::unique_ptr<CBlockTemplate> CreateNewPoWBlock(CWallet *pwallet, const CScrip
     CTxMemPool::setEntries waitSet;
 
     // ppcoin: if coinstake available add coinstake tx
-    static int64_t nLastCoinStakeSearchTime = GetAdjustedTime(); // only initialized at startup
+    // Commented out unused variable assuming no side effect within GetAdjustedTime()
+    // static int64_t nLastCoinStakeSearchTime = GetAdjustedTime(); // only initialized at startup
     CBlockIndex *pindexPrev = pnetMan->getChainActive()->chainActive.Tip();
 
 
@@ -172,10 +173,10 @@ std::unique_ptr<CBlockTemplate> CreateNewPoWBlock(CWallet *pwallet, const CScrip
     // Collect memory pool transactions into the block
     {
         LOCK2(cs_main, mempool.cs);
-        CBlockIndex *pindexPrev = pnetMan->getChainActive()->chainActive.Tip();
-        const int nHeight = pindexPrev->nHeight + 1;
+        CBlockIndex *_pindexPrev = pnetMan->getChainActive()->chainActive.Tip();
+        const int nHeight = _pindexPrev->nHeight + 1;
         pblock->nTime = GetAdjustedTime();
-        const int64_t nMedianTimePast = pindexPrev->GetMedianTimePast();
+        const int64_t nMedianTimePast = _pindexPrev->GetMedianTimePast();
 
         pblock->nVersion = 4;
 
@@ -323,12 +324,12 @@ std::unique_ptr<CBlockTemplate> CreateNewPoWBlock(CWallet *pwallet, const CScrip
         nLastBlockSize = nBlockSize;
 
         // Fill in header
-        pblock->hashPrevBlock = pindexPrev->GetBlockHash();
-        pblock->nTime = std::max(pindexPrev->GetMedianTimePast() + 1, pblock->GetMaxTransactionTime());
-        pblock->nTime = std::max(pblock->GetBlockTime(), pindexPrev->GetBlockTime() - nMaxClockDrift);
-        UpdateTime(pblock, pnetMan->getActivePaymentNetwork()->GetConsensus(), pindexPrev);
+        pblock->hashPrevBlock = _pindexPrev->GetBlockHash();
+        pblock->nTime = std::max(_pindexPrev->GetMedianTimePast() + 1, pblock->GetMaxTransactionTime());
+        pblock->nTime = std::max(pblock->GetBlockTime(), _pindexPrev->GetBlockTime() - nMaxClockDrift);
+        UpdateTime(pblock, pnetMan->getActivePaymentNetwork()->GetConsensus(), _pindexPrev);
         pblock->vtx[0]->vout[0].nValue =
-            GetProofOfWorkReward(nFees, pindexPrev->nHeight + 1, pindexPrev->GetBlockHash());
+            GetProofOfWorkReward(nFees, _pindexPrev->nHeight + 1, _pindexPrev->GetBlockHash());
         pblock->nNonce = 0;
     }
 
@@ -422,7 +423,7 @@ bool CheckWork(const std::shared_ptr<const CBlock> pblock,
 void EccMiner(CWallet *pwallet)
 {
     void *scratchbuf = scrypt_buffer_alloc();
-    LogPrintf("CPUMiner started for proof-of-%s\n", "stake");
+    LogPrintf("CPUMiner started for proof-of-%s\n", "work");
     SetThreadPriority(THREAD_PRIORITY_LOWEST);
     // Make this thread recognisable as the mining thread
     RenameThread("ecc-miner");
@@ -442,19 +443,19 @@ void EccMiner(CWallet *pwallet)
     unsigned int nExtraNonce = 0;
     while (true)
     {
-        if (fShutdown)
+        if (shutdown_threads.load())
             return;
         if (!g_connman)
         {
             MilliSleep(1000);
-            if (fShutdown)
+            if (shutdown_threads.load())
                 return;
         }
         while (g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL) < 6 ||
                pnetMan->getChainActive()->IsInitialBlockDownload() || pwallet->IsLocked())
         {
             MilliSleep(1000);
-            if (fShutdown)
+            if (shutdown_threads.load())
                 return;
         }
         //
@@ -543,7 +544,7 @@ void EccMiner(CWallet *pwallet)
                 }
             }
             // Check for stop or if block needs to be rebuilt
-            if (fShutdown)
+            if (shutdown_threads.load())
                 return;
             if (g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL))
                 break;

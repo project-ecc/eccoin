@@ -27,6 +27,8 @@
 #include <boost/thread/locks.hpp>
 #include <boost/thread/mutex.hpp>
 
+extern std::atomic<bool> shutdown_threads;
+
 template <typename T>
 class CCheckQueueControl;
 
@@ -73,9 +75,6 @@ private:
      */
     unsigned int nTodo;
 
-    //! Whether we're shutting down.
-    bool fQuit;
-
     //! The maximum number of elements to be processed in one batch
     unsigned int nBatchSize;
 
@@ -108,7 +107,7 @@ private:
                 // logically, the do loop starts here
                 while (queue.empty())
                 {
-                    if ((fMaster || fQuit) && nTodo == 0)
+                    if (fMaster && nTodo == 0)
                     {
                         nTotal--;
                         bool fRet = fAllOk;
@@ -121,6 +120,10 @@ private:
                     nIdle++;
                     cond.wait(lock); // wait
                     nIdle--;
+                    if (shutdown_threads.load() == true)
+                    {
+                        return true;
+                    }
                 }
                 // Decide how many work units to process now.
                 // * Do not try to do everything at once, but aim for increasingly smaller batches so
@@ -144,16 +147,13 @@ private:
                 if (fOk)
                     fOk = check();
             vChecks.clear();
+
         } while (true);
     }
 
 public:
     //! Create a new check queue
-    CCheckQueue(unsigned int nBatchSizeIn)
-        : nIdle(0), nTotal(0), fAllOk(true), nTodo(0), fQuit(false), nBatchSize(nBatchSizeIn)
-    {
-    }
-
+    CCheckQueue(unsigned int nBatchSizeIn) : nIdle(0), nTotal(0), fAllOk(true), nTodo(0), nBatchSize(nBatchSizeIn) {}
     //! Worker thread
     void Thread() { Loop(); }
     //! Wait until execution finishes, and return whether all evaluations were successful.
@@ -174,6 +174,7 @@ public:
             condWorker.notify_all();
     }
 
+    void Stop() { condWorker.notify_all(); }
     ~CCheckQueue() {}
     bool IsIdle()
     {

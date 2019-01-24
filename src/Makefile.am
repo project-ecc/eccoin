@@ -38,8 +38,6 @@ endif
 .PHONY: FORCE check-symbols check-security check-formatting
 # bitcoin core #
 BITCOIN_CORE_H = \
-  addrdb.h \
-  addrman.h \
   amount.h \
   args.h \
   arith_uint256.h \
@@ -81,13 +79,15 @@ BITCOIN_CORE_H = \
   keystore.h \
   limitedmap.h \
   main.h \
-  messages.h \
   memusage.h \
   merkleblock.h \
-  net.h \
-  netaddress.h \
-  netbase.h \
-  netmessagemaker.h \
+  net/addrdb.h \
+  net/addrman.h \
+  net/messages.h \
+  net/net.h \
+  net/netaddress.h \
+  net/netbase.h \
+  net/protocol.h \
   networks/netman.h \
   networks/network.h \
   networks/networktemplate.h \
@@ -102,7 +102,6 @@ BITCOIN_CORE_H = \
   processblock.h \
   processheader.h \
   processtx.h \
-  protocol.h \
   pubkey.h \
   random.h \
   reverselock.h \
@@ -110,7 +109,6 @@ BITCOIN_CORE_H = \
   rpc/rpcclient.h \
   rpc/rpcprotocol.h \
   rpc/rpcserver.h \
-  scheduler.h \
   script/interpreter.h \
   script/script.h \
   script/script_error.h \
@@ -126,7 +124,7 @@ BITCOIN_CORE_H = \
   support/cleanse.h \
   support/pagelocker.h \
   sync.h \
-  threadinterrupt.h \
+  threadgroup.h \
   threadsafety.h \
   timedata.h \
   tinyformat.h \
@@ -161,8 +159,8 @@ libbitcoin_server_a-clientversion.$(OBJEXT): build/build.h
 libbitcoin_server_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES) $(MINIUPNPC_CPPFLAGS) $(EVENT_CFLAGS) $(EVENT_PTHREADS_CFLAGS)
 libbitcoin_server_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIC_FLAGS) $(PIE_FLAGS)
 libbitcoin_server_a_SOURCES = \
-  addrdb.cpp \
-  addrman.cpp \
+  net/addrdb.cpp \
+  net/addrman.cpp \
   blockgeneration/blockgeneration.cpp \
   blockgeneration/miner.cpp \
   blockgeneration/minter.cpp \
@@ -177,8 +175,8 @@ libbitcoin_server_a_SOURCES = \
   kernel.cpp \
   main.cpp \
   merkleblock.cpp \
-  net.cpp \
-  netaddress.cpp \
+  net/net.cpp \
+  net/netaddress.cpp \
   noui.cpp \
   policy/fees.cpp \
   policy/policy.cpp \
@@ -209,16 +207,15 @@ libbitcoin_server_a_SOURCES = \
   crypto/hash.cpp \
   key.cpp \
   keystore.cpp \
-  netbase.cpp \
+  net/netbase.cpp \
   chain/block.cpp \
   chain/blockindex.cpp \
   processblock.cpp \
   processheader.cpp \
   processtx.cpp \
   chain/tx.cpp \
-  protocol.cpp \
+  net/protocol.cpp \
   pubkey.cpp \
-  scheduler.cpp \
   pbkdf2.cpp \
   script/interpreter.cpp \
   script/script.cpp \
@@ -234,7 +231,7 @@ libbitcoin_server_a_SOURCES = \
   compat/glibcxx_sanity.cpp \
   compat/strnlen.cpp \
   networks/netman.cpp \
-  messages.cpp \
+  net/messages.cpp \
   random.cpp \
   rpc/rpcprotocol.cpp \
   support/cleanse.cpp \
@@ -271,7 +268,6 @@ libbitcoin_server_a_SOURCES = \
   wallet/wallet_ismine.cpp \
   wallet/walletdb.cpp \
   rpc/rpcclient.cpp \
-  threadinterrupt.cpp \
   $(BITCOIN_CORE_H)
 
 if GLIBC_BACK_COMPAT

@@ -23,9 +23,11 @@
 #include "util/util.h"
 #include "util/utilstrencodings.h"
 
+#include <map>
+#include <memory>
+#include <set>
 #include <stdio.h>
 
-#include <boost/thread.hpp>
 
 #ifdef DEBUG_LOCKCONTENTION
 void PrintLockContention(const char *pszName, const char *pszFile, int nLine)
@@ -72,11 +74,24 @@ private:
 };
 
 typedef std::vector<std::pair<void *, CLockLocation> > LockStack;
+typedef std::map<std::pair<void *, void *>, LockStack> LockOrders;
+typedef std::set<std::pair<void *, void *> > InvLockOrders;
 
-static boost::mutex dd_mutex;
-static std::map<std::pair<void *, void *>, LockStack> lockorders;
-static boost::thread_specific_ptr<LockStack> lockstack;
+struct LockData
+{
+    // Very ugly hack: as the global constructs and destructors run single
+    // threaded, we use this boolean to know whether LockData still exists,
+    // as DeleteLock can get called by global CCriticalSection destructors
+    // after LockData disappears.
+    bool available;
+    LockData() : available(true) {}
+    ~LockData() { available = false; }
+    LockOrders lockorders;
+    InvLockOrders invlockorders;
+    std::mutex dd_mutex;
+} static lockdata;
 
+static thread_local LockStack g_lockstack;
 
 static void potential_deadlock_detected(const std::pair<void *, void *> &mismatch,
     const LockStack &s1,
@@ -136,64 +151,98 @@ static void potential_deadlock_detected(const std::pair<void *, void *> &mismatc
     assert(onlyMaybeDeadlock);
 }
 
-static void push_lock(void *c, const CLockLocation &locklocation, bool fTry)
+static void push_lock(void *c, const CLockLocation &locklocation)
 {
-    if (lockstack.get() == NULL)
-        lockstack.reset(new LockStack);
+    std::lock_guard<std::mutex> lock(lockdata.dd_mutex);
 
-    dd_mutex.lock();
+    g_lockstack.push_back(std::make_pair(c, locklocation));
 
-    (*lockstack).push_back(std::make_pair(c, locklocation));
-
-    if (!fTry)
+    for (const std::pair<void *, CLockLocation> &i : g_lockstack)
     {
-        for (auto const &i : (*lockstack))
+        if (i.first == c)
         {
-            if (i.first == c)
-                break;
+            break;
+        }
 
-            std::pair<void *, void *> p1 = std::make_pair(i.first, c);
-            if (lockorders.count(p1))
-                continue;
-            lockorders[p1] = (*lockstack);
+        std::pair<void *, void *> p1 = std::make_pair(i.first, c);
+        if (lockdata.lockorders.count(p1))
+        {
+            continue;
+        }
+        lockdata.lockorders[p1] = g_lockstack;
 
-            std::pair<void *, void *> p2 = std::make_pair(c, i.first);
-            if (lockorders.count(p2))
-                potential_deadlock_detected(p1, lockorders[p2], lockorders[p1]);
+        std::pair<void *, void *> p2 = std::make_pair(c, i.first);
+        lockdata.invlockorders.insert(p2);
+        if (lockdata.lockorders.count(p2))
+        {
+            potential_deadlock_detected(p1, lockdata.lockorders[p2], lockdata.lockorders[p1]);
         }
     }
-    dd_mutex.unlock();
 }
 
-static void pop_lock()
-{
-    dd_mutex.lock();
-    (*lockstack).pop_back();
-    dd_mutex.unlock();
-}
-
+static void pop_lock() { g_lockstack.pop_back(); }
 void EnterCritical(const char *pszName, const char *pszFile, int nLine, void *cs, bool fTry)
 {
-    push_lock(cs, CLockLocation(pszName, pszFile, nLine, fTry), fTry);
+    push_lock(cs, CLockLocation(pszName, pszFile, nLine, fTry));
 }
 
 void LeaveCritical() { pop_lock(); }
 std::string LocksHeld()
 {
     std::string result;
-    for (auto const &i : *lockstack)
+    for (const std::pair<void *, CLockLocation> &i : g_lockstack)
         result += i.second.ToString() + std::string("\n");
     return result;
 }
 
 void AssertLockHeldInternal(const char *pszName, const char *pszFile, int nLine, void *cs)
 {
-    for (auto const &i : *lockstack)
+    for (const std::pair<void *, CLockLocation> &i : g_lockstack)
         if (i.first == cs)
             return;
     fprintf(stderr, "Assertion failed: lock %s not held in %s:%i; locks held:\n%s", pszName, pszFile, nLine,
         LocksHeld().c_str());
     abort();
 }
+
+void AssertLockNotHeldInternal(const char *pszName, const char *pszFile, int nLine, void *cs)
+{
+    for (const std::pair<void *, CLockLocation> &i : g_lockstack)
+    {
+        if (i.first == cs)
+        {
+            fprintf(stderr, "Assertion failed: lock %s held in %s:%i; locks held:\n%s", pszName, pszFile, nLine,
+                LocksHeld().c_str());
+            abort();
+        }
+    }
+}
+
+void DeleteLock(void *cs)
+{
+    if (!lockdata.available)
+    {
+        // We're already shutting down.
+        return;
+    }
+    std::lock_guard<std::mutex> lock(lockdata.dd_mutex);
+    std::pair<void *, void *> item = std::make_pair(cs, nullptr);
+    LockOrders::iterator it = lockdata.lockorders.lower_bound(item);
+    while (it != lockdata.lockorders.end() && it->first.first == cs)
+    {
+        std::pair<void *, void *> invitem = std::make_pair(it->first.second, it->first.first);
+        lockdata.invlockorders.erase(invitem);
+        lockdata.lockorders.erase(it++);
+    }
+    InvLockOrders::iterator invit = lockdata.invlockorders.lower_bound(item);
+    while (invit != lockdata.invlockorders.end() && invit->first == cs)
+    {
+        std::pair<void *, void *> invinvitem = std::make_pair(invit->second, invit->first);
+        lockdata.lockorders.erase(invinvitem);
+        lockdata.invlockorders.erase(invit++);
+    }
+}
+
+bool g_debug_lockorder_abort = true;
 
 #endif /* DEBUG_LOCKORDER */
