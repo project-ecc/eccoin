@@ -1,13 +1,12 @@
 ##################################  Notes  ##################################
 # to build:
-#   docker build --no-cache -t eccoin .
-# (--no-cache is required or else it won't pull latest updates from github)
+#   docker build -t eccoin .
 #
 # to run:
-#   docker run -P eccoin
+#   docker run -p 19118:19118 eccoin
 #
 # to run with a mounted directory for ~/.eccoin:
-#   docker run -P -v /path/to/a/local/directory:/root/.eccoin eccoin
+#   docker run -p 19118:19118 -v /path/to/a/local/directory:/root/.eccoin eccoin
 #
 #############################################################################
 
@@ -26,5 +25,4 @@ RUN cd eccoin && ./autogen.sh && ./configure && make
 
 #final prep work to run daemon
 RUN mkdir /root/.eccoin/
-EXPOSE 11918
 CMD ["/eccoin/src/eccoind","-listen","-upnp"]
