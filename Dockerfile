@@ -26,5 +26,5 @@ RUN cd eccoin && ./autogen.sh && ./configure && make
 
 #final prep work to run daemon
 RUN mkdir /root/.eccoin/
-EXPOSE 19118
+EXPOSE 11918
 CMD ["/eccoin/src/eccoind","-listen","-upnp"]
