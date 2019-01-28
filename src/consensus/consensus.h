@@ -23,13 +23,10 @@
 
 #include <inttypes.h>
 
-
 /** The maximum allowed size for a serialized block, in bytes (network rule) */
-static const uint64_t MAX_BLOCK_SIZE = 1000000;
-
-static const uint64_t MAX_BLOCK_SIZE_GEN = MAX_BLOCK_SIZE / 2;
-
-static const uint64_t DEFAULT_LARGEST_TRANSACTION = 1000000;
+static const uint64_t MAX_BLOCK_SIZE = 1000000; // 1MB
+static const uint64_t DEFTAUL_BLOCK_PRIORITY_SIZE = 100000; // 0.1MB
+static const uint64_t DEFAULT_LARGEST_TRANSACTION = 1000000; // 1MB
 
 static const int64_t nMaxClockDrift = 2 * 60 * 60; // two hours
 

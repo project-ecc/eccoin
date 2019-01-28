@@ -88,8 +88,6 @@ unsigned int nBytesPerSigOp = DEFAULT_BYTES_PER_SIGOP;
 bool fCheckBlockIndex = false;
 bool fCheckpointsEnabled = DEFAULT_CHECKPOINTS_ENABLED;
 size_t nCoinCacheUsage = 5000 * 300;
-bool fAlerts = DEFAULT_ALERTS;
-bool fEnableReplacement = DEFAULT_ENABLE_REPLACEMENT;
 
 /** Fees smaller than this (in satoshi) are considered zero fee (for relaying, mining and transaction creation) */
 CFeeRate minRelayTxFee = CFeeRate(DEFAULT_MIN_RELAY_TX_FEE);
@@ -658,13 +656,6 @@ bool AcceptToMemoryPoolWorker(CTxMemPool &pool,
             return state.DoS(0, false, REJECT_INSUFFICIENTFEE, "mempool min fee not met", false,
                 strprintf("%d < %d", nFees, mempoolRejectFee));
         }
-        else if (gArgs.GetBoolArg("-relaypriority", DEFAULT_RELAYPRIORITY) &&
-                 nModifiedFees < ::minRelayTxFee.GetFee(nSize) &&
-                 !AllowFree(entry.GetPriority(pnetMan->getChainActive()->chainActive.Height() + 1)))
-        {
-            // Require that free transactions have sufficient priority to be mined in the next block.
-            return state.DoS(0, false, REJECT_INSUFFICIENTFEE, "insufficient priority");
-        }
 
         // Continuously rate-limit free (really, very-low-fee) transactions
         // This mitigates 'penny-flooding' -- sending thousands of free transactions just to
@@ -744,7 +735,9 @@ bool AcceptToMemoryPoolWorker(CTxMemPool &pool,
             // -limitfreerelay unit is thousand-bytes-per-minute
             // At default rate it would take over a month to fill 1GB
             if (dFreeCount >= gArgs.GetArg("-limitfreerelay", DEFAULT_LIMITFREERELAY) * 10 * 1000)
+            {
                 return state.DoS(0, false, REJECT_INSUFFICIENTFEE, "rate limited free transaction");
+            }
             LogPrint("mempool", "Rate limit dFreeCount: %g => %g\n", dFreeCount, dFreeCount + nSize);
             dFreeCount += nSize;
         }

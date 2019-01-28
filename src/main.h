@@ -56,8 +56,6 @@ struct LockPoints;
 /** Default for returning change from tx back an address we already owned instead of a new one (try to select address
  * with most value in it). */
 static const bool DEFAULT_RETURN_CHANGE = true;
-/** Default for accepting alerts from the P2P network. */
-static const bool DEFAULT_ALERTS = false;
 /** Default for DEFAULT_WHITELISTRELAY. */
 static const bool DEFAULT_WHITELISTRELAY = true;
 /** Default for DEFAULT_WHITELISTFORCERELAY. */
@@ -117,8 +115,7 @@ static const int64_t BLOCK_DOWNLOAD_TIMEOUT_BASE = 1000000;
 /** Additional block download timeout per parallel downloading peer (i.e. 5 min) */
 static const int64_t BLOCK_DOWNLOAD_TIMEOUT_PER_PEER = 500000;
 
-static const unsigned int DEFAULT_LIMITFREERELAY = 15;
-static const bool DEFAULT_RELAYPRIORITY = true;
+static const unsigned int DEFAULT_LIMITFREERELAY = 1000;
 
 /** Default for -permitbaremultisig */
 static const bool DEFAULT_PERMIT_BAREMULTISIG = true;
@@ -128,8 +125,6 @@ static const bool DEFAULT_TXINDEX = true;
 static const unsigned int DEFAULT_BANSCORE_THRESHOLD = 100;
 
 static const bool DEFAULT_TESTSAFEMODE = false;
-/** Default for -mempoolreplacement */
-static const bool DEFAULT_ENABLE_REPLACEMENT = true;
 /** The minimum value possible for -limitfreerelay when rate limiting */
 static const unsigned int DEFAULT_MIN_LIMITFREERELAY = 1;
 /** The default value for -minrelaytxfee */
@@ -164,8 +159,6 @@ extern bool fCheckBlockIndex;
 extern bool fCheckpointsEnabled;
 extern size_t nCoinCacheUsage;
 extern CFeeRate minRelayTxFee;
-extern bool fAlerts;
-extern bool fEnableReplacement;
 
 struct COrphanTx
 {
