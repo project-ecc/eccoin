@@ -61,8 +61,8 @@ if 'ENABLE_BITCOIND' not in vars():
     ENABLE_BITCOIND=0
 if 'ENABLE_UTILS' not in vars():
     ENABLE_UTILS=0
-#if 'ENABLE_ZMQ' not in vars():
-ENABLE_ZMQ=0
+if 'ENABLE_ZMQ' not in vars():
+    ENABLE_ZMQ=0
 
 ENABLE_COVERAGE=0
 

@@ -158,6 +158,12 @@ std::vector<std::string> CArgsManager::GetArgs(const std::string &strArg)
     return {};
 }
 
+std::map<std::string, std::string> CArgsManager::GetMapArgs()
+{
+    LOCK(cs_args);
+    return mapArgs;
+}
+
 bool CArgsManager::IsArgSet(const std::string &strArg)
 {
     LOCK(cs_args);

@@ -51,7 +51,7 @@ void SyncWithWallets(const CTransactionRef &ptx, const CBlock *pblock, int txIdx
 class CValidationInterface
 {
 protected:
-    virtual void UpdatedBlockTip(const CBlockIndex *pindexNew, const CBlockIndex *pindexFork, bool fInitialDownload) {}
+    virtual void UpdatedBlockTip(const CBlockIndex *pindex) {}
     virtual void SyncTransaction(const CTransactionRef &ptx, const CBlock *pblock, int txIdx) {}
     virtual void SetBestChain(const CBlockLocator &locator) {}
     virtual void Inventory(const uint256 &hash) {}
@@ -67,7 +67,7 @@ protected:
 struct CMainSignals
 {
     /** Notifies listeners of updated block chain tip */
-    boost::signals2::signal<void(const CBlockIndex *, const CBlockIndex *, bool fInitialDownload)> UpdatedBlockTip;
+    boost::signals2::signal<void(const CBlockIndex *)> UpdatedBlockTip;
     /** Notifies listeners of updated transaction data (transaction, and optionally the block it is found in. */
     boost::signals2::signal<void(const CTransactionRef &, const CBlock *, int txIndex)> SyncTransaction;
     /** Notifies listeners of a new active block chain. */

@@ -62,8 +62,6 @@ private:
 
 public:
     PeerLogicValidation(CConnman *connmanIn);
-
-    void UpdatedBlockTip(const CBlockIndex *pindexNew, const CBlockIndex *pindexFork, bool fInitialDownload) override;
     void NewPoWValidBlock(const CBlockIndex *pindex, const CBlock *pblock) override;
 };
 

@@ -673,7 +673,7 @@ bool ActivateBestChain(CValidationState &state, const CNetworkTemplate &chainpar
                 // Notify external listeners about the new tip.
                 if (!vHashes.empty())
                 {
-                    GetMainSignals().UpdatedBlockTip(pindexNewTip, pindexFork, fInitialDownload);
+                    GetMainSignals().UpdatedBlockTip(pindexNewTip);
                 }
             }
         }

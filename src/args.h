@@ -47,6 +47,8 @@ public:
     void ReadConfigFile();
     std::vector<std::string> GetArgs(const std::string &strArg);
 
+    std::map<std::string, std::string> GetMapArgs();
+
     /**
      * Return true if the given argument has been manually set
      *
