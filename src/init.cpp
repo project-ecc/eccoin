@@ -160,7 +160,7 @@ public:
         catch (const std::runtime_error &e)
         {
             uiInterface.ThreadSafeMessageBox(
-                _("Error reading from database, shutting down."), "", CClientUIInterface::MSG_ERROR);
+                ("Error reading from database, shutting down."), "", CClientUIInterface::MSG_ERROR);
             LogPrintf("Error reading from database: %s\n", e.what());
             // Starting the shutdown sequence and returning false to the caller would be
             // interpreted as 'entry not found' (as opposed to unable to read data), and
@@ -283,6 +283,8 @@ void Shutdown()
     globalVerifyHandle.reset();
     ECC_Stop();
     LogPrintf("%s: done\n", __func__);
+    delete g_logger;
+    g_logger = nullptr;
 }
 
 /**
@@ -337,166 +339,165 @@ std::string HelpMessage()
     // When adding new options to the categories, please keep and ensure alphabetical ordering.
     // Do not translate _(...) -help-debug options, Many technical terms, and only a very small audience, so is
     // unnecessary stress to translators.
-    std::string strUsage = HelpMessageGroup(_("Options:"));
-    strUsage += HelpMessageOpt("-?", _("This help message"));
-    strUsage += HelpMessageOpt("-version", _("Print version and exit"));
+    std::string strUsage = HelpMessageGroup(("Options:"));
+    strUsage += HelpMessageOpt("-?", ("This help message"));
+    strUsage += HelpMessageOpt("-version", ("Print version and exit"));
     strUsage += HelpMessageOpt(
-        "-blocknotify=<cmd>", _("Execute command when the best block changes (%s in cmd is replaced by block hash)"));
+        "-blocknotify=<cmd>", ("Execute command when the best block changes (%s in cmd is replaced by block hash)"));
     strUsage += HelpMessageOpt("-checkblocks=<n>",
-        strprintf(_("How many blocks to check at startup (default: %u, 0 = all)"), DEFAULT_CHECKBLOCKS));
+        strprintf(("How many blocks to check at startup (default: %u, 0 = all)"), DEFAULT_CHECKBLOCKS));
     strUsage += HelpMessageOpt("-checklevel=<n>",
-        strprintf(_("How thorough the block verification of -checkblocks is (0-4, default: %u)"), DEFAULT_CHECKLEVEL));
-    strUsage += HelpMessageOpt("-conf=<file>", strprintf(_("Specify configuration file (default: %s)"), CONF_FILENAME));
+        strprintf(("How thorough the block verification of -checkblocks is (0-4, default: %u)"), DEFAULT_CHECKLEVEL));
+    strUsage += HelpMessageOpt("-conf=<file>", strprintf(("Specify configuration file (default: %s)"), CONF_FILENAME));
     strUsage += HelpMessageOpt("-returnchange",
-        strprintf(_("Specify if change is returned to same address (default: %u)"), DEFAULT_RETURN_CHANGE));
+        strprintf(("Specify if change is returned to same address (default: %u)"), DEFAULT_RETURN_CHANGE));
     {
 #ifndef WIN32
-        strUsage += HelpMessageOpt("-daemon", _("Run in the background as a daemon and accept commands"));
+        strUsage += HelpMessageOpt("-daemon", ("Run in the background as a daemon and accept commands"));
 #endif
     }
-    strUsage += HelpMessageOpt("-datadir=<dir>", _("Specify data directory"));
+    strUsage += HelpMessageOpt("-datadir=<dir>", ("Specify data directory"));
     strUsage +=
-        HelpMessageOpt("-dbcache=<n>", strprintf(_("Set database cache size in megabytes (%d to %d, default: %d)"),
+        HelpMessageOpt("-dbcache=<n>", strprintf(("Set database cache size in megabytes (%d to %d, default: %d)"),
                                            nMinDbCache, nMaxDbCache, nDefaultDbCache));
-    strUsage += HelpMessageOpt("-loadblock=<file>", _("Imports blocks from external blk000??.dat file on startup"));
+    strUsage += HelpMessageOpt("-loadblock=<file>", ("Imports blocks from external blk000??.dat file on startup"));
     strUsage += HelpMessageOpt(
-        "-maxorphantx=<n>", strprintf(_("Keep at most <n> unconnectable transactions in memory (default: %u)"),
+        "-maxorphantx=<n>", strprintf(("Keep at most <n> unconnectable transactions in memory (default: %u)"),
                                 DEFAULT_MAX_ORPHAN_TRANSACTIONS));
     strUsage += HelpMessageOpt("-maxmempool=<n>",
-        strprintf(_("Keep the transaction memory pool below <n> megabytes (default: %u)"), DEFAULT_MAX_MEMPOOL_SIZE));
+        strprintf(("Keep the transaction memory pool below <n> megabytes (default: %u)"), DEFAULT_MAX_MEMPOOL_SIZE));
     strUsage += HelpMessageOpt("-mempoolexpiry=<n>",
-        strprintf(_("Do not keep transactions in the mempool longer than <n> hours (default: %u)"),
+        strprintf(("Do not keep transactions in the mempool longer than <n> hours (default: %u)"),
                                    DEFAULT_MEMPOOL_EXPIRY));
-    strUsage += HelpMessageOpt("-par=<n>", strprintf(_("Set the number of script verification threads (%u to %d, 0 = "
+    strUsage += HelpMessageOpt("-par=<n>", strprintf(("Set the number of script verification threads (%u to %d, 0 = "
                                                        "auto, <0 = leave that many cores free, default: %d)"),
                                                -GetNumCores(), MAX_SCRIPTCHECK_THREADS, DEFAULT_SCRIPTCHECK_THREADS));
 #ifndef WIN32
-    strUsage += HelpMessageOpt("-pid=<file>", strprintf(_("Specify pid file (default: %s)"), PID_FILENAME));
+    strUsage += HelpMessageOpt("-pid=<file>", strprintf(("Specify pid file (default: %s)"), PID_FILENAME));
 #endif
-    strUsage += HelpMessageOpt("-reindex", _("Rebuild block chain index from current blk000??.dat files on startup"));
+    strUsage += HelpMessageOpt("-reindex", ("Rebuild block chain index from current blk000??.dat files on startup"));
 
-    strUsage += HelpMessageGroup(_("Connection options:"));
-    strUsage += HelpMessageOpt("-addnode=<ip>", _("Add a node to connect to and attempt to keep the connection open"));
+    strUsage += HelpMessageGroup(("Connection options:"));
+    strUsage += HelpMessageOpt("-addnode=<ip>", ("Add a node to connect to and attempt to keep the connection open"));
     strUsage += HelpMessageOpt("-banscore=<n>",
-        strprintf(_("Threshold for disconnecting misbehaving peers (default: %u)"), DEFAULT_BANSCORE_THRESHOLD));
+        strprintf(("Threshold for disconnecting misbehaving peers (default: %u)"), DEFAULT_BANSCORE_THRESHOLD));
     strUsage += HelpMessageOpt(
-        "-bantime=<n>", strprintf(_("Number of seconds to keep misbehaving peers from reconnecting (default: %u)"),
+        "-bantime=<n>", strprintf(("Number of seconds to keep misbehaving peers from reconnecting (default: %u)"),
                             DEFAULT_MISBEHAVING_BANTIME));
     strUsage += HelpMessageOpt(
-        "-bind=<addr>", _("Bind to given address and always listen on it. Use [host]:port notation for IPv6"));
-    strUsage += HelpMessageOpt("-connect=<ip>", _("Connect only to the specified node(s)"));
+        "-bind=<addr>", ("Bind to given address and always listen on it. Use [host]:port notation for IPv6"));
+    strUsage += HelpMessageOpt("-connect=<ip>", ("Connect only to the specified node(s)"));
     strUsage += HelpMessageOpt(
-        "-discover", _("Discover own IP addresses (default: 1 when listening and no -externalip or -proxy)"));
-    strUsage += HelpMessageOpt("-dns", _("Allow DNS lookups for -addnode, -seednode and -connect") + " " +
-                                           strprintf(_("(default: %u)"), DEFAULT_NAME_LOOKUP));
+        "-discover", ("Discover own IP addresses (default: 1 when listening and no -externalip or -proxy)"));
+    strUsage += HelpMessageOpt("-dns", "Allow DNS lookups for -addnode, -seednode and -connect " +
+                                           strprintf("(default: %u)", DEFAULT_NAME_LOOKUP));
     strUsage += HelpMessageOpt(
-        "-dnsseed", _("Query for peer addresses via DNS lookup, if low on addresses (default: 1 unless -connect)"));
-    strUsage += HelpMessageOpt("-externalip=<ip>", _("Specify your own public address"));
+        "-dnsseed", ("Query for peer addresses via DNS lookup, if low on addresses (default: 1 unless -connect)"));
+    strUsage += HelpMessageOpt("-externalip=<ip>", ("Specify your own public address"));
     strUsage += HelpMessageOpt("-forcednsseed",
-        strprintf(_("Always query for peer addresses via DNS lookup (default: %u)"), DEFAULT_FORCEDNSSEED));
-    strUsage += HelpMessageOpt("-listen", _("Accept connections from outside (default: 1 if no -proxy or -connect)"));
+        strprintf(("Always query for peer addresses via DNS lookup (default: %u)"), DEFAULT_FORCEDNSSEED));
+    strUsage += HelpMessageOpt("-listen", ("Accept connections from outside (default: 1 if no -proxy or -connect)"));
     strUsage += HelpMessageOpt(
-        "-listenonion", strprintf(_("Automatically create Tor hidden service (default: %d)"), DEFAULT_LISTEN_ONION));
+        "-listenonion", strprintf(("Automatically create Tor hidden service (default: %d)"), DEFAULT_LISTEN_ONION));
     strUsage += HelpMessageOpt("-maxconnections=<n>",
-        strprintf(_("Maintain at most <n> connections to peers (default: %u)"), DEFAULT_MAX_PEER_CONNECTIONS));
+        strprintf(("Maintain at most <n> connections to peers (default: %u)"), DEFAULT_MAX_PEER_CONNECTIONS));
     strUsage += HelpMessageOpt("-maxreceivebuffer=<n>",
-        strprintf(_("Maximum per-connection receive buffer, <n>*1000 bytes (default: %u)"), DEFAULT_MAXRECEIVEBUFFER));
+        strprintf(("Maximum per-connection receive buffer, <n>*1000 bytes (default: %u)"), DEFAULT_MAXRECEIVEBUFFER));
     strUsage += HelpMessageOpt("-maxsendbuffer=<n>",
-        strprintf(_("Maximum per-connection send buffer, <n>*1000 bytes (default: %u)"), DEFAULT_MAXSENDBUFFER));
+        strprintf(("Maximum per-connection send buffer, <n>*1000 bytes (default: %u)"), DEFAULT_MAXSENDBUFFER));
     strUsage += HelpMessageOpt("-onion=<ip:port>",
-        strprintf(_("Use separate SOCKS5 proxy to reach peers via Tor hidden services (default: %s)"), "-proxy"));
-    strUsage += HelpMessageOpt("-onlynet=<net>", _("Only connect to nodes in network <net> (ipv4, ipv6 or onion)"));
+        strprintf(("Use separate SOCKS5 proxy to reach peers via Tor hidden services (default: %s)"), "-proxy"));
+    strUsage += HelpMessageOpt("-onlynet=<net>", ("Only connect to nodes in network <net> (ipv4, ipv6 or onion)"));
     strUsage += HelpMessageOpt(
-        "-permitbaremultisig", strprintf(_("Relay non-P2SH multisig (default: %u)"), DEFAULT_PERMIT_BAREMULTISIG));
+        "-permitbaremultisig", strprintf(("Relay non-P2SH multisig (default: %u)"), DEFAULT_PERMIT_BAREMULTISIG));
     strUsage += HelpMessageOpt("-peerbloomfilters",
-        strprintf(_("Support filtering of blocks and transaction with bloom filters (default: %u)"), 1));
-    strUsage += HelpMessageOpt("-port=<port>", strprintf(_("Listen for connections on <port> (default: %u)"),
+        strprintf(("Support filtering of blocks and transaction with bloom filters (default: %u)"), 1));
+    strUsage += HelpMessageOpt("-port=<port>", strprintf(("Listen for connections on <port> (default: %u)"),
                                                    pnetMan->getActivePaymentNetwork()->GetDefaultPort()));
-    strUsage += HelpMessageOpt("-proxy=<ip:port>", _("Connect through SOCKS5 proxy"));
+    strUsage += HelpMessageOpt("-proxy=<ip:port>", ("Connect through SOCKS5 proxy"));
     strUsage += HelpMessageOpt(
         "-proxyrandomize",
         strprintf(
-            _("Randomize credentials for every proxy connection. This enables Tor stream isolation (default: %u)"),
+            ("Randomize credentials for every proxy connection. This enables Tor stream isolation (default: %u)"),
             DEFAULT_PROXYRANDOMIZE));
-    strUsage += HelpMessageOpt("-seednode=<ip>", _("Connect to a node to retrieve peer addresses, and disconnect"));
+    strUsage += HelpMessageOpt("-seednode=<ip>", ("Connect to a node to retrieve peer addresses, and disconnect"));
     strUsage += HelpMessageOpt("-timeout=<n>",
-        strprintf(_("Specify connection timeout in milliseconds (minimum: 1, default: %d)"), DEFAULT_CONNECT_TIMEOUT));
+        strprintf(("Specify connection timeout in milliseconds (minimum: 1, default: %d)"), DEFAULT_CONNECT_TIMEOUT));
     strUsage += HelpMessageOpt("-torcontrol=<ip>:<port>",
-        strprintf(_("Tor control port to use if onion listening enabled (default: %s)"), DEFAULT_TOR_CONTROL));
-    strUsage += HelpMessageOpt("-torpassword=<pass>", _("Tor control port password (default: empty)"));
+        strprintf(("Tor control port to use if onion listening enabled (default: %s)"), DEFAULT_TOR_CONTROL));
+    strUsage += HelpMessageOpt("-torpassword=<pass>", ("Tor control port password (default: empty)"));
 #ifdef USE_UPNP
 #if USE_UPNP
     strUsage +=
-        HelpMessageOpt("-upnp", _("Use UPnP to map the listening port (default: 1 when listening and no -proxy)"));
+        HelpMessageOpt("-upnp", ("Use UPnP to map the listening port (default: 1 when listening and no -proxy)"));
 #else
-    strUsage += HelpMessageOpt("-upnp", strprintf(_("Use UPnP to map the listening port (default: %u)"), 0));
+    strUsage += HelpMessageOpt("-upnp", strprintf(("Use UPnP to map the listening port (default: %u)"), 0));
 #endif
 #endif
     strUsage += HelpMessageOpt("-whitebind=<addr>",
-        _("Bind to given address and whitelist peers connecting to it. Use [host]:port notation for IPv6"));
+        ("Bind to given address and whitelist peers connecting to it. Use [host]:port notation for IPv6"));
     strUsage += HelpMessageOpt("-whitelist=<netmask>",
-        _("Whitelist peers connecting from the given netmask or IP address. Can be specified multiple times.") + " " +
-            _("Whitelisted peers cannot be DoS banned and their transactions are always relayed, even if they are "
-              "already in the mempool, useful e.g. for a gateway"));
+        "Whitelist peers connecting from the given netmask or IP address. Can be specified multiple times. "
+            "Whitelisted peers cannot be DoS banned and their transactions are always relayed, even if they are "
+              "already in the mempool, useful e.g. for a gateway");
     strUsage +=
-        HelpMessageOpt("-whitelistrelay", strprintf(_("Accept relayed transactions received from whitelisted peers "
+        HelpMessageOpt("-whitelistrelay", strprintf(("Accept relayed transactions received from whitelisted peers "
                                                       "even when not relaying transactions (default: %d)"),
                                               DEFAULT_WHITELISTRELAY));
     strUsage += HelpMessageOpt(
         "-whitelistforcerelay",
         strprintf(
-            _("Force relay of transactions from whitelisted peers even they violate local relay policy (default: %d)"),
+            ("Force relay of transactions from whitelisted peers even they violate local relay policy (default: %d)"),
             DEFAULT_WHITELISTFORCERELAY));
     strUsage += HelpMessageOpt(
         "-maxuploadtarget=<n>",
         strprintf(
-            _("Tries to keep outbound traffic under the given target (in MiB per 24h), 0 = no limit (default: %d)"),
+            ("Tries to keep outbound traffic under the given target (in MiB per 24h), 0 = no limit (default: %d)"),
             DEFAULT_MAX_UPLOAD_TARGET));
 
 
-    strUsage += HelpMessageGroup(_("Wallet options:"));
+    strUsage += HelpMessageGroup(("Wallet options:"));
     strUsage +=
-        HelpMessageOpt("-keypool=<n>", strprintf(_("Set key pool size to <n> (default: %u)"), DEFAULT_KEYPOOL_SIZE));
+        HelpMessageOpt("-keypool=<n>", strprintf(("Set key pool size to <n> (default: %u)"), DEFAULT_KEYPOOL_SIZE));
     strUsage += HelpMessageOpt("-fallbackfee=<amt>",
-        strprintf(_("A fee rate (in %s/kB) that will be used when fee estimation has insufficient data (default: %s)"),
+        strprintf(("A fee rate (in %s/kB) that will be used when fee estimation has insufficient data (default: %s)"),
                                    CURRENCY_UNIT, FormatMoney(DEFAULT_FALLBACK_FEE)));
     strUsage += HelpMessageOpt("-mintxfee=<amt>",
-        strprintf(_("Fees (in %s/kB) smaller than this are considered zero fee for transaction creation (default: %s)"),
+        strprintf(("Fees (in %s/kB) smaller than this are considered zero fee for transaction creation (default: %s)"),
                                    CURRENCY_UNIT, FormatMoney(DEFAULT_TRANSACTION_MINFEE)));
     strUsage +=
-        HelpMessageOpt("-paytxfee=<amt>", strprintf(_("Fee (in %s/kB) to add to transactions you send (default: %s)"),
+        HelpMessageOpt("-paytxfee=<amt>", strprintf(("Fee (in %s/kB) to add to transactions you send (default: %s)"),
                                               CURRENCY_UNIT, FormatMoney(payTxFee.GetFeePerK())));
-    strUsage += HelpMessageOpt("-rescan", _("Rescan the block chain for missing wallet transactions on startup"));
+    strUsage += HelpMessageOpt("-rescan", ("Rescan the block chain for missing wallet transactions on startup"));
     strUsage +=
-        HelpMessageOpt("-salvagewallet", _("Attempt to recover private keys from a corrupt wallet.dat on startup"));
+        HelpMessageOpt("-salvagewallet", ("Attempt to recover private keys from a corrupt wallet.dat on startup"));
     strUsage += HelpMessageOpt(
-        "-sendfreetransactions", strprintf(_("Send transactions as zero-fee transactions if possible (default: %u)"),
+        "-sendfreetransactions", strprintf(("Send transactions as zero-fee transactions if possible (default: %u)"),
                                      DEFAULT_SEND_FREE_TRANSACTIONS));
     strUsage += HelpMessageOpt(
-        "-spendzeroconfchange", strprintf(_("Spend unconfirmed change when sending transactions (default: %u)"),
+        "-spendzeroconfchange", strprintf(("Spend unconfirmed change when sending transactions (default: %u)"),
                                     DEFAULT_SPEND_ZEROCONF_CHANGE));
     strUsage += HelpMessageOpt(
-        "-txconfirmtarget=<n>", strprintf(_("If paytxfee is not set, include enough fee so transactions begin "
+        "-txconfirmtarget=<n>", strprintf(("If paytxfee is not set, include enough fee so transactions begin "
                                             "confirmation on average within n blocks (default: %u)"),
                                     DEFAULT_TX_CONFIRM_TARGET));
     strUsage += HelpMessageOpt(
-        "-maxtxfee=<amt>", strprintf(_("Maximum total fees (in %s) to use in a single wallet transaction; setting this "
+        "-maxtxfee=<amt>", strprintf(("Maximum total fees (in %s) to use in a single wallet transaction; setting this "
                                        "too low may abort large transactions (default: %s)"),
                                CURRENCY_UNIT, FormatMoney(DEFAULT_TRANSACTION_MAXFEE)));
-    strUsage += HelpMessageOpt("-upgradewallet", _("Upgrade wallet to latest format on startup"));
+    strUsage += HelpMessageOpt("-upgradewallet", ("Upgrade wallet to latest format on startup"));
     strUsage += HelpMessageOpt("-wallet=<file>",
-        _("Specify wallet file (within data directory)") + " " + strprintf(_("(default: %s)"), "wallet.dat"));
+        "Specify wallet file (within data directory) (default: wallet.dat)");
     strUsage += HelpMessageOpt("-walletbroadcast",
-        _("Make the wallet broadcast transactions") + " " + strprintf(_("(default: %u)"), DEFAULT_WALLETBROADCAST));
+        "Make the wallet broadcast transactions " + strprintf("(default: %u)", DEFAULT_WALLETBROADCAST));
     strUsage += HelpMessageOpt(
-        "-walletnotify=<cmd>", _("Execute command when a wallet transaction changes (%s in cmd is replaced by TxID)"));
+        "-walletnotify=<cmd>", ("Execute command when a wallet transaction changes (%s in cmd is replaced by TxID)"));
     strUsage += HelpMessageOpt("-zapwallettxes=<mode>",
-        _("Delete all wallet transactions and only recover those parts of the blockchain through -rescan on startup") +
-            " " +
-            _("(1 = keep tx meta data e.g. account owner and payment request information, 2 = drop tx meta data)"));
+        "Delete all wallet transactions and only recover those parts of the blockchain through -rescan on startup "
+            "(1 = keep tx meta data e.g. account owner and payment request information, 2 = drop tx meta data)");
 
-    strUsage += HelpMessageGroup(_("Debugging/Testing options:"));
-    strUsage += HelpMessageOpt("-uacomment=<cmt>", _("Append comment to the user agent string"));
+    strUsage += HelpMessageGroup(("Debugging/Testing options:"));
+    strUsage += HelpMessageOpt("-uacomment=<cmt>", ("Append comment to the user agent string"));
     if (showDebug)
     {
         strUsage += HelpMessageOpt("-checkblockindex",
@@ -545,17 +546,17 @@ std::string HelpMessage()
                                   "mempoolrej, net, proxy, http, libevent, tor, zmq";
     debugCategories += ", qt";
     strUsage += HelpMessageOpt("-debug=<category>",
-        strprintf(_("Output debugging information (default: %u, supplying <category> is optional)"), 0) + ". " +
-            _("If <category> is not supplied or if <category> = 1, output all debugging information.") +
-            _("<category> can be:") + " " + debugCategories + ".");
+        strprintf(("Output debugging information (default: %u, supplying <category> is optional)"), 0) + ". " +
+            ("If <category> is not supplied or if <category> = 1, output all debugging information.") +
+            ("<category> can be:") + " " + debugCategories + ".");
     if (showDebug)
         strUsage += HelpMessageOpt("-nodebug", "Turn off debugging messages, same as -debug=0");
-    strUsage += HelpMessageOpt("-staking", strprintf(_("Generate coins (default: %u)"), DEFAULT_GENERATE));
-    strUsage += HelpMessageOpt("-help-debug", _("Show all debugging options (usage: --help -help-debug)"));
+    strUsage += HelpMessageOpt("-staking", strprintf(("Generate coins (default: %u)"), DEFAULT_GENERATE));
+    strUsage += HelpMessageOpt("-help-debug", ("Show all debugging options (usage: --help -help-debug)"));
     strUsage +=
-        HelpMessageOpt("-logips", strprintf(_("Include IP addresses in debug output (default: %u)"), DEFAULT_LOGIPS));
+        HelpMessageOpt("-logips", strprintf(("Include IP addresses in debug output (default: %u)"), DEFAULT_LOGIPS));
     strUsage += HelpMessageOpt(
-        "-logtimestamps", strprintf(_("Prepend debug output with timestamp (default: %u)"), DEFAULT_LOGTIMESTAMPS));
+        "-logtimestamps", strprintf(("Prepend debug output with timestamp (default: %u)"), DEFAULT_LOGTIMESTAMPS));
     if (showDebug)
     {
         strUsage += HelpMessageOpt("-logtimemicros",
@@ -568,10 +569,10 @@ std::string HelpMessage()
             strprintf("Limit size of signature cache to <n> MiB (default: %u)", DEFAULT_MAX_SIG_CACHE_SIZE));
     }
     strUsage += HelpMessageOpt(
-        "-minrelaytxfee=<amt>", strprintf(_("Fees (in %s/kB) smaller than this are considered zero fee for relaying, "
+        "-minrelaytxfee=<amt>", strprintf(("Fees (in %s/kB) smaller than this are considered zero fee for relaying, "
                                             "mining and transaction creation (default: %s)"),
                                     CURRENCY_UNIT, FormatMoney(DEFAULT_MIN_RELAY_TX_FEE)));
-    strUsage += HelpMessageOpt("-printtoconsole", _("Send trace/debug info to console instead of debug.log file"));
+    strUsage += HelpMessageOpt("-printtoconsole", ("Send trace/debug info to console instead of debug.log file"));
     if (showDebug)
     {
         strUsage += HelpMessageOpt(
@@ -582,7 +583,7 @@ std::string HelpMessage()
             strprintf("Sets the DB_PRIVATE flag in the wallet db environment (default: %u)", DEFAULT_WALLET_PRIVDB));
     }
 
-    strUsage += HelpMessageGroup(_("Node relay options:"));
+    strUsage += HelpMessageGroup(("Node relay options:"));
 
     /// TODO: fix this as it is temporarily disabled
     /*
@@ -591,40 +592,40 @@ std::string HelpMessage()
     (%sdefault: %u)", "testnet/regtest only; ", !Params(CNetMan::TESTNET).RequireStandard()));
         */
     strUsage += HelpMessageOpt(
-        "-bytespersigop", strprintf(_("Minimum bytes per sigop in transactions we relay and mine (default: %u)"),
+        "-bytespersigop", strprintf(("Minimum bytes per sigop in transactions we relay and mine (default: %u)"),
                               DEFAULT_BYTES_PER_SIGOP));
     strUsage += HelpMessageOpt("-datacarrier",
-        strprintf(_("Relay and mine data carrier transactions (default: %u)"), DEFAULT_ACCEPT_DATACARRIER));
+        strprintf(("Relay and mine data carrier transactions (default: %u)"), DEFAULT_ACCEPT_DATACARRIER));
     strUsage += HelpMessageOpt("-datacarriersize",
-        strprintf(_("Maximum size of data in data carrier transactions we relay and mine (default: %u)"),
+        strprintf(("Maximum size of data in data carrier transactions we relay and mine (default: %u)"),
                                    MAX_OP_RETURN_RELAY));
 
-    strUsage += HelpMessageGroup(_("Block creation options:"));
+    strUsage += HelpMessageGroup(("Block creation options:"));
     if (showDebug)
         strUsage += HelpMessageOpt("-blockversion=<n>", "Override block version to test forking scenarios");
 
-    strUsage += HelpMessageGroup(_("RPC server options:"));
-    strUsage += HelpMessageOpt("-server", _("Accept command line and JSON-RPC commands"));
-    strUsage += HelpMessageOpt("-rest", strprintf(_("Accept public REST requests (default: %u)"), DEFAULT_REST_ENABLE));
+    strUsage += HelpMessageGroup(("RPC server options:"));
+    strUsage += HelpMessageOpt("-server", ("Accept command line and JSON-RPC commands"));
+    strUsage += HelpMessageOpt("-rest", strprintf(("Accept public REST requests (default: %u)"), DEFAULT_REST_ENABLE));
     strUsage += HelpMessageOpt(
-        "-rpcbind=<addr>", _("Bind to given address to listen for JSON-RPC connections. Use [host]:port notation for "
+        "-rpcbind=<addr>", ("Bind to given address to listen for JSON-RPC connections. Use [host]:port notation for "
                              "IPv6. This option can be specified multiple times (default: bind to all interfaces)"));
-    strUsage += HelpMessageOpt("-rpccookiefile=<loc>", _("Location of the auth cookie (default: data dir)"));
-    strUsage += HelpMessageOpt("-rpcuser=<user>", _("Username for JSON-RPC connections"));
-    strUsage += HelpMessageOpt("-rpcpassword=<pw>", _("Password for JSON-RPC connections"));
+    strUsage += HelpMessageOpt("-rpccookiefile=<loc>", ("Location of the auth cookie (default: data dir)"));
+    strUsage += HelpMessageOpt("-rpcuser=<user>", ("Username for JSON-RPC connections"));
+    strUsage += HelpMessageOpt("-rpcpassword=<pw>", ("Password for JSON-RPC connections"));
     strUsage += HelpMessageOpt(
-        "-rpcauth=<userpw>", _("Username and hashed password for JSON-RPC connections. The field <userpw> comes in the "
+        "-rpcauth=<userpw>", ("Username and hashed password for JSON-RPC connections. The field <userpw> comes in the "
                                "format: <USERNAME>:<SALT>$<HASH>. A canonical python script is included in "
                                "share/rpcuser. This option can be specified multiple times"));
     strUsage +=
-        HelpMessageOpt("-rpcport=<port>", strprintf(_("Listen for JSON-RPC connections on <port> (default: %u)"),
+        HelpMessageOpt("-rpcport=<port>", strprintf(("Listen for JSON-RPC connections on <port> (default: %u)"),
                                               pnetMan->getActivePaymentNetwork()->GetRPCPort()));
     strUsage += HelpMessageOpt(
-        "-rpcallowip=<ip>", _("Allow JSON-RPC connections from specified source. Valid for <ip> are a single IP (e.g. "
+        "-rpcallowip=<ip>", ("Allow JSON-RPC connections from specified source. Valid for <ip> are a single IP (e.g. "
                               "1.2.3.4), a network/netmask (e.g. 1.2.3.4/255.255.255.0) or a network/CIDR (e.g. "
                               "1.2.3.4/24). This option can be specified multiple times"));
     strUsage += HelpMessageOpt("-rpcthreads=<n>",
-        strprintf(_("Set the number of threads to service RPC calls (default: %d)"), DEFAULT_HTTP_THREADS));
+        strprintf(("Set the number of threads to service RPC calls (default: %d)"), DEFAULT_HTTP_THREADS));
     if (showDebug)
     {
         strUsage += HelpMessageOpt("-rpcworkqueue=<n>",
@@ -639,11 +640,11 @@ std::string HelpMessage()
 std::string LicenseInfo()
 {
     // todo: remove urls from translations on next change
-    return FormatParagraph(strprintf(_("Copyright (C) 2014-%i The Eccoin Developers"), COPYRIGHT_YEAR)) + "\n" + "\n" +
-           FormatParagraph(_("This is experimental software.")) + "\n" + "\n" +
-           FormatParagraph(_("Distributed under the MIT software license, see the accompanying file COPYING or "
+    return FormatParagraph(strprintf(("Copyright (C) 2014-%i The Eccoin Developers"), COPYRIGHT_YEAR)) + "\n" + "\n" +
+           FormatParagraph(("This is experimental software.")) + "\n" + "\n" +
+           FormatParagraph(("Distributed under the MIT software license, see the accompanying file COPYING or "
                              "<http://www.opensource.org/licenses/mit-license.php>.")) +
-           "\n" + "\n" + FormatParagraph(_("This product includes software developed by the OpenSSL Project for use in "
+           "\n" + "\n" + FormatParagraph(("This product includes software developed by the OpenSSL Project for use in "
                                            "the OpenSSL Toolkit <https://www.openssl.org/> and cryptographic software "
                                            "written by Eric Young and UPnP software written by Thomas Bernard.")) +
            "\n";
@@ -860,15 +861,15 @@ void InitParameterInteraction()
 
 static std::string ResolveErrMsg(const char *const optname, const std::string &strBind)
 {
-    return strprintf(_("Cannot resolve -%s address: '%s'"), optname, strBind);
+    return strprintf(("Cannot resolve -%s address: '%s'"), optname, strBind);
 }
 
 void InitLogging()
 {
-    fPrintToConsole = gArgs.GetBoolArg("-printtoconsole", false);
-    fLogTimestamps = gArgs.GetBoolArg("-logtimestamps", DEFAULT_LOGTIMESTAMPS);
-    fLogTimeMicros = gArgs.GetBoolArg("-logtimemicros", DEFAULT_LOGTIMEMICROS);
-    fLogIPs = gArgs.GetBoolArg("-logips", DEFAULT_LOGIPS);
+    g_logger->fPrintToConsole = gArgs.GetBoolArg("-printtoconsole", false);
+    g_logger->fLogTimestamps = gArgs.GetBoolArg("-logtimestamps", DEFAULT_LOGTIMESTAMPS);
+    g_logger->fLogTimeMicros = gArgs.GetBoolArg("-logtimemicros", DEFAULT_LOGTIMEMICROS);
+    g_logger->fLogIPs = gArgs.GetBoolArg("-logips", DEFAULT_LOGIPS);
 
     LogPrintf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
     LogPrintf("Eccoin version %s (%s)\n", FormatFullVersion(), CLIENT_DATE);
@@ -957,7 +958,7 @@ bool AppInit2(thread_group &threadGroup)
     initFD = RaiseFileDescriptorLimit(initMaxConnections + MIN_CORE_FILEDESCRIPTORS);
     if (initFD < MIN_CORE_FILEDESCRIPTORS)
     {
-        return InitError(_("Not enough file descriptors available."));
+        return InitError(("Not enough file descriptors available."));
     }
     initMaxConnections = std::min(initFD - MIN_CORE_FILEDESCRIPTORS, initMaxConnections);
 
@@ -965,36 +966,36 @@ bool AppInit2(thread_group &threadGroup)
     {
         LogPrintf("Reducing -maxconnections from %d to %d, because of system limitations.", nUserMaxConnections,
             initMaxConnections);
-        InitWarning(strprintf(_("Reducing -maxconnections from %d to %d, because of system limitations."),
+        InitWarning(strprintf(("Reducing -maxconnections from %d to %d, because of system limitations."),
             nUserMaxConnections, initMaxConnections));
     }
 
     // ********************************************************* Step 3: parameter-to-internal-flags
 
-    fDebug = gArgs.IsArgSet("-debug");
+    g_logger->fDebug = gArgs.IsArgSet("-debug");
     // Special-case: if -debug=0/-nodebug is set, turn off debugging messages
     const std::vector<std::string> &categories = gArgs.GetArgs("-debug");
     if (gArgs.GetBoolArg("-nodebug", false) ||
         find(categories.begin(), categories.end(), std::string("0")) != categories.end())
-        fDebug = false;
+        g_logger->fDebug = false;
 
     // Check for -debugnet
     if (gArgs.GetBoolArg("-debugnet", false))
-        InitWarning(_("Unsupported argument -debugnet ignored, use -debug=net."));
+        InitWarning(("Unsupported argument -debugnet ignored, use -debug=net."));
     // Check for -socks - as this is a privacy risk to continue, exit here
     if (gArgs.IsArgSet("-socks"))
-        return InitError(_("Unsupported argument -socks found. Setting SOCKS version isn't possible anymore, only "
+        return InitError(("Unsupported argument -socks found. Setting SOCKS version isn't possible anymore, only "
                            "SOCKS5 proxies are supported."));
     // Check for -tor - as this is a privacy risk to continue, exit here
     if (gArgs.GetBoolArg("-tor", false))
-        return InitError(_("Unsupported argument -tor found, use -onion."));
+        return InitError(("Unsupported argument -tor found, use -onion."));
 
     if (gArgs.GetBoolArg("-benchmark", false))
-        InitWarning(_("Unsupported argument -benchmark ignored, use -debug=bench."));
+        InitWarning(("Unsupported argument -benchmark ignored, use -debug=bench."));
 
     if (gArgs.GetBoolArg("-whitelistalwaysrelay", false))
         InitWarning(
-            _("Unsupported argument -whitelistalwaysrelay ignored, use -whitelistrelay and/or -whitelistforcerelay."));
+            ("Unsupported argument -whitelistalwaysrelay ignored, use -whitelistrelay and/or -whitelistforcerelay."));
 
     // Checkmempool and checkblockindex default to true in regtest mode
     int ratio = std::min<int>(
@@ -1010,7 +1011,7 @@ bool AppInit2(thread_group &threadGroup)
     int64_t nMempoolSizeMax = gArgs.GetArg("-maxmempool", DEFAULT_MAX_MEMPOOL_SIZE) * 1000000;
     int64_t nMempoolSizeMin = gArgs.GetArg("-limitdescendantsize", DEFAULT_DESCENDANT_SIZE_LIMIT) * 1000 * 40;
     if (nMempoolSizeMax < 0 || nMempoolSizeMax < nMempoolSizeMin)
-        return InitError(strprintf(_("-maxmempool must be at least %d MB"), std::ceil(nMempoolSizeMin / 1000000.0)));
+        return InitError(strprintf(("-maxmempool must be at least %d MB"), std::ceil(nMempoolSizeMin / 1000000.0)));
 
     // -par=0 means autodetect, but nScriptCheckThreads==0 means no concurrency
     nScriptCheckThreads = gArgs.GetArg("-par", DEFAULT_SCRIPTCHECK_THREADS);
@@ -1040,7 +1041,7 @@ bool AppInit2(thread_group &threadGroup)
         if (ParseMoney(minrelay, n) && n > 0)
             ::minRelayTxFee = CFeeRate(n);
         else
-            return InitError(strprintf(_("Invalid amount for -minrelaytxfee=<amount>: '%i'"),
+            return InitError(strprintf(("Invalid amount for -minrelaytxfee=<amount>: '%i'"),
                 gArgs.GetArg("-minrelaytxfee", DEFAULT_TRANSACTION_MINFEE)));
     }
 
@@ -1058,7 +1059,7 @@ bool AppInit2(thread_group &threadGroup)
         if (ParseMoney(minfee, n) && n > 0)
             CWallet::minTxFee = CFeeRate(n);
         else
-            return InitError(strprintf(_("Invalid amount for -mintxfee=<amount>: '%i'"),
+            return InitError(strprintf(("Invalid amount for -mintxfee=<amount>: '%i'"),
                 gArgs.GetArg("-mintxfee", DEFAULT_TRANSACTION_MINFEE)));
     }
     if (gArgs.IsArgSet("-fallbackfee"))
@@ -1066,10 +1067,10 @@ bool AppInit2(thread_group &threadGroup)
         CAmount nFeePerK = 0;
         std::string fallback = gArgs.GetArg("-fallbackfee", std::to_string(DEFAULT_TRANSACTION_MINFEE));
         if (!ParseMoney(fallback, nFeePerK))
-            return InitError(strprintf(_("Invalid amount for -fallbackfee=<amount>: '%s'"),
+            return InitError(strprintf(("Invalid amount for -fallbackfee=<amount>: '%s'"),
                 gArgs.GetArg("-fallbackfee", DEFAULT_TRANSACTION_MINFEE)));
         if (nFeePerK > nHighTransactionFeeWarning)
-            InitWarning(_("-fallbackfee is set very high! This is the transaction fee you may pay when fee estimates "
+            InitWarning(("-fallbackfee is set very high! This is the transaction fee you may pay when fee estimates "
                           "are not available."));
         CWallet::fallbackFee = CFeeRate(nFeePerK);
     }
@@ -1078,15 +1079,15 @@ bool AppInit2(thread_group &threadGroup)
         CAmount nFeePerK = 0;
         std::string payfee = gArgs.GetArg("-paytxfee", std::to_string(DEFAULT_TRANSACTION_MINFEE));
         if (!ParseMoney(payfee, nFeePerK))
-            return InitError(strprintf(_("Invalid amount for -paytxfee=<amount>: '%i'"),
+            return InitError(strprintf(("Invalid amount for -paytxfee=<amount>: '%i'"),
                 gArgs.GetArg("-paytxfee", DEFAULT_TRANSACTION_MINFEE)));
         if (nFeePerK > nHighTransactionFeeWarning)
             InitWarning(
-                _("-paytxfee is set very high! This is the transaction fee you will pay if you send a transaction."));
+                ("-paytxfee is set very high! This is the transaction fee you will pay if you send a transaction."));
         payTxFee = CFeeRate(nFeePerK, 1000);
         if (payTxFee < ::minRelayTxFee)
         {
-            return InitError(strprintf(_("Invalid amount for -paytxfee=<amount>: '%i' (must be at least %s)"),
+            return InitError(strprintf(("Invalid amount for -paytxfee=<amount>: '%i' (must be at least %s)"),
                 gArgs.GetArg("-paytxfee", DEFAULT_TRANSACTION_MINFEE), ::minRelayTxFee.ToString()));
         }
     }
@@ -1095,14 +1096,14 @@ bool AppInit2(thread_group &threadGroup)
         CAmount nMaxFee = 0;
         std::string maxfee = gArgs.GetArg("-maxtxfee", std::to_string(DEFAULT_TRANSACTION_MINFEE));
         if (!ParseMoney(maxfee, nMaxFee))
-            return InitError(strprintf(_("Invalid amount for -maxtxfee=<amount>: '%i'"),
+            return InitError(strprintf(("Invalid amount for -maxtxfee=<amount>: '%i'"),
                 gArgs.GetArg("-maxtxfee", DEFAULT_TRANSACTION_MAXFEE)));
         if (nMaxFee > HIGH_MAX_TX_FEE)
-            InitWarning(_("-maxtxfee is set very high! Fees this large could be paid on a single transaction."));
+            InitWarning(("-maxtxfee is set very high! Fees this large could be paid on a single transaction."));
         maxTxFee = nMaxFee;
         if (CFeeRate(maxTxFee, 1000) < ::minRelayTxFee)
         {
-            return InitError(strprintf(_("Invalid amount for -maxtxfee=<amount>: '%i' (must be at least the minrelay "
+            return InitError(strprintf(("Invalid amount for -maxtxfee=<amount>: '%i' (must be at least the minrelay "
                                          "fee of %s to prevent stuck transactions)"),
                 gArgs.GetArg("-maxtxfee", DEFAULT_TRANSACTION_MAXFEE), ::minRelayTxFee.ToString()));
         }
@@ -1129,13 +1130,13 @@ bool AppInit2(thread_group &threadGroup)
 
     // Sanity check
     if (!InitSanityCheck())
-        return InitError(_("Initialization sanity check failed. Bitcoin Core is shutting down."));
+        return InitError(("Initialization sanity check failed. Bitcoin Core is shutting down."));
 
     std::string strDataDir = GetDataDir().string();
 
     // Wallet file must be a plain filename without a directory
     if (strWalletFile != fs::basename(strWalletFile) + fs::extension(strWalletFile))
-        return InitError(strprintf(_("Wallet %s resides outside data directory %s"), strWalletFile, strDataDir));
+        return InitError(strprintf(("Wallet %s resides outside data directory %s"), strWalletFile, strDataDir));
     // Make sure only a single Bitcoin process is using the data directory.
     fs::path pathLockFile = GetDataDir() / ".lock";
     FILE *file = fopen(pathLockFile.string().c_str(), "a"); // empty lock file; created if it doesn't exist.
@@ -1147,12 +1148,12 @@ bool AppInit2(thread_group &threadGroup)
         static boost::interprocess::file_lock lock(pathLockFile.string().c_str());
         if (!lock.try_lock())
             return InitError(strprintf(
-                _("Cannot obtain a lock on data directory %s. Eccoind is probably already running."), strDataDir));
+                ("Cannot obtain a lock on data directory %s. Eccoind is probably already running."), strDataDir));
     }
     catch (const boost::interprocess::interprocess_exception &e)
     {
         return InitError(
-            strprintf(_("Cannot obtain a lock on data directory %s. Eccoind is probably already running.") + " %s.",
+            strprintf("Cannot obtain a lock on data directory %s. Eccoind is probably already running. %s.",
                 strDataDir, e.what()));
     }
 
@@ -1160,13 +1161,17 @@ bool AppInit2(thread_group &threadGroup)
     CreatePidFile(GetPidFile(), getpid());
 #endif
 
-    if (fPrintToDebugLog)
-        OpenDebugLog();
+    if (g_logger->fPrintToDebugLog)
+    {
+        g_logger->OpenDebugLog();
+    }
 
 
     LogPrintf("Using BerkeleyDB version %s\n", DbEnv::version(0, 0, 0));
-    if (!fLogTimestamps)
+    if (!g_logger->fLogTimestamps)
+    {
         LogPrintf("Startup time: %s\n", DateTimeStrFormat("%Y-%m-%d %H:%M:%S", GetTime()));
+    }
     LogPrintf("Default data directory %s\n", GetDefaultDataDir().string());
     LogPrintf("Using data directory %s\n", strDataDir);
     LogPrintf("Using config file %s\n", gArgs.GetConfigFile().string());
@@ -1192,7 +1197,7 @@ bool AppInit2(thread_group &threadGroup)
     {
         uiInterface.InitMessage.connect(SetRPCWarmupStatus);
         if (!AppInitServers(threadGroup))
-            return InitError(_("Unable to start HTTP server. See debug log for details."));
+            return InitError(("Unable to start HTTP server. See debug log for details."));
     }
 
     int64_t nStart;
@@ -1201,7 +1206,7 @@ bool AppInit2(thread_group &threadGroup)
 
 
     LogPrintf("Using wallet %s\n", strWalletFile);
-    uiInterface.InitMessage(_("Verifying wallet..."));
+    uiInterface.InitMessage(("Verifying wallet..."));
 
     std::string warningString;
     std::string errorString;
@@ -1229,13 +1234,13 @@ bool AppInit2(thread_group &threadGroup)
     for (auto cmt : gArgs.GetArgs("-uacomment"))
     {
         if (cmt != SanitizeString(cmt, SAFE_CHARS_UA_COMMENT))
-            return InitError(strprintf(_("User Agent comment (%s) contains unsafe characters."), cmt));
+            return InitError(strprintf(("User Agent comment (%s) contains unsafe characters."), cmt));
         uacomments.push_back(SanitizeString(cmt, SAFE_CHARS_UA_COMMENT));
     }
     strSubVersion = FormatSubVersion(CLIENT_NAME, CLIENT_VERSION, uacomments);
     if (strSubVersion.size() > MAX_SUBVERSION_LENGTH)
     {
-        return InitError(strprintf(_("Total length of network version string (%i) exceeds maximum length (%i). Reduce "
+        return InitError(strprintf(("Total length of network version string (%i) exceeds maximum length (%i). Reduce "
                                      "the number or size of uacomments."),
             strSubVersion.size(), MAX_SUBVERSION_LENGTH));
     }
@@ -1247,7 +1252,7 @@ bool AppInit2(thread_group &threadGroup)
         {
             enum Network net = ParseNetwork(snet);
             if (net == NET_UNROUTABLE)
-                return InitError(strprintf(_("Unknown network specified in -onlynet: '%s'"), snet));
+                return InitError(strprintf(("Unknown network specified in -onlynet: '%s'"), snet));
             nets.insert(net);
         }
         for (int n = 0; n < NET_MAX; n++)
@@ -1265,7 +1270,7 @@ bool AppInit2(thread_group &threadGroup)
             CSubNet subnet;
             LookupSubNet(net.c_str(), subnet);
             if (!subnet.IsValid())
-                return InitError(strprintf(_("Invalid netmask specified in -whitelist: '%s'"), net));
+                return InitError(strprintf(("Invalid netmask specified in -whitelist: '%s'"), net));
             connman.AddWhitelistedRange(subnet);
         }
     }
@@ -1282,7 +1287,7 @@ bool AppInit2(thread_group &threadGroup)
         proxyType addrProxy = proxyType(resolved, proxyRandomize);
         if (!addrProxy.IsValid())
         {
-            return InitError(strprintf(_("Invalid -proxy address: '%s'"), proxyArg));
+            return InitError(strprintf(("Invalid -proxy address: '%s'"), proxyArg));
         }
 
         SetProxy(NET_IPV4, addrProxy);
@@ -1311,7 +1316,7 @@ bool AppInit2(thread_group &threadGroup)
             proxyType addrOnion = proxyType(resolved, proxyRandomize);
             if (!addrOnion.IsValid())
             {
-                return InitError(strprintf(_("Invalid -onion address: '%s'"), onionArg));
+                return InitError(strprintf(("Invalid -onion address: '%s'"), onionArg));
             }
             SetProxy(NET_TOR, addrOnion);
             SetLimited(NET_TOR, false);
@@ -1333,16 +1338,16 @@ bool AppInit2(thread_group &threadGroup)
             {
                 CService addrBind;
                 if (!Lookup(strBind.c_str(), addrBind, GetListenPort(), false))
-                    return InitError(strprintf(_("Cannot resolve -bind address: '%s'"), strBind));
+                    return InitError(strprintf(("Cannot resolve -bind address: '%s'"), strBind));
                 fBound |= Bind(connman, addrBind, (BF_EXPLICIT | BF_REPORT_ERROR));
             }
             for (auto const &strBind : gArgs.GetArgs("-whitebind"))
             {
                 CService addrBind;
                 if (!Lookup(strBind.c_str(), addrBind, 0, false))
-                    return InitError(strprintf(_("Cannot resolve -whitebind address: '%s'"), strBind));
+                    return InitError(strprintf(("Cannot resolve -whitebind address: '%s'"), strBind));
                 if (addrBind.GetPort() == 0)
-                    return InitError(strprintf(_("Need to specify a port with -whitebind: '%s'"), strBind));
+                    return InitError(strprintf(("Need to specify a port with -whitebind: '%s'"), strBind));
                 fBound |= Bind(connman, addrBind, (BF_EXPLICIT | BF_REPORT_ERROR | BF_WHITELIST));
             }
         }
@@ -1354,7 +1359,7 @@ bool AppInit2(thread_group &threadGroup)
             fBound |= Bind(connman, CService(inaddr_any, GetListenPort()), !fBound ? BF_REPORT_ERROR : BF_NONE);
         }
         if (!fBound)
-            return InitError(_("Failed to listen on any port. Use -listen=0 if you want this."));
+            return InitError(("Failed to listen on any port. Use -listen=0 if you want this."));
     }
 
     if (gArgs.IsArgSet("-externalip"))
@@ -1467,14 +1472,14 @@ bool AppInit2(thread_group &threadGroup)
                     // If necessary, upgrade from older database format.
                     if (!pcoinsdbview->Upgrade())
                     {
-                        strLoadError = _("Error upgrading chainstate database");
+                        strLoadError = ("Error upgrading chainstate database");
                         break;
                     }
                 }
 
                 if (!pnetMan->getChainActive()->LoadBlockIndex())
                 {
-                    strLoadError = _("Error loading block database");
+                    strLoadError = ("Error loading block database");
                     break;
                 }
                 // If the loaded chain has a wrong genesis, bail out immediately
@@ -1492,7 +1497,7 @@ bool AppInit2(thread_group &threadGroup)
                 // Initialize the block index (no-op if non-empty database was already loaded)
                 if (!pnetMan->getChainActive()->InitBlockIndex(chainparams))
                 {
-                    strLoadError = _("Error initializing block database");
+                    strLoadError = ("Error initializing block database");
                     break;
                 }
 
@@ -1518,7 +1523,7 @@ bool AppInit2(thread_group &threadGroup)
                     CBlockIndex *tip = pnetMan->getChainActive()->chainActive.Tip();
                     if (tip && tip->nTime > GetAdjustedTime() + 2 * 60 * 60)
                     {
-                        strLoadError = _("The block database contains a block which appears to be from the future. "
+                        strLoadError = ("The block database contains a block which appears to be from the future. "
                                          "This may be due to your computer's date and time being set incorrectly. "
                                          "Only rebuild the block database if you are sure that your computer's "
                                          "date and time are correct");
@@ -1530,15 +1535,15 @@ bool AppInit2(thread_group &threadGroup)
                         gArgs.GetArg("-checklevel", DEFAULT_CHECKLEVEL),
                         gArgs.GetArg("-checkblocks", DEFAULT_CHECKBLOCKS)))
                 {
-                    strLoadError = _("Corrupted block database detected");
+                    strLoadError = ("Corrupted block database detected");
                     break;
                 }
             }
             catch (const std::exception &e)
             {
-                if (fDebug)
+                if (g_logger->fDebug)
                     LogPrintf("%s\n", e.what());
-                strLoadError = _("Error opening block database");
+                strLoadError = ("Error opening block database");
                 break;
             }
 
@@ -1551,7 +1556,7 @@ bool AppInit2(thread_group &threadGroup)
             if (!fReset)
             {
                 bool fRet = uiInterface.ThreadSafeMessageBox(
-                    strLoadError + ".\n\n" + _("Do you want to rebuild the block database now?"), "",
+                    strLoadError + ".\n\n" + ("Do you want to rebuild the block database now?"), "",
                     CClientUIInterface::MSG_ERROR | CClientUIInterface::BTN_ABORT);
                 if (fRet)
                 {

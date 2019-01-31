@@ -112,7 +112,7 @@ void PushNodeVersion(CNode *pnode, CConnman &connman, int64_t nTime)
     connman.PushMessage(pnode, NetMsgType::VERSION, PROTOCOL_VERSION, (uint64_t)nLocalNodeServices, nTime, addrYou,
         addrMe, nLocalHostNonce, strSubVersion, nNodeStartingHeight, ::fRelayTxes);
 
-    if (fLogIPs)
+    if (g_logger->fLogIPs)
     {
         LogPrintf("send version message: version %d, blocks=%d, "
                   "us=%s, them=%s, peer=%d\n",
@@ -1173,7 +1173,7 @@ bool static ProcessMessage(CNode *pfrom,
         }
 
         std::string remoteAddr;
-        if (fLogIPs)
+        if (g_logger->fLogIPs)
         {
             remoteAddr = ", peeraddr=" + pfrom->addr.ToString();
         }
@@ -2111,7 +2111,7 @@ bool static ProcessMessage(CNode *pfrom,
 
     else if (strCommand == NetMsgType::REJECT)
     {
-        if (fDebug)
+        if (g_logger->fDebug)
         {
             try
             {

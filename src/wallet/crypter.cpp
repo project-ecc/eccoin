@@ -23,6 +23,7 @@
 #include "crypto/aes.h"
 #include "script/script.h"
 #include "script/standard.h"
+#include "util/logger.h"
 #include "util/util.h"
 
 #include <openssl/aes.h>

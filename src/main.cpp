@@ -1013,10 +1013,7 @@ bool CheckTxInputs(const CTransaction &tx, CValidationState &state, const CCoins
         if (nStakeReward >
             GetProofOfStakeReward(tx.GetCoinAge(nCoinAge, true), nSpendHeight) + DEFAULT_TRANSACTION_MINFEE)
         {
-            if (fDebug)
-            {
-                LogPrintf("nStakeReward = %d , CoinAge = %d \n", nStakeReward, nCoinAge);
-            }
+            LogPrint("kernel","nStakeReward = %d , CoinAge = %d \n", nStakeReward, nCoinAge);
             return state.DoS(100, false, REJECT_INVALID, "bad-txns-stake-reward-too-high", false,
                 strprintf("ConnectInputs() : %s stake reward exceeded", tx.GetHash().ToString().substr(0, 10).c_str()));
         }
@@ -1113,7 +1110,7 @@ bool AbortNode(const std::string &strMessage, const std::string &userMessage)
     strMiscWarning = strMessage;
     LogPrintf("*** %s\n", strMessage);
     uiInterface.ThreadSafeMessageBox(
-        userMessage.empty() ? _("Error: A fatal internal error occurred, see debug.log for details") : userMessage, "",
+        userMessage.empty() ? ("Error: A fatal internal error occurred, see debug.log for details") : userMessage, "",
         CClientUIInterface::MSG_ERROR);
     StartShutdown();
     return false;
@@ -1757,7 +1754,7 @@ bool CheckDiskSpace(uint64_t nAdditionalBytes)
 
     // Check for nMinDiskSpace bytes (currently 50MB)
     if (nFreeBytesAvailable < nMinDiskSpace + nAdditionalBytes)
-        return AbortNode("Disk space is low!", _("Error: Disk space is low!"));
+        return AbortNode("Disk space is low!", "Error: Disk space is low!");
 
     return true;
 }
@@ -1805,42 +1802,33 @@ std::string GetWarnings(const std::string &strFor)
 {
     std::string strStatusBar;
     std::string strRPC;
-    std::string strGUI;
 
     if (!CLIENT_VERSION_IS_RELEASE)
     {
         strStatusBar =
             "This is a pre-release test build - use at your own risk - do not use for mining or merchant applications";
-        strGUI = _(
-            "This is a pre-release test build - use at your own risk - do not use for mining or merchant applications");
     }
 
     if (gArgs.GetBoolArg("-testsafemode", DEFAULT_TESTSAFEMODE))
-        strStatusBar = strRPC = strGUI = "testsafemode enabled";
+        strStatusBar = strRPC = "testsafemode enabled";
 
     // Misc warnings like out of disk space and clock is wrong
     if (strMiscWarning != "")
     {
-        strStatusBar = strGUI = strMiscWarning;
+        strStatusBar = strMiscWarning;
     }
 
     if (fLargeWorkForkFound)
     {
         strStatusBar = strRPC =
             "Warning: The network does not appear to fully agree! Some miners appear to be experiencing issues.";
-        strGUI =
-            _("Warning: The network does not appear to fully agree! Some miners appear to be experiencing issues.");
     }
     else if (fLargeWorkInvalidChainFound)
     {
         strStatusBar = strRPC = "Warning: We do not appear to fully agree with our peers! You may need to upgrade, or "
                                 "other nodes may need to upgrade.";
-        strGUI = _("Warning: We do not appear to fully agree with our peers! You may need to upgrade, or other nodes "
-                   "may need to upgrade.");
     }
 
-    if (strFor == "gui")
-        return strGUI;
     else if (strFor == "statusbar")
         return strStatusBar;
     else if (strFor == "rpc")
@@ -1994,10 +1982,7 @@ int64_t GetProofOfStakeReward(int64_t nCoinAge, int nHeight)
     if (CMS == MAX_MONEY)
     {
         // if we are already at max money supply limits (25 billion coins, we return 0 as no new coins are to be minted
-        if (fDebug)
-        {
-            LogPrintf("GetProofOfStakeReward(): create=%i nCoinAge=%d\n", 0, nCoinAge);
-        }
+        LogPrint("kernel", "GetProofOfStakeReward(): create=%i nCoinAge=%d\n", 0, nCoinAge);
         return 0;
     }
     if (nHeight > 500000 && nHeight < 1005000)
@@ -2013,10 +1998,7 @@ int64_t GetProofOfStakeReward(int64_t nCoinAge, int nHeight)
             nRewardCoinYear = 0;
         }
         int64_t nSubsidy = nCoinAge * nRewardCoinYear / 365;
-        if (fDebug)
-        {
-            LogPrintf("GetProofOfStakeReward(): create=%s nCoinAge=%d\n", FormatMoney(nSubsidy).c_str(), nCoinAge);
-        }
+        LogPrint("kernel", "GetProofOfStakeReward(): create=%s nCoinAge=%d\n", FormatMoney(nSubsidy).c_str(), nCoinAge);
         return nSubsidy;
     }
 
@@ -2036,9 +2018,6 @@ int64_t GetProofOfStakeReward(int64_t nCoinAge, int nHeight)
             nSubsidy = nSubsidy - difference;
         }
     }
-    if (fDebug)
-    {
-        LogPrintf("GetProofOfStakeReward(): create=%s nCoinAge=%d\n", FormatMoney(nSubsidy).c_str(), nCoinAge);
-    }
+    LogPrint("kernel", "GetProofOfStakeReward(): create=%s nCoinAge=%d\n", FormatMoney(nSubsidy).c_str(), nCoinAge);
     return nSubsidy;
 }

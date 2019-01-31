@@ -32,6 +32,7 @@
 #include "script/stakescript.h"
 #include "timedata.h"
 #include "txdb.h"
+#include "util/logger.h"
 #include "util/utiltime.h"
 
 // The stake modifier used to hash for a stake kernel is chosen as the stake
@@ -56,10 +57,7 @@ static bool GetKernelStakeModifier(uint256 hashBlockFrom, uint256 &nStakeModifie
     }
     if (blocksToGo > 0)
     {
-        if (fDebug)
-        {
-            LogPrintf("blocks to go was %i and it should be 0 but we ran out of indexes \n", blocksToGo);
-        }
+        LogPrint("kernel","blocks to go was %i and it should be 0 but we ran out of indexes \n", blocksToGo);
         return false;
     }
 
@@ -132,15 +130,15 @@ bool ComputeNextStakeModifier(const CBlockIndex *pindexPrev, const CTransaction 
     CBlockIndex *index = pnetMan->getChainActive()->LookupBlockIndex(blockHashOfTx);
 
     if (!ReadBlockFromDisk(block, index, pnetMan->getActivePaymentNetwork()->GetConsensus()))
+    {
         // unable to read block of previous transaction
-        return fDebug ? error("ComputeNextStakeModifier() : read block failed") : false;
+        LogPrint("kernel", "ComputeNextStakeModifier() : read block failed");
+        return false;
+    }
 
     if (!GetKernelStakeModifier(block.GetHash(), nStakeModifier))
     {
-        if (fDebug)
-        {
-            LogPrintf("ComputeNextStakeModifier(): GetKernelStakeModifier return false\n");
-        }
+        LogPrint("kernel","ComputeNextStakeModifier(): GetKernelStakeModifier return false\n");
         return false;
     }
     return true;
@@ -194,10 +192,7 @@ bool CheckStakeKernelHash(int nHeight,
 
     if (nTimeWeight <= 0)
     {
-        if (fDebug)
-        {
-            LogPrintf("CheckStakeKernelHash(): ERROR: time weight was somehow <= 0 \n");
-        }
+        LogPrint("kernel","CheckStakeKernelHash(): ERROR: time weight was somehow <= 0 \n");
         return false;
     }
 
@@ -209,10 +204,7 @@ bool CheckStakeKernelHash(int nHeight,
 
     if (!GetKernelStakeModifier(blockFrom.GetHash(), nStakeModifier))
     {
-        if (fDebug)
-        {
-            LogPrintf(">>> CheckStakeKernelHash: GetKernelStakeModifier return false\n");
-        }
+        LogPrint("kernel", ">>> CheckStakeKernelHash: GetKernelStakeModifier return false\n");
         return false;
     }
     // LogPrintf(">>> CheckStakeKernelHash: passed GetKernelStakeModifier\n");
@@ -248,38 +240,23 @@ bool CheckStakeKernelHash(int nHeight,
         std::string reductionHex = reduction.GetHex();
         unsigned int n = std::count(reductionHex.begin(), reductionHex.end(), '0');
         unsigned int redux = 64 - n; // 64 is max 0's in a 256 bit hex string
-        if (fDebug)
-        {
-            LogPrintf("reduction = %u \n", redux);
-            LogPrintf("pre reduction hashProofOfStake = %s \n", arith_hashProofOfStake.GetHex().c_str());
-        }
+        LogPrint("kernel","reduction = %u \n", redux);
+        LogPrint("kernel","pre reduction hashProofOfStake = %s \n", arith_hashProofOfStake.GetHex().c_str());
         // before we apply reduction, we want to shift the hash 20 bits to the right. the PoS limit is lead by 20 0's so
         // we want our reduction to apply to a hashproofofstake that is also lead by 20 0's
         arith_hashProofOfStake = arith_hashProofOfStake >> 20;
-        if (fDebug)
-        {
-            LogPrintf("mid reduction hashProofOfStake = %s \n", arith_hashProofOfStake.GetHex().c_str());
-        }
+        LogPrint("kernel","mid reduction hashProofOfStake = %s \n", arith_hashProofOfStake.GetHex().c_str());
         arith_hashProofOfStake = arith_hashProofOfStake >> redux;
-        if (fDebug)
-        {
-            LogPrintf("post reduction hashProofOfStake = %s \n", arith_hashProofOfStake.GetHex().c_str());
-        }
+        LogPrint("kernel","post reduction hashProofOfStake = %s \n", arith_hashProofOfStake.GetHex().c_str());
         // Now check if proof-of-stake hash meets target protocol
         if (arith_hashProofOfStake > hashTarget)
         {
-            if (fDebug)
-            {
-                LogPrintf("CheckStakeKernelHash(): ERROR: hashProofOfStake %s > %s hashTarget\n",
-                    arith_hashProofOfStake.GetHex().c_str(), hashTarget.GetHex().c_str());
-            }
+            LogPrint("kernel","CheckStakeKernelHash(): ERROR: hashProofOfStake %s > %s hashTarget\n",
+                arith_hashProofOfStake.GetHex().c_str(), hashTarget.GetHex().c_str());
             return false;
         }
-        if (fDebug)
-        {
-            LogPrintf("CheckStakeKernelHash(): SUCCESS: hashProofOfStake %s < %s hashTarget\n",
-                arith_hashProofOfStake.GetHex().c_str(), hashTarget.GetHex().c_str());
-        }
+        LogPrint("kernel","CheckStakeKernelHash(): SUCCESS: hashProofOfStake %s < %s hashTarget\n",
+            arith_hashProofOfStake.GetHex().c_str(), hashTarget.GetHex().c_str());
     }
 
     return true;
@@ -309,8 +286,10 @@ bool CheckProofOfStake(int nHeight, const CTransaction &tx, uint256 &hashProofOf
     CBlockIndex *index = pnetMan->getChainActive()->LookupBlockIndex(blockHashOfTx);
 
     if (!ReadBlockFromDisk(block, index, pnetMan->getActivePaymentNetwork()->GetConsensus()))
-        // unable to read block of previous transaction
-        return fDebug ? error("CheckProofOfStake() : read block failed") : false;
+    {
+        LogPrint("kernel","CheckProofOfStake() : read block failed");
+        return false;
+    }
 
     CDiskTxPos txindex;
     pnetMan->getChainActive()->pblocktree->ReadTxIndex(txPrev.GetHash(), txindex);

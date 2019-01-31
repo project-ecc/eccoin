@@ -403,7 +403,7 @@ bool CWallet::Verify(const std::string &walletFile, std::string &warningString, 
         if (!bitdb.Open(GetDataDir()))
         {
             // if it still fails, it probably means we can't even create the database env
-            std::string msg = strprintf(_("Error initializing wallet database environment %s!"), GetDataDir());
+            std::string msg = strprintf("Error initializing wallet database environment %s!", GetDataDir());
             errorString += msg;
             return true;
         }
@@ -421,14 +421,14 @@ bool CWallet::Verify(const std::string &walletFile, std::string &warningString, 
         CDBEnv::VerifyResult r = bitdb.Verify(walletFile, CWalletDB::Recover);
         if (r == CDBEnv::RECOVER_OK)
         {
-            warningString += strprintf(_("Warning: wallet.dat corrupt, data salvaged!"
+            warningString += strprintf(("Warning: wallet.dat corrupt, data salvaged!"
                                          " Original wallet.dat saved as wallet.{timestamp}.bak in %s; if"
                                          " your balance or transactions are incorrect you should"
                                          " restore from a backup."),
                 GetDataDir());
         }
         if (r == CDBEnv::RECOVER_FAIL)
-            errorString += _("wallet.dat corrupt, salvage failed");
+            errorString += ("wallet.dat corrupt, salvage failed");
     }
 
     return true;
@@ -1256,7 +1256,7 @@ int CWallet::ScanForWalletTransactions(CBlockIndex *pindexStart, bool fUpdate)
         }
 
         // show rescan progress in GUI as dialog or on splashscreen, if -rescan on startup
-        ShowProgress(_("Rescanning..."), 0);
+        ShowProgress(("Rescanning..."), 0);
         double dProgressStart =
             Checkpoints::GuessVerificationProgress(pnetMan->getActivePaymentNetwork()->Checkpoints(), pindex, false);
         double dProgressTip = Checkpoints::GuessVerificationProgress(
@@ -1265,7 +1265,7 @@ int CWallet::ScanForWalletTransactions(CBlockIndex *pindexStart, bool fUpdate)
         {
             if (pindex->nHeight % 100 == 0 && dProgressTip - dProgressStart > 0.0)
             {
-                ShowProgress(_("Rescanning..."),
+                ShowProgress(("Rescanning..."),
                     std::max(1, std::min(
                                     99, (int)((Checkpoints::GuessVerificationProgress(
                                                    pnetMan->getActivePaymentNetwork()->Checkpoints(), pindex, false) -
@@ -1290,7 +1290,7 @@ int CWallet::ScanForWalletTransactions(CBlockIndex *pindexStart, bool fUpdate)
                     Checkpoints::GuessVerificationProgress(pnetMan->getActivePaymentNetwork()->Checkpoints(), pindex));
             }
         }
-        ShowProgress(_("Rescanning..."), 100); // hide progress dialog in GUI
+        ShowProgress(("Rescanning..."), 100); // hide progress dialog in GUI
     }
     return ret;
 }
@@ -2119,7 +2119,7 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient> &vecSend,
     {
         if (nValue < 0 || recipient.nAmount < 0)
         {
-            strFailReason = _("Transaction amounts must be positive");
+            strFailReason = ("Transaction amounts must be positive");
             return false;
         }
         nValue += recipient.nAmount;
@@ -2129,7 +2129,7 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient> &vecSend,
     }
     if (vecSend.empty() || nValue < 0)
     {
-        strFailReason = _("Transaction amounts must be positive");
+        strFailReason = ("Transaction amounts must be positive");
         return false;
     }
 
@@ -2208,13 +2208,13 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient> &vecSend,
                         if (recipient.fSubtractFeeFromAmount && nFeeRet > 0)
                         {
                             if (txout.nValue < 0)
-                                strFailReason = _("The transaction amount is too small to pay the fee");
+                                strFailReason = ("The transaction amount is too small to pay the fee");
                             else
                                 strFailReason =
-                                    _("The transaction amount is too small to send after the fee has been deducted");
+                                    ("The transaction amount is too small to send after the fee has been deducted");
                         }
                         else
-                            strFailReason = _("Transaction amount too small");
+                            strFailReason = ("Transaction amount too small");
                         return false;
                     }
                     txNew.vout.push_back(txout);
@@ -2225,7 +2225,7 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient> &vecSend,
                 CAmount nValueIn = 0;
                 if (!SelectCoins(nValueToSelect, setCoins, nValueIn))
                 {
-                    strFailReason = _("Insufficient funds");
+                    strFailReason = ("Insufficient funds");
                     return false;
                 }
                 for (auto pcoin : setCoins)
@@ -2317,8 +2317,7 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient> &vecSend,
                                 txNew.vout[i].nValue -= nDust;
                                 if (txNew.vout[i].IsDust(::minRelayTxFee))
                                 {
-                                    strFailReason = _(
-                                        "The transaction amount is too small to send after the fee has been deducted");
+                                    strFailReason = "The transaction amount is too small to send after the fee has been deducted";
                                     return false;
                                 }
                                 break;
@@ -2370,7 +2369,7 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient> &vecSend,
 
                     if (!signSuccess)
                     {
-                        strFailReason = _("Signing transaction failed");
+                        strFailReason = ("Signing transaction failed");
                         return false;
                     }
                     nIn++;
@@ -2393,7 +2392,7 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient> &vecSend,
                 // Limit size
                 if (nBytes >= MAX_STANDARD_TX_SIZE)
                 {
-                    strFailReason = _("Transaction too large");
+                    strFailReason = ("Transaction too large");
                     return false;
                 }
 
@@ -2415,7 +2414,7 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient> &vecSend,
                 // because we must be at the maximum allowed fee.
                 if (nFeeNeeded < ::minRelayTxFee.GetFee(nBytes))
                 {
-                    strFailReason = _("Transaction too large for fee policy");
+                    strFailReason = ("Transaction too large for fee policy");
                     return false;
                 }
 
@@ -2712,10 +2711,7 @@ void CWallet::ReserveKeyFromKeyPool(int64_t &nIndex, CKeyPool &keypool)
         if (!HaveKey(keypool.vchPubKey.GetID()))
             throw std::runtime_error("ReserveKeyFromKeyPool(): unknown key in key pool");
         assert(keypool.vchPubKey.IsValid());
-        if (fDebug)
-        {
-            LogPrintf("keypool reserve %d\n", nIndex);
-        }
+        LogPrintf("wallet", "keypool reserve %d\n", nIndex);
     }
 }
 
@@ -2737,10 +2733,7 @@ void CWallet::ReturnKey(int64_t nIndex)
         LOCK(cs_wallet);
         setKeyPool.insert(nIndex);
     }
-    if (fDebug)
-    {
-        LogPrintf("keypool return %d\n", nIndex);
-    }
+    LogPrintf("wallet", "keypool return %d\n", nIndex);
 }
 
 bool CWallet::GetKeyFromPool(CPubKey &result)
@@ -3353,7 +3346,7 @@ bool CWallet::SelectCoinsMinConf(CAmount nTargetValue,
                 nValueRet += vValue[i].first;
             }
 
-        if (fDebug && gArgs.GetBoolArg("-printpriority", false))
+        if (gArgs.GetBoolArg("-printpriority", false))
         {
             //// debug print
             LogPrintf("SelectCoins() best subset: ");
@@ -3461,24 +3454,20 @@ bool CWallet::CreateCoinStake(const CKeyStore &keystore,
                     txindex.nTxOffset, *(pcoin.first->tx), prevoutStake, txNew.nTime, hashProofOfStake))
             {
                 // Found a kernel
-                if (fDebug)
-                    LogPrintf("CreateCoinStake : kernel found\n");
+                LogPrint("wallet", "CreateCoinStake : kernel found\n");
                 std::vector<std::vector<unsigned char> > vSolutions;
                 txnouttype whichType;
                 CScript scriptPubKeyOut;
                 scriptPubKeyKernel = pcoin.first->tx->vout[pcoin.second].scriptPubKey;
                 if (!Solver(scriptPubKeyKernel, whichType, vSolutions))
                 {
-                    if (fDebug)
-                        LogPrintf("CreateCoinStake : failed to parse kernel\n");
+                    LogPrint("wallet", "CreateCoinStake : failed to parse kernel\n");
                     break;
                 }
-                if (fDebug)
-                    LogPrintf("CreateCoinStake : parsed kernel type=%d\n", whichType);
+                LogPrintf("wallet", "CreateCoinStake : parsed kernel type=%d\n", whichType);
                 if (whichType != TX_PUBKEY && whichType != TX_PUBKEYHASH)
                 {
-                    if (fDebug)
-                        LogPrintf("CreateCoinStake : no support for kernel type=%d\n", whichType);
+                    LogPrint("wallet", "CreateCoinStake : no support for kernel type=%d\n", whichType);
                     break; // only support pay to public key and pay to address
                 }
                 if (whichType == TX_PUBKEYHASH) // pay to address type
@@ -3487,8 +3476,7 @@ bool CWallet::CreateCoinStake(const CKeyStore &keystore,
                     CKey key;
                     if (!keystore.GetKey(uint160(vSolutions[0]), key))
                     {
-                        if (fDebug)
-                            LogPrintf("CreateCoinStake : failed to get key for kernel type=%d\n", whichType);
+                        LogPrint("wallet", "CreateCoinStake : failed to get key for kernel type=%d\n", whichType);
                         break; // unable to find corresponding public key
                     }
                     scriptPubKeyOut << key.GetPubKey() << OP_CHECKSIG;
@@ -3503,8 +3491,7 @@ bool CWallet::CreateCoinStake(const CKeyStore &keystore,
                 if (block.GetBlockTime() + nStakeSplitAge > txNew.nTime)
                     txNew.vout.push_back(CTxOut(0, scriptPubKeyOut)); // split stake
 
-                if (fDebug)
-                    LogPrintf("CreateCoinStake : added kernel type=%d\n", whichType);
+                LogPrint("wallet", "CreateCoinStake : added kernel type=%d\n", whichType);
                 fKernelFound = true;
                 break;
             }
@@ -3629,7 +3616,7 @@ bool CWallet::InitLoadWallet()
         DBErrors nZapWalletRet = tempWallet->ZapWalletTx(vWtx);
         if (nZapWalletRet != DB_LOAD_OK)
         {
-            return UIError(strprintf(_("Error loading %s: Wallet corrupted"), walletFile));
+            return UIError(strprintf(("Error loading %s: Wallet corrupted"), walletFile));
         }
 
         delete tempWallet;
@@ -3646,26 +3633,26 @@ bool CWallet::InitLoadWallet()
     {
         if (nLoadWalletRet == DB_CORRUPT)
         {
-            return UIError(strprintf(_("Error loading %s: Wallet corrupted"), walletFile));
+            return UIError(strprintf(("Error loading %s: Wallet corrupted"), walletFile));
         }
         else if (nLoadWalletRet == DB_NONCRITICAL_ERROR)
         {
-            UIWarning(strprintf(_("Error reading %s! All keys read correctly, but transaction data"
+            UIWarning(strprintf(("Error reading %s! All keys read correctly, but transaction data"
                                   " or address book entries might be missing or incorrect."),
                 walletFile));
         }
         else if (nLoadWalletRet == DB_TOO_NEW)
         {
             return UIError(
-                strprintf(_("Error loading %s: Wallet requires newer version of %s"), walletFile, _(PACKAGE_NAME)));
+                strprintf(("Error loading %s: Wallet requires newer version of %s"), walletFile, PACKAGE_NAME));
         }
         else if (nLoadWalletRet == DB_NEED_REWRITE)
         {
-            return UIError(strprintf(_("Wallet needed to be rewritten: restart %s to complete"), _(PACKAGE_NAME)));
+            return UIError(strprintf(("Wallet needed to be rewritten: restart %s to complete"), PACKAGE_NAME));
         }
         else
         {
-            return UIError(strprintf(_("Error loading %s"), walletFile));
+            return UIError(strprintf(("Error loading %s"), walletFile));
         }
     }
 
@@ -3684,7 +3671,7 @@ bool CWallet::InitLoadWallet()
         }
         if (nMaxVersion < walletInstance->GetVersion())
         {
-            return UIError(_("Cannot downgrade wallet"));
+            return UIError(("Cannot downgrade wallet"));
         }
         walletInstance->SetMaxVersion(nMaxVersion);
     }
@@ -3699,7 +3686,7 @@ bool CWallet::InitLoadWallet()
         {
             walletInstance->SetDefaultKey(newDefaultKey);
             if (!walletInstance->SetAddressBook(walletInstance->vchDefaultKey.GetID(), "", "receive"))
-                return UIError(_("Cannot write default address") += "\n");
+                return UIError("Cannot write default address \n");
         }
 
         walletInstance->SetBestChain(pnetMan->getChainActive()->chainActive.GetLocator());

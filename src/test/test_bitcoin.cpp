@@ -40,7 +40,7 @@ BasicTestingSetup::BasicTestingSetup(const std::string &chainName)
     ECC_Start();
     SetupEnvironment();
     SetupNetworking();
-    fPrintToDebugLog = false; // don't want to write to debug.log file
+    g_logger->fPrintToDebugLog = false; // don't want to write to debug.log file
     fCheckBlockIndex = true;
     pnetMan = new CNetworkManager();
     pwallet = new CWallet("walletFile");
@@ -162,12 +162,12 @@ struct StartupShutdown
             if (s == "console")
             {
                 fPrintToConsole = true;
-                fPrintToDebugLog = false;
+                g_logger->fPrintToDebugLog = false;
             }
             else if (s == "none")
             {
                 fPrintToConsole = false;
-                fPrintToDebugLog = false;
+                g_logger->fPrintToDebugLog = false;
             }
         }
     }

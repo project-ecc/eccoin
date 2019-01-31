@@ -24,15 +24,9 @@
 #include "random.h"
 #include "util/util.h"
 #include <assert.h>
-
-#include "coins.h"
-
 #include "consensus/consensus.h"
-#include "memusage.h"
-#include "random.h"
-#include "util/util.h"
+#include "util/logger.h"
 
-#include <assert.h>
 
 bool CCoinsView::GetCoin(const COutPoint &outpoint, Coin &coin) const { return false; }
 bool CCoinsView::HaveCoin(const COutPoint &outpoint) const { return false; }

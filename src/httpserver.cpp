@@ -440,7 +440,7 @@ bool InitHTTPServer()
 #if LIBEVENT_VERSION_NUMBER >= 0x02010100
     // If -debug=libevent, set full libevent debugging.
     // Otherwise, disable all libevent debugging.
-    if (LogAcceptCategory("libevent"))
+    if (g_logger->LogAcceptCategory("libevent"))
         event_enable_debug_logging(EVENT_DBG_ALL);
     else
         event_enable_debug_logging(EVENT_DBG_NONE);

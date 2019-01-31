@@ -135,6 +135,7 @@ BITCOIN_CORE_H = \
   ui_interface.h \
   uint256.h \
   undo.h \
+  util/logger.h \
   util/util.h \
   util/utilmoneystr.h \
   util/utilstrencodings.h \
@@ -239,6 +240,7 @@ libbitcoin_server_a_SOURCES = \
   rpc/rpcprotocol.cpp \
   support/cleanse.cpp \
   uint256.cpp \
+  util/logger.cpp \
   util/util.cpp \
   util/utilmoneystr.cpp \
   util/utilstrencodings.cpp \

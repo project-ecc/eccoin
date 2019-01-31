@@ -22,6 +22,7 @@
 
 #include "key.h"
 #include "pubkey.h"
+#include "util/logger.h"
 #include "util/util.h"
 
 bool CKeyStore::AddKey(const CKey &key) { return AddKeyPubKey(key, key.GetPubKey()); }

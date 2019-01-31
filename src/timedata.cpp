@@ -22,6 +22,7 @@
 #include "net/netbase.h"
 #include "sync.h"
 #include "ui_interface.h"
+#include "util/logger.h"
 #include "util/util.h"
 #include "util/utilstrencodings.h"
 
@@ -103,8 +104,8 @@ void AddTimeData(const CNetAddr &ip, int64_t nOffsetSample)
                 if (!fMatch)
                 {
                     fDone = true;
-                    std::string strMessage = _("Please check that your computer's date and time are correct! If your "
-                                               "clock is wrong Bitcoin Core will not work properly.");
+                    std::string strMessage = "Please check that your computer's date and time are correct! If your "
+                                               "clock is wrong Bitcoin Core will not work properly.";
                     strMiscWarning = strMessage;
                     uiInterface.ThreadSafeMessageBox(strMessage, "", CClientUIInterface::MSG_WARNING);
                 }

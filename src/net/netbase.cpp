@@ -30,6 +30,7 @@
 #include "random.h"
 #include "sync.h"
 #include "uint256.h"
+#include "util/logger.h"
 #include "util/util.h"
 #include "util/utilstrencodings.h"
 
