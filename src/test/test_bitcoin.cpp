@@ -13,7 +13,6 @@
 #include "consensus/validation.h"
 #include "crypto/sha256.h"
 #include "fs.h"
-#include "init.h"
 #include "key.h"
 #include "main.h"
 #include "net/messages.h"
@@ -133,14 +132,14 @@ CTxMemPoolEntry TestMemPoolEntryHelper::FromTx(CTransaction &tx, CTxMemPool *poo
         inChainValue, spendsCoinbase, sigOpCount, lp);
 }
 
-void ShutdownTest(void *parg) { exit(0); }
-void StartShutdownTest() { exit(0); }
-bool ShutdownRequestedTest() { return false; }
+void Shutdown(void *parg) { exit(0); }
+// void StartShutdown() { exit(0); }
+// bool ShutdownRequested() { return false; }
 using namespace boost::program_options;
 
 struct StartupShutdown
 {
-    void StartupShutdownTest()
+    StartupShutdown()
     {
         options_description optDef("Options");
         optDef.add_options()("testhelp", "program options information")(
@@ -172,7 +171,7 @@ struct StartupShutdown
             }
         }
     }
-    ~StartupShutdownTest() { }
+    ~StartupShutdown() {}
 };
 
 BOOST_GLOBAL_FIXTURE(StartupShutdown);
