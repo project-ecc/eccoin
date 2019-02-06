@@ -1371,7 +1371,6 @@ bool static ProcessMessage(CNode *pfrom,
 
     else if (strCommand == NetMsgType::SENDHEADERS)
     {
-        LOCK(cs_main);
         CNodeStateAccessor state(nodestateman, pfrom->GetId());
         state->fPreferHeaders = true;
     }
