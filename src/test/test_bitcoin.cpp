@@ -79,7 +79,7 @@ TestingSetup::~TestingSetup()
     fs::remove_all(pathTemp);
 }
 
-TestChain100Setup::TestChain100Setup() : TestingSetup("TESTNET0-TEMPORARY")
+TestChain100Setup::TestChain100Setup() : TestingSetup("REGTEST")
 {
     // Generate a 100-block chain:
     coinbaseKey.MakeNewKey(true);
