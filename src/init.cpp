@@ -1510,7 +1510,6 @@ bool AppInit2(thread_group &threadGroup)
                 LogPrintf("Verifying blocks...");
 
                 {
-                    LOCK(cs_main);
                     CBlockIndex *tip = pnetMan->getChainActive()->chainActive.Tip();
                     if (tip && tip->nTime > GetAdjustedTime() + 2 * 60 * 60)
                     {

@@ -386,7 +386,6 @@ bool CheckWork(const std::shared_ptr<const CBlock> pblock,
 
     // Found a solution
     {
-        LOCK(cs_main);
         if (pblock->hashPrevBlock != pnetMan->getChainActive()->chainActive.Tip()->GetBlockHash())
             return error("BMiner : generated block is stale");
 
@@ -395,7 +394,7 @@ bool CheckWork(const std::shared_ptr<const CBlock> pblock,
 
         // Track how many getdata requests this block gets
         {
-            LOCK(wallet.cs_wallet);
+            LOCK2(cs_main, wallet.cs_wallet);
             wallet.mapRequestCount[pblock->GetHash()] = 0;
         }
 

@@ -50,7 +50,6 @@ bool CheckStake(const std::shared_ptr<const CBlock> pblock,
 
     // Found a solution
     {
-        LOCK(cs_main);
         if (pblock->hashPrevBlock != pnetMan->getChainActive()->chainActive.Tip()->GetBlockHash())
         {
             return error("Minter : generated block is stale");
@@ -59,7 +58,7 @@ bool CheckStake(const std::shared_ptr<const CBlock> pblock,
         coinbaseScript->KeepScript();
         // Track how many getdata requests this block gets
         {
-            LOCK(wallet.cs_wallet);
+            LOCK2(cs_main, wallet.cs_wallet);
             wallet.mapRequestCount[pblock->GetHash()] = 0;
         }
         // Process this block the same as if we had received it from another node

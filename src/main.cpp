@@ -171,7 +171,6 @@ int nPeersWithValidatedDownloads = 0;
 
 int GetHeight()
 {
-    LOCK(cs_main);
     return pnetMan->getChainActive()->chainActive.Height();
 }
 
