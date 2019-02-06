@@ -28,6 +28,7 @@
 #include "tinyformat.h"
 #include "uint256.h"
 
+#include <atomic>
 #include <vector>
 
 /** An in-memory indexed chain of blocks. */
@@ -39,9 +40,7 @@ private:
     std::atomic<CBlockIndex *> tip;
 
 public:
-    CChain() : tip(nullptr)
-    {
-    }
+    CChain() : tip(nullptr) {}
     ~CChain()
     {
         vChain.clear();

@@ -169,11 +169,7 @@ int nPeersWithValidatedDownloads = 0;
 // Registration of network node signals.
 //
 
-int GetHeight()
-{
-    return pnetMan->getChainActive()->chainActive.Height();
-}
-
+int GetHeight() { return pnetMan->getChainActive()->chainActive.Height(); }
 //////////////////////////////////////////////////////////////////////////////
 //
 // mapOrphanTransactions

@@ -87,6 +87,7 @@ BITCOIN_CORE_H = \
   net/net.h \
   net/netaddress.h \
   net/netbase.h \
+  net/nodestate.h \
   net/protocol.h \
   networks/netman.h \
   networks/network.h \
@@ -214,6 +215,7 @@ libbitcoin_server_a_SOURCES = \
   processheader.cpp \
   processtx.cpp \
   chain/tx.cpp \
+  net/nodestate.cpp \
   net/protocol.cpp \
   pubkey.cpp \
   crypto/pbkdf2.cpp \

@@ -23,6 +23,7 @@
 #include "kernel.h"
 #include "main.h"
 #include "net/messages.h"
+#include "net/nodestate.h"
 #include "networks/netman.h"
 #include "processblock.h"
 #include "processheader.h"
@@ -446,9 +447,9 @@ void CChainManager::UnloadBlockIndex()
 {
     LOCK(cs_main);
     setBlockIndexCandidates.clear();
-    chainActive.SetTip(NULL);
-    pindexBestInvalid = NULL;
-    pindexBestHeader = NULL;
+    chainActive.SetTip(nullptr);
+    pindexBestInvalid = nullptr;
+    pindexBestHeader = nullptr;
     mempool.clear();
     mapOrphanTransactions.clear();
     mapOrphanTransactionsByPrev.clear();
@@ -462,8 +463,8 @@ void CChainManager::UnloadBlockIndex()
     nPreferredDownload = 0;
     setDirtyBlockIndex.clear();
     setDirtyFileInfo.clear();
-    mapNodeState.clear();
-    recentRejects.reset(NULL);
+    nodestateman.Clear();
+    recentRejects.reset(nullptr);
     versionbitscache.Clear();
     for (int b = 0; b < VERSIONBITS_NUM_BITS; b++)
     {
