@@ -172,7 +172,7 @@ struct StartupShutdown
             }
         }
     }
-    // ~StartupShutdownTest() { }
+    ~StartupShutdownTest() { }
 };
 
 BOOST_GLOBAL_FIXTURE(StartupShutdown);
