@@ -386,8 +386,15 @@ bool CheckWork(const std::shared_ptr<const CBlock> pblock,
 
     // Found a solution
     {
-        if (pblock->hashPrevBlock != pnetMan->getChainActive()->chainActive.Tip()->GetBlockHash())
+        CBlockIndex* ptip = pnetMan->getChainActive()->chainActive.Tip();
+        if(ptip == nullptr)
+        {
+            return false;
+        }
+        if (pblock->hashPrevBlock != ptip->GetBlockHash())
+        {
             return error("BMiner : generated block is stale");
+        }
 
         // Remove key from key pool
         coinbaseScript->KeepScript();
