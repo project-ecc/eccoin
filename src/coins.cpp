@@ -91,7 +91,7 @@ size_t CCoinsViewCache::ResetCachedCoinUsage() const
 
 CCoinsMap::iterator CCoinsViewCache::FetchCoin(const COutPoint &outpoint) const
 {
-    AssertLockHeld(cs_utxo);
+    LOCK(cs_utxo);
     CCoinsMap::iterator it = cacheCoins.find(outpoint);
     if (it != cacheCoins.end())
         return it;
