@@ -217,7 +217,6 @@ bool GetNodeStateStats(NodeId nodeid, CNodeStateStats &stats)
     return true;
 }
 
-// Requires cs_main.
 void Misbehaving(NodeId pnode, int howmuch, const std::string &reason)
 {
     if (howmuch == 0)
@@ -1110,7 +1109,6 @@ bool static ProcessMessage(CNode *pfrom,
         {
             connman.PushMessage(
                 pfrom, NetMsgType::REJECT, strCommand, REJECT_DUPLICATE, std::string("Duplicate version message"));
-            LOCK(cs_main);
             Misbehaving(pfrom, 1, "multiple-version");
             return false;
         }
@@ -1272,7 +1270,6 @@ bool static ProcessMessage(CNode *pfrom,
     else if (pfrom->nVersion == 0)
     {
         // Must have a version message before anything else
-        LOCK(cs_main);
         Misbehaving(pfrom, 1, "missing-version");
         return false;
     }
@@ -1305,7 +1302,6 @@ bool static ProcessMessage(CNode *pfrom,
     {
         {
             // Must have a verack message before anything else
-            LOCK(cs_main);
             Misbehaving(pfrom, 1, "missing-verack");
         }
         {
@@ -1330,7 +1326,6 @@ bool static ProcessMessage(CNode *pfrom,
         }
         if (vAddr.size() > 1000)
         {
-            LOCK(cs_main);
             Misbehaving(pfrom, 20, "oversized-addr");
             return error("message addr size() = %u", vAddr.size());
         }
@@ -1388,7 +1383,6 @@ bool static ProcessMessage(CNode *pfrom,
         vRecv >> vInv;
         if (vInv.size() > MAX_INV_SZ)
         {
-            LOCK(cs_main);
             Misbehaving(pfrom, 20, "oversized-inv");
             return error("message inv size() = %u", vInv.size());
         }
@@ -1480,7 +1474,6 @@ bool static ProcessMessage(CNode *pfrom,
         vRecv >> vInv;
         if (vInv.size() > MAX_INV_SZ)
         {
-            LOCK(cs_main);
             Misbehaving(pfrom, 20, "too-many-inv");
             return error("message getdata size() = %u", vInv.size());
         }
@@ -1847,7 +1840,6 @@ bool static ProcessMessage(CNode *pfrom,
         unsigned int nCount = ReadCompactSize(vRecv);
         if (nCount > MAX_HEADERS_RESULTS)
         {
-            LOCK(cs_main);
             Misbehaving(pfrom->GetId(), 20, "too-many-headers");
             return error("headers message size = %u", nCount);
         }
@@ -1994,7 +1986,6 @@ bool static ProcessMessage(CNode *pfrom,
                 state.GetRejectReason().substr(0, MAX_REJECT_MESSAGE_LENGTH), hash);
             if (nDoS > 0)
             {
-                LOCK(cs_main);
                 Misbehaving(pfrom->GetId(), nDoS, "invalid-blk");
             }
         }
