@@ -75,81 +75,6 @@ public:
     }
 };
 
-struct PerBlockConnectTrace
-{
-    CBlockIndex *pindex = nullptr;
-    std::shared_ptr<const CBlock> pblock;
-    std::shared_ptr<std::vector<CTransactionRef> > conflictedTxs;
-    PerBlockConnectTrace() : conflictedTxs(std::make_shared<std::vector<CTransactionRef> >()) {}
-};
-
-/**
- * Used to track blocks whose transactions were applied to the UTXO state as a
- * part of a single ActivateBestChainStep call.
- *
- * This class also tracks transactions that are removed from the mempool as
- * conflicts (per block) and can be used to pass all those transactions through
- * SyncTransaction.
- *
- * This class assumes (and asserts) that the conflicted transactions for a given
- * block are added via mempool callbacks prior to the BlockConnected()
- * associated with those transactions. If any transactions are marked
- * conflicted, it is assumed that an associated block will always be added.
- *
- * This class is single-use, once you call GetBlocksConnected() you have to
- * throw it away and make a new one.
- */
-class ConnectTrace
-{
-private:
-    std::vector<PerBlockConnectTrace> blocksConnected;
-    CTxMemPool &pool;
-
-public:
-    ConnectTrace(CTxMemPool &_pool) : blocksConnected(1), pool(_pool)
-    {
-        pool.NotifyEntryRemoved.connect(boost::bind(&ConnectTrace::NotifyEntryRemoved, this, _1, _2));
-    }
-
-    ~ConnectTrace()
-    {
-        pool.NotifyEntryRemoved.disconnect(boost::bind(&ConnectTrace::NotifyEntryRemoved, this, _1, _2));
-    }
-
-    void BlockConnected(CBlockIndex *pindex, std::shared_ptr<const CBlock> pblock)
-    {
-        assert(!blocksConnected.back().pindex);
-        assert(pindex);
-        assert(pblock);
-        blocksConnected.back().pindex = pindex;
-        blocksConnected.back().pblock = std::move(pblock);
-        blocksConnected.emplace_back();
-    }
-
-    std::vector<PerBlockConnectTrace> &GetBlocksConnected()
-    {
-        // We always keep one extra block at the end of our list because blocks
-        // are added after all the conflicted transactions have been filled in.
-        // Thus, the last entry should always be an empty one waiting for the
-        // transactions from the next block. We pop the last entry here to make
-        // sure the list we return is sane.
-        assert(!blocksConnected.back().pindex);
-        assert(blocksConnected.back().conflictedTxs->empty());
-        blocksConnected.pop_back();
-        return blocksConnected;
-    }
-
-    void NotifyEntryRemoved(CTransactionRef txRemoved, MemPoolRemovalReason reason)
-    {
-        assert(!blocksConnected.back().pindex);
-        if (reason == MemPoolRemovalReason::CONFLICT)
-        {
-            blocksConnected.back().conflictedTxs->emplace_back(std::move(txRemoved));
-        }
-    }
-};
-
-
 /** Store block on disk. If dbp is non-NULL, the file is known to already reside on disk */
 bool AcceptBlock(const std::shared_ptr<const CBlock> pblock,
     CValidationState &state,
@@ -264,7 +189,6 @@ bool ProcessNewBlock(CValidationState &state,
         CheckBlockIndex(chainparams.GetConsensus());
         if (!ret)
         {
-            GetMainSignals().BlockChecked(*pblock, state);
             return error("%s: AcceptBlock FAILED", __func__);
         }
     }
@@ -395,7 +319,10 @@ bool DisconnectTip(CValidationState &state, const Consensus::Params &consensusPa
     UpdateTip(pindexDelete->pprev);
     // Let wallets know transactions went from 1-confirmed to
     // 0-confirmed or conflicted:
-    GetMainSignals().BlockDisconnected(pblock);
+    for (const auto &ptx : block.vtx)
+    {
+        SyncWithWallets(ptx, nullptr, -1);
+    }
     return true;
 }
 
@@ -414,8 +341,7 @@ static int64_t nTimeTotal = 0;
 bool ConnectTip(CValidationState &state,
     const CNetworkTemplate &chainparams,
     CBlockIndex *pindexNew,
-    const std::shared_ptr<const CBlock> &pblock,
-    ConnectTrace &connectTrace)
+    const std::shared_ptr<const CBlock> &pblock)
 {
     assert(pindexNew->pprev == pnetMan->getChainActive()->chainActive.Tip());
     // Read block from disk.
@@ -447,7 +373,6 @@ bool ConnectTip(CValidationState &state,
     {
         CCoinsViewCache view(pnetMan->getChainActive()->pcoinsTip.get());
         bool rv = ConnectBlock(blockConnecting, state, pindexNew, view);
-        GetMainSignals().BlockChecked(blockConnecting, state);
         if (!rv)
         {
             if (state.IsInvalid())
@@ -479,14 +404,26 @@ bool ConnectTip(CValidationState &state,
     // Update chainActive & related variables.
     UpdateTip(pindexNew);
 
+    // Tell wallet about transactions that went from mempool
+    // to conflicted:
+    for (const auto &ptx : txConflicted)
+    {
+        SyncWithWallets(ptx, nullptr, -1);
+    }
+    // ... and about transactions that got confirmed:
+    int txIdx = 0;
+    for (const auto &ptx : pblock->vtx)
+    {
+        SyncWithWallets(ptx, pblock.get(), txIdx);
+        txIdx++;
+    }
+
     int64_t nTime6 = GetTimeMicros();
     nTimePostConnect += nTime6 - nTime5;
     nTimeTotal += nTime6 - nTime1;
     LogPrint(
         "bench", "  - Connect postprocess: %.2fms [%.2fs]\n", (nTime6 - nTime5) * 0.001, nTimePostConnect * 0.000001);
     LogPrint("bench", "- Connect block: %.2fms [%.2fs]\n", (nTime6 - nTime1) * 0.001, nTimeTotal * 0.000001);
-
-    connectTrace.BlockConnected(pindexNew, std::move(pthisBlock));
     return true;
 }
 
@@ -578,8 +515,7 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex *pindexNewForkTip)
 bool ActivateBestChainStep(CValidationState &state,
     const CNetworkTemplate &chainparams,
     CBlockIndex *pindexMostWork,
-    const std::shared_ptr<const CBlock> &pblock,
-    ConnectTrace &connectTrace)
+    const std::shared_ptr<const CBlock> &pblock)
 {
     AssertLockHeld(cs_main);
     bool fInvalidFound = false;
@@ -618,7 +554,7 @@ bool ActivateBestChainStep(CValidationState &state,
         BOOST_REVERSE_FOREACH (CBlockIndex *pindexConnect, vpindexToConnect)
         {
             if (!ConnectTip(
-                    state, chainparams, pindexConnect, pindexConnect == pindexMostWork ? pblock : NULL, connectTrace))
+                    state, chainparams, pindexConnect, pindexConnect == pindexMostWork ? pblock : nullptr))
             {
                 if (state.IsInvalid())
                 {
@@ -692,29 +628,23 @@ bool ActivateBestChain(CValidationState &state,
         {
             LOCK(cs_main);
 
-            // Destructed before cs_main is unlocked.
-            ConnectTrace connectTrace(mempool);
-
             CBlockIndex *pindexOldTip = pnetMan->getChainActive()->chainActive.Tip();
             pindexMostWork = FindMostWorkChain();
 
             // Whether we have anything to do at all.
-            if (pindexMostWork == NULL || pindexMostWork == pnetMan->getChainActive()->chainActive.Tip())
+            if (pindexMostWork == nullptr || pindexMostWork == pnetMan->getChainActive()->chainActive.Tip())
                 return true;
 
             if (!ActivateBestChainStep(state, chainparams, pindexMostWork,
-                    pblock && pblock->GetHash() == pindexMostWork->GetBlockHash() ? pblock : NULL, connectTrace))
+                    pblock && pblock->GetHash() == pindexMostWork->GetBlockHash() ? pblock : nullptr))
+            {
                 return false;
+            }
 
             pindexNewTip = pnetMan->getChainActive()->chainActive.Tip();
             pindexFork = pnetMan->getChainActive()->chainActive.FindFork(pindexOldTip);
             fInitialDownload = pnetMan->getChainActive()->IsInitialBlockDownload();
 
-            for (const PerBlockConnectTrace &trace : connectTrace.GetBlocksConnected())
-            {
-                assert(trace.pblock && trace.pindex);
-                GetMainSignals().BlockConnected(trace.pblock, trace.pindex, *trace.conflictedTxs);
-            }
         }
         // When we reach this point, we switched to a new tip (stored in pindexNewTip).
 

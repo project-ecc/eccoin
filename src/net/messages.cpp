@@ -711,44 +711,6 @@ PeerLogicValidation::PeerLogicValidation(CConnman *connmanIn) : connman(connmanI
     recentRejects.reset(new CRollingBloomFilter(120000, 0.000001));
 }
 
-void PeerLogicValidation::BlockConnected(const std::shared_ptr<const CBlock> &pblock,
-    const CBlockIndex *pindex,
-    const std::vector<CTransactionRef> &vtxConflicted)
-{
-    LOCK(cs_main);
-
-    std::vector<uint256> vOrphanErase;
-
-    for (const CTransactionRef &ptx : pblock->vtx)
-    {
-        const CTransaction tx = *ptx;
-
-        // Which orphan pool entries must we evict?
-        for (size_t j = 0; j < tx.vin.size(); j++)
-        {
-            auto itByPrev = mapOrphanTransactionsByPrev.find(tx.vin[j].prevout.hash);
-            if (itByPrev == mapOrphanTransactionsByPrev.end())
-            {
-                continue;
-            }
-            for (auto mi = itByPrev->second.begin(); mi != itByPrev->second.end(); ++mi)
-            {
-                const uint256 &orphanHash = *mi;
-                vOrphanErase.push_back(orphanHash);
-            }
-        }
-    }
-
-    // Erase orphan transactions include or precluded by this block
-    if (vOrphanErase.size())
-    {
-        for (uint256 &orphanId : vOrphanErase)
-        {
-            EraseOrphanTx(orphanId);
-        }
-    }
-}
-
 void PeerLogicValidation::NewPoWValidBlock(const CBlockIndex *pindex, const std::shared_ptr<const CBlock> &pblock)
 {
     LOCK(cs_main);
@@ -824,34 +786,6 @@ void PeerLogicValidation::UpdatedBlockTip(const CBlockIndex *pindexNew,
     }
 
     nTimeBestReceived = GetTime();
-}
-
-void PeerLogicValidation::BlockChecked(const CBlock &block, const CValidationState &state)
-{
-    LOCK(cs_main);
-    const uint256 hash(block.GetHash());
-    std::map<uint256, std::pair<NodeId, bool> >::iterator it = mapBlockSource.find(hash);
-    int nDoS = 0;
-    CNodeStateAccessor nodestate(nodestateman, it->second.first);
-    if (state.IsInvalid(nDoS))
-    {
-        // Don't send reject message with code 0 or an internal reject code.
-        if (it != mapBlockSource.end() && nodestate.IsNull() == false && state.GetRejectCode() > 0 &&
-            state.GetRejectCode() < REJECT_INTERNAL)
-        {
-            CBlockReject reject = {
-                uint8_t(state.GetRejectCode()), state.GetRejectReason().substr(0, MAX_REJECT_MESSAGE_LENGTH), hash};
-            nodestate->rejects.push_back(reject);
-            if (nDoS > 0 && it->second.second)
-            {
-                Misbehaving(it->second.first, nDoS, state.GetRejectReason());
-            }
-        }
-    }
-    if (it != mapBlockSource.end())
-    {
-        mapBlockSource.erase(it);
-    }
 }
 
 bool AlreadyHave(const CInv &inv) EXCLUSIVE_LOCKS_REQUIRED(cs_main)

@@ -963,11 +963,9 @@ void CWallet::MarkConflicted(const uint256 &hashBlock, const uint256 &hashTx)
     }
 }
 
-void CWallet::SyncTransaction(const CTransactionRef &ptx, const CBlock *pblock)
+void CWallet::SyncTransaction(const CTransactionRef &ptx, const CBlock *pblock, int txIdx)
 {
     LOCK2(cs_main, cs_wallet);
-
-    const CTransaction &tx = *ptx;
 
     if (!AddToWalletIfInvolvingMe(ptx, pblock, true))
     {
@@ -977,52 +975,12 @@ void CWallet::SyncTransaction(const CTransactionRef &ptx, const CBlock *pblock)
     // If a transaction changes 'conflicted' state, that changes the balance
     // available of the outputs it spends. So force those to be
     // recomputed, also:
-    for (auto const &txin : tx.vin)
+    for (const CTxIn &txin : ptx->vin)
     {
         if (mapWallet.count(txin.prevout.hash))
             mapWallet[txin.prevout.hash].MarkDirty();
     }
 }
-
-void CWallet::TransactionAddedToMempool(const CTransactionRef &ptx)
-{
-    LOCK2(cs_main, cs_wallet);
-    SyncTransaction(ptx);
-}
-
-void CWallet::BlockConnected(const std::shared_ptr<const CBlock> &pblock,
-    const CBlockIndex *pindex,
-    const std::vector<CTransactionRef> &vtxConflicted)
-{
-    LOCK2(cs_main, cs_wallet);
-    // TODO: Tempoarily ensure that mempool removals are notified before
-    // connected transactions. This shouldn't matter, but the abandoned state of
-    // transactions in our wallet is currently cleared when we receive another
-    // notification and there is a race condition where notification of a
-    // connected conflict might cause an outside process to abandon a
-    // transaction and then have it inadvertantly cleared by the notification
-    // that the conflicted transaction was evicted.
-
-    for (const CTransactionRef &ptx : vtxConflicted)
-    {
-        SyncTransaction(ptx);
-    }
-    for (size_t i = 0; i < pblock->vtx.size(); i++)
-    {
-        SyncTransaction(pblock->vtx[i], pblock.get());
-    }
-}
-
-void CWallet::BlockDisconnected(const std::shared_ptr<const CBlock> &pblock)
-{
-    LOCK2(cs_main, cs_wallet);
-
-    for (const CTransactionRef &ptx : pblock->vtx)
-    {
-        SyncTransaction(ptx);
-    }
-}
-
 
 isminetype CWallet::IsMine(const CTxIn &txin) const
 {
@@ -1344,21 +1302,24 @@ void CWallet::ReacceptWalletTransactions()
     // If transactions aren't being broadcasted, don't let them into local mempool either
     if (!fBroadcastTransactions)
         return;
-    LOCK2(cs_main, cs_wallet);
+
     std::map<int64_t, CWalletTx *> mapSorted;
 
-    // Sort pending wallet transactions based on their initial wallet insertion order
-    for (auto const &item : mapWallet)
     {
-        const uint256 &wtxid = item.first;
-        CWalletTx wtx = item.second;
-        assert(wtx.tx->GetHash() == wtxid);
-
-        int nDepth = wtx.GetDepthInMainChain();
-
-        if (!wtx.tx->IsCoinBase() && !wtx.tx->IsCoinStake() && (nDepth == 0 && !wtx.isAbandoned()))
+        LOCK2(cs_main, cs_wallet);
+        // Sort pending wallet transactions based on their initial wallet insertion order
+        for (auto const &item : mapWallet)
         {
-            mapSorted.insert(std::make_pair(wtx.nOrderPos, &wtx));
+            const uint256 &wtxid = item.first;
+            CWalletTx wtx = item.second;
+            assert(wtx.tx->GetHash() == wtxid);
+
+            int nDepth = wtx.GetDepthInMainChain();
+
+            if (!wtx.tx->IsCoinBase() && !wtx.tx->IsCoinStake() && (nDepth == 0 && !wtx.isAbandoned()))
+            {
+                mapSorted.insert(std::make_pair(wtx.nOrderPos, &wtx));
+            }
         }
     }
 
@@ -1366,9 +1327,8 @@ void CWallet::ReacceptWalletTransactions()
     for (auto const &item : mapSorted)
     {
         CWalletTx &wtx = *(item.second);
-
-        LOCK(mempool.cs);
         wtx.AcceptToMemoryPool(false);
+        SyncWithWallets(wtx.tx, nullptr, -1);
     }
 }
 
@@ -2480,6 +2440,17 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient> &vecSend,
  */
 bool CWallet::CommitTransaction(CWalletTx &wtxNew, CReserveKey &reservekey, CConnman *connman, CValidationState &state)
 {
+    if (fBroadcastTransactions)
+    {
+        // Broadcast
+        if (!wtxNew.AcceptToMemoryPool(false))
+        {
+            // This must not fail. The transaction has already been signed and recorded.
+            LogPrintf("CommitTransaction(): Error: Transaction not valid\n");
+            return false;
+        }
+    }
+
     {
         LOCK2(cs_main, cs_wallet);
         LogPrintf("CommitTransaction:\n%s", wtxNew.tx->ToString());
@@ -2514,13 +2485,7 @@ bool CWallet::CommitTransaction(CWalletTx &wtxNew, CReserveKey &reservekey, CCon
 
         if (fBroadcastTransactions)
         {
-            // Broadcast
-            if (!wtxNew.AcceptToMemoryPool(false))
-            {
-                // This must not fail. The transaction has already been signed and recorded.
-                LogPrintf("CommitTransaction(): Error: Transaction not valid\n");
-                return false;
-            }
+            SyncWithWallets(wtxNew.tx, nullptr, -1);
             wtxNew.RelayWalletTransaction(connman);
         }
     }

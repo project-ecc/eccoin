@@ -808,8 +808,13 @@ bool AcceptToMemoryPoolWorker(CTxMemPool &pool,
                 return state.DoS(0, false, REJECT_INSUFFICIENTFEE, "mempool full");
             }
         }
+
+        if (!fRejectAbsurdFee)
+        {
+            SyncWithWallets(ptx, nullptr, -1);
+        }
     }
-    GetMainSignals().TransactionAddedToMempool(ptx);
+
     return true;
 }
 
