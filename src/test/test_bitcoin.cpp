@@ -99,7 +99,7 @@ CBlock TestChain100Setup::CreateAndProcessBlock(const std::vector<CTransactionRe
 {
     std::unique_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(pwallet, scriptPubKey, false));
     CBlock block = pblocktemplate->block;
-    CBlock* pblock = &block;
+    CBlock *pblock = &block;
 
     // Replace mempool-selected txns with just coinbase plus passed-in txns:
     pblock->vtx.resize(1);

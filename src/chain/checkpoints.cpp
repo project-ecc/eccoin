@@ -90,8 +90,8 @@ CBlockIndex *GetLastCheckpoint(const CCheckpointData &data)
     BOOST_REVERSE_FOREACH (const MapCheckpoints::value_type &i, checkpoints)
     {
         const uint256 &hash = i.second;
-        CBlockIndex* pindex = pnetMan->getChainActive()->LookupBlockIndex(hash);
-        if(pindex)
+        CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(hash);
+        if (pindex)
         {
             return pindex;
         }

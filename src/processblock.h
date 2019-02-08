@@ -58,7 +58,7 @@ void CheckBlockIndex(const Consensus::Params &consensusParams);
 bool ProcessNewBlock(CValidationState &state,
     const CNetworkTemplate &chainparams,
     const CNode *pfrom,
-    const CBlock* pblock,
+    const CBlock *pblock,
     bool fForceProcessing,
     CDiskBlockPos *dbp);
 bool DisconnectTip(CValidationState &state, const Consensus::Params &consensusParams);
@@ -88,9 +88,7 @@ bool DisconnectBlock(const CBlock &block,
     bool *pfClean = nullptr);
 
 /** Find the best known block, and make it the tip of the block chain */
-bool ActivateBestChain(CValidationState &state,
-    const CNetworkTemplate &chainparams,
-    const CBlock* pblock = nullptr);
+bool ActivateBestChain(CValidationState &state, const CNetworkTemplate &chainparams, const CBlock *pblock = nullptr);
 
 
 #endif // PROCESSBLOCK_H

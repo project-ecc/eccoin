@@ -76,7 +76,7 @@ public:
 };
 
 /** Store block on disk. If dbp is non-NULL, the file is known to already reside on disk */
-bool AcceptBlock(const CBlock* pblock,
+bool AcceptBlock(const CBlock *pblock,
     CValidationState &state,
     const CNetworkTemplate &chainparams,
     CBlockIndex **ppindex,
@@ -166,7 +166,7 @@ bool AcceptBlock(const CBlock* pblock,
 bool ProcessNewBlock(CValidationState &state,
     const CNetworkTemplate &chainparams,
     const CNode *pfrom,
-    const CBlock* pblock,
+    const CBlock *pblock,
     bool fForceProcessing,
     CDiskBlockPos *dbp)
 {
@@ -546,8 +546,7 @@ bool ActivateBestChainStep(CValidationState &state,
         // Connect new blocks.
         BOOST_REVERSE_FOREACH (CBlockIndex *pindexConnect, vpindexToConnect)
         {
-            if (!ConnectTip(
-                    state, chainparams, pindexConnect, pindexConnect == pindexMostWork ? pblock : nullptr))
+            if (!ConnectTip(state, chainparams, pindexConnect, pindexConnect == pindexMostWork ? pblock : nullptr))
             {
                 if (state.IsInvalid())
                 {
@@ -600,9 +599,7 @@ bool ActivateBestChainStep(CValidationState &state,
  * or an activated best chain. pblock is either NULL or a pointer to a block
  * that is already loaded (to avoid loading it again from disk).
  */
-bool ActivateBestChain(CValidationState &state,
-    const CNetworkTemplate &chainparams,
-    const CBlock* pblock)
+bool ActivateBestChain(CValidationState &state, const CNetworkTemplate &chainparams, const CBlock *pblock)
 {
     CBlockIndex *pindexMostWork = NULL;
     do
@@ -637,7 +634,6 @@ bool ActivateBestChain(CValidationState &state,
             pindexNewTip = pnetMan->getChainActive()->chainActive.Tip();
             pindexFork = pnetMan->getChainActive()->chainActive.FindFork(pindexOldTip);
             fInitialDownload = pnetMan->getChainActive()->IsInitialBlockDownload();
-
         }
         // When we reach this point, we switched to a new tip (stored in pindexNewTip).
 

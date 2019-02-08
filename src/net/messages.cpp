@@ -490,7 +490,7 @@ void ProcessBlockAvailability(NodeId nodeid)
 
     if (!state->hashLastUnknownBlock.IsNull())
     {
-        CBlockIndex* pindex = pnetMan->getChainActive()->LookupBlockIndex(state->hashLastUnknownBlock);
+        CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(state->hashLastUnknownBlock);
         if (pindex && pindex->nChainWork > 0)
         {
             if (state->pindexBestKnownBlock == NULL || pindex->nChainWork >= state->pindexBestKnownBlock->nChainWork)
@@ -642,7 +642,7 @@ void UpdateBlockAvailability(NodeId nodeid, const uint256 &hash)
 
     ProcessBlockAvailability(nodeid);
 
-    CBlockIndex* pindex = pnetMan->getChainActive()->LookupBlockIndex(hash);
+    CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(hash);
     if (pindex && pindex->nChainWork > 0)
     {
         // An actually better block was announced.
@@ -831,7 +831,7 @@ void static ProcessGetData(CNode *pfrom, CConnman &connman, const Consensus::Par
         if (inv.type == MSG_BLOCK || inv.type == MSG_FILTERED_BLOCK)
         {
             bool send = false;
-            CBlockIndex* pindex = pnetMan->getChainActive()->LookupBlockIndex(inv.hash);
+            CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(inv.hash);
             if (pindex)
             {
                 if (pnetMan->getChainActive()->chainActive.Contains(pindex))
@@ -847,9 +847,9 @@ void static ProcessGetData(CNode *pfrom, CConnman &connman, const Consensus::Par
                     // equivalent proof of work) than the best header chain
                     // we know about.
                     send = pindex->IsValid(BLOCK_VALID_SCRIPTS) &&
-                        (pnetMan->getChainActive()->pindexBestHeader != nullptr) &&
-                        (pnetMan->getChainActive()->pindexBestHeader->GetBlockTime() - pindex->GetBlockTime() <
-                            nOneMonth) &&
+                           (pnetMan->getChainActive()->pindexBestHeader != nullptr) &&
+                           (pnetMan->getChainActive()->pindexBestHeader->GetBlockTime() - pindex->GetBlockTime() <
+                               nOneMonth) &&
                            (GetBlockProofEquivalentTime(*pnetMan->getChainActive()->pindexBestHeader, *pindex,
                                 *pnetMan->getChainActive()->pindexBestHeader, consensusParams) < nOneMonth);
                     if (!send)
@@ -2462,7 +2462,7 @@ bool SendMessages(CNode *pto, CConnman &connman)
             // aren't on chainActive, give up.
             for (const uint256 &hash : pto->vBlockHashesToAnnounce)
             {
-                CBlockIndex* pindex = pnetMan->getChainActive()->LookupBlockIndex(hash);
+                CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(hash);
                 assert(pindex);
                 if (pnetMan->getChainActive()->chainActive[pindex->nHeight] != pindex)
                 {
@@ -2542,7 +2542,7 @@ bool SendMessages(CNode *pto, CConnman &connman)
             if (!pto->vBlockHashesToAnnounce.empty())
             {
                 const uint256 &hashToAnnounce = pto->vBlockHashesToAnnounce.back();
-                CBlockIndex* pindex = pnetMan->getChainActive()->LookupBlockIndex(hashToAnnounce);
+                CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(hashToAnnounce);
                 assert(pindex);
 
                 // Warn if we're announcing a block that is not on the main

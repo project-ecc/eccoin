@@ -621,7 +621,8 @@ UniValue gettxout(const UniValue &params, bool fHelp)
         }
     }
 
-    CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(pnetMan->getChainActive()->pcoinsTip->GetBestBlock());
+    CBlockIndex *pindex =
+        pnetMan->getChainActive()->LookupBlockIndex(pnetMan->getChainActive()->pcoinsTip->GetBestBlock());
     ret.push_back(Pair("bestblock", pindex->GetBlockHash().GetHex()));
     if ((unsigned int)coin.nHeight == MEMPOOL_HEIGHT)
         ret.push_back(Pair("confirmations", 0));

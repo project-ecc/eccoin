@@ -3115,7 +3115,7 @@ void CWallet::GetKeyBirthTimes(std::map<CKeyID, int64_t> &mapKeyBirth) const
     {
         // iterate over all wallet transactions...
         const CWalletTx &wtx = (*it).second;
-        CBlockIndex* pindex = pnetMan->getChainActive()->LookupBlockIndex(wtx.hashBlock);
+        CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(wtx.hashBlock);
         if (pindex && pnetMan->getChainActive()->chainActive.Contains(pindex))
         {
             // ... which are already in a block
@@ -3220,7 +3220,7 @@ int CMerkleTx::SetMerkleBranch(const CBlock &block)
     }
 
     // Is the tx in a block that's in the main chain
-    const CBlockIndex* pindex = pnetMan->getChainActive()->LookupBlockIndex(hashBlock);
+    const CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(hashBlock);
     if (!pindex || !pnetMan->getChainActive()->chainActive.Contains(pindex))
     {
         return 0;
@@ -3236,7 +3236,7 @@ int CMerkleTx::GetDepthInMainChain(const CBlockIndex *&pindexRet) const
     }
     AssertLockHeld(cs_main);
     // Find the block it claims to be in
-    CBlockIndex* pindex = pnetMan->getChainActive()->LookupBlockIndex(hashBlock);
+    CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(hashBlock);
     LOCK(cs_main); // for chainActive
     if (!pindex || !pnetMan->getChainActive()->chainActive.Contains(pindex))
     {

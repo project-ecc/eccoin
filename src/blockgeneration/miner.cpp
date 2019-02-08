@@ -369,9 +369,7 @@ void FormatHashBuffers(CBlock *pblock, char *pmidstate, char *pdata, char *phash
 }
 
 
-bool CheckWork(const CBlock* pblock,
-    CWallet &wallet,
-    boost::shared_ptr<CReserveScript> coinbaseScript)
+bool CheckWork(const CBlock *pblock, CWallet &wallet, boost::shared_ptr<CReserveScript> coinbaseScript)
 {
     arith_uint256 hash = UintToArith256(pblock->GetHash());
     arith_uint256 hashTarget = arith_uint256(pblock->nBits);
@@ -386,8 +384,8 @@ bool CheckWork(const CBlock* pblock,
 
     // Found a solution
     {
-        CBlockIndex* ptip = pnetMan->getChainActive()->chainActive.Tip();
-        if(ptip == nullptr)
+        CBlockIndex *ptip = pnetMan->getChainActive()->chainActive.Tip();
+        if (ptip == nullptr)
         {
             return false;
         }

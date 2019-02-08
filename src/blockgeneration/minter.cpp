@@ -32,9 +32,7 @@
 extern CWallet *pwalletMain;
 int64_t nLastCoinStakeSearchInterval = 0;
 
-bool CheckStake(const CBlock* pblock,
-    CWallet &wallet,
-    boost::shared_ptr<CReserveScript> coinbaseScript)
+bool CheckStake(const CBlock *pblock, CWallet &wallet, boost::shared_ptr<CReserveScript> coinbaseScript)
 {
     //// debug print
     LogPrintf("Minter:\n");
@@ -50,8 +48,8 @@ bool CheckStake(const CBlock* pblock,
 
     // Found a solution
     {
-        CBlockIndex* ptip = pnetMan->getChainActive()->chainActive.Tip();
-        if(ptip == nullptr)
+        CBlockIndex *ptip = pnetMan->getChainActive()->chainActive.Tip();
+        if (ptip == nullptr)
         {
             return false;
         }

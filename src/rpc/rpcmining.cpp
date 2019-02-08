@@ -1265,7 +1265,7 @@ UniValue submitblock(const UniValue &params, bool fHelp)
     CValidationState state;
     submitblock_StateCatcher sc(block.GetHash());
     RegisterValidationInterface(&sc);
-    const CBlock* spblock(&block);
+    const CBlock *spblock(&block);
     bool fAccepted = ProcessNewBlock(state, pnetMan->getActivePaymentNetwork(), NULL, spblock, true, NULL);
     UnregisterValidationInterface(&sc);
     if (fBlockPresent)
