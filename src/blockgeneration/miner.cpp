@@ -369,7 +369,7 @@ void FormatHashBuffers(CBlock *pblock, char *pmidstate, char *pdata, char *phash
 }
 
 
-bool CheckWork(const std::shared_ptr<const CBlock> pblock,
+bool CheckWork(const CBlock* pblock,
     CWallet &wallet,
     boost::shared_ptr<CReserveScript> coinbaseScript)
 {
@@ -510,8 +510,7 @@ void EccMiner(CWallet *pwallet)
                         break;
                     }
                     SetThreadPriority(THREAD_PRIORITY_NORMAL);
-                    const std::shared_ptr<const CBlock> spblock = std::make_shared<const CBlock>(*pblock);
-                    CheckWork(spblock, *pwalletMain, coinbaseScript);
+                    CheckWork(pblock, *pwalletMain, coinbaseScript);
                     SetThreadPriority(THREAD_PRIORITY_LOWEST);
                     break;
                 }

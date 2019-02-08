@@ -87,10 +87,6 @@ CCriticalSection cs_mapRelay;
 std::map<uint256, CTransaction> mapRelay;
 std::deque<std::pair<int64_t, std::map<uint256, CTransaction>::iterator> > vRelayExpiration;
 
-static CCriticalSection cs_most_recent_block;
-static std::shared_ptr<const CBlock> most_recent_block;
-static uint256 most_recent_block_hash;
-
 uint64_t nLocalHostNonce = 0;
 extern CCriticalSection cs_mapInboundConnectionTracker;
 extern std::map<CNetAddr, ConnectionHistory> mapInboundConnectionTracker;
@@ -711,7 +707,7 @@ PeerLogicValidation::PeerLogicValidation(CConnman *connmanIn) : connman(connmanI
     recentRejects.reset(new CRollingBloomFilter(120000, 0.000001));
 }
 
-void PeerLogicValidation::NewPoWValidBlock(const CBlockIndex *pindex, const std::shared_ptr<const CBlock> &pblock)
+void PeerLogicValidation::NewPoWValidBlock(const CBlockIndex *pindex, const CBlock *pblock)
 {
     LOCK(cs_main);
     static int nHighestFastAnnounce = 0;
@@ -721,11 +717,6 @@ void PeerLogicValidation::NewPoWValidBlock(const CBlockIndex *pindex, const std:
     }
     nHighestFastAnnounce = pindex->nHeight;
     uint256 hashBlock(pblock->GetHash());
-    {
-        LOCK(cs_most_recent_block);
-        most_recent_block_hash = hashBlock;
-        most_recent_block = pblock;
-    }
     connman->ForEachNode([this, pindex, &hashBlock](CNode *pnode) {
         // TODO: Avoid the repeated-serialization here
         if (pnode->fDisconnect)
@@ -1434,23 +1425,6 @@ bool static ProcessMessage(CNode *pfrom,
         uint256 hashStop;
         vRecv >> locator >> hashStop;
 
-        // We might have announced the currently-being-connected tip using a
-        // compact block, which resulted in the peer sending a getblocks
-        // request, which we would otherwise respond to without the new block.
-        // To avoid this situation we simply verify that we are on our best
-        // known chain now. This is super overkill, but we handle it better
-        // for getheaders requests, and there are no known nodes which support
-        // compact blocks but still use getblocks to request blocks.
-        {
-            std::shared_ptr<const CBlock> a_recent_block;
-            {
-                LOCK(cs_most_recent_block);
-                a_recent_block = most_recent_block;
-            }
-            CValidationState dummy;
-            ActivateBestChain(dummy, pnetMan->getActivePaymentNetwork(), a_recent_block);
-        }
-
         LOCK(cs_main);
 
         // Find the last block the caller has in the main chain
@@ -1892,17 +1866,17 @@ bool static ProcessMessage(CNode *pfrom,
 
     else if (strCommand == NetMsgType::BLOCK && !fImporting && !fReindex) // Ignore blocks received while importing
     {
-        std::shared_ptr<CBlock> pblock = std::make_shared<CBlock>();
-        vRecv >> *pblock;
+        CBlock block;
+        vRecv >> block;
 
-        LogPrint("net", "received block %s peer=%d\n", pblock->GetHash().ToString(), pfrom->id);
+        const uint256 hash(block.GetHash());
+        LogPrint("net", "received block %s peer=%d\n", hash.ToString(), pfrom->id);
 
         // Process all blocks from whitelisted peers, even if not requested,
         // unless we're still syncing with the network. Such an unrequested
         // block may still be processed, subject to the conditions in
         // AcceptBlock().
         bool forceProcessing = pfrom->fWhitelisted && !pnetMan->getChainActive()->IsInitialBlockDownload();
-        const uint256 hash(pblock->GetHash());
         {
             LOCK(cs_main);
             // Also always process if we requested the block explicitly, as we
@@ -1914,7 +1888,7 @@ bool static ProcessMessage(CNode *pfrom,
             mapBlockSource.emplace(hash, std::make_pair(pfrom->GetId(), true));
         }
         CValidationState state;
-        ProcessNewBlock(state, chainparams, pfrom, pblock, forceProcessing, NULL);
+        ProcessNewBlock(state, chainparams, pfrom, &block, forceProcessing, NULL);
         int nDoS;
         if (state.IsInvalid(nDoS))
         {

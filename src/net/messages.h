@@ -64,7 +64,7 @@ public:
     PeerLogicValidation(CConnman *connmanIn);
 
     void UpdatedBlockTip(const CBlockIndex *pindexNew, const CBlockIndex *pindexFork, bool fInitialDownload) override;
-    void NewPoWValidBlock(const CBlockIndex *pindex, const std::shared_ptr<const CBlock> &pblock) override;
+    void NewPoWValidBlock(const CBlockIndex *pindex, const CBlock *pblock) override;
 };
 
 struct CNodeStateStats

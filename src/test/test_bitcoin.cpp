@@ -98,8 +98,8 @@ TestChain100Setup::TestChain100Setup() : TestingSetup("REGTEST")
 CBlock TestChain100Setup::CreateAndProcessBlock(const std::vector<CTransactionRef> &txns, const CScript &scriptPubKey)
 {
     std::unique_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(pwallet, scriptPubKey, false));
-    std::shared_ptr<CBlock> pblock = std::make_shared<CBlock>();
-    *pblock = pblocktemplate->block;
+    CBlock block = pblocktemplate->block;
+    CBlock* pblock = &block;
 
     // Replace mempool-selected txns with just coinbase plus passed-in txns:
     pblock->vtx.resize(1);
@@ -107,7 +107,7 @@ CBlock TestChain100Setup::CreateAndProcessBlock(const std::vector<CTransactionRe
         pblock->vtx.push_back(tx);
     // IncrementExtraNonce creates a valid coinbase and merkleRoot
     unsigned int extraNonce = 0;
-    IncrementExtraNonce(pblock.get(), pnetMan->getChainActive()->chainActive.Tip(), extraNonce);
+    IncrementExtraNonce(pblock, pnetMan->getChainActive()->chainActive.Tip(), extraNonce);
 
     while (!CheckProofOfWork(pblock->GetHash(), pblock->nBits, pnetMan->getActivePaymentNetwork()->GetConsensus()))
         ++pblock->nNonce;

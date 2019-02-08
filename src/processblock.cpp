@@ -76,7 +76,7 @@ public:
 };
 
 /** Store block on disk. If dbp is non-NULL, the file is known to already reside on disk */
-bool AcceptBlock(const std::shared_ptr<const CBlock> pblock,
+bool AcceptBlock(const CBlock* pblock,
     CValidationState &state,
     const CNetworkTemplate &chainparams,
     CBlockIndex **ppindex,
@@ -166,7 +166,7 @@ bool AcceptBlock(const std::shared_ptr<const CBlock> pblock,
 bool ProcessNewBlock(CValidationState &state,
     const CNetworkTemplate &chainparams,
     const CNode *pfrom,
-    const std::shared_ptr<const CBlock> pblock,
+    const CBlock* pblock,
     bool fForceProcessing,
     CDiskBlockPos *dbp)
 {
@@ -341,28 +341,21 @@ static int64_t nTimeTotal = 0;
 bool ConnectTip(CValidationState &state,
     const CNetworkTemplate &chainparams,
     CBlockIndex *pindexNew,
-    const std::shared_ptr<const CBlock> &pblock)
+    const CBlock *pblock)
 {
     assert(pindexNew->pprev == pnetMan->getChainActive()->chainActive.Tip());
     // Read block from disk.
     int64_t nTime1 = GetTimeMicros();
 
-    std::shared_ptr<const CBlock> pthisBlock;
+    CBlock block;
     if (!pblock)
     {
-        std::shared_ptr<CBlock> pblockNew = std::make_shared<CBlock>();
-        if (!ReadBlockFromDisk(*pblockNew, pindexNew, chainparams.GetConsensus()))
+        if (!ReadBlockFromDisk(block, pindexNew, chainparams.GetConsensus()))
         {
             return AbortNode(state, "Failed to read block");
         }
-        pthisBlock = pblockNew;
+        pblock = &block;
     }
-    else
-    {
-        pthisBlock = pblock;
-    }
-
-    const CBlock &blockConnecting = *pthisBlock;
 
     // Apply the block atomically to the chain state.
     int64_t nTime2 = GetTimeMicros();
@@ -372,7 +365,7 @@ bool ConnectTip(CValidationState &state,
         "bench", "  - Load block from disk: %.2fms [%.2fs]\n", (nTime2 - nTime1) * 0.001, nTimeReadFromDisk * 0.000001);
     {
         CCoinsViewCache view(pnetMan->getChainActive()->pcoinsTip.get());
-        bool rv = ConnectBlock(blockConnecting, state, pindexNew, view);
+        bool rv = ConnectBlock(*pblock, state, pindexNew, view);
         if (!rv)
         {
             if (state.IsInvalid())
@@ -400,7 +393,7 @@ bool ConnectTip(CValidationState &state,
     // Remove conflicting transactions from the mempool.
     std::list<CTransactionRef> txConflicted;
     mempool.removeForBlock(
-        blockConnecting.vtx, pindexNew->nHeight, txConflicted, !pnetMan->getChainActive()->IsInitialBlockDownload());
+        pblock->vtx, pindexNew->nHeight, txConflicted, !pnetMan->getChainActive()->IsInitialBlockDownload());
     // Update chainActive & related variables.
     UpdateTip(pindexNew);
 
@@ -414,7 +407,7 @@ bool ConnectTip(CValidationState &state,
     int txIdx = 0;
     for (const auto &ptx : pblock->vtx)
     {
-        SyncWithWallets(ptx, pblock.get(), txIdx);
+        SyncWithWallets(ptx, pblock, txIdx);
         txIdx++;
     }
 
@@ -515,7 +508,7 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex *pindexNewForkTip)
 bool ActivateBestChainStep(CValidationState &state,
     const CNetworkTemplate &chainparams,
     CBlockIndex *pindexMostWork,
-    const std::shared_ptr<const CBlock> &pblock)
+    const CBlock *pblock)
 {
     AssertLockHeld(cs_main);
     bool fInvalidFound = false;
@@ -609,7 +602,7 @@ bool ActivateBestChainStep(CValidationState &state,
  */
 bool ActivateBestChain(CValidationState &state,
     const CNetworkTemplate &chainparams,
-    const std::shared_ptr<const CBlock> pblock)
+    const CBlock* pblock)
 {
     CBlockIndex *pindexMostWork = NULL;
     do

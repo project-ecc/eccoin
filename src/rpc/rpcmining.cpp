@@ -208,7 +208,6 @@ UniValue generateBlocks(boost::shared_ptr<CReserveScript> coinbaseScript,
         }
 
         CValidationState state;
-        const std::shared_ptr<const CBlock> spblock = std::make_shared<const CBlock>(*pblock);
         for (auto tx : pblock->vtx)
         {
             LogPrintf("transaction: %s \n", tx->GetHash().GetHex().c_str());
@@ -217,7 +216,7 @@ UniValue generateBlocks(boost::shared_ptr<CReserveScript> coinbaseScript,
                 LogPrintf("generated %s\n", FormatMoney(vout.nValue).c_str());
             }
         }
-        if (!ProcessNewBlock(state, pnetMan->getActivePaymentNetwork(), nullptr, spblock, true, nullptr))
+        if (!ProcessNewBlock(state, pnetMan->getActivePaymentNetwork(), nullptr, pblock, true, nullptr))
             throw JSONRPCError(RPC_INTERNAL_ERROR, "ProcessNewBlock, block not accepted");
         ++nHeight;
         blockHashes.push_back(pblock->GetHash().GetHex());
@@ -1266,7 +1265,7 @@ UniValue submitblock(const UniValue &params, bool fHelp)
     CValidationState state;
     submitblock_StateCatcher sc(block.GetHash());
     RegisterValidationInterface(&sc);
-    const std::shared_ptr<const CBlock> spblock(&block);
+    const CBlock* spblock(&block);
     bool fAccepted = ProcessNewBlock(state, pnetMan->getActivePaymentNetwork(), NULL, spblock, true, NULL);
     UnregisterValidationInterface(&sc);
     if (fBlockPresent)

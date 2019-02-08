@@ -32,7 +32,7 @@
 extern CWallet *pwalletMain;
 int64_t nLastCoinStakeSearchInterval = 0;
 
-bool CheckStake(const std::shared_ptr<const CBlock> pblock,
+bool CheckStake(const CBlock* pblock,
     CWallet &wallet,
     boost::shared_ptr<CReserveScript> coinbaseScript)
 {
@@ -376,8 +376,7 @@ void EccMinter(CWallet *pwallet)
         }
         LogPrintf("CPUMiner : proof-of-stake block found %s\n", pblock->GetHash().ToString().c_str());
         SetThreadPriority(THREAD_PRIORITY_NORMAL);
-        const std::shared_ptr<const CBlock> spblock = std::make_shared<const CBlock>(*pblock);
-        CheckStake(spblock, *pwalletMain, coinbaseScript);
+        CheckStake(pblock, *pwalletMain, coinbaseScript);
         SetThreadPriority(THREAD_PRIORITY_LOWEST);
         MilliSleep(1000); // 1 second delay
         continue;
