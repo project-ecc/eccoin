@@ -442,7 +442,7 @@ void ECC_Start()
 
     {
         // Pass in a random blinding seed to the secp256k1 context.
-        uint8_t seed[32];
+        uint8_t seed[32] = {0};
         LockObject(seed);
         GetRandBytes(seed, 32);
         bool ret = secp256k1_context_randomize(ctx, seed);
