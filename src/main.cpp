@@ -1013,7 +1013,7 @@ bool CheckTxInputs(const CTransaction &tx, CValidationState &state, const CCoins
         if (nStakeReward >
             GetProofOfStakeReward(tx.GetCoinAge(nCoinAge, true), nSpendHeight) + DEFAULT_TRANSACTION_MINFEE)
         {
-            LogPrint("kernel","nStakeReward = %d , CoinAge = %d \n", nStakeReward, nCoinAge);
+            LogPrint("kernel", "nStakeReward = %d , CoinAge = %d \n", nStakeReward, nCoinAge);
             return state.DoS(100, false, REJECT_INVALID, "bad-txns-stake-reward-too-high", false,
                 strprintf("ConnectInputs() : %s stake reward exceeded", tx.GetHash().ToString().substr(0, 10).c_str()));
         }

@@ -20,12 +20,12 @@
 
 #include "coins.h"
 
+#include "consensus/consensus.h"
 #include "memusage.h"
 #include "random.h"
+#include "util/logger.h"
 #include "util/util.h"
 #include <assert.h>
-#include "consensus/consensus.h"
-#include "util/logger.h"
 
 
 bool CCoinsView::GetCoin(const COutPoint &outpoint, Coin &coin) const { return false; }

@@ -105,7 +105,7 @@ void AddTimeData(const CNetAddr &ip, int64_t nOffsetSample)
                 {
                     fDone = true;
                     std::string strMessage = "Please check that your computer's date and time are correct! If your "
-                                               "clock is wrong Bitcoin Core will not work properly.";
+                                             "clock is wrong Bitcoin Core will not work properly.";
                     strMiscWarning = strMessage;
                     uiInterface.ThreadSafeMessageBox(strMessage, "", CClientUIInterface::MSG_WARNING);
                 }

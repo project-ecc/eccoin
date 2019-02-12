@@ -2314,13 +2314,13 @@ bool CConnman::BindListenPort(const CService &addrBind, std::string &strError, b
         if (nErr == WSAEADDRINUSE)
         {
             strError = strprintf("Unable to bind to %s on this computer. %s "
-                                   "is probably already running.",
+                                 "is probably already running.",
                 addrBind.ToString(), "Eccoind");
         }
         else
         {
             strError = strprintf("Unable to bind to %s on this computer "
-                                   "(bind returned error %s)",
+                                 "(bind returned error %s)",
                 addrBind.ToString(), NetworkErrorString(nErr));
         }
         LogPrintf("%s\n", strError);
@@ -2333,7 +2333,7 @@ bool CConnman::BindListenPort(const CService &addrBind, std::string &strError, b
     if (listen(hListenSocket, SOMAXCONN) == SOCKET_ERROR)
     {
         strError = strprintf("Error: Listening for incoming connections "
-                               "failed (listen returned error %s)",
+                             "failed (listen returned error %s)",
             NetworkErrorString(WSAGetLastError()));
         LogPrintf("%s\n", strError);
         CloseSocket(hListenSocket);

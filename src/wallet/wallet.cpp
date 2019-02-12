@@ -422,9 +422,9 @@ bool CWallet::Verify(const std::string &walletFile, std::string &warningString, 
         if (r == CDBEnv::RECOVER_OK)
         {
             warningString += strprintf(("Warning: wallet.dat corrupt, data salvaged!"
-                                         " Original wallet.dat saved as wallet.{timestamp}.bak in %s; if"
-                                         " your balance or transactions are incorrect you should"
-                                         " restore from a backup."),
+                                        " Original wallet.dat saved as wallet.{timestamp}.bak in %s; if"
+                                        " your balance or transactions are incorrect you should"
+                                        " restore from a backup."),
                 GetDataDir());
         }
         if (r == CDBEnv::RECOVER_FAIL)
@@ -2317,7 +2317,8 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient> &vecSend,
                                 txNew.vout[i].nValue -= nDust;
                                 if (txNew.vout[i].IsDust(::minRelayTxFee))
                                 {
-                                    strFailReason = "The transaction amount is too small to send after the fee has been deducted";
+                                    strFailReason =
+                                        "The transaction amount is too small to send after the fee has been deducted";
                                     return false;
                                 }
                                 break;
@@ -3638,7 +3639,7 @@ bool CWallet::InitLoadWallet()
         else if (nLoadWalletRet == DB_NONCRITICAL_ERROR)
         {
             UIWarning(strprintf(("Error reading %s! All keys read correctly, but transaction data"
-                                  " or address book entries might be missing or incorrect."),
+                                 " or address book entries might be missing or incorrect."),
                 walletFile));
         }
         else if (nLoadWalletRet == DB_TOO_NEW)

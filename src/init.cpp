@@ -366,11 +366,11 @@ std::string HelpMessage()
                                 DEFAULT_MAX_ORPHAN_TRANSACTIONS));
     strUsage += HelpMessageOpt("-maxmempool=<n>",
         strprintf(("Keep the transaction memory pool below <n> megabytes (default: %u)"), DEFAULT_MAX_MEMPOOL_SIZE));
-    strUsage += HelpMessageOpt("-mempoolexpiry=<n>",
-        strprintf(("Do not keep transactions in the mempool longer than <n> hours (default: %u)"),
-                                   DEFAULT_MEMPOOL_EXPIRY));
+    strUsage += HelpMessageOpt(
+        "-mempoolexpiry=<n>", strprintf(("Do not keep transactions in the mempool longer than <n> hours (default: %u)"),
+                                  DEFAULT_MEMPOOL_EXPIRY));
     strUsage += HelpMessageOpt("-par=<n>", strprintf(("Set the number of script verification threads (%u to %d, 0 = "
-                                                       "auto, <0 = leave that many cores free, default: %d)"),
+                                                      "auto, <0 = leave that many cores free, default: %d)"),
                                                -GetNumCores(), MAX_SCRIPTCHECK_THREADS, DEFAULT_SCRIPTCHECK_THREADS));
 #ifndef WIN32
     strUsage += HelpMessageOpt("-pid=<file>", strprintf(("Specify pid file (default: %s)"), PID_FILENAME));
@@ -389,8 +389,8 @@ std::string HelpMessage()
     strUsage += HelpMessageOpt("-connect=<ip>", ("Connect only to the specified node(s)"));
     strUsage += HelpMessageOpt(
         "-discover", ("Discover own IP addresses (default: 1 when listening and no -externalip or -proxy)"));
-    strUsage += HelpMessageOpt("-dns", "Allow DNS lookups for -addnode, -seednode and -connect " +
-                                           strprintf("(default: %u)", DEFAULT_NAME_LOOKUP));
+    strUsage += HelpMessageOpt("-dns",
+        "Allow DNS lookups for -addnode, -seednode and -connect " + strprintf("(default: %u)", DEFAULT_NAME_LOOKUP));
     strUsage += HelpMessageOpt(
         "-dnsseed", ("Query for peer addresses via DNS lookup, if low on addresses (default: 1 unless -connect)"));
     strUsage += HelpMessageOpt("-externalip=<ip>", ("Specify your own public address"));
@@ -415,11 +415,9 @@ std::string HelpMessage()
     strUsage += HelpMessageOpt("-port=<port>", strprintf(("Listen for connections on <port> (default: %u)"),
                                                    pnetMan->getActivePaymentNetwork()->GetDefaultPort()));
     strUsage += HelpMessageOpt("-proxy=<ip:port>", ("Connect through SOCKS5 proxy"));
-    strUsage += HelpMessageOpt(
-        "-proxyrandomize",
-        strprintf(
-            ("Randomize credentials for every proxy connection. This enables Tor stream isolation (default: %u)"),
-            DEFAULT_PROXYRANDOMIZE));
+    strUsage += HelpMessageOpt("-proxyrandomize",
+        strprintf(("Randomize credentials for every proxy connection. This enables Tor stream isolation (default: %u)"),
+                                   DEFAULT_PROXYRANDOMIZE));
     strUsage += HelpMessageOpt("-seednode=<ip>", ("Connect to a node to retrieve peer addresses, and disconnect"));
     strUsage += HelpMessageOpt("-timeout=<n>",
         strprintf(("Specify connection timeout in milliseconds (minimum: 1, default: %d)"), DEFAULT_CONNECT_TIMEOUT));
@@ -438,11 +436,11 @@ std::string HelpMessage()
         ("Bind to given address and whitelist peers connecting to it. Use [host]:port notation for IPv6"));
     strUsage += HelpMessageOpt("-whitelist=<netmask>",
         "Whitelist peers connecting from the given netmask or IP address. Can be specified multiple times. "
-            "Whitelisted peers cannot be DoS banned and their transactions are always relayed, even if they are "
-              "already in the mempool, useful e.g. for a gateway");
+        "Whitelisted peers cannot be DoS banned and their transactions are always relayed, even if they are "
+        "already in the mempool, useful e.g. for a gateway");
     strUsage +=
         HelpMessageOpt("-whitelistrelay", strprintf(("Accept relayed transactions received from whitelisted peers "
-                                                      "even when not relaying transactions (default: %d)"),
+                                                     "even when not relaying transactions (default: %d)"),
                                               DEFAULT_WHITELISTRELAY));
     strUsage += HelpMessageOpt(
         "-whitelistforcerelay",
@@ -474,27 +472,25 @@ std::string HelpMessage()
     strUsage += HelpMessageOpt(
         "-sendfreetransactions", strprintf(("Send transactions as zero-fee transactions if possible (default: %u)"),
                                      DEFAULT_SEND_FREE_TRANSACTIONS));
-    strUsage += HelpMessageOpt(
-        "-spendzeroconfchange", strprintf(("Spend unconfirmed change when sending transactions (default: %u)"),
-                                    DEFAULT_SPEND_ZEROCONF_CHANGE));
+    strUsage += HelpMessageOpt("-spendzeroconfchange",
+        strprintf(("Spend unconfirmed change when sending transactions (default: %u)"), DEFAULT_SPEND_ZEROCONF_CHANGE));
     strUsage += HelpMessageOpt(
         "-txconfirmtarget=<n>", strprintf(("If paytxfee is not set, include enough fee so transactions begin "
-                                            "confirmation on average within n blocks (default: %u)"),
+                                           "confirmation on average within n blocks (default: %u)"),
                                     DEFAULT_TX_CONFIRM_TARGET));
     strUsage += HelpMessageOpt(
         "-maxtxfee=<amt>", strprintf(("Maximum total fees (in %s) to use in a single wallet transaction; setting this "
-                                       "too low may abort large transactions (default: %s)"),
+                                      "too low may abort large transactions (default: %s)"),
                                CURRENCY_UNIT, FormatMoney(DEFAULT_TRANSACTION_MAXFEE)));
     strUsage += HelpMessageOpt("-upgradewallet", ("Upgrade wallet to latest format on startup"));
-    strUsage += HelpMessageOpt("-wallet=<file>",
-        "Specify wallet file (within data directory) (default: wallet.dat)");
+    strUsage += HelpMessageOpt("-wallet=<file>", "Specify wallet file (within data directory) (default: wallet.dat)");
     strUsage += HelpMessageOpt("-walletbroadcast",
         "Make the wallet broadcast transactions " + strprintf("(default: %u)", DEFAULT_WALLETBROADCAST));
     strUsage += HelpMessageOpt(
         "-walletnotify=<cmd>", ("Execute command when a wallet transaction changes (%s in cmd is replaced by TxID)"));
     strUsage += HelpMessageOpt("-zapwallettxes=<mode>",
         "Delete all wallet transactions and only recover those parts of the blockchain through -rescan on startup "
-            "(1 = keep tx meta data e.g. account owner and payment request information, 2 = drop tx meta data)");
+        "(1 = keep tx meta data e.g. account owner and payment request information, 2 = drop tx meta data)");
 
     strUsage += HelpMessageGroup(("Debugging/Testing options:"));
     strUsage += HelpMessageOpt("-uacomment=<cmt>", ("Append comment to the user agent string"));
@@ -570,7 +566,7 @@ std::string HelpMessage()
     }
     strUsage += HelpMessageOpt(
         "-minrelaytxfee=<amt>", strprintf(("Fees (in %s/kB) smaller than this are considered zero fee for relaying, "
-                                            "mining and transaction creation (default: %s)"),
+                                           "mining and transaction creation (default: %s)"),
                                     CURRENCY_UNIT, FormatMoney(DEFAULT_MIN_RELAY_TX_FEE)));
     strUsage += HelpMessageOpt("-printtoconsole", ("Send trace/debug info to console instead of debug.log file"));
     if (showDebug)
@@ -609,21 +605,20 @@ std::string HelpMessage()
     strUsage += HelpMessageOpt("-rest", strprintf(("Accept public REST requests (default: %u)"), DEFAULT_REST_ENABLE));
     strUsage += HelpMessageOpt(
         "-rpcbind=<addr>", ("Bind to given address to listen for JSON-RPC connections. Use [host]:port notation for "
-                             "IPv6. This option can be specified multiple times (default: bind to all interfaces)"));
+                            "IPv6. This option can be specified multiple times (default: bind to all interfaces)"));
     strUsage += HelpMessageOpt("-rpccookiefile=<loc>", ("Location of the auth cookie (default: data dir)"));
     strUsage += HelpMessageOpt("-rpcuser=<user>", ("Username for JSON-RPC connections"));
     strUsage += HelpMessageOpt("-rpcpassword=<pw>", ("Password for JSON-RPC connections"));
     strUsage += HelpMessageOpt(
         "-rpcauth=<userpw>", ("Username and hashed password for JSON-RPC connections. The field <userpw> comes in the "
-                               "format: <USERNAME>:<SALT>$<HASH>. A canonical python script is included in "
-                               "share/rpcuser. This option can be specified multiple times"));
-    strUsage +=
-        HelpMessageOpt("-rpcport=<port>", strprintf(("Listen for JSON-RPC connections on <port> (default: %u)"),
-                                              pnetMan->getActivePaymentNetwork()->GetRPCPort()));
+                              "format: <USERNAME>:<SALT>$<HASH>. A canonical python script is included in "
+                              "share/rpcuser. This option can be specified multiple times"));
+    strUsage += HelpMessageOpt("-rpcport=<port>", strprintf(("Listen for JSON-RPC connections on <port> (default: %u)"),
+                                                      pnetMan->getActivePaymentNetwork()->GetRPCPort()));
     strUsage += HelpMessageOpt(
         "-rpcallowip=<ip>", ("Allow JSON-RPC connections from specified source. Valid for <ip> are a single IP (e.g. "
-                              "1.2.3.4), a network/netmask (e.g. 1.2.3.4/255.255.255.0) or a network/CIDR (e.g. "
-                              "1.2.3.4/24). This option can be specified multiple times"));
+                             "1.2.3.4), a network/netmask (e.g. 1.2.3.4/255.255.255.0) or a network/CIDR (e.g. "
+                             "1.2.3.4/24). This option can be specified multiple times"));
     strUsage += HelpMessageOpt("-rpcthreads=<n>",
         strprintf(("Set the number of threads to service RPC calls (default: %d)"), DEFAULT_HTTP_THREADS));
     if (showDebug)
@@ -643,10 +638,10 @@ std::string LicenseInfo()
     return FormatParagraph(strprintf(("Copyright (C) 2014-%i The Eccoin Developers"), COPYRIGHT_YEAR)) + "\n" + "\n" +
            FormatParagraph(("This is experimental software.")) + "\n" + "\n" +
            FormatParagraph(("Distributed under the MIT software license, see the accompanying file COPYING or "
-                             "<http://www.opensource.org/licenses/mit-license.php>.")) +
+                            "<http://www.opensource.org/licenses/mit-license.php>.")) +
            "\n" + "\n" + FormatParagraph(("This product includes software developed by the OpenSSL Project for use in "
-                                           "the OpenSSL Toolkit <https://www.openssl.org/> and cryptographic software "
-                                           "written by Eric Young and UPnP software written by Thomas Bernard.")) +
+                                          "the OpenSSL Toolkit <https://www.openssl.org/> and cryptographic software "
+                                          "written by Eric Young and UPnP software written by Thomas Bernard.")) +
            "\n";
 }
 
@@ -985,7 +980,7 @@ bool AppInit2(thread_group &threadGroup)
     // Check for -socks - as this is a privacy risk to continue, exit here
     if (gArgs.IsArgSet("-socks"))
         return InitError(("Unsupported argument -socks found. Setting SOCKS version isn't possible anymore, only "
-                           "SOCKS5 proxies are supported."));
+                          "SOCKS5 proxies are supported."));
     // Check for -tor - as this is a privacy risk to continue, exit here
     if (gArgs.GetBoolArg("-tor", false))
         return InitError(("Unsupported argument -tor found, use -onion."));
@@ -1071,7 +1066,7 @@ bool AppInit2(thread_group &threadGroup)
                 gArgs.GetArg("-fallbackfee", DEFAULT_TRANSACTION_MINFEE)));
         if (nFeePerK > nHighTransactionFeeWarning)
             InitWarning(("-fallbackfee is set very high! This is the transaction fee you may pay when fee estimates "
-                          "are not available."));
+                         "are not available."));
         CWallet::fallbackFee = CFeeRate(nFeePerK);
     }
     if (gArgs.IsArgSet("-paytxfee"))
@@ -1104,7 +1099,7 @@ bool AppInit2(thread_group &threadGroup)
         if (CFeeRate(maxTxFee, 1000) < ::minRelayTxFee)
         {
             return InitError(strprintf(("Invalid amount for -maxtxfee=<amount>: '%i' (must be at least the minrelay "
-                                         "fee of %s to prevent stuck transactions)"),
+                                        "fee of %s to prevent stuck transactions)"),
                 gArgs.GetArg("-maxtxfee", DEFAULT_TRANSACTION_MAXFEE), ::minRelayTxFee.ToString()));
         }
     }
@@ -1153,8 +1148,8 @@ bool AppInit2(thread_group &threadGroup)
     catch (const boost::interprocess::interprocess_exception &e)
     {
         return InitError(
-            strprintf("Cannot obtain a lock on data directory %s. Eccoind is probably already running. %s.",
-                strDataDir, e.what()));
+            strprintf("Cannot obtain a lock on data directory %s. Eccoind is probably already running. %s.", strDataDir,
+                e.what()));
     }
 
 #ifndef WIN32
@@ -1241,7 +1236,7 @@ bool AppInit2(thread_group &threadGroup)
     if (strSubVersion.size() > MAX_SUBVERSION_LENGTH)
     {
         return InitError(strprintf(("Total length of network version string (%i) exceeds maximum length (%i). Reduce "
-                                     "the number or size of uacomments."),
+                                    "the number or size of uacomments."),
             strSubVersion.size(), MAX_SUBVERSION_LENGTH));
     }
 
@@ -1524,9 +1519,9 @@ bool AppInit2(thread_group &threadGroup)
                     if (tip && tip->nTime > GetAdjustedTime() + 2 * 60 * 60)
                     {
                         strLoadError = ("The block database contains a block which appears to be from the future. "
-                                         "This may be due to your computer's date and time being set incorrectly. "
-                                         "Only rebuild the block database if you are sure that your computer's "
-                                         "date and time are correct");
+                                        "This may be due to your computer's date and time being set incorrectly. "
+                                        "Only rebuild the block database if you are sure that your computer's "
+                                        "date and time are correct");
                         break;
                     }
                 }

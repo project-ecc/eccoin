@@ -759,7 +759,7 @@ static UniValue CallRPC(BaseRequestHandler *rh, const std::string &strMethod, co
         {
             throw std::runtime_error(
                 strprintf("Could not locate RPC credentials. No authentication cookie could be found, and RPC "
-                            "password is not set.  See -rpcpassword and -stdinrpcpass.  Configuration file: (%s)",
+                          "password is not set.  See -rpcpassword and -stdinrpcpass.  Configuration file: (%s)",
                     gArgs.GetConfigFile().string().c_str()));
         }
     }
