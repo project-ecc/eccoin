@@ -1434,7 +1434,8 @@ bool AppInit2(thread_group &threadGroup)
     LogPrintf("* Using %.1fMiB for chain state database\n", nCoinDBCache * (1.0 / 1024 / 1024));
     LogPrintf("* Using %.1fMiB for in-memory UTXO set\n", nCoinCacheUsage * (1.0 / 1024 / 1024));
 
-    LOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+    LOCK2(cs_main, pnetMan->getChainActive()->cs_mapBlockIndex);
+
     bool fLoaded = false;
     while (!fLoaded)
     {

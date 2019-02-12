@@ -131,7 +131,7 @@ CBlockIndex *CChainManager::InsertBlockIndex(uint256 hash)
 
 bool CChainManager::InitBlockIndex(const CNetworkTemplate &chainparams)
 {
-    LOCK(cs_mapBlockIndex);
+    LOCK2(cs_main, cs_mapBlockIndex);
 
     // Initialize global variables that cannot be constructed at startup.
     recentRejects.reset(new CRollingBloomFilter(120000, 0.000001));
