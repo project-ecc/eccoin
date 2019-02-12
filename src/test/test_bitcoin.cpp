@@ -24,13 +24,13 @@
 #include "txdb.h"
 #include "txmempool.h"
 #include "ui_interface.h"
+#include "util/logger.h"
 #include <boost/program_options.hpp>
 #include <boost/test/unit_test.hpp>
 
 #include <memory>
 
 
-extern bool fPrintToConsole;
 extern void noui_connect();
 CWallet *pwallet = nullptr;
 
@@ -161,12 +161,12 @@ struct StartupShutdown
             std::string s = opts["log_bitcoin"].as<std::string>();
             if (s == "console")
             {
-                fPrintToConsole = true;
+                g_logger->fPrintToConsole = true;
                 g_logger->fPrintToDebugLog = false;
             }
             else if (s == "none")
             {
-                fPrintToConsole = false;
+                g_logger->fPrintToConsole = false;
                 g_logger->fPrintToDebugLog = false;
             }
         }
