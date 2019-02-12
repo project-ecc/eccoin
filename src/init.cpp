@@ -1490,7 +1490,7 @@ bool AppInit2(thread_group &threadGroup)
                         pnetMan->getChainActive()->mapBlockIndex.count(chainparams.GetConsensus().hashGenesisBlock) ==
                             0)
                     {
-                        return InitError(_("Incorrect or no genesis block found. Wrong datadir for network?"));
+                        return InitError("Incorrect or no genesis block found. Wrong datadir for network?");
                     }
                 }
 
