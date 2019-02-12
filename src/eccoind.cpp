@@ -25,6 +25,7 @@
 #include "networks/netman.h"
 #include "noui.h"
 #include "rpc/rpcserver.h"
+#include "sync.h"
 #include "threadgroup.h"
 #include "util/util.h"
 

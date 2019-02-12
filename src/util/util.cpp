@@ -90,7 +90,7 @@
 #include <boost/algorithm/string/predicate.hpp> // for startswith() and endswith()
 #include <boost/program_options/detail/config_file.hpp>
 #include <boost/program_options/parsers.hpp>
-#include <boost/thread.hpp>
+#include <boost/thread/tss.hpp> // for boost::thread_specific_ptr
 
 #include <openssl/conf.h>
 #include <openssl/crypto.h>

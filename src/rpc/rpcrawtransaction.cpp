@@ -264,7 +264,7 @@ UniValue gettxoutproof(const UniValue &params, bool fHelp)
     uint256 hashBlock;
     if (params.size() > 1)
     {
-        LOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+        READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
         hashBlock = uint256S(params[1].get_str());
         if (!pnetMan->getChainActive()->mapBlockIndex.count(hashBlock))
             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
@@ -285,7 +285,7 @@ UniValue gettxoutproof(const UniValue &params, bool fHelp)
         if (!GetTransaction(oneTxid, tx, pnetMan->getActivePaymentNetwork()->GetConsensus(), hashBlock, false) ||
             hashBlock.IsNull())
             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Transaction not yet in block");
-        LOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+        READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
         if (!pnetMan->getChainActive()->mapBlockIndex.count(hashBlock))
             throw JSONRPCError(RPC_INTERNAL_ERROR, "Transaction index corrupt");
         pblockindex = pnetMan->getChainActive()->mapBlockIndex[hashBlock];
@@ -678,7 +678,7 @@ UniValue signrawtransaction(const UniValue &params, bool fHelp)
     CCoinsView viewDummy;
     CCoinsViewCache view(&viewDummy);
     {
-        LOCK(mempool.cs);
+        READLOCK(mempool.cs);
         CCoinsViewCache &viewChain = *pnetMan->getChainActive()->pcoinsTip;
         CCoinsViewMemPool viewMempool(&viewChain, mempool);
         view.SetBackend(viewMempool); // temporarily switch cache backend to db+mempool view

@@ -525,7 +525,7 @@ bool AcceptToMemoryPoolWorker(CTxMemPool &pool,
 
     // Check for conflicts with in-memory transactions
     {
-        LOCK(pool.cs); // protect pool.mapNextTx
+        READLOCK(pool.cs); // protect pool.mapNextTx
         for (auto const &txin : tx.vin)
         {
             auto itConflicting = pool.mapNextTx.find(txin.prevout);
@@ -544,7 +544,7 @@ bool AcceptToMemoryPoolWorker(CTxMemPool &pool,
         CAmount nValueIn = 0;
         LockPoints lp;
         {
-            LOCK(pool.cs);
+            WRITELOCK(pool.cs);
             CCoinsViewMemPool viewMemPool(pnetMan->getChainActive()->pcoinsTip.get(), pool);
             view.SetBackend(viewMemPool);
 
@@ -784,7 +784,7 @@ bool AcceptToMemoryPoolWorker(CTxMemPool &pool,
                 __func__, hash.ToString(), FormatStateMessage(state));
         }
         {
-            LOCK(pool.cs);
+            WRITELOCK(pool.cs);
             if (!pool._CalculateMemPoolAncestors(entry, setAncestors, nLimitAncestors, nLimitAncestorSize,
                     nLimitDescendants, nLimitDescendantSize, errString))
             {
@@ -793,7 +793,7 @@ bool AcceptToMemoryPoolWorker(CTxMemPool &pool,
         }
 
         {
-            LOCK(pool.cs);
+            WRITELOCK(pool.cs);
             // Store transaction in memory
             pool.addUnchecked(hash, entry, setAncestors, !pnetMan->getChainActive()->IsInitialBlockDownload());
         }
@@ -1329,7 +1329,7 @@ bool InvalidateBlock(CValidationState &state, const Consensus::Params &consensus
     // The resulting new best tip may not be in setBlockIndexCandidates anymore, so
     // add it again.
     {
-        LOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+        READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
         BlockMap::iterator it = pnetMan->getChainActive()->mapBlockIndex.begin();
         while (it != pnetMan->getChainActive()->mapBlockIndex.end())
         {
@@ -1354,7 +1354,7 @@ bool ReconsiderBlock(CValidationState &state, CBlockIndex *pindex)
 
     int nHeight = pindex->nHeight;
 
-    LOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+    READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
     // Remove the invalidity flag from this block
     if (!pindex->IsValid())
     {

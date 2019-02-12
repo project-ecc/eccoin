@@ -1434,8 +1434,7 @@ bool AppInit2(thread_group &threadGroup)
     LogPrintf("* Using %.1fMiB for chain state database\n", nCoinDBCache * (1.0 / 1024 / 1024));
     LogPrintf("* Using %.1fMiB for in-memory UTXO set\n", nCoinCacheUsage * (1.0 / 1024 / 1024));
 
-    LOCK2(cs_main, pnetMan->getChainActive()->cs_mapBlockIndex);
-
+    LOCK(cs_main);
     bool fLoaded = false;
     while (!fLoaded)
     {
@@ -1480,10 +1479,14 @@ bool AppInit2(thread_group &threadGroup)
                 }
                 // If the loaded chain has a wrong genesis, bail out immediately
                 // (we're likely using a testnet datadir, or the other way around).
-                if (!pnetMan->getChainActive()->mapBlockIndex.empty() &&
-                    pnetMan->getChainActive()->mapBlockIndex.count(chainparams.GetConsensus().hashGenesisBlock) == 0)
                 {
-                    return InitError(_("Incorrect or no genesis block found. Wrong datadir for network?"));
+                    READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+                    if (!pnetMan->getChainActive()->mapBlockIndex.empty() &&
+                        pnetMan->getChainActive()->mapBlockIndex.count(chainparams.GetConsensus().hashGenesisBlock) ==
+                            0)
+                    {
+                        return InitError(_("Incorrect or no genesis block found. Wrong datadir for network?"));
+                    }
                 }
 
                 // Initialize the block index (no-op if non-empty database was already loaded)

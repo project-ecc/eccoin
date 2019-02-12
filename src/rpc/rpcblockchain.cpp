@@ -203,7 +203,7 @@ UniValue mempoolToJSON(bool fVerbose = false)
 {
     if (fVerbose)
     {
-        LOCK(mempool.cs);
+        READLOCK(mempool.cs);
         UniValue o(UniValue::VOBJ);
         for (auto const &e : mempool.mapTx)
         {
@@ -606,7 +606,7 @@ UniValue gettxout(const UniValue &params, bool fHelp)
     Coin coin;
     if (fMempool)
     {
-        LOCK(mempool.cs);
+        READLOCK(mempool.cs);
         CCoinsViewMemPool view(pnetMan->getChainActive()->pcoinsTip.get(), mempool);
         if (!view.GetCoin(out, coin) || mempool.isSpent(out))
         {
@@ -833,7 +833,7 @@ static std::set<CBlockIndex *, CompareBlocksByHeight> GetChainTips()
     std::set<CBlockIndex *> setPrevs;
 
     AssertLockHeld(cs_main); // for chainActive
-    LOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+    READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
     for (const std::pair<const uint256, CBlockIndex *> &item : pnetMan->getChainActive()->mapBlockIndex)
     {
         if (!pnetMan->getChainActive()->chainActive.Contains(item.second))

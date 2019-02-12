@@ -683,7 +683,7 @@ bool CWallet::AddToWallet(const CWalletTx &wtxIn, bool fFromLoadWallet, CWalletD
             wtx.nTimeSmart = wtx.nTimeReceived;
             if (!wtxIn.hashUnset())
             {
-                LOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+                READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
                 if (pnetMan->getChainActive()->mapBlockIndex.count(wtxIn.hashBlock))
                 {
                     int64_t latestNow = wtx.nTimeReceived;
@@ -900,7 +900,7 @@ void CWallet::MarkConflicted(const uint256 &hashBlock, const uint256 &hashTx)
 {
     LOCK2(cs_main, cs_wallet);
 
-    LOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+    READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
 
     int conflictconfirms = 0;
     if (pnetMan->getChainActive()->mapBlockIndex.count(hashBlock))
@@ -1519,7 +1519,7 @@ CAmount CWalletTx::GetChange() const
 
 bool CWalletTx::InMempool() const
 {
-    LOCK(mempool.cs);
+    READLOCK(mempool.cs);
     if (mempool.exists(tx->GetHash()))
     {
         return true;
@@ -3108,9 +3108,6 @@ void CWallet::GetKeyBirthTimes(std::map<CKeyID, int64_t> &mapKeyBirth) const
 
     // find first block that affects those keys, if there are any left
     std::vector<CKeyID> vAffected;
-
-    LOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
-
     for (std::map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); it++)
     {
         // iterate over all wallet transactions...

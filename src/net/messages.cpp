@@ -802,7 +802,7 @@ bool AlreadyHave(const CInv &inv) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
                pnetMan->getChainActive()->pcoinsTip->HaveCoinInCache(COutPoint(inv.hash, 1));
     }
     case MSG_BLOCK:
-        LOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+        READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
         return pnetMan->getChainActive()->mapBlockIndex.count(inv.hash);
     }
     // Don't know what it is, just say we already got one

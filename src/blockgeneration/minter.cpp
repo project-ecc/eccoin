@@ -156,7 +156,8 @@ std::unique_ptr<CBlockTemplate> CreateNewPoSBlock(CWallet *pwallet, const CScrip
 
     // Collect memory pool transactions into the block
     {
-        LOCK2(cs_main, mempool.cs);
+        LOCK(cs_main);
+        READLOCK(mempool.cs);
         CBlockIndex *_pindexPrev = pnetMan->getChainActive()->chainActive.Tip();
         const int nHeight = _pindexPrev->nHeight + 1;
         pblock->nTime = GetAdjustedTime();
