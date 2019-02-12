@@ -683,6 +683,7 @@ bool CWallet::AddToWallet(const CWalletTx &wtxIn, bool fFromLoadWallet, CWalletD
             wtx.nTimeSmart = wtx.nTimeReceived;
             if (!wtxIn.hashUnset())
             {
+                LOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
                 if (pnetMan->getChainActive()->mapBlockIndex.count(wtxIn.hashBlock))
                 {
                     int64_t latestNow = wtx.nTimeReceived;
@@ -898,6 +899,8 @@ bool CWallet::AbandonTransaction(const uint256 &hashTx)
 void CWallet::MarkConflicted(const uint256 &hashBlock, const uint256 &hashTx)
 {
     LOCK2(cs_main, cs_wallet);
+
+    LOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
 
     int conflictconfirms = 0;
     if (pnetMan->getChainActive()->mapBlockIndex.count(hashBlock))
@@ -3140,16 +3143,18 @@ void CWallet::GetKeyBirthTimes(std::map<CKeyID, int64_t> &mapKeyBirth) const
 
     // find first block that affects those keys, if there are any left
     std::vector<CKeyID> vAffected;
+
+    LOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+
     for (std::map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); it++)
     {
         // iterate over all wallet transactions...
         const CWalletTx &wtx = (*it).second;
-        BlockMap::const_iterator blit = pnetMan->getChainActive()->mapBlockIndex.find(wtx.hashBlock);
-        if (blit != pnetMan->getChainActive()->mapBlockIndex.end() &&
-            pnetMan->getChainActive()->chainActive.Contains(blit->second))
+        CBlockIndex* pindex = pnetMan->getChainActive()->LookupBlockIndex(wtx.hashBlock);
+        if (pindex && pnetMan->getChainActive()->chainActive.Contains(pindex))
         {
             // ... which are already in a block
-            int nHeight = blit->second->nHeight;
+            int nHeight = pindex->nHeight;
             for (auto const &txout : wtx.tx->vout)
             {
                 // iterate over all their outputs
@@ -3159,7 +3164,7 @@ void CWallet::GetKeyBirthTimes(std::map<CKeyID, int64_t> &mapKeyBirth) const
                     // ... and all their affected keys
                     std::map<CKeyID, CBlockIndex *>::iterator rit = mapKeyFirstBlock.find(keyid);
                     if (rit != mapKeyFirstBlock.end() && nHeight < rit->second->nHeight)
-                        rit->second = blit->second;
+                        rit->second = pindex;
                 }
                 vAffected.clear();
             }
@@ -3250,12 +3255,7 @@ int CMerkleTx::SetMerkleBranch(const CBlock &block)
     }
 
     // Is the tx in a block that's in the main chain
-    BlockMap::iterator mi = pnetMan->getChainActive()->mapBlockIndex.find(hashBlock);
-    if (mi == pnetMan->getChainActive()->mapBlockIndex.end())
-    {
-        return 0;
-    }
-    const CBlockIndex *pindex = (*mi).second;
+    const CBlockIndex* pindex = pnetMan->getChainActive()->LookupBlockIndex(hashBlock);
     if (!pindex || !pnetMan->getChainActive()->chainActive.Contains(pindex))
     {
         return 0;
@@ -3271,12 +3271,8 @@ int CMerkleTx::GetDepthInMainChain(const CBlockIndex *&pindexRet) const
     }
     AssertLockHeld(cs_main);
     // Find the block it claims to be in
-    BlockMap::iterator mi = pnetMan->getChainActive()->mapBlockIndex.find(hashBlock);
-    if (mi == pnetMan->getChainActive()->mapBlockIndex.end())
-    {
-        return 0;
-    }
-    CBlockIndex *pindex = (*mi).second;
+    CBlockIndex* pindex = pnetMan->getChainActive()->LookupBlockIndex(hashBlock);
+    LOCK(cs_main); // for chainActive
     if (!pindex || !pnetMan->getChainActive()->chainActive.Contains(pindex))
     {
         return 0;

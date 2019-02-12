@@ -69,8 +69,6 @@ bool DisconnectBlock(const CBlock &block,
     CCoinsViewCache &coins,
     bool *pfClean = NULL);
 
-void removeImpossibleChainTips();
-
 /** Find the best known block, and make it the tip of the block chain */
 bool ActivateBestChain(CValidationState &state,
     const CNetworkTemplate &chainparams,

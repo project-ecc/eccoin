@@ -154,8 +154,7 @@ static bool rest_headers(HTTPRequest *req, const std::string &strURIPart)
     headers.reserve(count);
     {
         LOCK(cs_main);
-        auto it = pnetMan->getChainActive()->mapBlockIndex.find(hash);
-        const CBlockIndex *pindex = (it != pnetMan->getChainActive()->mapBlockIndex.end()) ? it->second : NULL;
+        const CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(hash);
         while (pindex != NULL && pnetMan->getChainActive()->chainActive.Contains(pindex))
         {
             headers.push_back(pindex);
@@ -225,10 +224,9 @@ static bool rest_block(HTTPRequest *req, const std::string &strURIPart, bool sho
     CBlockIndex *pblockindex = NULL;
     {
         LOCK(cs_main);
-        if (pnetMan->getChainActive()->mapBlockIndex.count(hash) == 0)
+        CBlockIndex *pblockindex = pnetMan->getChainActive()->LookupBlockIndex(hash);
+        if (!pblockindex)
             return RESTERR(req, HTTP_NOT_FOUND, hashStr + " not found");
-
-        pblockindex = pnetMan->getChainActive()->mapBlockIndex[hash];
 
         if (!ReadBlockFromDisk(block, pblockindex, pnetMan->getActivePaymentNetwork()->GetConsensus()))
             return RESTERR(req, HTTP_NOT_FOUND, hashStr + " not found");

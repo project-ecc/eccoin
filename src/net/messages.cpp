@@ -494,12 +494,13 @@ void ProcessBlockAvailability(NodeId nodeid)
 
     if (!state->hashLastUnknownBlock.IsNull())
     {
-        BlockMap::iterator itOld = pnetMan->getChainActive()->mapBlockIndex.find(state->hashLastUnknownBlock);
-        if (itOld != pnetMan->getChainActive()->mapBlockIndex.end() && itOld->second->nChainWork > 0)
+        CBlockIndex* pindex = pnetMan->getChainActive()->LookupBlockIndex(state->hashLastUnknownBlock);
+        if (pindex && pindex->nChainWork > 0)
         {
-            if (state->pindexBestKnownBlock == NULL ||
-                itOld->second->nChainWork >= state->pindexBestKnownBlock->nChainWork)
-                state->pindexBestKnownBlock = itOld->second;
+            if (state->pindexBestKnownBlock == NULL || pindex->nChainWork >= state->pindexBestKnownBlock->nChainWork)
+            {
+                state->pindexBestKnownBlock = pindex;
+            }
             state->hashLastUnknownBlock.SetNull();
         }
     }
@@ -645,12 +646,12 @@ void UpdateBlockAvailability(NodeId nodeid, const uint256 &hash)
 
     ProcessBlockAvailability(nodeid);
 
-    BlockMap::iterator it = pnetMan->getChainActive()->mapBlockIndex.find(hash);
-    if (it != pnetMan->getChainActive()->mapBlockIndex.end() && it->second->nChainWork > 0)
+    CBlockIndex* pindex = pnetMan->getChainActive()->LookupBlockIndex(hash);
+    if (pindex && pindex->nChainWork > 0)
     {
         // An actually better block was announced.
-        if (state->pindexBestKnownBlock == NULL || it->second->nChainWork >= state->pindexBestKnownBlock->nChainWork)
-            state->pindexBestKnownBlock = it->second;
+        if (state->pindexBestKnownBlock == NULL || pindex->nChainWork >= state->pindexBestKnownBlock->nChainWork)
+            state->pindexBestKnownBlock = pindex;
     }
     else
     {
@@ -876,6 +877,7 @@ bool AlreadyHave(const CInv &inv) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
                pnetMan->getChainActive()->pcoinsTip->HaveCoinInCache(COutPoint(inv.hash, 1));
     }
     case MSG_BLOCK:
+        LOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
         return pnetMan->getChainActive()->mapBlockIndex.count(inv.hash);
     }
     // Don't know what it is, just say we already got one
@@ -904,29 +906,32 @@ void static ProcessGetData(CNode *pfrom, CConnman &connman, const Consensus::Par
         if (inv.type == MSG_BLOCK || inv.type == MSG_FILTERED_BLOCK)
         {
             bool send = false;
-            BlockMap::iterator mi = pnetMan->getChainActive()->mapBlockIndex.find(inv.hash);
-            if (pnetMan->getChainActive()->chainActive.Contains(mi->second))
+            CBlockIndex* pindex = pnetMan->getChainActive()->LookupBlockIndex(inv.hash);
+            if (pindex)
             {
-                send = true;
-            }
-            else
-            {
-                static const int nOneMonth = 30 * 24 * 60 * 60;
-                // To prevent fingerprinting attacks, only send blocks
-                // outside of the active chain if they are valid, and no
-                // more than a month older (both in time, and in best
-                // equivalent proof of work) than the best header chain
-                // we know about.
-                send = mi->second->IsValid(BLOCK_VALID_SCRIPTS) &&
-                       (pnetMan->getChainActive()->pindexBestHeader != nullptr) &&
-                       (pnetMan->getChainActive()->pindexBestHeader->GetBlockTime() - mi->second->GetBlockTime() <
-                           nOneMonth) &&
-                       (GetBlockProofEquivalentTime(*pnetMan->getChainActive()->pindexBestHeader, *mi->second,
-                            *pnetMan->getChainActive()->pindexBestHeader, consensusParams) < nOneMonth);
-                if (!send)
+                if (pnetMan->getChainActive()->chainActive.Contains(pindex))
                 {
-                    LogPrintf("%s: ignoring request from peer=%i for old block that isn't in the main chain\n",
-                        __func__, pfrom->GetId());
+                    send = true;
+                }
+                else
+                {
+                    static const int nOneMonth = 30 * 24 * 60 * 60;
+                    // To prevent fingerprinting attacks, only send blocks
+                    // outside of the active chain if they are valid, and no
+                    // more than a month older (both in time, and in best
+                    // equivalent proof of work) than the best header chain
+                    // we know about.
+                    send = pindex->IsValid(BLOCK_VALID_SCRIPTS) &&
+                        (pnetMan->getChainActive()->pindexBestHeader != nullptr) &&
+                        (pnetMan->getChainActive()->pindexBestHeader->GetBlockTime() - pindex->GetBlockTime() <
+                            nOneMonth) &&
+                           (GetBlockProofEquivalentTime(*pnetMan->getChainActive()->pindexBestHeader, *pindex,
+                                *pnetMan->getChainActive()->pindexBestHeader, consensusParams) < nOneMonth);
+                    if (!send)
+                    {
+                        LogPrintf("%s: ignoring request from peer=%i for old block that isn't in the main chain\n",
+                            __func__, pfrom->GetId());
+                    }
                 }
             }
             // Disconnect node in case we have reached the outbound limit
@@ -936,7 +941,7 @@ void static ProcessGetData(CNode *pfrom, CConnman &connman, const Consensus::Par
             static const int nOneWeek = 7 * 24 * 60 * 60;
             if (send && connman.OutboundTargetReached(true) &&
                 (((pnetMan->getChainActive()->pindexBestHeader != nullptr) &&
-                     (pnetMan->getChainActive()->pindexBestHeader->GetBlockTime() - mi->second->GetBlockTime() >
+                     (pnetMan->getChainActive()->pindexBestHeader->GetBlockTime() - pindex->GetBlockTime() >
                          nOneWeek)) ||
                     inv.type == MSG_FILTERED_BLOCK) &&
                 !pfrom->fWhitelisted)
@@ -949,11 +954,11 @@ void static ProcessGetData(CNode *pfrom, CConnman &connman, const Consensus::Par
             }
             // Pruned nodes may have deleted the block, so check whether
             // it's available before trying to send.
-            if (send && (mi->second->nStatus & BLOCK_HAVE_DATA))
+            if (send && (pindex->nStatus & BLOCK_HAVE_DATA))
             {
                 // Send block from disk
                 CBlock block;
-                if (!ReadBlockFromDisk(block, (*mi).second, consensusParams))
+                if (!ReadBlockFromDisk(block, pindex, consensusParams))
                 {
                     LogPrintf("cannot load block from disk");
                     assert(false);
@@ -1565,12 +1570,11 @@ bool static ProcessMessage(CNode *pfrom,
         if (locator.IsNull())
         {
             // If locator is null, return the hashStop block
-            BlockMap::iterator mi = pnetMan->getChainActive()->mapBlockIndex.find(hashStop);
-            if (mi == pnetMan->getChainActive()->mapBlockIndex.end())
+            pindex = pnetMan->getChainActive()->LookupBlockIndex(hashStop);
+            if (!pindex)
             {
                 return true;
             }
-            pindex = (*mi).second;
         }
         else
         {
@@ -2550,9 +2554,8 @@ bool SendMessages(CNode *pto, CConnman &connman)
             // aren't on chainActive, give up.
             for (const uint256 &hash : pto->vBlockHashesToAnnounce)
             {
-                BlockMap::iterator mi = pnetMan->getChainActive()->mapBlockIndex.find(hash);
-                assert(mi != pnetMan->getChainActive()->mapBlockIndex.end());
-                CBlockIndex *pindex = mi->second;
+                CBlockIndex* pindex = pnetMan->getChainActive()->LookupBlockIndex(hash);
+                assert(pindex);
                 if (pnetMan->getChainActive()->chainActive[pindex->nHeight] != pindex)
                 {
                     // Bail out if we reorged away from this block
@@ -2631,9 +2634,8 @@ bool SendMessages(CNode *pto, CConnman &connman)
             if (!pto->vBlockHashesToAnnounce.empty())
             {
                 const uint256 &hashToAnnounce = pto->vBlockHashesToAnnounce.back();
-                BlockMap::iterator mi = pnetMan->getChainActive()->mapBlockIndex.find(hashToAnnounce);
-                assert(mi != pnetMan->getChainActive()->mapBlockIndex.end());
-                CBlockIndex *pindex = mi->second;
+                CBlockIndex* pindex = pnetMan->getChainActive()->LookupBlockIndex(hashToAnnounce);
+                assert(pindex);
 
                 // Warn if we're announcing a block that is not on the main
                 // chain. This should be very rare and could be optimized out.

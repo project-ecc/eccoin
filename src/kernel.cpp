@@ -39,10 +39,11 @@
 static bool GetKernelStakeModifier(uint256 hashBlockFrom, uint256 &nStakeModifier)
 {
     nStakeModifier.SetNull();
-    if (!pnetMan->getChainActive()->mapBlockIndex.count(hashBlockFrom))
+    const CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(hashBlockFrom);
+    if (!pindex)
+    {
         return error("GetKernelStakeModifier() : block not indexed");
-    const CBlockIndex *pindex = pnetMan->getChainActive()->mapBlockIndex[hashBlockFrom];
-
+    }
     int blocksToGo = 5;
     if (pnetMan->getChainActive()->chainActive.Tip()->nHeight >= 1504350)
     {
@@ -128,7 +129,7 @@ bool ComputeNextStakeModifier(const CBlockIndex *pindexPrev, const CTransaction 
 
     // Read block header
     CBlock block;
-    CBlockIndex *index = pnetMan->getChainActive()->mapBlockIndex[blockHashOfTx];
+    CBlockIndex *index = pnetMan->getChainActive()->LookupBlockIndex(blockHashOfTx);
 
     if (!ReadBlockFromDisk(block, index, pnetMan->getActivePaymentNetwork()->GetConsensus()))
         // unable to read block of previous transaction
@@ -305,7 +306,7 @@ bool CheckProofOfStake(int nHeight, const CTransaction &tx, uint256 &hashProofOf
 
     // Read block header
     CBlock block;
-    CBlockIndex *index = pnetMan->getChainActive()->mapBlockIndex[blockHashOfTx];
+    CBlockIndex *index = pnetMan->getChainActive()->LookupBlockIndex(blockHashOfTx);
 
     if (!ReadBlockFromDisk(block, index, pnetMan->getActivePaymentNetwork()->GetConsensus()))
         // unable to read block of previous transaction

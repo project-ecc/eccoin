@@ -778,7 +778,7 @@ void CheckBlockIndex(const Consensus::Params &consensusParams)
         return;
     }
 
-    LOCK(cs_main);
+    LOCK2(cs_main, pnetMan->getChainActive()->cs_mapBlockIndex);
 
     // During a reindex, we read the genesis block and call CheckBlockIndex before ActivateBestChain,
     // so we have the genesis block in mapBlockIndex but no active chain.  (A few of the tests when
@@ -1668,94 +1668,4 @@ bool DisconnectBlock(const CBlock &block,
     }
 
     return fClean;
-}
-
-/** Comparison function for sorting the getchaintips heads.  */
-struct CompareBlocksByHeight
-{
-    bool operator()(const CBlockIndex *a, const CBlockIndex *b) const
-    {
-        /* Make sure that unequal blocks with the same height do not compare
-           equal. Use the pointers themselves to make a distinction. */
-
-        if (a->nHeight != b->nHeight)
-            return (a->nHeight > b->nHeight);
-
-        return a < b;
-    }
-};
-
-void removeImpossibleChainTips()
-{
-    LOCK(cs_main);
-    int deletionCount = 0;
-    std::set<CBlockIndex *, CompareBlocksByHeight> setTips;
-    for (auto &item : pnetMan->getChainActive()->mapBlockIndex)
-        setTips.insert(item.second);
-    for (auto &item : pnetMan->getChainActive()->mapBlockIndex)
-    {
-        CBlockIndex *pprev = item.second->pprev;
-        if (pprev)
-            setTips.erase(pprev);
-    }
-
-    setTips.insert(pnetMan->getChainActive()->chainActive.Tip());
-
-    const int currentHeight = pnetMan->getChainActive()->chainActive.Height();
-    for (CBlockIndex *block : setTips)
-    {
-        const int forkHeight = pnetMan->getChainActive()->chainActive.FindFork(block)->nHeight;
-        const int branchLen = block->nHeight - forkHeight;
-        std::string status = "";
-        if (pnetMan->getChainActive()->chainActive.Contains(block))
-        {
-            // This block is part of the currently active chain.
-            status = "active";
-        }
-        else if (block->nStatus & BLOCK_FAILED_MASK)
-        {
-            // This block or one of its ancestors is invalid.
-            status = "invalid";
-        }
-        else if (block->nChainTx == 0)
-        {
-            // This block cannot be connected because full block data for it or one of its parents is missing.
-            status = "headers-only";
-        }
-        else if (block->IsValid(BLOCK_VALID_SCRIPTS))
-        {
-            // This block is fully validated, but no longer part of the active chain. It was probably the active block
-            // once, but was reorganized.
-            status = "valid-fork";
-        }
-        else if (block->IsValid(BLOCK_VALID_TREE))
-        {
-            // The headers for this block are valid, but it has not been validated. It was probably never part of the
-            // most-work chain.
-            status = "valid-headers";
-        }
-        else
-        {
-            // No clue.
-            status = "unknown";
-        }
-        // after 30 blocks we cannot re-org anyway so after 100 it is definitely safe to delete data
-        if (status != "active" && status != "unknown" && forkHeight <= currentHeight - 100 && branchLen <= 50)
-        {
-            CBlockIndex *curBlock = block;
-            while (curBlock->nHeight > forkHeight)
-            {
-                pnetMan->getChainActive()->pblocktree->EraseBlockIndex(curBlock->GetBlockHash());
-                pnetMan->getChainActive()->mapBlockIndex.erase(curBlock->GetBlockHash());
-                LogPrintf("cleaning up index %s \n", curBlock->GetBlockHash().ToString().c_str());
-                deletionCount++;
-                curBlock = curBlock->pprev;
-            }
-        }
-    }
-    /// only print that we deleted if we did delete something
-    if (deletionCount > 0)
-    {
-        LogPrintf("found %i impossible indexes and deleted them \n", deletionCount);
-    }
 }

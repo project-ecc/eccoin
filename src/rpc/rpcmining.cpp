@@ -655,10 +655,9 @@ UniValue getblocktemplate(const UniValue &params, bool fHelp)
                 throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "Block decode failed");
 
             uint256 hash = block.GetHash();
-            BlockMap::iterator mi = pnetMan->getChainActive()->mapBlockIndex.find(hash);
-            if (mi != pnetMan->getChainActive()->mapBlockIndex.end())
+            CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(hash);
+            if (pindex)
             {
-                CBlockIndex *pindex = mi->second;
                 if (pindex->IsValid(BLOCK_VALID_SCRIPTS))
                     return "duplicate";
                 if (pindex->nStatus & BLOCK_FAILED_MASK)
@@ -983,10 +982,9 @@ UniValue getposblocktemplate(const UniValue &params, bool fHelp)
                 throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "Block decode failed");
 
             uint256 hash = block.GetHash();
-            BlockMap::iterator mi = pnetMan->getChainActive()->mapBlockIndex.find(hash);
-            if (mi != pnetMan->getChainActive()->mapBlockIndex.end())
+            CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(hash);
+            if (pindex)
             {
-                CBlockIndex *pindex = mi->second;
                 if (pindex->IsValid(BLOCK_VALID_SCRIPTS))
                     return "duplicate";
                 if (pindex->nStatus & BLOCK_FAILED_MASK)
@@ -1253,11 +1251,9 @@ UniValue submitblock(const UniValue &params, bool fHelp)
     uint256 hash = block.GetHash();
     bool fBlockPresent = false;
     {
-        LOCK(cs_main);
-        BlockMap::iterator mi = pnetMan->getChainActive()->mapBlockIndex.find(hash);
-        if (mi != pnetMan->getChainActive()->mapBlockIndex.end())
+        CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(hash);
+        if (pindex)
         {
-            CBlockIndex *pindex = mi->second;
             if (pindex->IsValid(BLOCK_VALID_SCRIPTS))
                 return "duplicate";
             if (pindex->nStatus & BLOCK_FAILED_MASK)

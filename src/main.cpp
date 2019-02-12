@@ -890,6 +890,10 @@ bool ReadBlockFromDisk(CBlock &block, const CDiskBlockPos &pos, const Consensus:
 
 bool ReadBlockFromDisk(CBlock &block, const CBlockIndex *pindex, const Consensus::Params &consensusParams)
 {
+    if(!pindex)
+    {
+        return false;
+    }
     if (!ReadBlockFromDisk(block, pindex->GetBlockPos(), consensusParams))
     {
         return false;
@@ -937,8 +941,7 @@ bool CScriptCheck::operator()()
 
 int GetSpendHeight(const CCoinsViewCache &inputs)
 {
-    LOCK(cs_main);
-    CBlockIndex *pindexPrev = pnetMan->getChainActive()->mapBlockIndex.find(inputs.GetBestBlock())->second;
+    CBlockIndex *pindexPrev = pnetMan->getChainActive()->LookupBlockIndex(inputs.GetBestBlock());
     return pindexPrev->nHeight + 1;
 }
 
@@ -1320,15 +1323,18 @@ bool InvalidateBlock(CValidationState &state, const Consensus::Params &consensus
 
     // The resulting new best tip may not be in setBlockIndexCandidates anymore, so
     // add it again.
-    BlockMap::iterator it = pnetMan->getChainActive()->mapBlockIndex.begin();
-    while (it != pnetMan->getChainActive()->mapBlockIndex.end())
     {
-        if (it->second->IsValid(BLOCK_VALID_TRANSACTIONS) && it->second->nChainTx &&
-            !setBlockIndexCandidates.value_comp()(it->second, pnetMan->getChainActive()->chainActive.Tip()))
+        LOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+        BlockMap::iterator it = pnetMan->getChainActive()->mapBlockIndex.begin();
+        while (it != pnetMan->getChainActive()->mapBlockIndex.end())
         {
-            setBlockIndexCandidates.insert(it->second);
+            if (it->second->IsValid(BLOCK_VALID_TRANSACTIONS) && it->second->nChainTx &&
+                !setBlockIndexCandidates.value_comp()(it->second, pnetMan->getChainActive()->chainActive.Tip()))
+            {
+                setBlockIndexCandidates.insert(it->second);
+            }
+            it++;
         }
-        it++;
     }
 
     InvalidChainFound(pindex);
@@ -1343,6 +1349,7 @@ bool ReconsiderBlock(CValidationState &state, CBlockIndex *pindex)
 
     int nHeight = pindex->nHeight;
 
+    LOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
     // Remove the invalidity flag from this block
     if (!pindex->IsValid())
     {

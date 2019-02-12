@@ -80,6 +80,7 @@ void WalletTxToJSON(const CWalletTx &wtx, UniValue &entry)
     }
     if (confirms > 0)
     {
+        LOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
         entry.push_back(Pair("blockhash", wtx.hashBlock.GetHex()));
         entry.push_back(Pair("blockindex", wtx.nIndex));
         entry.push_back(Pair("blocktime", pnetMan->getChainActive()->mapBlockIndex[wtx.hashBlock]->GetBlockTime()));
@@ -1205,9 +1206,7 @@ UniValue listsinceblock(const UniValue &params, bool fHelp)
         uint256 blockId;
 
         blockId.SetHex(params[0].get_str());
-        BlockMap::iterator it = pnetMan->getChainActive()->mapBlockIndex.find(blockId);
-        if (it != pnetMan->getChainActive()->mapBlockIndex.end())
-            pindex = it->second;
+        pindex = pnetMan->getChainActive()->LookupBlockIndex(blockId);
     }
 
     if (params.size() > 1)

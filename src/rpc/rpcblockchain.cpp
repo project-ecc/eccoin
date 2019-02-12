@@ -43,6 +43,8 @@
 
 #include <univalue.h>
 
+extern CNetworkManager *pnetMan;
+
 extern void TxToJSON(const CTransaction &tx, const uint256 hashBlock, UniValue &entry);
 void ScriptPubKeyToJSON(const CScript &scriptPubKey, UniValue &out, bool fIncludeHex);
 
@@ -364,10 +366,9 @@ UniValue getblockheader(const UniValue &params, bool fHelp)
     if (params.size() > 1)
         fVerbose = params[1].get_bool();
 
-    if (pnetMan->getChainActive()->mapBlockIndex.count(hash) == 0)
+    CBlockIndex *pblockindex = pnetMan->getChainActive()->LookupBlockIndex(hash);
+    if (!pblockindex)
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
-
-    CBlockIndex *pblockindex = pnetMan->getChainActive()->mapBlockIndex[hash];
 
     if (!fVerbose)
     {
@@ -429,11 +430,11 @@ UniValue getblock(const UniValue &params, bool fHelp)
     if (params.size() > 1)
         fVerbose = params[1].get_bool();
 
-    if (pnetMan->getChainActive()->mapBlockIndex.count(hash) == 0)
+    CBlockIndex *pblockindex = pnetMan->getChainActive()->LookupBlockIndex(hash);
+    if (!pblockindex)
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
 
     CBlock block;
-    CBlockIndex *pblockindex = pnetMan->getChainActive()->mapBlockIndex[hash];
 
     if (!ReadBlockFromDisk(block, pblockindex, pnetMan->getActivePaymentNetwork()->GetConsensus()))
         throw JSONRPCError(RPC_INTERNAL_ERROR, "Can't read block from disk");
@@ -479,8 +480,7 @@ static bool GetUTXOStats(CCoinsView *view, CCoinsStats &stats)
     CHashWriter ss(SER_GETHASH, PROTOCOL_VERSION);
     stats.hashBlock = pcursor->GetBestBlock();
     {
-        LOCK(cs_main);
-        stats.nHeight = pnetMan->getChainActive()->mapBlockIndex.find(stats.hashBlock)->second->nHeight;
+        stats.nHeight = pnetMan->getChainActive()->LookupBlockIndex(stats.hashBlock)->nHeight;
     }
     ss << stats.hashBlock;
     uint256 prevkey;
@@ -621,9 +621,7 @@ UniValue gettxout(const UniValue &params, bool fHelp)
         }
     }
 
-    BlockMap::iterator it =
-        pnetMan->getChainActive()->mapBlockIndex.find(pnetMan->getChainActive()->pcoinsTip->GetBestBlock());
-    CBlockIndex *pindex = it->second;
+    CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(pnetMan->getChainActive()->pcoinsTip->GetBestBlock());
     ret.push_back(Pair("bestblock", pindex->GetBlockHash().GetHex()));
     if ((unsigned int)coin.nHeight == MEMPOOL_HEIGHT)
         ret.push_back(Pair("confirmations", 0));
@@ -818,6 +816,46 @@ struct CompareBlocksByHeight
     }
 };
 
+static std::set<CBlockIndex *, CompareBlocksByHeight> GetChainTips()
+{
+    /*
+     * Idea:  the set of chain tips is chainActive.tip, plus orphan blocks which do not have another orphan building off
+     * of them.
+     * Algorithm:
+     *  - Make one pass through mapBlockIndex, picking out the orphan blocks, and also storing a set of the orphan
+     * block's pprev pointers.
+     *  - Iterate through the orphan blocks. If the block isn't pointed to by another orphan, it is a chain tip.
+     *  - add chainActive.Tip()
+     */
+    std::set<CBlockIndex *, CompareBlocksByHeight> setTips;
+    std::set<CBlockIndex *> setOrphans;
+    std::set<CBlockIndex *> setPrevs;
+
+    AssertLockHeld(cs_main); // for chainActive
+    LOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+    for (const std::pair<const uint256, CBlockIndex *> &item : pnetMan->getChainActive()->mapBlockIndex)
+    {
+        if (!pnetMan->getChainActive()->chainActive.Contains(item.second))
+        {
+            setOrphans.insert(item.second);
+            setPrevs.insert(item.second->pprev);
+        }
+    }
+
+    for (auto &it : setOrphans)
+    {
+        if (setPrevs.erase(it) == 0)
+        {
+            setTips.insert(it);
+        }
+    }
+
+    // Always report the currently active tip.
+    setTips.insert(pnetMan->getChainActive()->chainActive.Tip());
+
+    return setTips;
+}
+
 UniValue getchaintips(const UniValue &params, bool fHelp)
 {
     if (fHelp || params.size() != 0)
@@ -853,21 +891,8 @@ UniValue getchaintips(const UniValue &params, bool fHelp)
 
     LOCK(cs_main);
 
-    /* Build up a list of chain tips.  We start with the list of all
-       known blocks, and successively remove blocks that appear as pprev
-       of another block.  */
-    std::set<const CBlockIndex *, CompareBlocksByHeight> setTips;
-    for (auto const &item : pnetMan->getChainActive()->mapBlockIndex)
-        setTips.insert(item.second);
-    for (auto const &item : pnetMan->getChainActive()->mapBlockIndex)
-    {
-        const CBlockIndex *pprev = item.second->pprev;
-        if (pprev)
-            setTips.erase(pprev);
-    }
-
-    // Always report the currently active tip.
-    setTips.insert(pnetMan->getChainActive()->chainActive.Tip());
+    std::set<CBlockIndex *, CompareBlocksByHeight> setTips;
+    setTips = GetChainTips();
 
     /* Construct the output array.  */
     UniValue res(UniValue::VARR);
@@ -970,11 +995,11 @@ UniValue invalidateblock(const UniValue &params, bool fHelp)
     CValidationState state;
 
     {
-        LOCK(cs_main);
-        if (pnetMan->getChainActive()->mapBlockIndex.count(hash) == 0)
+        CBlockIndex *pblockindex = pnetMan->getChainActive()->LookupBlockIndex(hash);
+        if (!pblockindex)
             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
 
-        CBlockIndex *pblockindex = pnetMan->getChainActive()->mapBlockIndex[hash];
+        LOCK(cs_main);
         InvalidateBlock(state, pnetMan->getActivePaymentNetwork()->GetConsensus(), pblockindex);
     }
 
@@ -1008,12 +1033,12 @@ UniValue reconsiderblock(const UniValue &params, bool fHelp)
     uint256 hash(uint256S(strHash));
     CValidationState state;
 
+    CBlockIndex *pblockindex = pnetMan->getChainActive()->LookupBlockIndex(hash);
+    if (!pblockindex)
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
+
     {
         LOCK(cs_main);
-        if (pnetMan->getChainActive()->mapBlockIndex.count(hash) == 0)
-            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
-
-        CBlockIndex *pblockindex = pnetMan->getChainActive()->mapBlockIndex[hash];
         ReconsiderBlock(state, pblockindex);
     }
 

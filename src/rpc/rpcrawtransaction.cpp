@@ -113,10 +113,9 @@ void TxToJSON(const CTransaction &tx, const uint256 hashBlock, UniValue &entry)
     if (!hashBlock.IsNull())
     {
         entry.push_back(Pair("blockhash", hashBlock.GetHex()));
-        BlockMap::iterator mi = pnetMan->getChainActive()->mapBlockIndex.find(hashBlock);
-        if (mi != pnetMan->getChainActive()->mapBlockIndex.end() && (*mi).second)
+        CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(hashBlock);
+        if (pindex)
         {
-            CBlockIndex *pindex = (*mi).second;
             if (pnetMan->getChainActive()->chainActive.Contains(pindex))
             {
                 entry.push_back(
@@ -265,6 +264,7 @@ UniValue gettxoutproof(const UniValue &params, bool fHelp)
     uint256 hashBlock;
     if (params.size() > 1)
     {
+        LOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
         hashBlock = uint256S(params[1].get_str());
         if (!pnetMan->getChainActive()->mapBlockIndex.count(hashBlock))
             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
@@ -285,6 +285,7 @@ UniValue gettxoutproof(const UniValue &params, bool fHelp)
         if (!GetTransaction(oneTxid, tx, pnetMan->getActivePaymentNetwork()->GetConsensus(), hashBlock, false) ||
             hashBlock.IsNull())
             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Transaction not yet in block");
+        LOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
         if (!pnetMan->getChainActive()->mapBlockIndex.count(hashBlock))
             throw JSONRPCError(RPC_INTERNAL_ERROR, "Transaction index corrupt");
         pblockindex = pnetMan->getChainActive()->mapBlockIndex[hashBlock];
@@ -337,12 +338,13 @@ UniValue verifytxoutproof(const UniValue &params, bool fHelp)
     if (merkleBlock.txn.ExtractMatches(vMatch) != merkleBlock.header.hashMerkleRoot)
         return res;
 
-    LOCK(cs_main);
+    auto *pindex = pnetMan->getChainActive()->LookupBlockIndex(merkleBlock.header.GetHash());
 
-    if (!pnetMan->getChainActive()->mapBlockIndex.count(merkleBlock.header.GetHash()) ||
-        !pnetMan->getChainActive()->chainActive.Contains(
-            pnetMan->getChainActive()->mapBlockIndex[merkleBlock.header.GetHash()]))
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found in chain");
+    {
+        LOCK(cs_main);
+        if (!pindex || !pnetMan->getChainActive()->chainActive.Contains(pindex))
+            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found in chain");
+    }
 
     for (auto const &hash : vMatch)
         res.push_back(hash.GetHex());
