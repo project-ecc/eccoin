@@ -208,7 +208,6 @@ UniValue generateBlocks(boost::shared_ptr<CReserveScript> coinbaseScript,
         }
 
         CValidationState state;
-        const std::shared_ptr<const CBlock> spblock = std::make_shared<const CBlock>(*pblock);
         for (auto tx : pblock->vtx)
         {
             LogPrintf("transaction: %s \n", tx->GetHash().GetHex().c_str());
@@ -217,7 +216,7 @@ UniValue generateBlocks(boost::shared_ptr<CReserveScript> coinbaseScript,
                 LogPrintf("generated %s\n", FormatMoney(vout.nValue).c_str());
             }
         }
-        if (!ProcessNewBlock(state, pnetMan->getActivePaymentNetwork(), nullptr, spblock, true, nullptr))
+        if (!ProcessNewBlock(state, pnetMan->getActivePaymentNetwork(), nullptr, pblock, true, nullptr))
             throw JSONRPCError(RPC_INTERNAL_ERROR, "ProcessNewBlock, block not accepted");
         ++nHeight;
         blockHashes.push_back(pblock->GetHash().GetHex());
@@ -655,10 +654,9 @@ UniValue getblocktemplate(const UniValue &params, bool fHelp)
                 throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "Block decode failed");
 
             uint256 hash = block.GetHash();
-            BlockMap::iterator mi = pnetMan->getChainActive()->mapBlockIndex.find(hash);
-            if (mi != pnetMan->getChainActive()->mapBlockIndex.end())
+            CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(hash);
+            if (pindex)
             {
-                CBlockIndex *pindex = mi->second;
                 if (pindex->IsValid(BLOCK_VALID_SCRIPTS))
                     return "duplicate";
                 if (pindex->nStatus & BLOCK_FAILED_MASK)
@@ -983,10 +981,9 @@ UniValue getposblocktemplate(const UniValue &params, bool fHelp)
                 throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "Block decode failed");
 
             uint256 hash = block.GetHash();
-            BlockMap::iterator mi = pnetMan->getChainActive()->mapBlockIndex.find(hash);
-            if (mi != pnetMan->getChainActive()->mapBlockIndex.end())
+            CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(hash);
+            if (pindex)
             {
-                CBlockIndex *pindex = mi->second;
                 if (pindex->IsValid(BLOCK_VALID_SCRIPTS))
                     return "duplicate";
                 if (pindex->nStatus & BLOCK_FAILED_MASK)
@@ -1253,11 +1250,9 @@ UniValue submitblock(const UniValue &params, bool fHelp)
     uint256 hash = block.GetHash();
     bool fBlockPresent = false;
     {
-        LOCK(cs_main);
-        BlockMap::iterator mi = pnetMan->getChainActive()->mapBlockIndex.find(hash);
-        if (mi != pnetMan->getChainActive()->mapBlockIndex.end())
+        CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(hash);
+        if (pindex)
         {
-            CBlockIndex *pindex = mi->second;
             if (pindex->IsValid(BLOCK_VALID_SCRIPTS))
                 return "duplicate";
             if (pindex->nStatus & BLOCK_FAILED_MASK)
@@ -1270,7 +1265,7 @@ UniValue submitblock(const UniValue &params, bool fHelp)
     CValidationState state;
     submitblock_StateCatcher sc(block.GetHash());
     RegisterValidationInterface(&sc);
-    const std::shared_ptr<const CBlock> spblock(&block);
+    const CBlock *spblock(&block);
     bool fAccepted = ProcessNewBlock(state, pnetMan->getActivePaymentNetwork(), NULL, spblock, true, NULL);
     UnregisterValidationInterface(&sc);
     if (fBlockPresent)

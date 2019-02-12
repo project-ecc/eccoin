@@ -13,7 +13,6 @@
 #include "consensus/validation.h"
 #include "crypto/sha256.h"
 #include "fs.h"
-#include "init.h"
 #include "key.h"
 #include "main.h"
 #include "net/messages.h"
@@ -79,7 +78,7 @@ TestingSetup::~TestingSetup()
     fs::remove_all(pathTemp);
 }
 
-TestChain100Setup::TestChain100Setup() : TestingSetup("TESTNET0-TEMPORARY")
+TestChain100Setup::TestChain100Setup() : TestingSetup("REGTEST")
 {
     // Generate a 100-block chain:
     coinbaseKey.MakeNewKey(true);
@@ -99,8 +98,8 @@ TestChain100Setup::TestChain100Setup() : TestingSetup("TESTNET0-TEMPORARY")
 CBlock TestChain100Setup::CreateAndProcessBlock(const std::vector<CTransactionRef> &txns, const CScript &scriptPubKey)
 {
     std::unique_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(pwallet, scriptPubKey, false));
-    std::shared_ptr<CBlock> pblock = std::make_shared<CBlock>();
-    *pblock = pblocktemplate->block;
+    CBlock block = pblocktemplate->block;
+    CBlock *pblock = &block;
 
     // Replace mempool-selected txns with just coinbase plus passed-in txns:
     pblock->vtx.resize(1);
@@ -108,7 +107,7 @@ CBlock TestChain100Setup::CreateAndProcessBlock(const std::vector<CTransactionRe
         pblock->vtx.push_back(tx);
     // IncrementExtraNonce creates a valid coinbase and merkleRoot
     unsigned int extraNonce = 0;
-    IncrementExtraNonce(pblock.get(), pnetMan->getChainActive()->chainActive.Tip(), extraNonce);
+    IncrementExtraNonce(pblock, pnetMan->getChainActive()->chainActive.Tip(), extraNonce);
 
     while (!CheckProofOfWork(pblock->GetHash(), pblock->nBits, pnetMan->getActivePaymentNetwork()->GetConsensus()))
         ++pblock->nNonce;
@@ -133,14 +132,14 @@ CTxMemPoolEntry TestMemPoolEntryHelper::FromTx(CTransaction &tx, CTxMemPool *poo
         inChainValue, spendsCoinbase, sigOpCount, lp);
 }
 
-void ShutdownTest(void *parg) { exit(0); }
-void StartShutdownTest() { exit(0); }
-bool ShutdownRequestedTest() { return false; }
+void Shutdown(void *parg) { exit(0); }
+// void StartShutdown() { exit(0); }
+// bool ShutdownRequested() { return false; }
 using namespace boost::program_options;
 
 struct StartupShutdown
 {
-    void StartupShutdownTest()
+    StartupShutdown()
     {
         options_description optDef("Options");
         optDef.add_options()("testhelp", "program options information")(
@@ -172,7 +171,7 @@ struct StartupShutdown
             }
         }
     }
-    // ~StartupShutdownTest() { }
+    ~StartupShutdown() {}
 };
 
 BOOST_GLOBAL_FIXTURE(StartupShutdown);

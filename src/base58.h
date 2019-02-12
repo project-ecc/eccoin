@@ -29,7 +29,6 @@
 #ifndef BITCOIN_BASE58_H
 #define BITCOIN_BASE58_H
 
-#include "init.h"
 #include "key.h"
 #include "networks/netman.h"
 #include "networks/networktemplate.h"
@@ -40,6 +39,8 @@
 
 #include <string>
 #include <vector>
+
+extern CNetworkManager *pnetMan;
 
 /**
  * Encode a byte sequence as a base58-encoded string.

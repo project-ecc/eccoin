@@ -161,7 +161,8 @@ std::unique_ptr<CBlockTemplate> CreateNewPoWBlock(CWallet *pwallet, const CScrip
     pblock->nBits = GetNextTargetRequired(pindexPrev, false);
     // Collect memory pool transactions into the block
     {
-        LOCK2(cs_main, mempool.cs);
+        LOCK(cs_main);
+        READLOCK(mempool.cs);
         CBlockIndex *_pindexPrev = pnetMan->getChainActive()->chainActive.Tip();
         const int nHeight = _pindexPrev->nHeight + 1;
         pblock->nTime = GetAdjustedTime();
@@ -181,7 +182,7 @@ std::unique_ptr<CBlockTemplate> CreateNewPoWBlock(CWallet *pwallet, const CScrip
             {
                 double dPriority = mi->GetPriority(nHeight);
                 CAmount dummy;
-                mempool.ApplyDeltas(mi->GetTx().GetHash(), dPriority, dummy);
+                mempool._ApplyDeltas(mi->GetTx().GetHash(), dPriority, dummy);
                 vecPriority.push_back(TxCoinAgePriority(dPriority, mi));
             }
             std::make_heap(vecPriority.begin(), vecPriority.end(), pricomparer);
@@ -369,9 +370,7 @@ void FormatHashBuffers(CBlock *pblock, char *pmidstate, char *pdata, char *phash
 }
 
 
-bool CheckWork(const std::shared_ptr<const CBlock> pblock,
-    CWallet &wallet,
-    boost::shared_ptr<CReserveScript> coinbaseScript)
+bool CheckWork(const CBlock *pblock, CWallet &wallet, boost::shared_ptr<CReserveScript> coinbaseScript)
 {
     arith_uint256 hash = UintToArith256(pblock->GetHash());
     arith_uint256 hashTarget = arith_uint256(pblock->nBits);
@@ -386,16 +385,22 @@ bool CheckWork(const std::shared_ptr<const CBlock> pblock,
 
     // Found a solution
     {
-        LOCK(cs_main);
-        if (pblock->hashPrevBlock != pnetMan->getChainActive()->chainActive.Tip()->GetBlockHash())
+        CBlockIndex *ptip = pnetMan->getChainActive()->chainActive.Tip();
+        if (ptip == nullptr)
+        {
+            return false;
+        }
+        if (pblock->hashPrevBlock != ptip->GetBlockHash())
+        {
             return error("BMiner : generated block is stale");
+        }
 
         // Remove key from key pool
         coinbaseScript->KeepScript();
 
         // Track how many getdata requests this block gets
         {
-            LOCK(wallet.cs_wallet);
+            LOCK2(cs_main, wallet.cs_wallet);
             wallet.mapRequestCount[pblock->GetHash()] = 0;
         }
 
@@ -504,8 +509,7 @@ void EccMiner(CWallet *pwallet)
                         break;
                     }
                     SetThreadPriority(THREAD_PRIORITY_NORMAL);
-                    const std::shared_ptr<const CBlock> spblock = std::make_shared<const CBlock>(*pblock);
-                    CheckWork(spblock, *pwalletMain, coinbaseScript);
+                    CheckWork(pblock, *pwalletMain, coinbaseScript);
                     SetThreadPriority(THREAD_PRIORITY_LOWEST);
                     break;
                 }

@@ -171,6 +171,7 @@ BOOST_AUTO_TEST_CASE(coins_cache_simulation_test)
             }
             else
             {
+                LOCK(stack.back()->cs_utxo);
                 const Coin &entry = stack.back()->AccessCoin(COutPoint(txid, 0));
                 BOOST_CHECK(coin == entry);
             }
@@ -225,10 +226,15 @@ BOOST_AUTO_TEST_CASE(coins_cache_simulation_test)
             for (auto it = result.begin(); it != result.end(); it++)
             {
                 bool have = stack.back()->HaveCoin(it->first);
-                const Coin &coin = stack.back()->AccessCoin(it->first);
-                BOOST_CHECK(have == !coin.IsSpent());
-                BOOST_CHECK(coin == it->second);
-                if (coin.IsSpent())
+                bool isspent = true;
+                {
+                    LOCK(stack.back()->cs_utxo);
+                    const Coin &coin = stack.back()->AccessCoin(it->first);
+                    isspent = coin.IsSpent();
+                    BOOST_CHECK(have == !coin.IsSpent());
+                    BOOST_CHECK(coin == it->second);
+                }
+                if (isspent)
                 {
                     missed_an_entry = true;
                 }

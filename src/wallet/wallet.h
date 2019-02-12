@@ -684,7 +684,7 @@ public:
 
     void MarkDirty();
     bool AddToWallet(const CWalletTx &wtxIn, bool fFromLoadWallet, CWalletDB *pwalletdb);
-    void SyncTransaction(const CTransactionRef &ptx, const CBlock *pblock = nullptr);
+    void SyncTransaction(const CTransactionRef &ptx, const CBlock *pblock, int txIndex = -1);
     bool AddToWalletIfInvolvingMe(const CTransactionRef &ptx, const CBlock *pblock, bool fUpdate);
     int ScanForWalletTransactions(CBlockIndex *pindexStart, bool fUpdate = false);
     void ReacceptWalletTransactions();
@@ -766,11 +766,6 @@ public:
     void SetBestChain(const CBlockLocator &loc);
 
     DBErrors LoadWallet(bool &fFirstRunRet);
-    void TransactionAddedToMempool(const CTransactionRef &tx) override;
-    void BlockConnected(const std::shared_ptr<const CBlock> &pblock,
-        const CBlockIndex *pindex,
-        const std::vector<CTransactionRef> &vtxConflicted) override;
-    void BlockDisconnected(const std::shared_ptr<const CBlock> &pblock) override;
 
     DBErrors ZapWalletTx(std::vector<CWalletTx> &vWtx);
 

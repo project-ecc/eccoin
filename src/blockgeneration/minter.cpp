@@ -32,9 +32,7 @@
 extern CWallet *pwalletMain;
 int64_t nLastCoinStakeSearchInterval = 0;
 
-bool CheckStake(const std::shared_ptr<const CBlock> pblock,
-    CWallet &wallet,
-    boost::shared_ptr<CReserveScript> coinbaseScript)
+bool CheckStake(const CBlock *pblock, CWallet &wallet, boost::shared_ptr<CReserveScript> coinbaseScript)
 {
     //// debug print
     LogPrintf("Minter:\n");
@@ -50,16 +48,20 @@ bool CheckStake(const std::shared_ptr<const CBlock> pblock,
 
     // Found a solution
     {
-        LOCK(cs_main);
-        if (pblock->hashPrevBlock != pnetMan->getChainActive()->chainActive.Tip()->GetBlockHash())
+        CBlockIndex *ptip = pnetMan->getChainActive()->chainActive.Tip();
+        if (ptip == nullptr)
         {
-            return error("Minter : generated block is stale");
+            return false;
+        }
+        if (pblock->hashPrevBlock != ptip->GetBlockHash())
+        {
+            return error("BMiner : generated block is stale");
         }
         // Remove key from key pool
         coinbaseScript->KeepScript();
         // Track how many getdata requests this block gets
         {
-            LOCK(wallet.cs_wallet);
+            LOCK2(cs_main, wallet.cs_wallet);
             wallet.mapRequestCount[pblock->GetHash()] = 0;
         }
         // Process this block the same as if we had received it from another node
@@ -147,14 +149,15 @@ std::unique_ptr<CBlockTemplate> CreateNewPoSBlock(CWallet *pwallet, const CScrip
             nLastCoinStakeSearchInterval = nSearchTime - nLastCoinStakeSearchTime;
             nLastCoinStakeSearchTime = nSearchTime;
         }
-        MilliSleep(100);
+        MilliSleep(50);
         if (shutdown_threads.load())
             return nullptr;
     }
 
     // Collect memory pool transactions into the block
     {
-        LOCK2(cs_main, mempool.cs);
+        LOCK(cs_main);
+        READLOCK(mempool.cs);
         CBlockIndex *_pindexPrev = pnetMan->getChainActive()->chainActive.Tip();
         const int nHeight = _pindexPrev->nHeight + 1;
         pblock->nTime = GetAdjustedTime();
@@ -174,7 +177,7 @@ std::unique_ptr<CBlockTemplate> CreateNewPoSBlock(CWallet *pwallet, const CScrip
             {
                 double dPriority = mi->GetPriority(nHeight);
                 CAmount dummy;
-                mempool.ApplyDeltas(mi->GetTx().GetHash(), dPriority, dummy);
+                mempool._ApplyDeltas(mi->GetTx().GetHash(), dPriority, dummy);
                 vecPriority.push_back(TxCoinAgePriority(dPriority, mi));
             }
             std::make_heap(vecPriority.begin(), vecPriority.end(), pricomparer);
@@ -372,8 +375,7 @@ void EccMinter(CWallet *pwallet)
         }
         LogPrintf("CPUMiner : proof-of-stake block found %s\n", pblock->GetHash().ToString().c_str());
         SetThreadPriority(THREAD_PRIORITY_NORMAL);
-        const std::shared_ptr<const CBlock> spblock = std::make_shared<const CBlock>(*pblock);
-        CheckStake(spblock, *pwalletMain, coinbaseScript);
+        CheckStake(pblock, *pwalletMain, coinbaseScript);
         SetThreadPriority(THREAD_PRIORITY_LOWEST);
         MilliSleep(1000); // 1 second delay
         continue;

@@ -345,7 +345,7 @@ bool GetTransaction(const uint256 &hash,
     uint256 &hashBlock,
     bool fAllowSlow)
 {
-    CBlockIndex *pindexSlow = NULL;
+    CBlockIndex *pindexSlow = nullptr;
 
     LOCK(cs_main);
 

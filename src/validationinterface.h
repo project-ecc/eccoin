@@ -45,24 +45,20 @@ void RegisterValidationInterface(CValidationInterface *pwalletIn);
 void UnregisterValidationInterface(CValidationInterface *pwalletIn);
 /** Unregister all wallets from core */
 void UnregisterAllValidationInterfaces();
+/** Push an updated transaction to all registered wallets, pass NULL if block not known, pass -1 if txIdx not known */
+void SyncWithWallets(const CTransactionRef &ptx, const CBlock *pblock, int txIdx);
 
 class CValidationInterface
 {
 protected:
     virtual void UpdatedBlockTip(const CBlockIndex *pindexNew, const CBlockIndex *pindexFork, bool fInitialDownload) {}
-    virtual void TransactionAddedToMempool(const CTransactionRef &ptxn) {}
-    virtual void BlockConnected(const std::shared_ptr<const CBlock> &block,
-        const CBlockIndex *pindex,
-        const std::vector<CTransactionRef> &txnConflicted)
-    {
-    }
-    virtual void BlockDisconnected(const std::shared_ptr<const CBlock> &block) {}
+    virtual void SyncTransaction(const CTransactionRef &ptx, const CBlock *pblock, int txIdx) {}
     virtual void SetBestChain(const CBlockLocator &locator) {}
     virtual void Inventory(const uint256 &hash) {}
     virtual void ResendWalletTransactions(int64_t nBestBlockTime, CConnman *connman) {}
     virtual void BlockChecked(const CBlock &, const CValidationState &) {}
     virtual void GetScriptForMining(boost::shared_ptr<CReserveScript> &){};
-    virtual void NewPoWValidBlock(const CBlockIndex *pindex, const std::shared_ptr<const CBlock> &block) {}
+    virtual void NewPoWValidBlock(const CBlockIndex *pindex, const CBlock *block) {}
     friend void ::RegisterValidationInterface(CValidationInterface *);
     friend void ::UnregisterValidationInterface(CValidationInterface *);
     friend void ::UnregisterAllValidationInterfaces();
@@ -72,17 +68,8 @@ struct CMainSignals
 {
     /** Notifies listeners of updated block chain tip */
     boost::signals2::signal<void(const CBlockIndex *, const CBlockIndex *, bool fInitialDownload)> UpdatedBlockTip;
-    /** Notifies listeners of a transaction having been added to mempool. */
-    boost::signals2::signal<void(const CTransactionRef &)> TransactionAddedToMempool;
-    /**
-     * Notifies listeners of a block being connected.
-     * Provides a vector of transactions evicted from the mempool as a result.
-     */
-    boost::signals2::signal<
-        void(const std::shared_ptr<const CBlock> &, const CBlockIndex *pindex, const std::vector<CTransactionRef> &)>
-        BlockConnected;
-    /** Notifies listeners of a block being disconnected */
-    boost::signals2::signal<void(const std::shared_ptr<const CBlock> &)> BlockDisconnected;
+    /** Notifies listeners of updated transaction data (transaction, and optionally the block it is found in. */
+    boost::signals2::signal<void(const CTransactionRef &, const CBlock *, int txIndex)> SyncTransaction;
     /** Notifies listeners of a new active block chain. */
     boost::signals2::signal<void(const CBlockLocator &)> SetBestChain;
     /** Notifies listeners about an inventory item being seen on the network. */
@@ -98,7 +85,7 @@ struct CMainSignals
      * has been received and connected to the headers tree, though not validated
      * yet.
      */
-    boost::signals2::signal<void(const CBlockIndex *, const std::shared_ptr<const CBlock> &)> NewPoWValidBlock;
+    boost::signals2::signal<void(const CBlockIndex *, const CBlock *)> NewPoWValidBlock;
 };
 
 CMainSignals &GetMainSignals();

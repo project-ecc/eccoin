@@ -25,12 +25,14 @@
  */
 void CChain::SetTip(CBlockIndex *pindex)
 {
-    if (pindex == NULL)
+    if (pindex == nullptr)
     {
         vChain.clear();
+        tip = nullptr;
         return;
     }
     vChain.resize(pindex->nHeight + 1);
+    tip = pindex;
     while (pindex && vChain[pindex->nHeight] != pindex)
     {
         vChain[pindex->nHeight] = pindex;

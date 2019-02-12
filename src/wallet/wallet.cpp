@@ -683,6 +683,7 @@ bool CWallet::AddToWallet(const CWalletTx &wtxIn, bool fFromLoadWallet, CWalletD
             wtx.nTimeSmart = wtx.nTimeReceived;
             if (!wtxIn.hashUnset())
             {
+                READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
                 if (pnetMan->getChainActive()->mapBlockIndex.count(wtxIn.hashBlock))
                 {
                     int64_t latestNow = wtx.nTimeReceived;
@@ -900,9 +901,9 @@ void CWallet::MarkConflicted(const uint256 &hashBlock, const uint256 &hashTx)
     LOCK2(cs_main, cs_wallet);
 
     int conflictconfirms = 0;
-    if (pnetMan->getChainActive()->mapBlockIndex.count(hashBlock))
+    CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(hashBlock);
+    if (pindex)
     {
-        CBlockIndex *pindex = pnetMan->getChainActive()->mapBlockIndex[hashBlock];
         if (pnetMan->getChainActive()->chainActive.Contains(pindex))
         {
             conflictconfirms = -(pnetMan->getChainActive()->chainActive.Height() - pindex->nHeight + 1);
@@ -960,11 +961,9 @@ void CWallet::MarkConflicted(const uint256 &hashBlock, const uint256 &hashTx)
     }
 }
 
-void CWallet::SyncTransaction(const CTransactionRef &ptx, const CBlock *pblock)
+void CWallet::SyncTransaction(const CTransactionRef &ptx, const CBlock *pblock, int txIdx)
 {
     LOCK2(cs_main, cs_wallet);
-
-    const CTransaction &tx = *ptx;
 
     if (!AddToWalletIfInvolvingMe(ptx, pblock, true))
     {
@@ -974,52 +973,12 @@ void CWallet::SyncTransaction(const CTransactionRef &ptx, const CBlock *pblock)
     // If a transaction changes 'conflicted' state, that changes the balance
     // available of the outputs it spends. So force those to be
     // recomputed, also:
-    for (auto const &txin : tx.vin)
+    for (const CTxIn &txin : ptx->vin)
     {
         if (mapWallet.count(txin.prevout.hash))
             mapWallet[txin.prevout.hash].MarkDirty();
     }
 }
-
-void CWallet::TransactionAddedToMempool(const CTransactionRef &ptx)
-{
-    LOCK2(cs_main, cs_wallet);
-    SyncTransaction(ptx);
-}
-
-void CWallet::BlockConnected(const std::shared_ptr<const CBlock> &pblock,
-    const CBlockIndex *pindex,
-    const std::vector<CTransactionRef> &vtxConflicted)
-{
-    LOCK2(cs_main, cs_wallet);
-    // TODO: Tempoarily ensure that mempool removals are notified before
-    // connected transactions. This shouldn't matter, but the abandoned state of
-    // transactions in our wallet is currently cleared when we receive another
-    // notification and there is a race condition where notification of a
-    // connected conflict might cause an outside process to abandon a
-    // transaction and then have it inadvertantly cleared by the notification
-    // that the conflicted transaction was evicted.
-
-    for (const CTransactionRef &ptx : vtxConflicted)
-    {
-        SyncTransaction(ptx);
-    }
-    for (size_t i = 0; i < pblock->vtx.size(); i++)
-    {
-        SyncTransaction(pblock->vtx[i], pblock.get());
-    }
-}
-
-void CWallet::BlockDisconnected(const std::shared_ptr<const CBlock> &pblock)
-{
-    LOCK2(cs_main, cs_wallet);
-
-    for (const CTransactionRef &ptx : pblock->vtx)
-    {
-        SyncTransaction(ptx);
-    }
-}
-
 
 isminetype CWallet::IsMine(const CTxIn &txin) const
 {
@@ -1341,21 +1300,24 @@ void CWallet::ReacceptWalletTransactions()
     // If transactions aren't being broadcasted, don't let them into local mempool either
     if (!fBroadcastTransactions)
         return;
-    LOCK2(cs_main, cs_wallet);
+
     std::map<int64_t, CWalletTx *> mapSorted;
 
-    // Sort pending wallet transactions based on their initial wallet insertion order
-    for (auto const &item : mapWallet)
     {
-        const uint256 &wtxid = item.first;
-        CWalletTx wtx = item.second;
-        assert(wtx.tx->GetHash() == wtxid);
-
-        int nDepth = wtx.GetDepthInMainChain();
-
-        if (!wtx.tx->IsCoinBase() && !wtx.tx->IsCoinStake() && (nDepth == 0 && !wtx.isAbandoned()))
+        LOCK2(cs_main, cs_wallet);
+        // Sort pending wallet transactions based on their initial wallet insertion order
+        for (auto const &item : mapWallet)
         {
-            mapSorted.insert(std::make_pair(wtx.nOrderPos, &wtx));
+            const uint256 &wtxid = item.first;
+            CWalletTx wtx = item.second;
+            assert(wtx.tx->GetHash() == wtxid);
+
+            int nDepth = wtx.GetDepthInMainChain();
+
+            if (!wtx.tx->IsCoinBase() && !wtx.tx->IsCoinStake() && (nDepth == 0 && !wtx.isAbandoned()))
+            {
+                mapSorted.insert(std::make_pair(wtx.nOrderPos, &wtx));
+            }
         }
     }
 
@@ -1363,9 +1325,8 @@ void CWallet::ReacceptWalletTransactions()
     for (auto const &item : mapSorted)
     {
         CWalletTx &wtx = *(item.second);
-
-        LOCK(mempool.cs);
         wtx.AcceptToMemoryPool(false);
+        SyncWithWallets(wtx.tx, nullptr, -1);
     }
 }
 
@@ -1556,7 +1517,6 @@ CAmount CWalletTx::GetChange() const
 
 bool CWalletTx::InMempool() const
 {
-    LOCK(mempool.cs);
     if (mempool.exists(tx->GetHash()))
     {
         return true;
@@ -2477,6 +2437,17 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient> &vecSend,
  */
 bool CWallet::CommitTransaction(CWalletTx &wtxNew, CReserveKey &reservekey, CConnman *connman, CValidationState &state)
 {
+    if (fBroadcastTransactions)
+    {
+        // Broadcast
+        if (!wtxNew.AcceptToMemoryPool(false))
+        {
+            // This must not fail. The transaction has already been signed and recorded.
+            LogPrintf("CommitTransaction(): Error: Transaction not valid\n");
+            return false;
+        }
+    }
+
     {
         LOCK2(cs_main, cs_wallet);
         LogPrintf("CommitTransaction:\n%s", wtxNew.tx->ToString());
@@ -2511,13 +2482,7 @@ bool CWallet::CommitTransaction(CWalletTx &wtxNew, CReserveKey &reservekey, CCon
 
         if (fBroadcastTransactions)
         {
-            // Broadcast
-            if (!wtxNew.AcceptToMemoryPool(false))
-            {
-                // This must not fail. The transaction has already been signed and recorded.
-                LogPrintf("CommitTransaction(): Error: Transaction not valid\n");
-                return false;
-            }
+            SyncWithWallets(wtxNew.tx, nullptr, -1);
             wtxNew.RelayWalletTransaction(connman);
         }
     }
@@ -3144,12 +3109,11 @@ void CWallet::GetKeyBirthTimes(std::map<CKeyID, int64_t> &mapKeyBirth) const
     {
         // iterate over all wallet transactions...
         const CWalletTx &wtx = (*it).second;
-        BlockMap::const_iterator blit = pnetMan->getChainActive()->mapBlockIndex.find(wtx.hashBlock);
-        if (blit != pnetMan->getChainActive()->mapBlockIndex.end() &&
-            pnetMan->getChainActive()->chainActive.Contains(blit->second))
+        CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(wtx.hashBlock);
+        if (pindex && pnetMan->getChainActive()->chainActive.Contains(pindex))
         {
             // ... which are already in a block
-            int nHeight = blit->second->nHeight;
+            int nHeight = pindex->nHeight;
             for (auto const &txout : wtx.tx->vout)
             {
                 // iterate over all their outputs
@@ -3159,7 +3123,7 @@ void CWallet::GetKeyBirthTimes(std::map<CKeyID, int64_t> &mapKeyBirth) const
                     // ... and all their affected keys
                     std::map<CKeyID, CBlockIndex *>::iterator rit = mapKeyFirstBlock.find(keyid);
                     if (rit != mapKeyFirstBlock.end() && nHeight < rit->second->nHeight)
-                        rit->second = blit->second;
+                        rit->second = pindex;
                 }
                 vAffected.clear();
             }
@@ -3250,12 +3214,7 @@ int CMerkleTx::SetMerkleBranch(const CBlock &block)
     }
 
     // Is the tx in a block that's in the main chain
-    BlockMap::iterator mi = pnetMan->getChainActive()->mapBlockIndex.find(hashBlock);
-    if (mi == pnetMan->getChainActive()->mapBlockIndex.end())
-    {
-        return 0;
-    }
-    const CBlockIndex *pindex = (*mi).second;
+    const CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(hashBlock);
     if (!pindex || !pnetMan->getChainActive()->chainActive.Contains(pindex))
     {
         return 0;
@@ -3271,12 +3230,8 @@ int CMerkleTx::GetDepthInMainChain(const CBlockIndex *&pindexRet) const
     }
     AssertLockHeld(cs_main);
     // Find the block it claims to be in
-    BlockMap::iterator mi = pnetMan->getChainActive()->mapBlockIndex.find(hashBlock);
-    if (mi == pnetMan->getChainActive()->mapBlockIndex.end())
-    {
-        return 0;
-    }
-    CBlockIndex *pindex = (*mi).second;
+    CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(hashBlock);
+    LOCK(cs_main); // for chainActive
     if (!pindex || !pnetMan->getChainActive()->chainActive.Contains(pindex))
     {
         return 0;

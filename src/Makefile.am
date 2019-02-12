@@ -87,6 +87,7 @@ BITCOIN_CORE_H = \
   net/net.h \
   net/netaddress.h \
   net/netbase.h \
+  net/nodestate.h \
   net/protocol.h \
   networks/netman.h \
   networks/network.h \
@@ -159,6 +160,7 @@ libbitcoin_server_a-clientversion.$(OBJEXT): build/build.h
 libbitcoin_server_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES) $(MINIUPNPC_CPPFLAGS) $(EVENT_CFLAGS) $(EVENT_PTHREADS_CFLAGS)
 libbitcoin_server_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIC_FLAGS) $(PIE_FLAGS)
 libbitcoin_server_a_SOURCES = \
+  sync.cpp \
   net/addrdb.cpp \
   net/addrman.cpp \
   blockgeneration/blockgeneration.cpp \
@@ -214,6 +216,7 @@ libbitcoin_server_a_SOURCES = \
   processheader.cpp \
   processtx.cpp \
   chain/tx.cpp \
+  net/nodestate.cpp \
   net/protocol.cpp \
   pubkey.cpp \
   crypto/pbkdf2.cpp \
@@ -235,7 +238,6 @@ libbitcoin_server_a_SOURCES = \
   random.cpp \
   rpc/rpcprotocol.cpp \
   support/cleanse.cpp \
-  sync.cpp \
   uint256.cpp \
   util/util.cpp \
   util/utilmoneystr.cpp \
