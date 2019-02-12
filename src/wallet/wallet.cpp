@@ -900,12 +900,10 @@ void CWallet::MarkConflicted(const uint256 &hashBlock, const uint256 &hashTx)
 {
     LOCK2(cs_main, cs_wallet);
 
-    READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
-
     int conflictconfirms = 0;
-    if (pnetMan->getChainActive()->mapBlockIndex.count(hashBlock))
+    CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(hashBlock);
+    if (pindex)
     {
-        CBlockIndex *pindex = pnetMan->getChainActive()->mapBlockIndex[hashBlock];
         if (pnetMan->getChainActive()->chainActive.Contains(pindex))
         {
             conflictconfirms = -(pnetMan->getChainActive()->chainActive.Height() - pindex->nHeight + 1);
@@ -1519,7 +1517,6 @@ CAmount CWalletTx::GetChange() const
 
 bool CWalletTx::InMempool() const
 {
-    READLOCK(mempool.cs);
     if (mempool.exists(tx->GetHash()))
     {
         return true;

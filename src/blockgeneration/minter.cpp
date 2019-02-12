@@ -149,7 +149,7 @@ std::unique_ptr<CBlockTemplate> CreateNewPoSBlock(CWallet *pwallet, const CScrip
             nLastCoinStakeSearchInterval = nSearchTime - nLastCoinStakeSearchTime;
             nLastCoinStakeSearchTime = nSearchTime;
         }
-        MilliSleep(100);
+        MilliSleep(50);
         if (shutdown_threads.load())
             return nullptr;
     }
@@ -177,7 +177,7 @@ std::unique_ptr<CBlockTemplate> CreateNewPoSBlock(CWallet *pwallet, const CScrip
             {
                 double dPriority = mi->GetPriority(nHeight);
                 CAmount dummy;
-                mempool.ApplyDeltas(mi->GetTx().GetHash(), dPriority, dummy);
+                mempool._ApplyDeltas(mi->GetTx().GetHash(), dPriority, dummy);
                 vecPriority.push_back(TxCoinAgePriority(dPriority, mi));
             }
             std::make_heap(vecPriority.begin(), vecPriority.end(), pricomparer);

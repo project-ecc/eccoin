@@ -182,7 +182,7 @@ std::unique_ptr<CBlockTemplate> CreateNewPoWBlock(CWallet *pwallet, const CScrip
             {
                 double dPriority = mi->GetPriority(nHeight);
                 CAmount dummy;
-                mempool.ApplyDeltas(mi->GetTx().GetHash(), dPriority, dummy);
+                mempool._ApplyDeltas(mi->GetTx().GetHash(), dPriority, dummy);
                 vecPriority.push_back(TxCoinAgePriority(dPriority, mi));
             }
             std::make_heap(vecPriority.begin(), vecPriority.end(), pricomparer);
