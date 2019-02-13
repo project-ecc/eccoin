@@ -14,12 +14,14 @@ volatile bool fReopenDebugLog = false;
 
 bool CLogger::DebugPrintInit()
 {
-    if (!(mutexDebugLog == nullptr && vMsgsBeforeOpenLog == nullptr))
+    if (mutexDebugLog == nullptr)
     {
-        return false;
+        mutexDebugLog = new std::mutex();
     }
-    mutexDebugLog = new boost::mutex();
-    vMsgsBeforeOpenLog = new std::list<std::string>;
+    if (vMsgsBeforeOpenLog == nullptr)
+    {
+        vMsgsBeforeOpenLog = new std::list<std::string>;
+    }
     return true;
 }
 
@@ -65,7 +67,7 @@ void CLogger::OpenDebugLog()
     {
         return;
     }
-    boost::mutex::scoped_lock scoped_lock(*mutexDebugLog);
+    std::lock_guard<std::mutex> scoped_lock(*mutexDebugLog);
 
     assert(fileout == nullptr);
     assert(vMsgsBeforeOpenLog);
@@ -128,7 +130,7 @@ int CLogger::LogPrintStr(const std::string &str)
     }
     else if (fPrintToDebugLog)
     {
-        boost::mutex::scoped_lock scoped_lock(*mutexDebugLog);
+        std::lock_guard<std::mutex> scoped_lock(*mutexDebugLog);
 
         // buffer if we haven't opened the log yet
         if (fileout == nullptr)

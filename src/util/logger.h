@@ -6,7 +6,7 @@
 #include "tinyformat.h"
 
 #include <list>
-#include <boost/thread/mutex.hpp>
+#include <mutex>
 #include <mutex>
 
 static const bool DEFAULT_LOGTIMEMICROS = false;
@@ -18,7 +18,7 @@ class CLogger
 {
 private:
     FILE *fileout;
-    boost::mutex *mutexDebugLog;
+    std::mutex *mutexDebugLog;
     std::list<std::string> *vMsgsBeforeOpenLog;
 
 public:
@@ -54,6 +54,7 @@ public:
         fDebug = false;
         fPrintToConsole = false;
         fPrintToDebugLog = true;
+        DebugPrintInit();
     }
     void OpenDebugLog();
 

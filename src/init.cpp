@@ -866,6 +866,11 @@ void InitLogging()
     g_logger->fLogTimeMicros = gArgs.GetBoolArg("-logtimemicros", DEFAULT_LOGTIMEMICROS);
     g_logger->fLogIPs = gArgs.GetBoolArg("-logips", DEFAULT_LOGIPS);
 
+    if (g_logger->fPrintToDebugLog)
+    {
+        g_logger->OpenDebugLog();
+    }
+
     LogPrintf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
     LogPrintf("Eccoin version %s (%s)\n", FormatFullVersion(), CLIENT_DATE);
 }
@@ -1155,12 +1160,6 @@ bool AppInit2(thread_group &threadGroup)
 #ifndef WIN32
     CreatePidFile(GetPidFile(), getpid());
 #endif
-
-    if (g_logger->fPrintToDebugLog)
-    {
-        g_logger->OpenDebugLog();
-    }
-
 
     LogPrintf("Using BerkeleyDB version %s\n", DbEnv::version(0, 0, 0));
     if (!g_logger->fLogTimestamps)
