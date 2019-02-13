@@ -2701,7 +2701,7 @@ void CWallet::ReserveKeyFromKeyPool(int64_t &nIndex, CKeyPool &keypool)
         if (!HaveKey(keypool.vchPubKey.GetID()))
             throw std::runtime_error("ReserveKeyFromKeyPool(): unknown key in key pool");
         assert(keypool.vchPubKey.IsValid());
-        LogPrintf("wallet", "keypool reserve %d\n", nIndex);
+        LogPrint("wallet", "keypool reserve %d\n", nIndex);
     }
 }
 
