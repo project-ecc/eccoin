@@ -27,7 +27,7 @@
 #include "init.h"
 #include "random.h"
 #include "sync.h"
-#include "ui_interface.h"
+
 #include "util/util.h"
 #include "util/utilstrencodings.h"
 

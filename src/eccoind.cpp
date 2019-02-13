@@ -23,7 +23,6 @@
 #include "httpserver.h"
 #include "init.h"
 #include "networks/netman.h"
-#include "noui.h"
 #include "rpc/rpcserver.h"
 #include "sync.h"
 #include "threadgroup.h"
@@ -186,9 +185,6 @@ bool AppInit(int argc, char *argv[])
 int main(int argc, char *argv[])
 {
     SetupEnvironment();
-
-    // Connect eccoind signal handlers
-    noui_connect();
 
     return (AppInit(argc, argv) ? 0 : 1);
 }

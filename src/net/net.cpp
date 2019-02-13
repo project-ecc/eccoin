@@ -29,7 +29,7 @@
 #include "init.h"
 #include "net/addrman.h"
 #include "networks/netman.h"
-#include "ui_interface.h"
+
 #include "util/utilstrencodings.h"
 
 #ifdef WIN32

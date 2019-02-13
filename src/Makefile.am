@@ -92,7 +92,6 @@ BITCOIN_CORE_H = \
   networks/netman.h \
   networks/network.h \
   networks/networktemplate.h \
-  noui.h \
   policy/fees.h \
   policy/policy.h \
   pow.h \
@@ -132,7 +131,6 @@ BITCOIN_CORE_H = \
   torcontrol.h \
   txdb.h \
   txmempool.h \
-  ui_interface.h \
   uint256.h \
   undo.h \
   util/logger.h \
@@ -180,7 +178,6 @@ libbitcoin_server_a_SOURCES = \
   merkleblock.cpp \
   net/net.cpp \
   net/netaddress.cpp \
-  noui.cpp \
   policy/fees.cpp \
   policy/policy.cpp \
   pow.cpp \

@@ -767,9 +767,6 @@ bool CWallet::AddToWallet(const CWalletTx &wtxIn, bool fFromLoadWallet, CWalletD
         // Break debit/credit balance caches:
         wtx.MarkDirty();
 
-        // Notify UI of new or updated transaction
-        NotifyTransactionChanged(this, hash, fInsertedNew ? CT_NEW : CT_UPDATED);
-
         // notify an external script when a wallet transaction comes in or is updated
         std::string strCmd = gArgs.GetArg("-walletnotify", "");
 
@@ -872,7 +869,6 @@ bool CWallet::AbandonTransaction(const uint256 &hashTx)
             wtx.setAbandoned();
             wtx.MarkDirty();
             wtx.WriteToDisk(&walletdb);
-            NotifyTransactionChanged(this, wtx.tx->GetHash(), CT_UPDATED);
             // Iterate over all its outputs, and mark transactions in the wallet that spend them abandoned too
             TxSpends::const_iterator iter = mapTxSpends.lower_bound(COutPoint(hashTx, 0));
             while (iter != mapTxSpends.end() && iter->first.hash == now)
@@ -2470,7 +2466,6 @@ bool CWallet::CommitTransaction(CWalletTx &wtxNew, CReserveKey &reservekey, CCon
             {
                 CWalletTx &coin = mapWallet[txin.prevout.hash];
                 coin.BindWallet(this);
-                NotifyTransactionChanged(this, coin.tx->GetHash(), CT_UPDATED);
             }
 
             if (fFileBacked)
@@ -2538,8 +2533,6 @@ DBErrors CWallet::LoadWallet(bool &fFirstRunRet)
         return nLoadWalletRet;
     fFirstRunRet = !vchDefaultKey.IsValid();
 
-    uiInterface.LoadWallet(this);
-
     return DB_LOAD_OK;
 }
 
@@ -2579,8 +2572,6 @@ bool CWallet::SetAddressBook(const CTxDestination &address, const std::string &s
         if (!strPurpose.empty()) /* update purpose only if requested */
             mapAddressBook[address].purpose = strPurpose;
     }
-    NotifyAddressBookChanged(
-        this, address, strName, ::IsMine(*this, address) != ISMINE_NO, strPurpose, (fUpdated ? CT_UPDATED : CT_NEW));
     if (!fFileBacked)
         return false;
     if (!strPurpose.empty() && !CWalletDB(strWalletFile).WritePurpose(CBitcoinAddress(address).ToString(), strPurpose))
@@ -2610,8 +2601,6 @@ bool CWallet::DelAddressBook(const CTxDestination &address)
         }
         mapAddressBook.erase(address);
     }
-
-    NotifyAddressBookChanged(this, address, "", ::IsMine(*this, address) != ISMINE_NO, "", CT_DELETED);
 
     if (!fFileBacked)
         return false;
@@ -2966,17 +2955,6 @@ void CWallet::GetAllReserveKeys(std::set<CKeyID> &setAddress) const
         if (!HaveKey(keyID))
             throw std::runtime_error("GetAllReserveKeyHashes(): unknown key in key pool");
         setAddress.insert(keyID);
-    }
-}
-
-void CWallet::UpdatedTransaction(const uint256 &hashTx)
-{
-    {
-        LOCK(cs_wallet);
-        // Only notify UI if this transaction is in this wallet
-        std::map<uint256, CWalletTx>::const_iterator mi = mapWallet.find(hashTx);
-        if (mi != mapWallet.end())
-            NotifyTransactionChanged(this, hashTx, CT_UPDATED);
     }
 }
 
@@ -3593,13 +3571,13 @@ bool CWallet::CreateCoinStake(const CKeyStore &keystore,
 
 bool static UIError(const std::string &str)
 {
-    uiInterface.ThreadSafeMessageBox(str, "", CClientUIInterface::MSG_ERROR);
+    LogPrintf("Wallet Error: %s\n", str.c_str());
     return false;
 }
 
 void static UIWarning(const std::string &str)
 {
-    uiInterface.ThreadSafeMessageBox(str, "", CClientUIInterface::MSG_WARNING);
+    LogPrintf("Wallet Warning: %s\n", str.c_str());
 }
 
 bool CWallet::InitLoadWallet()

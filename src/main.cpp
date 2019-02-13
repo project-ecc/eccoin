@@ -49,7 +49,7 @@
 #include "tinyformat.h"
 #include "txdb.h"
 #include "txmempool.h"
-#include "ui_interface.h"
+
 #include "undo.h"
 #include "util/util.h"
 #include "util/utilmoneystr.h"
@@ -1109,9 +1109,7 @@ bool AbortNode(const std::string &strMessage, const std::string &userMessage)
 {
     strMiscWarning = strMessage;
     LogPrintf("*** %s\n", strMessage);
-    uiInterface.ThreadSafeMessageBox(
-        userMessage.empty() ? ("Error: A fatal internal error occurred, see debug.log for details") : userMessage, "",
-        CClientUIInterface::MSG_ERROR);
+    LogPrintf("Error: A fatal internal error occurred, see debug.log for details\n");
     StartShutdown();
     return false;
 }

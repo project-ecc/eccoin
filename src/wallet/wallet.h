@@ -27,7 +27,7 @@
 #include "policy/policy.h"
 #include "streams.h"
 #include "tinyformat.h"
-#include "ui_interface.h"
+
 #include "util/utilstrencodings.h"
 #include "validationinterface.h"
 #include "wallet/crypter.h"
@@ -775,8 +775,6 @@ public:
 
     bool DelAddressBook(const CTxDestination &address);
 
-    void UpdatedTransaction(const uint256 &hashTx);
-
     void Inventory(const uint256 &hash)
     {
         {
@@ -825,24 +823,6 @@ public:
 
     //! Verify the wallet database and perform salvage if required
     static bool Verify(const std::string &walletFile, std::string &warningString, std::string &errorString);
-
-    /**
-     * Address book entry changed.
-     * @note called with lock cs_wallet held.
-     */
-    boost::signals2::signal<void(CWallet *wallet,
-        const CTxDestination &address,
-        const std::string &label,
-        bool isMine,
-        const std::string &purpose,
-        ChangeType status)>
-        NotifyAddressBookChanged;
-
-    /**
-     * Wallet transaction added, removed or updated.
-     * @note called with lock cs_wallet held.
-     */
-    boost::signals2::signal<void(CWallet *wallet, const uint256 &hashTx, ChangeType status)> NotifyTransactionChanged;
 
     /** Show progress e.g. for rescan */
     boost::signals2::signal<void(const std::string &title, int nProgress)> ShowProgress;

@@ -43,7 +43,7 @@
 #include "processheader.h"
 #include "processtx.h"
 #include "txmempool.h"
-#include "ui_interface.h"
+
 #include "undo.h"
 #include "util/util.h"
 #include "validationinterface.h"
@@ -640,7 +640,7 @@ bool ActivateBestChain(CValidationState &state, const CNetworkTemplate &chainpar
         // Always notify the UI if a new block tip was connected
         if (pindexFork != pindexNewTip)
         {
-            uiInterface.NotifyBlockTip(fInitialDownload, pindexNewTip);
+            BlockNotifyCallback(fInitialDownload, pindexNewTip);
 
             if (!fInitialDownload)
             {

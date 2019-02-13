@@ -44,7 +44,6 @@
 #include "torcontrol.h"
 #include "txdb.h"
 #include "txmempool.h"
-#include "ui_interface.h"
 #include "util/util.h"
 #include "util/utilmoneystr.h"
 #include "util/utilstrencodings.h"
@@ -104,7 +103,6 @@ enum BindFlags
 };
 
 static const char *FEE_ESTIMATES_FILENAME = "fee_estimates.dat";
-CClientUIInterface uiInterface; // Declared but not defined in ui_interface.h
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -159,8 +157,6 @@ public:
         }
         catch (const std::runtime_error &e)
         {
-            uiInterface.ThreadSafeMessageBox(
-                ("Error reading from database, shutting down."), "", CClientUIInterface::MSG_ERROR);
             LogPrintf("Error reading from database: %s\n", e.what());
             // Starting the shutdown sequence and returning false to the caller would be
             // interpreted as 'entry not found' (as opposed to unable to read data), and
@@ -294,13 +290,13 @@ void HandleSIGTERM(int) { shutdown_threads.store(true); }
 void HandleSIGHUP(int) { fReopenDebugLog = true; }
 bool static InitError(const std::string &str)
 {
-    uiInterface.ThreadSafeMessageBox(str, "", CClientUIInterface::MSG_ERROR);
+    LogPrintf("InitError: %s\n", str.c_str());
     return false;
 }
 
 bool static InitWarning(const std::string &str)
 {
-    uiInterface.ThreadSafeMessageBox(str, "", CClientUIInterface::MSG_WARNING);
+    LogPrintf("InitWarning: %s\n", str.c_str());
     return true;
 }
 
@@ -645,8 +641,13 @@ std::string LicenseInfo()
            "\n";
 }
 
-static void BlockNotifyCallback(bool initialSync, const CBlockIndex *pBlockIndex)
+void BlockNotifyCallback(bool initialSync, const CBlockIndex *pBlockIndex)
 {
+    if (!gArgs.IsArgSet("-blocknotify"))
+    {
+        return;
+    }
+
     if (initialSync || !pBlockIndex)
         return;
 
@@ -1189,7 +1190,6 @@ bool AppInit2(thread_group &threadGroup)
      */
     if (fServer)
     {
-        uiInterface.InitMessage.connect(SetRPCWarmupStatus);
         if (!AppInitServers(threadGroup))
             return InitError(("Unable to start HTTP server. See debug log for details."));
     }
@@ -1200,7 +1200,7 @@ bool AppInit2(thread_group &threadGroup)
 
 
     LogPrintf("Using wallet %s\n", strWalletFile);
-    uiInterface.InitMessage(("Verifying wallet..."));
+    LogPrintf("Verifying wallet...");
 
     std::string warningString;
     std::string errorString;
@@ -1549,19 +1549,8 @@ bool AppInit2(thread_group &threadGroup)
             // first suggest a reindex
             if (!fReset)
             {
-                bool fRet = uiInterface.ThreadSafeMessageBox(
-                    strLoadError + ".\n\n" + ("Do you want to rebuild the block database now?"), "",
-                    CClientUIInterface::MSG_ERROR | CClientUIInterface::BTN_ABORT);
-                if (fRet)
-                {
-                    fReindex = true;
-                    shutdown_threads.store(false);
-                }
-                else
-                {
-                    LogPrintf("Aborted block database rebuild. Exiting.\n");
-                    return false;
-                }
+                LogPrintf("Aborted block database rebuild. Exiting.\n");
+                return false;
             }
             else
             {
@@ -1595,10 +1584,7 @@ bool AppInit2(thread_group &threadGroup)
 
     // ********************************************************* Step 10: import blocks
 
-    if (gArgs.IsArgSet("-blocknotify"))
-        uiInterface.NotifyBlockTip.connect(BlockNotifyCallback);
-
-    LogPrintf("Activating best chain...");
+    LogPrintf("Activating best chain...\n");
 
     std::vector<fs::path> vImportFiles;
     if (gArgs.IsArgSet("-loadblock"))

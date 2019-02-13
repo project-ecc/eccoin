@@ -48,6 +48,8 @@ std::string HelpMessage();
 /** Returns licensing information (for -version) */
 std::string LicenseInfo();
 
+void BlockNotifyCallback(bool initialSync, const CBlockIndex *pBlockIndex);
+
 extern std::unique_ptr<CCoinsViewDB> pcoinsdbview;
 
 

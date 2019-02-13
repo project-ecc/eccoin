@@ -23,17 +23,14 @@
 #include "test/testutil.h"
 #include "txdb.h"
 #include "txmempool.h"
-#include "ui_interface.h"
+
 #include "util/logger.h"
 #include <boost/program_options.hpp>
 #include <boost/test/unit_test.hpp>
 
 #include <memory>
 
-
-extern void noui_connect();
 CWallet *pwallet = nullptr;
-
 
 BasicTestingSetup::BasicTestingSetup(const std::string &chainName)
 {
@@ -45,7 +42,6 @@ BasicTestingSetup::BasicTestingSetup(const std::string &chainName)
     pnetMan = new CNetworkManager();
     pwallet = new CWallet("walletFile");
     pnetMan->SetParams(chainName);
-    noui_connect();
 }
 
 BasicTestingSetup::~BasicTestingSetup() { ECC_Stop(); }
