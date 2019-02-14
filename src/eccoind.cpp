@@ -23,10 +23,10 @@
 #include "httpserver.h"
 #include "init.h"
 #include "networks/netman.h"
-#include "noui.h"
 #include "rpc/rpcserver.h"
 #include "sync.h"
 #include "threadgroup.h"
+#include "util/logger.h"
 #include "util/util.h"
 
 #include <boost/algorithm/string/predicate.hpp>
@@ -91,7 +91,7 @@ bool AppInit(int argc, char *argv[])
     // Process help and version before taking care about datadir
     if (gArgs.IsArgSet("-?") || gArgs.IsArgSet("-h") || gArgs.IsArgSet("-help") || gArgs.IsArgSet("-version"))
     {
-        std::string strUsage = _("Eccoind") + " " + _("version") + " " + FormatFullVersion() + "\n";
+        std::string strUsage = "Eccoind version " + FormatFullVersion() + "\n";
 
         if (gArgs.IsArgSet("-version"))
         {
@@ -99,8 +99,7 @@ bool AppInit(int argc, char *argv[])
         }
         else
         {
-            strUsage +=
-                "\n" + _("Usage:") + "\n" + "  eccoind [options]                     " + _("Start Eccoind") + "\n";
+            strUsage += "\nUsage:\neccoind [options]                     Start Eccoind\n";
 
             strUsage += "\n" + HelpMessage();
         }
@@ -186,9 +185,6 @@ bool AppInit(int argc, char *argv[])
 int main(int argc, char *argv[])
 {
     SetupEnvironment();
-
-    // Connect eccoind signal handlers
-    noui_connect();
 
     return (AppInit(argc, argv) ? 0 : 1);
 }

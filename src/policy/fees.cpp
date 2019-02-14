@@ -26,6 +26,7 @@
 #include "chain/tx.h"
 #include "streams.h"
 #include "txmempool.h"
+#include "util/logger.h"
 #include "util/util.h"
 
 void TxConfirmStats::Initialize(std::vector<double> &defaultBuckets,

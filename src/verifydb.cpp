@@ -25,8 +25,8 @@
 #include "processblock.h"
 
 
-CVerifyDB::CVerifyDB() { uiInterface.ShowProgress(_("Verifying blocks..."), 0); }
-CVerifyDB::~CVerifyDB() { uiInterface.ShowProgress("", 100); }
+CVerifyDB::CVerifyDB() {}
+CVerifyDB::~CVerifyDB() {}
 bool CVerifyDB::VerifyDB(const CNetworkTemplate &chainparams, CCoinsView *coinsview, int nCheckLevel, int nCheckDepth)
 {
     LOCK(cs_main);
@@ -54,10 +54,6 @@ bool CVerifyDB::VerifyDB(const CNetworkTemplate &chainparams, CCoinsView *coinsv
             LogPrintf("VerifyDB(): Shutdown requested. Exiting.\n");
             return false;
         }
-        uiInterface.ShowProgress(_("Verifying blocks..."),
-            std::max(1, std::min(
-                            99, (int)(((double)(pnetMan->getChainActive()->chainActive.Height() - pindex->nHeight)) /
-                                      (double)nCheckDepth * (nCheckLevel >= 4 ? 50 : 100)))));
         if (pindex->nHeight < pnetMan->getChainActive()->chainActive.Height() - nCheckDepth)
             break;
         CBlock block;
@@ -120,10 +116,6 @@ bool CVerifyDB::VerifyDB(const CNetworkTemplate &chainparams, CCoinsView *coinsv
                 LogPrintf("VerifyDB(): [lower] Shutdown requested. Exiting.\n");
                 return false;
             }
-            uiInterface.ShowProgress(_("Verifying blocks..."),
-                std::max(1, std::min(99, 100 - (int)(((double)(pnetMan->getChainActive()->chainActive.Height() -
-                                                               pindex->nHeight)) /
-                                                     (double)nCheckDepth * 50))));
             pindex = pnetMan->getChainActive()->chainActive.Next(pindex);
             CBlock block;
             if (!ReadBlockFromDisk(block, pindex, chainparams.GetConsensus()))

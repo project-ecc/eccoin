@@ -29,7 +29,7 @@
 #include "init.h"
 #include "net/addrman.h"
 #include "networks/netman.h"
-#include "ui_interface.h"
+
 #include "util/utilstrencodings.h"
 
 #ifdef WIN32
@@ -598,7 +598,7 @@ void CConnman::SweepBanned()
         {
             setBanned.erase(it++);
             setBannedIsDirty = true;
-            LogPrint("%s: Removed banned node ip/subnet from banlist.dat: %s\n", __func__, subNet.ToString());
+            LogPrintf("%s: Removed banned node ip/subnet from banlist.dat: %s\n", __func__, subNet.ToString());
         }
         else
         {
@@ -1634,7 +1634,7 @@ void MapPort(bool fUseUPnP)
             delete upnp_thread;
             upnp_thread = nullptr;
         }
-        upnp_thread = new std::thread(&TraceThread<void (*)()>, "upnp", &ThreadMapPort);
+        upnp_thread = new std::thread(&ThreadMapPort);
     }
     else if (upnp_thread)
     {
@@ -2313,14 +2313,14 @@ bool CConnman::BindListenPort(const CService &addrBind, std::string &strError, b
         int nErr = WSAGetLastError();
         if (nErr == WSAEADDRINUSE)
         {
-            strError = strprintf(_("Unable to bind to %s on this computer. %s "
-                                   "is probably already running."),
-                addrBind.ToString(), _("Eccoind"));
+            strError = strprintf("Unable to bind to %s on this computer. %s "
+                                 "is probably already running.",
+                addrBind.ToString(), "Eccoind");
         }
         else
         {
-            strError = strprintf(_("Unable to bind to %s on this computer "
-                                   "(bind returned error %s)"),
+            strError = strprintf("Unable to bind to %s on this computer "
+                                 "(bind returned error %s)",
                 addrBind.ToString(), NetworkErrorString(nErr));
         }
         LogPrintf("%s\n", strError);
@@ -2332,8 +2332,8 @@ bool CConnman::BindListenPort(const CService &addrBind, std::string &strError, b
     // Listen for incoming connections
     if (listen(hListenSocket, SOMAXCONN) == SOCKET_ERROR)
     {
-        strError = strprintf(_("Error: Listening for incoming connections "
-                               "failed (listen returned error %s)"),
+        strError = strprintf("Error: Listening for incoming connections "
+                             "failed (listen returned error %s)",
             NetworkErrorString(WSAGetLastError()));
         LogPrintf("%s\n", strError);
         CloseSocket(hListenSocket);
@@ -2946,7 +2946,7 @@ CNode::CNode(NodeId idIn,
     }
     mapRecvBytesPerMsgCmd[NET_MESSAGE_COMMAND_OTHER] = 0;
 
-    if (fLogIPs)
+    if (g_logger->fLogIPs)
     {
         LogPrintf("Added connection to %s peer=%d\n", addrName, id);
     }

@@ -777,7 +777,7 @@ void StartTorControl(thread_group &threadGroup)
         return;
     }
 
-    torControlThread = std::thread(boost::bind(&TraceThread<void (*)()>, "torcontrol", &TorControlThread));
+    torControlThread = std::thread(&TorControlThread);
 }
 
 void InterruptTorControl()

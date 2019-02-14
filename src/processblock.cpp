@@ -43,7 +43,7 @@
 #include "processheader.h"
 #include "processtx.h"
 #include "txmempool.h"
-#include "ui_interface.h"
+
 #include "undo.h"
 #include "util/util.h"
 #include "validationinterface.h"
@@ -235,7 +235,7 @@ void UpdateTip(CBlockIndex *pindexNew)
             {
                 if (state == THRESHOLD_ACTIVE)
                 {
-                    strMiscWarning = strprintf(_("Warning: unknown new rules activated (versionbit %i)"), bit);
+                    strMiscWarning = strprintf("Warning: unknown new rules activated (versionbit %i)", bit);
                     if (!fWarned)
                     {
                         fWarned = true;
@@ -259,8 +259,7 @@ void UpdateTip(CBlockIndex *pindexNew)
         if (nUpgraded > 100 / 2)
         {
             // strMiscWarning is read by GetWarnings(), called by Qt and the JSON-RPC code to warn the user:
-            strMiscWarning =
-                _("Warning: Unknown block versions being mined! It's possible unknown rules are in effect");
+            strMiscWarning = "Warning: Unknown block versions being mined! It's possible unknown rules are in effect";
             if (!fWarned)
             {
                 fWarned = true;
@@ -641,7 +640,7 @@ bool ActivateBestChain(CValidationState &state, const CNetworkTemplate &chainpar
         // Always notify the UI if a new block tip was connected
         if (pindexFork != pindexNewTip)
         {
-            uiInterface.NotifyBlockTip(fInitialDownload, pindexNewTip);
+            BlockNotifyCallback(fInitialDownload, pindexNewTip);
 
             if (!fInitialDownload)
             {

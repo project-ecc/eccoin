@@ -27,7 +27,7 @@
 #include "networks/netman.h"
 #include "rpc/rpcprotocol.h" // For HTTP status codes
 #include "sync.h"
-#include "ui_interface.h"
+
 #include "util/util.h"
 
 #include <stdio.h>
@@ -234,12 +234,11 @@ static bool InitHTTPAllowList()
             LookupSubNet(strAllow.c_str(), subnet);
             if (!subnet.IsValid())
             {
-                uiInterface.ThreadSafeMessageBox(strprintf("Invalid -rpcallowip subnet specification: %s. "
-                                                           "Valid are a single IP (e.g. 1.2.3.4), a "
-                                                           "network/netmask (e.g. 1.2.3.4/255.255.255.0) or "
-                                                           "a network/CIDR (e.g. 1.2.3.4/24).",
-                                                     strAllow),
-                    "", CClientUIInterface::MSG_ERROR);
+                LogPrintf("Invalid -rpcallowip subnet specification: %s. "
+                          "Valid are a single IP (e.g. 1.2.3.4), a "
+                          "network/netmask (e.g. 1.2.3.4/255.255.255.0) or "
+                          "a network/CIDR (e.g. 1.2.3.4/24).",
+                    strAllow);
                 return false;
             }
             rpc_allow_subnets.push_back(subnet);
@@ -430,8 +429,7 @@ bool InitHTTPServer()
 
     if (gArgs.GetBoolArg("-rpcssl", false))
     {
-        uiInterface.ThreadSafeMessageBox(
-            "SSL mode for RPC (-rpcssl) is no longer supported.", "", CClientUIInterface::MSG_ERROR);
+        LogPrintf("SSL mode for RPC (-rpcssl) is no longer supported. \n");
         return false;
     }
 
@@ -440,7 +438,7 @@ bool InitHTTPServer()
 #if LIBEVENT_VERSION_NUMBER >= 0x02010100
     // If -debug=libevent, set full libevent debugging.
     // Otherwise, disable all libevent debugging.
-    if (LogAcceptCategory("libevent"))
+    if (g_logger->LogAcceptCategory("libevent"))
         event_enable_debug_logging(EVENT_DBG_ALL);
     else
         event_enable_debug_logging(EVENT_DBG_NONE);

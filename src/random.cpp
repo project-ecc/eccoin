@@ -27,7 +27,8 @@
 #include <wincrypt.h>
 #endif
 #include "serialize.h"
-#include "util/util.h" // for LogPrint()
+#include "util/logger.h"
+#include "util/util.h"
 #include "util/utilstrencodings.h" // for GetTime()
 #include <cstdlib>
 #include <limits>

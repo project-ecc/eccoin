@@ -24,6 +24,7 @@
 #include "random.h"
 #include "sync.h"
 #include "timedata.h"
+#include "util/logger.h"
 #include "util/util.h"
 
 #include <map>

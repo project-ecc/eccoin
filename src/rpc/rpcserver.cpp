@@ -27,7 +27,7 @@
 #include "init.h"
 #include "random.h"
 #include "sync.h"
-#include "ui_interface.h"
+
 #include "util/util.h"
 #include "util/utilstrencodings.h"
 
@@ -758,8 +758,8 @@ static UniValue CallRPC(BaseRequestHandler *rh, const std::string &strMethod, co
         if (!GetAuthCookie(&strRPCUserColonPass))
         {
             throw std::runtime_error(
-                strprintf(_("Could not locate RPC credentials. No authentication cookie could be found, and RPC "
-                            "password is not set.  See -rpcpassword and -stdinrpcpass.  Configuration file: (%s)"),
+                strprintf("Could not locate RPC credentials. No authentication cookie could be found, and RPC "
+                          "password is not set.  See -rpcpassword and -stdinrpcpass.  Configuration file: (%s)",
                     gArgs.GetConfigFile().string().c_str()));
         }
     }

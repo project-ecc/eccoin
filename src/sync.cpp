@@ -20,6 +20,7 @@
 
 #include "sync.h"
 
+#include "util/logger.h"
 #include "util/util.h"
 #include "util/utilstrencodings.h"
 
