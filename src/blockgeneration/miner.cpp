@@ -417,7 +417,7 @@ bool CheckWork(const CBlock *pblock, CWallet &wallet, boost::shared_ptr<CReserve
 void EccMiner(CWallet *pwallet)
 {
     void *scratchbuf = scrypt_buffer_alloc();
-    LogPrintf("CPUMiner started for proof-of-%s\n", "work");
+    LogPrintf("CPUMiner started for proof-of-work\n");
     SetThreadPriority(THREAD_PRIORITY_LOWEST);
     // Make this thread recognisable as the mining thread
     RenameThread("ecc-miner");

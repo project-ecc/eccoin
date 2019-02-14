@@ -235,10 +235,10 @@ static bool InitHTTPAllowList()
             if (!subnet.IsValid())
             {
                 LogPrintf("Invalid -rpcallowip subnet specification: %s. "
-                            "Valid are a single IP (e.g. 1.2.3.4), a "
-                            "network/netmask (e.g. 1.2.3.4/255.255.255.0) or "
-                            "a network/CIDR (e.g. 1.2.3.4/24).",
-                            strAllow);
+                          "Valid are a single IP (e.g. 1.2.3.4), a "
+                          "network/netmask (e.g. 1.2.3.4/255.255.255.0) or "
+                          "a network/CIDR (e.g. 1.2.3.4/24).",
+                    strAllow);
                 return false;
             }
             rpc_allow_subnets.push_back(subnet);

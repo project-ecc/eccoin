@@ -324,7 +324,7 @@ std::unique_ptr<CBlockTemplate> CreateNewPoSBlock(CWallet *pwallet, const CScrip
 
 void EccMinter(CWallet *pwallet)
 {
-    LogPrintf("CPUMiner started for proof-of-%s\n", "stake");
+    LogPrintf("CPUMiner started for proof-of-stake\n");
     SetThreadPriority(THREAD_PRIORITY_LOWEST);
     // Make this thread recognisable as the mining thread
     RenameThread("ecc-minter");

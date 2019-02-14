@@ -2723,7 +2723,7 @@ void CWallet::ReturnKey(int64_t nIndex)
         LOCK(cs_wallet);
         setKeyPool.insert(nIndex);
     }
-    LogPrintf("wallet", "keypool return %d\n", nIndex);
+    LogPrint("wallet", "keypool return %d\n", nIndex);
 }
 
 bool CWallet::GetKeyFromPool(CPubKey &result)
@@ -3443,7 +3443,7 @@ bool CWallet::CreateCoinStake(const CKeyStore &keystore,
                     LogPrint("wallet", "CreateCoinStake : failed to parse kernel\n");
                     break;
                 }
-                LogPrintf("wallet", "CreateCoinStake : parsed kernel type=%d\n", whichType);
+                LogPrint("wallet", "CreateCoinStake : parsed kernel type=%d\n", whichType);
                 if (whichType != TX_PUBKEY && whichType != TX_PUBKEYHASH)
                 {
                     LogPrint("wallet", "CreateCoinStake : no support for kernel type=%d\n", whichType);
@@ -3575,11 +3575,7 @@ bool static UIError(const std::string &str)
     return false;
 }
 
-void static UIWarning(const std::string &str)
-{
-    LogPrintf("Wallet Warning: %s\n", str.c_str());
-}
-
+void static UIWarning(const std::string &str) { LogPrintf("Wallet Warning: %s\n", str.c_str()); }
 bool CWallet::InitLoadWallet()
 {
     std::string walletFile = gArgs.GetArg("-wallet", DEFAULT_WALLET_DAT);
