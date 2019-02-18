@@ -808,7 +808,6 @@ UniValue signrawtransaction(const UniValue &params, bool fHelp)
             continue;
         }
         const CScript &prevPubKey = coin.out.scriptPubKey;
-        const CAmount &amount = coin.out.nValue;
 
         txin.scriptSig.clear();
         // Only sign SIGHASH_SINGLE if there's a corresponding output:
