@@ -197,6 +197,13 @@ wallet/wallet.cpp
 wallet/wallet.h
 wallet/walletdb.cpp
 wallet/walletdb.h
+zmq/zmqabstractnotifier.cpp
+zmq/zmqabstractnotifier.h
+zmq/zmqconfig.h
+zmq/zmqnotificationinterface.cpp
+zmq/zmqnotificationinterface.h
+zmq/zmqpublishnotifier.cpp
+zmq/zmqpublishnotifier.h
 test/addrman_tests.cpp
 test/allocator_tests.cpp
 test/arith_uint256_tests.cpp

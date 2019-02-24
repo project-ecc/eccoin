@@ -113,6 +113,7 @@ test_test_bitcoin_LDADD = \
   $(LIBBITCOIN_CONSENSUS) \
   $(LIBBITCOIN_CRYPTO) \
   $(LIBUNIVALUE) \
+  $(LIBBITCOIN_ZMQ) \
   $(LIBLEVELDB) \
   $(LIBLEVELDB_SSE42) \
   $(LIBMEMENV) \
@@ -131,6 +132,10 @@ test_test_bitcoin_LDADD += $(LIBBITCOIN_WALLET)
 test_test_bitcoin_LDADD += $(LIBBITCOIN_CONSENSUS) $(BDB_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(MINIUPNPC_LIBS)
 test_test_bitcoin_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS) -static
 
+if ENABLE_ZMQ
+test_test_bitcoin_LDADD += $(ZMQ_LIBS)
+endif
+
 #
 
 # test_bitcoin_fuzzy binary #
@@ -143,6 +148,7 @@ test_test_bitcoin_fuzzy_LDADD = \
   $(LIBBITCOIN_SERVER) \
   $(LIBBITCOIN_COMMON) \
   $(LIBUNIVALUE) \
+  $(LIBBITCOIN_ZMQ) \
   $(LIBBITCOIN_UTIL) \
   $(LIBBITCOIN_WALLET) \
   $(LIBBITCOIN_CONSENSUS) \
@@ -152,7 +158,7 @@ test_test_bitcoin_fuzzy_LDADD = \
   $(LIBMEMENV) \
   $(LIBSECP256K1)
 
-test_test_bitcoin_fuzzy_LDADD += $(BOOST_LIBS) $(BDB_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(MINIUPNPC_LIBS) $(EVENT_PTHREADS_LIBS) $(EVENT_LIBS)
+test_test_bitcoin_fuzzy_LDADD += $(BOOST_LIBS) $(BDB_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(MINIUPNPC_LIBS) $(EVENT_PTHREADS_LIBS) $(EVENT_LIBS) $(ZMQ_LIBS)
 #
 
 nodist_test_test_bitcoin_SOURCES = $(GENERATED_TEST_FILES)

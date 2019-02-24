@@ -72,6 +72,11 @@
 
 #include <openssl/crypto.h>
 
+#if ENABLE_ZMQ
+#include "zmq/zmqnotificationinterface.h"
+static CZMQNotificationInterface *pzmqNotificationInterface = nullptr;
+#endif
+
 CWallet *pwalletMain = nullptr;
 CNetworkManager *pnetMan = nullptr;
 
@@ -261,6 +266,15 @@ void Shutdown()
     {
         pwalletMain->Flush(true);
     }
+
+#if ENABLE_ZMQ
+    if (pzmqNotificationInterface)
+    {
+        UnregisterValidationInterface(pzmqNotificationInterface);
+        delete pzmqNotificationInterface;
+        pzmqNotificationInterface = NULL;
+    }
+#endif
 
 #ifndef WIN32
     try
@@ -1594,14 +1608,22 @@ bool AppInit2(thread_group &threadGroup)
     }
     threadGroup.create_thread("importFiles", &ThreadImport, vImportFiles);
 
-    if (pnetMan->getChainActive()->chainActive.Tip() == NULL)
+    if (pnetMan->getChainActive()->chainActive.Tip() == nullptr)
     {
         LogPrintf("Waiting for genesis block to be imported...\n");
-        while (!shutdown_threads.load() && pnetMan->getChainActive()->chainActive.Tip() == NULL)
+        while (!shutdown_threads.load() && pnetMan->getChainActive()->chainActive.Tip() == nullptr)
         {
             MilliSleep(10);
         }
     }
+
+#if ENABLE_ZMQ
+    pzmqNotificationInterface = CZMQNotificationInterface::CreateWithArguments(gArgs.GetMapArgs());
+    if (pzmqNotificationInterface)
+    {
+        RegisterValidationInterface(pzmqNotificationInterface);
+    }
+#endif
 
     // ********************************************************* Step 11: start node
 
