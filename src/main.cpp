@@ -737,7 +737,7 @@ bool AcceptToMemoryPoolWorker(CTxMemPool &pool,
             dFreeCount += nSize;
         }
 
-        if (fRejectAbsurdFee && tx.nVersion == 1 && nFees > ::minRelayTxFee.GetFee(nSize) * 10000)
+        if (fRejectAbsurdFee && tx.nVersion == 1 && nFees > maxTxFee)
         {
             LogPrintf("Absurdly-high-fee of %d for tx with version of 1 \n", nFees);
             return state.Invalid(false, REJECT_HIGHFEE, "absurdly-high-fee",
