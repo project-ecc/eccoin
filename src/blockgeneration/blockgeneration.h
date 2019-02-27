@@ -27,7 +27,7 @@
 
 static const bool DEFAULT_GENERATE = false;
 static const bool DEFAULT_PRINTPRIORITY = false;
-
+static const uint64_t DEFAULT_MIN_BLOCK_GEN_PEERS = 4;
 struct CBlockTemplate
 {
     CBlock block;
