@@ -46,6 +46,8 @@
 
 #include <univalue.h>
 
+void RelayTransaction(const CTransaction &tx, CConnman &connman);
+
 void ScriptPubKeyToJSON(const CScript &scriptPubKey, UniValue &out, bool fIncludeHex)
 {
     txnouttype type;
@@ -913,7 +915,6 @@ UniValue sendrawtransaction(const UniValue &params, bool fHelp)
         throw JSONRPCError(RPC_CLIENT_P2P_DISABLED, "Error: Peer-to-peer functionality missing or disabled");
     }
 
-    CInv inv(MSG_TX, txid);
-    g_connman->ForEachNode([&inv](CNode *pnode) { pnode->PushInventory(inv); });
+    RelayTransaction(ttx, *g_connman);
     return txid.GetHex();
 }
