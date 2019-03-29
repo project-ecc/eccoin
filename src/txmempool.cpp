@@ -1355,8 +1355,10 @@ void CTxMemPool::TrimToSize(size_t sizelimit, std::vector<COutPoint> *pvNoSpends
     }
 
     if (maxFeeRateRemoved > CFeeRate(0))
-        LogPrintf(
+    {
+        LogPrint(
             "MEMPOOL", "Removed %u txn, rolling minimum fee bumped to %s\n", nTxnRemoved, maxFeeRateRemoved.ToString());
+    }
 }
 
 void CTxMemPool::UpdateTransactionsPerSecond()

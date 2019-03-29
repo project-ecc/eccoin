@@ -211,7 +211,7 @@ BOOST_AUTO_TEST_CASE(MempoolIndexingTest)
     std::vector<std::string> snapshotOrder;
     {
         CTxMemPool::setEntries setAncestorsCalculated;
-        LOCK(pool.cs);
+        WRITELOCK(pool.cs);
         BOOST_CHECK_EQUAL(pool._CalculateMemPoolAncestors(entry.Fee(2000000LL).FromTx(tx7), setAncestorsCalculated, 100,
                               1000000, 1000, 1000000, dummy),
             true);
