@@ -717,12 +717,7 @@ bool AcceptToMemoryPoolWorker(CTxMemPool &pool,
             nFees);
         if (fLimitFree && nModifiedFees < ::minRelayTxFee.GetFee(nSize))
         {
-            static CCriticalSection csFreeLimiter;
             static double dFreeCount;
-            static int64_t nLastTime;
-            int64_t nNow = GetTime();
-
-            LOCK(csFreeLimiter);
 
             // Use an exponentially decaying ~10-minute window:
             dFreeCount *= pow(1.0 - 1.0 / 600.0, (double)(nNow - nLastTime));
