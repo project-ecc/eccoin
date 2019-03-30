@@ -1592,6 +1592,8 @@ void ThreadMapPort()
                 while (nStart <= nFinish && upnp_thread_shutdown.load() == false)
                 {
                     MilliSleep(10000);
+                    // this is more performant than calling GetTime() multipe times
+                    nStart += 10000;
                 }
                 if (upnp_thread_shutdown.load())
                 {
