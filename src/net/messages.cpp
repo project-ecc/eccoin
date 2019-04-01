@@ -1730,6 +1730,21 @@ bool static ProcessMessage(CNode *pfrom,
             return true;
         }
 
+        // check if these are duplicate headers
+        uint256 hash = headers.front().GetHash();
+        CBlockIndex *_pindex = pnetMan->getChainActive()->LookupBlockIndex(hash);
+        if (hash != chainparams.GetConsensus().hashGenesisBlock)
+        {
+            if (_pindex)
+            {
+                if (_pindex->nStatus & BLOCK_FAILED_MASK)
+                {
+                    return error("invalid header received");
+                }
+                return true;
+            }
+        }
+
         CBlockIndex *pindexLast = NULL;
         for (const CBlockHeader &header : headers)
         {
