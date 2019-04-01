@@ -1327,7 +1327,7 @@ bool static ProcessMessage(CNode *pfrom,
                         // later (within the same cs_main lock, though).
                         MarkBlockAsInFlight(pfrom->GetId(), inv.hash, chainparams.GetConsensus());
                     }
-                    LogPrintf("getheaders (%d) %s to peer=%d\n", pnetMan->getChainActive()->pindexBestHeader->nHeight,
+                    LogPrint("net", "getheaders (%d) %s to peer=%d\n", pnetMan->getChainActive()->pindexBestHeader->nHeight,
                         inv.hash.ToString(), pfrom->id);
                 }
             }
