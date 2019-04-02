@@ -1327,8 +1327,8 @@ bool static ProcessMessage(CNode *pfrom,
                         // later (within the same cs_main lock, though).
                         MarkBlockAsInFlight(pfrom->GetId(), inv.hash, chainparams.GetConsensus());
                     }
-                    LogPrint("net", "getheaders (%d) %s to peer=%d\n", pnetMan->getChainActive()->pindexBestHeader->nHeight,
-                        inv.hash.ToString(), pfrom->id);
+                    LogPrint("net", "getheaders (%d) %s to peer=%d\n",
+                        pnetMan->getChainActive()->pindexBestHeader->nHeight, inv.hash.ToString(), pfrom->id);
                 }
             }
             else
@@ -1760,7 +1760,14 @@ bool static ProcessMessage(CNode *pfrom,
                 if (state.IsInvalid(nDoS))
                 {
                     if (nDoS > 0)
+                    {
                         Misbehaving(pfrom->GetId(), nDoS, state.GetRejectReason());
+                    }
+                    if (state.GetRejectReason() == "bad-prevblk")
+                    {
+                        connman.PushMessage(pfrom, NetMsgType::GETHEADERS,
+                            pnetMan->getChainActive()->chainActive.GetLocator(pindexLast), uint256());
+                    }
                     return error("invalid header received");
                 }
             }
