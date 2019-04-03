@@ -2466,6 +2466,12 @@ bool CConnman::Start(std::string &strNodeError)
 
     SetBestHeight(pnetMan->getChainActive()->chainActive.Height());
 
+    LogPrintf("Generating random routing id...");
+
+    pub_routing_key.MakeNewKey(true);
+    pub_routing_id = pub_routing_key.GetPubKey();
+    assert(pub_routing_key.VerifyPubKey(pub_routing_id));
+
     LogPrintf("Loading addresses...");
     // Load addresses from peers.dat
     int64_t nStart = GetTimeMillis();
@@ -3049,4 +3055,9 @@ uint64_t CConnman::CalculateKeyedNetGroup(const CAddress &ad) const
     std::vector<uint8_t> vchNetGroup(ad.GetGroup());
 
     return GetDeterministicRandomizer(RANDOMIZER_ID_NETGROUP).Write(&vchNetGroup[0], vchNetGroup.size()).Finalize();
+}
+
+CPubKey CConnman::GetRoutingKey() const
+{
+    return pub_routing_id;
 }
