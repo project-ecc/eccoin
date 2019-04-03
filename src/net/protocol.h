@@ -180,13 +180,6 @@ extern const char *PING;
  */
 extern const char *PONG;
 /**
- * The alert message warns nodes of problems that may affect them or the rest
- * of the network.
- * @since protocol version 311.
- * @see https://bitcoin.org/en/developer-reference#alert
- */
-extern const char *ALERT;
-/**
  * The notfound message is a reply to a getdata message which requested an
  * object the receiving node does not have available for relay.
  * @ince protocol version 70001.
@@ -234,6 +227,31 @@ extern const char *REJECT;
  * @see https://bitcoin.org/en/developer-reference#sendheaders
  */
 extern const char *SENDHEADERS;
+/**
+ * A message broadcast to all peers when searching for a route to a peer
+ * with a specific public routing id which should be specified in this
+ * message.
+ * @Heavily based on RREQ network message in AODV routing
+ * @see https://www.ietf.org/rfc/rfc3561.txt
+ */
+extern const char *RREQ; //ROUTE_REQUEST
+/**
+ * A message sent back to the originator of the RREQ notifying them that
+ * we either are the node they are looking for or know of a route
+ * to the node with the public routing id they are looking for.
+ * @Heavily based on RREP network message in AODV routing
+ * @see https://www.ietf.org/rfc/rfc3561.txt
+ */
+extern const char *RREP; //ROUTE_REPLY
+/**
+ * Broadcast to peers in the event that: a route it was known to have is
+ * now broken, it gets data for a route it does not have, or it recieved
+ * a RERR from a neighbor and needs for forward the linkage break down
+ * to its peers to notify them as well.
+ * @Heavily based on RERR network message in AODV routing
+ * @see https://www.ietf.org/rfc/rfc3561.txt
+ */
+extern const char *RERR; //ROUTE_ERROR
 };
 
 /* Get a vector of all valid message types (see above) */
