@@ -313,7 +313,10 @@ static const CRPCCommand vRPCCommands[] = {
     {"network", "getconnectioncount", &getconnectioncount, true}, {"network", "getnettotals", &getnettotals, true},
     {"network", "getpeerinfo", &getpeerinfo, true}, {"network", "ping", &ping, true},
     {"network", "setban", &setban, true}, {"network", "listbanned", &listbanned, true},
-    {"network", "clearbanned", &clearbanned, true},
+    {"network", "clearbanned", &clearbanned, true}, {"network", "getaodvtable", &getaodvtable, true},
+    {"network", "getaodvkeyentry", &getaodvkeyentry, true}, {"network", "getaodvidentry", &getaodvidentry, true},
+    {"network", "getroutingpubkey", &getroutingpubkey, true}, {"network", "findroute", &findroute, true},
+    {"network", "haveroute", &haveroute, true},
 
     /* Block chain and UTXO */
     {"blockchain", "getblockchaininfo", &getblockchaininfo, true},
