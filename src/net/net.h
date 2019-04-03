@@ -315,6 +315,8 @@ public:
     // Whether a ping is requested.
     std::atomic<bool> fPingQueued;
 
+    std::atomic<uint64_t> nNetworkServiceVersion;
+
     CNode(NodeId id,
         ServiceFlags nLocalServicesIn,
         int nMyStartingHeightIn,

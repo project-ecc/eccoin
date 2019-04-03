@@ -71,8 +71,8 @@ const static std::string allNetMessageTypes[] = {NetMsgType::VERSION, NetMsgType
     NetMsgType::INV, NetMsgType::GETDATA, NetMsgType::MERKLEBLOCK, NetMsgType::GETBLOCKS, NetMsgType::GETHEADERS,
     NetMsgType::TX, NetMsgType::HEADERS, NetMsgType::BLOCK, NetMsgType::GETADDR, NetMsgType::MEMPOOL, NetMsgType::PING,
     NetMsgType::PONG, NetMsgType::NOTFOUND, NetMsgType::FILTERLOAD, NetMsgType::FILTERADD, NetMsgType::FILTERCLEAR,
-    NetMsgType::REJECT, NetMsgType::SENDHEADERS, NetMsgType::RREQ, NetMsgType::RREP,
-    NetMsgType::RERR, NetMsgType::NSVERSION, NetMsgType::NSVERACK};
+    NetMsgType::REJECT, NetMsgType::SENDHEADERS, NetMsgType::RREQ, NetMsgType::RREP, NetMsgType::RERR,
+    NetMsgType::NSVERSION, NetMsgType::NSVERACK};
 
 const static std::vector<std::string> allNetMessageTypesVec(allNetMessageTypes,
     allNetMessageTypes + ARRAYLEN(allNetMessageTypes));
