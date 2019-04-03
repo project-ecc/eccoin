@@ -234,7 +234,7 @@ extern const char *SENDHEADERS;
  * @Heavily based on RREQ network message in AODV routing
  * @see https://www.ietf.org/rfc/rfc3561.txt
  */
-extern const char *RREQ; //ROUTE_REQUEST
+extern const char *RREQ; // ROUTE_REQUEST
 /**
  * A message sent back to the originator of the RREQ notifying them that
  * we either are the node they are looking for or know of a route
@@ -242,7 +242,7 @@ extern const char *RREQ; //ROUTE_REQUEST
  * @Heavily based on RREP network message in AODV routing
  * @see https://www.ietf.org/rfc/rfc3561.txt
  */
-extern const char *RREP; //ROUTE_REPLY
+extern const char *RREP; // ROUTE_REPLY
 /**
  * Broadcast to peers in the event that: a route it was known to have is
  * now broken, it gets data for a route it does not have, or it recieved
@@ -251,7 +251,16 @@ extern const char *RREP; //ROUTE_REPLY
  * @Heavily based on RERR network message in AODV routing
  * @see https://www.ietf.org/rfc/rfc3561.txt
  */
-extern const char *RERR; //ROUTE_ERROR
+extern const char *RERR; // ROUTE_ERROR
+/**
+ * The nsversion message provides information the network services supported
+ * by the transmitting node to the receiving node.
+ */
+extern const char *NSVERSION;
+/**
+ * The nsverack message acknowledges a previously-received nsversion message,
+ */
+extern const char *NSVERACK;
 };
 
 /* Get a vector of all valid message types (see above) */

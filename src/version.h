@@ -54,10 +54,10 @@ static const int NETWORK_SERVICE_PROTOCOL_VERSION = 60040;
 static const uint64_t NETWORK_SERVICE_VERSION = MAJOR(0) + MINOR(1) + REVISION(0);
 
 // AODV routing for public routing ids was introduced in this network service version
-static const uint64_t MIN_ADOV_VERSION = MAJOR(0) + MINOR(1) + REVISION(0);
+static const uint64_t MIN_AODV_VERSION = MAJOR(0) + MINOR(1) + REVISION(0);
 
 // This nodes AODV protocol version, this is unrelated to the network service version
-static const uint64_t ADOV_PROTOCOL_VERSION = MAJOR(0) + MINOR(1) + REVISION(1);
+static const uint64_t AODV_PROTOCOL_VERSION = MAJOR(0) + MINOR(1) + REVISION(1);
 
 
 #endif // BITCOIN_VERSION_H
