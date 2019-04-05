@@ -1327,8 +1327,8 @@ bool static ProcessMessage(CNode *pfrom,
                         // later (within the same cs_main lock, though).
                         MarkBlockAsInFlight(pfrom->GetId(), inv.hash, chainparams.GetConsensus());
                     }
-                    LogPrintf("getheaders (%d) %s to peer=%d\n", pnetMan->getChainActive()->pindexBestHeader->nHeight,
-                        inv.hash.ToString(), pfrom->id);
+                    LogPrint("net", "getheaders (%d) %s to peer=%d\n",
+                        pnetMan->getChainActive()->pindexBestHeader->nHeight, inv.hash.ToString(), pfrom->id);
                 }
             }
             else
@@ -1730,6 +1730,21 @@ bool static ProcessMessage(CNode *pfrom,
             return true;
         }
 
+        // check if these are duplicate headers
+        uint256 hash = headers.front().GetHash();
+        CBlockIndex *_pindex = pnetMan->getChainActive()->LookupBlockIndex(hash);
+        if (hash != chainparams.GetConsensus().hashGenesisBlock)
+        {
+            if (_pindex)
+            {
+                if (_pindex->nStatus & BLOCK_FAILED_MASK)
+                {
+                    return error("invalid header received");
+                }
+                return true;
+            }
+        }
+
         CBlockIndex *pindexLast = NULL;
         for (const CBlockHeader &header : headers)
         {
@@ -1745,7 +1760,14 @@ bool static ProcessMessage(CNode *pfrom,
                 if (state.IsInvalid(nDoS))
                 {
                     if (nDoS > 0)
+                    {
                         Misbehaving(pfrom->GetId(), nDoS, state.GetRejectReason());
+                    }
+                    if (state.GetRejectReason() == "bad-prevblk")
+                    {
+                        connman.PushMessage(pfrom, NetMsgType::GETHEADERS,
+                            pnetMan->getChainActive()->chainActive.GetLocator(pindexLast), uint256());
+                    }
                     return error("invalid header received");
                 }
             }

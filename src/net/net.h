@@ -463,7 +463,7 @@ public:
         CVectorWriter{SER_NETWORK, pnode->GetSendVersion(), data, 0, std::forward<Args>(args)...};
         size_t nMessageSize = data.size();
         size_t nTotalSize = nMessageSize + CMessageHeader::HEADER_SIZE;
-        LogPrintf("sending %s (%d bytes) peer=%d\n", SanitizeString(sCommand.c_str()), nMessageSize, pnode->id);
+        LogPrint("net", "sending %s (%d bytes) peer=%d\n", SanitizeString(sCommand.c_str()), nMessageSize, pnode->id);
 
         std::vector<uint8_t> serializedHeader;
         serializedHeader.reserve(CMessageHeader::HEADER_SIZE);
