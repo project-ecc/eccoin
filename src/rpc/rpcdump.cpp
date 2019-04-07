@@ -526,3 +526,48 @@ UniValue dumpwallet(const UniValue &params, bool fHelp)
     file.close();
     return NullUniValue;
 }
+
+UniValue listaddresses(const UniValue &params, bool fHelp)
+{
+    if (!EnsureWalletIsAvailable(fHelp))
+        return NullUniValue;
+
+    if (fHelp || params.size() != 0)
+        throw std::runtime_error("listaddresses \"filename\"\n"
+                                 "\nlists all used wallet keys in a human-readable format.\n"
+                                 "\nExamples:\n" +
+                                 HelpExampleCli("listaddresses", "") + HelpExampleRpc("listaddresses", ""));
+
+    LOCK2(cs_main, pwalletMain->cs_wallet);
+
+    EnsureWalletIsUnlocked();
+
+    std::map<CKeyID, int64_t> mapKeyBirth;
+    pwalletMain->GetKeyBirthTimes(mapKeyBirth);
+
+    // sort time/key pairs
+    std::vector<std::pair<int64_t, CKeyID> > vKeyBirth;
+    for (std::map<CKeyID, int64_t>::const_iterator it = mapKeyBirth.begin(); it != mapKeyBirth.end(); it++)
+    {
+        vKeyBirth.push_back(std::make_pair(it->second, it->first));
+    }
+    mapKeyBirth.clear();
+    std::sort(vKeyBirth.begin(), vKeyBirth.end());
+
+    UniValue ret(UniValue::VARR);
+    for (std::vector<std::pair<int64_t, CKeyID> >::const_iterator it = vKeyBirth.begin(); it != vKeyBirth.end(); it++)
+    {
+        const CKeyID &keyid = it->second;
+        std::string strAddr = CBitcoinAddress(keyid).ToString();
+        CKey key;
+        if (pwalletMain->GetKey(keyid, key))
+        {
+            if (pwalletMain->mapAddressBook.count(keyid))
+            {
+                ret.push_back(strprintf("%s", strAddr));
+            }
+        }
+    }
+
+    return ret;
+}
