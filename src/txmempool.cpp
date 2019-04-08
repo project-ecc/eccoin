@@ -1198,8 +1198,8 @@ int CTxMemPool::Expire(int64_t time, std::vector<COutPoint> &vCoinsToUncache)
     setEntries stage;
     for (txiter removeit : toremove)
         _CalculateDescendants(removeit, stage);
-    for (txiter it : stage)
-        for (const CTxIn &txin : it->GetTx().vin)
+    for (txiter iter : stage)
+        for (const CTxIn &txin : iter->GetTx().vin)
             vCoinsToUncache.push_back(txin.prevout);
 
     _RemoveStaged(stage);
@@ -1333,8 +1333,8 @@ void CTxMemPool::TrimToSize(size_t sizelimit, std::vector<COutPoint> *pvNoSpends
         if (pvNoSpendsRemaining)
         {
             txn.reserve(stage.size());
-            BOOST_FOREACH (txiter it, stage)
-                txn.push_back(it->GetTx());
+            BOOST_FOREACH (txiter iter, stage)
+                txn.push_back(iter->GetTx());
         }
         _RemoveStaged(stage);
         if (pvNoSpendsRemaining)
