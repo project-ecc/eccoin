@@ -359,8 +359,9 @@ static const CRPCCommand vRPCCommands[] = {
     /* Wallet */
     {"wallet", "addmultisigaddress", &addmultisigaddress, true}, {"wallet", "backupwallet", &backupwallet, true},
     {"wallet", "dumpprivkey", &dumpprivkey, true}, {"wallet", "dumpwallet", &dumpwallet, true},
-    {"wallet", "encryptwallet", &encryptwallet, true}, {"wallet", "getbalance", &getbalance, false},
-    {"wallet", "getnewaddress", &getnewaddress, true}, {"wallet", "getrawchangeaddress", &getrawchangeaddress, true},
+    {"wallet", "listaddresses", &listaddresses, true}, {"wallet", "encryptwallet", &encryptwallet, true},
+    {"wallet", "getbalance", &getbalance, false}, {"wallet", "getnewaddress", &getnewaddress, true},
+    {"wallet", "getrawchangeaddress", &getrawchangeaddress, true},
     {"wallet", "getreceivedbyaddress", &getreceivedbyaddress, false},
     {"wallet", "gettransaction", &gettransaction, false}, {"wallet", "abandontransaction", &abandontransaction, false},
     {"wallet", "getunconfirmedbalance", &getunconfirmedbalance, false},
