@@ -485,7 +485,8 @@ private:
         CAmount &nValueRet) const;
     bool SelectCoins(const CAmount &nTargetValue,
         std::set<std::pair<const CWalletTx *, unsigned int> > &setCoinsRet,
-        CAmount &nValueRet) const;
+        CAmount &nValueRet,
+        const std::vector<CTxIn> &vin) const;
     bool SelectCoins(CAmount nTargetValue,
         unsigned int nSpendTime,
         std::set<std::pair<const CWalletTx *, unsigned int> > &setCoinsRet,
@@ -597,8 +598,10 @@ public:
     /**
      * populate vCoins with vector of available COutputs.
      */
-    void AvailableCoinsByOwner(std::vector<COutput> &vCoins, const CRecipient &recipient) const;
-    void AvailableCoins(std::vector<COutput> &vCoins, bool fOnlyConfirmed = true, bool fIncludeZeroValue = false) const;
+    void AvailableCoins(std::vector<COutput> &vCoins,
+        bool fOnlyConfirmed = true,
+        bool fIncludeZeroValue = false,
+        const std::vector<CTxIn> &vin = {}) const;
 
     /**
      * Shuffle and select coins until nTargetValue is reached while avoiding
@@ -720,7 +723,8 @@ public:
         CAmount &nFeeRet,
         int &nChangePosRet,
         std::string &strFailReason,
-        bool sign = true);
+        bool sign = true,
+        const std::vector<CTxIn> &vin = {});
 
     bool CommitTransaction(CWalletTx &wtxNew, CReserveKey &reservekey, CConnman *connman, CValidationState &state);
 
