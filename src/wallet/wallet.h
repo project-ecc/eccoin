@@ -75,7 +75,7 @@ static const CAmount MIN_CHANGE = CENT;
 //! Default for -spendzeroconfchange
 static const bool DEFAULT_SPEND_ZEROCONF_CHANGE = true;
 //! Default for -sendfreetransactions
-static const bool DEFAULT_SEND_FREE_TRANSACTIONS = true;
+static const bool DEFAULT_SEND_FREE_TRANSACTIONS = false;
 //! -txconfirmtarget default
 static const unsigned int DEFAULT_TX_CONFIRM_TARGET = COINBASE_MATURITY;
 //! Largest (in bytes) free transaction we're willing to create
