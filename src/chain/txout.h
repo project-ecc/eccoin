@@ -24,6 +24,8 @@
 #include "amount.h"
 #include "script/script.h"
 
+const unsigned int DEFAULT_DUST_THRESHOLD = 546;
+
 /** An output of a transaction.  It contains the public key that the next input
  * must be able to sign with to claim it.
  */
@@ -61,26 +63,15 @@ public:
     bool IsEmpty() const { return (nValue == 0 && scriptPubKey.empty()); }
     uint256 GetHash() const;
 
-    CAmount GetDustThreshold(const CFeeRate &minRelayTxFee) const
+    CAmount GetDustThreshold() const
     {
-        // "Dust" is defined in terms of CTransaction::minRelayTxFee,
-        // which has units satoshis-per-kilobyte.
-        // If you'd pay more than 1/3 in fees
-        // to spend something, then we consider it dust.
-        // A typical spendable txout is 34 bytes big, and will
-        // need a CTxIn of at least 148 bytes to spend:
-        // so dust is a spendable txout less than
-        // 546*minRelayTxFee/1000 (in satoshis)
         if (scriptPubKey.IsUnspendable())
-            return 0;
+            return (CAmount)0;
 
-        size_t nSize = GetSerializeSize(*this, SER_DISK, 0);
-        // the 148 mentioned above
-        nSize += (32 + 4 + 1 + 107 + 4);
-        return 3 * minRelayTxFee.GetFee(nSize);
+        return (CAmount)DEFAULT_DUST_THRESHOLD;
     }
 
-    bool IsDust(const CFeeRate &minRelayTxFee) const { return (nValue < GetDustThreshold(minRelayTxFee)); }
+    bool IsDust() const { return (nValue < GetDustThreshold()); }
     friend bool operator==(const CTxOut &a, const CTxOut &b)
     {
         return (a.nValue == b.nValue && a.scriptPubKey == b.scriptPubKey);
