@@ -1,4 +1,4 @@
-DIST_SUBDIRS = secp256k1 univalue
+DIST_SUBDIRS = secp256k1 univalue rsm
 
 AM_LDFLAGS = $(PTHREAD_CFLAGS) $(LIBTOOL_LDFLAGS) $(HARDENED_LDFLAGS)
 AM_CXXFLAGS = $(HARDENED_CXXFLAGS) $(ERROR_CXXFLAGS)
@@ -10,6 +10,7 @@ BITCOIN_INCLUDES=-I$(builddir) -I$(builddir)/build $(BDB_CPPFLAGS) $(BOOST_CPPFL
 
 BITCOIN_INCLUDES += -I$(srcdir)/secp256k1/include
 BITCOIN_INCLUDES += -I$(srcdir)/univalue/include
+BITCOIN_INCLUDES += -I$(srcdir)/rsm
 
 LIBBITCOIN_SERVER=libbitcoin_server.a
 LIBSECP256K1=secp256k1/libsecp256k1.la
@@ -114,6 +115,7 @@ BITCOIN_CORE_H = \
   rpc/rpcclient.h \
   rpc/rpcprotocol.h \
   rpc/rpcserver.h \
+  rsm/recursive_shared_mutex.h \
   script/interpreter.h \
   script/script.h \
   script/script_error.h \
@@ -197,6 +199,7 @@ libbitcoin_server_a_SOURCES = \
   rpc/rpcnet.cpp \
   rpc/rpcrawtransaction.cpp \
   rpc/rpcserver.cpp \
+  rsm/recursive_shared_mutex.cpp \
   script/sigcache.cpp \
   timedata.cpp \
   torcontrol.cpp \
