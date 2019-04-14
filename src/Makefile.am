@@ -131,6 +131,7 @@ BITCOIN_CORE_H = \
   support/cleanse.h \
   support/pagelocker.h \
   sync.h \
+  sync_rsm.h \
   threadgroup.h \
   threadsafety.h \
   timedata.h \
@@ -171,6 +172,7 @@ libbitcoin_server_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES) $(MINIUPNPC_CP
 libbitcoin_server_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIC_FLAGS) $(PIE_FLAGS)
 libbitcoin_server_a_SOURCES = \
   sync.cpp \
+  sync_rsm.cpp \
   net/addrdb.cpp \
   net/addrman.cpp \
   blockgeneration/blockgeneration.cpp \

@@ -36,23 +36,6 @@ void PrintLockContention(const char *pszName, const char *pszFile, unsigned int 
 #endif /* DEBUG_LOCKCONTENTION */
 
 #ifdef DEBUG_LOCKORDER
-#include <sys/syscall.h>
-
-#ifdef __linux__
-uint64_t getTid(void)
-{
-    // "native" thread id used so the number correlates with what is shown in gdb
-    pid_t tid = (pid_t)syscall(SYS_gettid);
-    return tid;
-}
-#else
-uint64_t getTid(void)
-{
-    uint64_t tid = boost::lexical_cast<uint64_t>(boost::this_thread::get_id());
-    return tid;
-}
-#endif
-
 //
 // Early deadlock detection.
 // Problem being solved:
