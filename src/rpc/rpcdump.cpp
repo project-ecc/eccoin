@@ -540,8 +540,6 @@ UniValue listaddresses(const UniValue &params, bool fHelp)
 
     LOCK2(cs_main, pwalletMain->cs_wallet);
 
-    EnsureWalletIsUnlocked();
-
     std::map<CKeyID, int64_t> mapKeyBirth;
     pwalletMain->GetKeyBirthTimes(mapKeyBirth);
 
