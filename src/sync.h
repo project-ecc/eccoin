@@ -54,6 +54,26 @@ LEAVE_CRITICAL_SECTION(mutex); // no RAII
 //                           //
 ///////////////////////////////
 
+#ifdef DEBUG_LOCKORDER
+#include <sys/syscall.h>
+
+#ifdef __linux__
+inline uint64_t getTid(void)
+{
+    // "native" thread id used so the number correlates with what is shown in gdb
+    pid_t tid = (pid_t)syscall(SYS_gettid);
+    return tid;
+}
+#else
+inline uint64_t getTid(void)
+{
+    uint64_t tid = boost::lexical_cast<uint64_t>(boost::this_thread::get_id());
+    return tid;
+}
+#endif
+
+#endif // DEBUG_LOCKORDER
+
 /**
  * Template mixin that adds -Wthread-safety locking
  * annotations to a subset of the mutex API.
@@ -66,6 +86,7 @@ public:
     void unlock() UNLOCK_FUNCTION() { PARENT::unlock(); }
     bool try_lock() EXCLUSIVE_TRYLOCK_FUNCTION(true) { return PARENT::try_lock(); }
 };
+
 
 /**
  * Wrapped boost mutex: supports recursive locking, but no waiting
