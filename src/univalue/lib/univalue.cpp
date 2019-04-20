@@ -1,7 +1,7 @@
 // Copyright 2014 BitPay Inc.
 // Copyright 2015 Bitcoin Core Developers
 // Distributed under the MIT software license, see the accompanying
-// file COPYING or https://opensource.org/licenses/mit-license.php.
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <stdint.h>
 #include <iomanip>
@@ -107,18 +107,28 @@ bool UniValue::setObject()
 
 bool UniValue::push_back(const UniValue& val_)
 {
+#ifdef DEBUG
+    assert(typ == VARR);
+#else
     if (typ != VARR)
+    {
         return false;
-
+    }
+#endif
     values.push_back(val_);
     return true;
 }
 
 bool UniValue::push_backV(const std::vector<UniValue>& vec)
 {
+#ifdef DEBUG
+    assert(typ == VARR);
+#else
     if (typ != VARR)
+    {
         return false;
-
+    }
+#endif
     values.insert(values.end(), vec.begin(), vec.end());
 
     return true;
@@ -132,9 +142,14 @@ void UniValue::__pushKV(const std::string& key, const UniValue& val_)
 
 bool UniValue::pushKV(const std::string& key, const UniValue& val_)
 {
+#ifdef DEBUG
+    assert(typ == VOBJ);
+#else
     if (typ != VOBJ)
+    {
         return false;
-
+    }
+#endif
     size_t idx;
     if (findKey(key, idx))
         values[idx] = val_;
@@ -145,9 +160,14 @@ bool UniValue::pushKV(const std::string& key, const UniValue& val_)
 
 bool UniValue::pushKVs(const UniValue& obj)
 {
+#ifdef DEBUG
+    assert(typ == VOBJ && obj.typ == VOBJ);
+#else
     if (typ != VOBJ || obj.typ != VOBJ)
+    {
         return false;
-
+    }
+#endif
     for (size_t i = 0; i < obj.keys.size(); i++)
         __pushKV(obj.keys[i], obj.values.at(i));
 
@@ -239,4 +259,3 @@ const UniValue& find_value(const UniValue& obj, const std::string& name)
 
     return NullUniValue;
 }
-
