@@ -60,7 +60,6 @@ BITCOIN_TESTS = \
   test/addrman_tests.cpp \
   test/allocator_tests.cpp \
   test/base32_tests.cpp \
-  test/base58_tests.cpp \
   test/base64_tests.cpp \
   test/bswap_tests.cpp \
   test/checkblock_tests.cpp \
@@ -69,7 +68,6 @@ BITCOIN_TESTS = \
   test/crypto_tests.cpp \
   test/dbwrapper_tests.cpp \
   test/getarg_tests.cpp \
-  test/hash_tests.cpp \
   test/jsonutil.h \
   test/jsonutil.cpp \
   test/key_tests.cpp \
