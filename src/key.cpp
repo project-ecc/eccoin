@@ -354,13 +354,13 @@ bool CKey::Derive(CKey &keyChild, unsigned char ccChild[32], unsigned int nChild
     return ret;
 }
 
-bool CExtKey::Derive(CExtKey &out, unsigned int nChild) const
+bool CExtKey::Derive(CExtKey &out, unsigned int _nChild) const
 {
     out.nDepth = nDepth + 1;
     CKeyID id = key.GetPubKey().GetID();
     memcpy(&out.vchFingerprint[0], &id, 4);
-    out.nChild = nChild;
-    return key.Derive(out.key, out.vchChainCode, nChild, vchChainCode);
+    out.nChild = _nChild;
+    return key.Derive(out.key, out.vchChainCode, _nChild, vchChainCode);
 }
 
 void CExtKey::SetMaster(const unsigned char *seed, unsigned int nSeedLen)
