@@ -1441,14 +1441,14 @@ bool ConnectBlock(const CBlock &block,
     {
         if (pindex->GetUndoPos().IsNull())
         {
-            CDiskBlockPos pos;
-            if (!FindUndoPos(state, pindex->nFile, pos, ::GetSerializeSize(blockundo, SER_DISK, CLIENT_VERSION) + 40))
+            CDiskBlockPos _pos;
+            if (!FindUndoPos(state, pindex->nFile, _pos, ::GetSerializeSize(blockundo, SER_DISK, CLIENT_VERSION) + 40))
                 return error("ConnectBlock(): FindUndoPos failed");
-            if (!UndoWriteToDisk(blockundo, pos, pindex->pprev->GetBlockHash(), chainparams.MessageStart()))
+            if (!UndoWriteToDisk(blockundo, _pos, pindex->pprev->GetBlockHash(), chainparams.MessageStart()))
                 return AbortNode(state, "Failed to write undo data");
 
             // update nUndoPos in block index
-            pindex->nUndoPos = pos.nPos;
+            pindex->nUndoPos = _pos.nPos;
             pindex->nStatus |= BLOCK_HAVE_UNDO;
         }
         pindex->RaiseValidity(BLOCK_VALID_SCRIPTS);
@@ -1480,7 +1480,7 @@ bool ConnectBlock(const CBlock &block,
  * @param out The out point that corresponds to the tx input.
  * @return True on success.
  */
-bool ApplyTxInUndo(Coin &&undo, CCoinsViewCache &view, const COutPoint &out)
+int ApplyTxInUndo(Coin &&undo, CCoinsViewCache &view, const COutPoint &out)
 {
     bool fClean = true;
     if (view.HaveCoin(out))
