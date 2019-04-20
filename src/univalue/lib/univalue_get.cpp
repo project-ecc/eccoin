@@ -1,7 +1,7 @@
 // Copyright 2014 BitPay Inc.
 // Copyright 2015 Bitcoin Core Developers
 // Distributed under the MIT software license, see the accompanying
-// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+// file COPYING or https://opensource.org/licenses/mit-license.php.
 
 #include <stdint.h>
 #include <errno.h>
@@ -11,6 +11,7 @@
 #include <vector>
 #include <limits>
 #include <string>
+#include <sstream>
 
 #include "univalue.h"
 
