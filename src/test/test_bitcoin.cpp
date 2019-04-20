@@ -42,6 +42,8 @@ BasicTestingSetup::BasicTestingSetup(const std::string &chainName)
     pnetMan = new CNetworkManager();
     pwallet = new CWallet("walletFile");
     pnetMan->SetParams(chainName);
+    // Deterministic randomness for tests.
+    g_connman = std::make_unique<CConnman>(0x1337, 0x1337);
 }
 
 BasicTestingSetup::~BasicTestingSetup() { ECC_Stop(); }
@@ -71,6 +73,7 @@ TestingSetup::~TestingSetup()
     pnetMan->getChainActive()->pcoinsTip.reset();
     pcoinsdbview = nullptr;
     pnetMan->getChainActive()->pblocktree.reset();
+    g_connman.reset();
     fs::remove_all(pathTemp);
 }
 

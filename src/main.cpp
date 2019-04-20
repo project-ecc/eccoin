@@ -1945,7 +1945,6 @@ static const CAmount OLD_MAX_MONEY = 50000000000 * COIN;
 // miner's coin base reward
 int64_t GetProofOfWorkReward(int64_t nFees, const int nHeight, uint256 prevHash)
 {
-
     if (pnetMan->getActivePaymentNetwork()->MineBlocksOnDemand())
     {
         // just return 50 coins for regtest and the fees
