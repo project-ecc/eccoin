@@ -1,7 +1,7 @@
 sudo: required
-dist: trusty
+dist: xenial
 os: linux
-language: generic
+language: minimal
 cache:
   directories:
   - depends/built
@@ -33,7 +33,7 @@ matrix:
       addons:
         apt:
           sources:
-            - llvm-toolchain-trusty-5.0
+            - llvm-toolchain-xenial-5.0
           packages:
             - clang-5.0
       env:
