@@ -28,8 +28,15 @@
 
 typedef int64_t CAmount;
 
-static const CAmount COIN = 1000000;
-static const CAmount CENT = 10000;
+// clang-format off
+
+static const CAmount BITCOIN    = 100000000;
+static const CAmount COIN       = 1000000; // 1 ECC
+static const CAmount CENT       = 10000;
+static const CAmount BIT        = 100;
+static const CAmount SATOSHI    = 1;
+
+// clang-format on
 
 extern const std::string CURRENCY_UNIT;
 
