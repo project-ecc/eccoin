@@ -55,7 +55,7 @@ class CValidationState;
 struct LockPoints;
 /** Default for returning change from tx back an address we already owned instead of a new one (try to select address
  * with most value in it). */
-static const bool DEFAULT_RETURN_CHANGE = true;
+static const bool DEFAULT_RETURN_CHANGE = false;
 /** Default for DEFAULT_WHITELISTRELAY. */
 static const bool DEFAULT_WHITELISTRELAY = true;
 /** Default for DEFAULT_WHITELISTFORCERELAY. */
