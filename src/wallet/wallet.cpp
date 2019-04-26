@@ -1585,20 +1585,22 @@ std::vector<uint256> CWallet::ResendWalletTransactionsBefore(int64_t nTime, CCon
 {
     std::vector<uint256> result;
 
-    LOCK(cs_wallet);
-    // Sort them in chronological order
-    std::multimap<unsigned int, CWalletTx *> mapSorted;
-    for (auto const &item : mapWallet)
+    std::multimap<unsigned int, CWalletTx> mapSorted;
     {
-        CWalletTx wtx = item.second;
-        // Don't rebroadcast if newer than nTime:
-        if (wtx.nTimeReceived > nTime)
-            continue;
-        mapSorted.insert(std::make_pair(wtx.nTimeReceived, &wtx));
+        LOCK(cs_wallet);
+        // Sort them in chronological order
+        for (auto &item : mapWallet)
+        {
+            CWalletTx &wtx = item.second;
+            // Don't rebroadcast if newer than nTime:
+            if (wtx.nTimeReceived > nTime)
+                continue;
+            mapSorted.insert(std::make_pair(wtx.nTimeReceived, wtx));
+        }
     }
-    for (auto const &item : mapSorted)
+    for (auto &item : mapSorted)
     {
-        CWalletTx &wtx = *item.second;
+        CWalletTx &wtx = item.second;
         if (wtx.RelayWalletTransaction(connman))
             result.push_back(wtx.tx->GetHash());
     }
