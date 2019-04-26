@@ -107,7 +107,6 @@ BOOST_AUTO_TEST_CASE(BlockPolicyEstimates)
     }
 
     std::vector<CAmount> origFeeEst;
-    std::vector<double> origPriEst;
     // Highest feerate is 10*baseRate and gets in all blocks,
     // second highest feerate is 9*baseRate and gets in 9/10 blocks = 90%,
     // third highest feerate is 8*base rate, and gets in 8/10 blocks = 80%,
@@ -120,13 +119,10 @@ BOOST_AUTO_TEST_CASE(BlockPolicyEstimates)
         if (i > 1)
         { // Fee estimates should be monotonically decreasing
             BOOST_CHECK(origFeeEst[i - 1] <= origFeeEst[i - 2]);
-            BOOST_CHECK(origPriEst[i - 1] <= origPriEst[i - 2]);
         }
         int mult = 11 - i;
         BOOST_CHECK(origFeeEst[i - 1] < mult * baseRate.GetFeePerK() + deltaFee);
         BOOST_CHECK(origFeeEst[i - 1] > mult * baseRate.GetFeePerK() - deltaFee);
-        BOOST_CHECK(origPriEst[i - 1] < pow(10, mult) * basepri + deltaPri);
-        BOOST_CHECK(origPriEst[i - 1] > pow(10, mult) * basepri - deltaPri);
     }
 
     // Mine 50 more blocks with no transactions happening, estimates shouldn't change

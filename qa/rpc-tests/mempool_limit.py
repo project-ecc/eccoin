@@ -16,7 +16,7 @@ class MempoolLimitTest(BitcoinTestFramework):
 
     def setup_network(self):
         self.nodes = []
-        self.nodes.append(start_node(0, self.options.tmpdir, ["-maxmempool=5", "-spendzeroconfchange=0", "-minlimitertxfee=2", "-debug"]))
+        self.nodes.append(start_node(0, self.options.tmpdir, ["-maxmempool=5", "-spendzeroconfchange=0", "-minlimitertxfee=2", "-debug=mempool"]))
         self.is_network_split = False
         self.sync_all()
         self.relayfee = self.nodes[0].getnetworkinfo()['relayfee']
@@ -32,7 +32,7 @@ class MempoolLimitTest(BitcoinTestFramework):
         #create a mempool tx that will be evicted
         us0 = utxos.pop()
         inputs = [{ "txid" : us0["txid"], "vout" : us0["vout"]}]
-        outputs = {self.nodes[0].getnewaddress() : 0.0001}
+        outputs = {self.nodes[0].getnewaddress() : 0.001}
         tx = self.nodes[0].createrawtransaction(inputs, outputs)
         self.nodes[0].settxfee(self.relayfee) # specifically fund this tx with low fee
         txF = self.nodes[0].fundrawtransaction(tx)
