@@ -318,6 +318,8 @@ public:
         nImmatureWatchCreditCached = 0;
         nChangeCached = 0;
         nOrderPos = -1;
+        hashBlock = uint256();
+        nIndex = -1;
     }
 
     ADD_SERIALIZE_METHODS

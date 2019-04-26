@@ -1330,7 +1330,14 @@ void RelayTransaction(const CTransaction &tx, CConnman &connman);
 
 bool CWalletTx::RelayWalletTransaction(CConnman *connman)
 {
-    assert(pwallet->GetBroadcastTransactions());
+    if (pwallet == nullptr)
+    {
+        return false;
+    }
+    if (!pwallet->GetBroadcastTransactions())
+    {
+        return false;
+    }
     if (tx->IsCoinBase() || tx->IsCoinStake() || isAbandoned() || GetDepthInMainChain() != 0)
     {
         return false;
