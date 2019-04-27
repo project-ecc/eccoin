@@ -5,7 +5,7 @@
 
 #include "recursive_shared_mutex.h"
 #include "test_cxx_rsm.h"
-#include "timer.h"
+#include "util/utiltime.h"
 
 #include <boost/test/unit_test.hpp>
 
