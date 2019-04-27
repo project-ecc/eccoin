@@ -116,7 +116,6 @@ pubkey.cpp
 pubkey.h
 random.cpp
 random.h
-rest.cpp
 reverselock.h
 rpc/events.h
 rpc/rpcblockchain.cpp

@@ -194,7 +194,6 @@ libbitcoin_server_a_SOURCES = \
   policy/fees.cpp \
   policy/policy.cpp \
   pow.cpp \
-  rest.cpp \
   rpc/rpcblockchain.cpp \
   rpc/rpcmining.cpp \
   rpc/rpcmisc.cpp \
