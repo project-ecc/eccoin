@@ -1,5 +1,5 @@
 ---
-name: "eccoin-osx-0.2.5.12"
+name: "eccoin-osx-0.2.5.15"
 enable_cache: true
 suites:
 - "trusty"
