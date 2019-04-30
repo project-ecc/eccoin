@@ -3470,15 +3470,6 @@ bool CWallet::CreateCoinStake(const CKeyStore &keystore,
                 fKernelFound = true;
                 break;
             }
-            else
-            {
-                /// TODO
-                // sleep very briefly before trying next pcoin for kernel. removing this would be an obvious opimization
-                // but it is here to keep cpu temps
-                // lower in times of high difficulty staking, possible change to configurable parameter later so i
-                // will mark this with todo
-                MilliSleep(5);
-            }
         }
         if (fKernelFound)
             break; // if kernel is found stop searching
