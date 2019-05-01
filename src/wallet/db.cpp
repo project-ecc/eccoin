@@ -111,7 +111,10 @@ bool CDBEnv::Open(const fs::path &pathIn)
         DB_CREATE | DB_INIT_LOCK | DB_INIT_LOG | DB_INIT_MPOOL | DB_INIT_TXN | DB_THREAD | DB_RECOVER | nEnvFlags,
         S_IRUSR | S_IWUSR);
     if (ret != 0)
+    {
+        dbenv->close(0);
         return error("CDBEnv::Open: Error %d opening database environment: %s\n", ret, DbEnv::strerror(ret));
+    }
 
     fDbEnvInit = true;
     fMockDb = false;
@@ -377,11 +380,13 @@ bool CDB::Rewrite(const std::string &strFile, const char *pszSkip)
                     if (ret > 0)
                     {
                         LogPrintf("CDB::Rewrite: Can't create database file %s\n", strFileRes);
+                        pdbCopy->close(0);
                         fSuccess = false;
                     }
 
                     Dbc *pcursor = db.GetCursor();
                     if (pcursor)
+                    {
                         while (fSuccess)
                         {
                             CDataStream ssKey(SER_DISK, CLIENT_VERSION);
@@ -412,12 +417,19 @@ bool CDB::Rewrite(const std::string &strFile, const char *pszSkip)
                             if (ret2 > 0)
                                 fSuccess = false;
                         }
+                    }
                     if (fSuccess)
                     {
                         db.Close();
                         bitdb.CloseDb(strFile);
                         if (pdbCopy->close(0))
+                        {
                             fSuccess = false;
+                        }
+                        else
+                        {
+                            pdbCopy->close(0);
+                        }
                         delete pdbCopy;
                     }
                 }
