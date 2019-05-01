@@ -2436,7 +2436,6 @@ extern int initMaxConnections;
 
 bool CConnman::Start(std::string &strNodeError)
 {
-    netThreads.clear();
     nTotalBytesRecv = 0;
     nTotalBytesSent = 0;
     nMaxOutboundTotalBytesSentInCycle = 0;
