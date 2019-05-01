@@ -86,7 +86,7 @@ void ThreadMiner(void *parg, bool shutdownOnly)
     CWallet *pwallet = (CWallet *)parg;
     try
     {
-        minerThreads->create_thread("eccMiner", &EccMiner, pwallet);
+        minerThreads->create_thread(&EccMiner, pwallet);
     }
     catch (std::exception &e)
     {
@@ -120,7 +120,7 @@ void ThreadMinter(void *parg, bool shutdownOnly)
     CWallet *pwallet = (CWallet *)parg;
     try
     {
-        minterThreads->create_thread("eccMinter", &EccMinter, pwallet);
+        minterThreads->create_thread(&EccMinter, pwallet);
     }
     catch (std::exception &e)
     {

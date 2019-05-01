@@ -1192,8 +1192,7 @@ bool AppInit2(thread_group &threadGroup)
     {
         for (int i = 0; i < nScriptCheckThreads - 1; i++)
         {
-            std::string name = "scriptCheck" + std::to_string(i);
-            threadGroup.create_thread(name, &ThreadScriptCheck);
+            threadGroup.create_thread(&ThreadScriptCheck);
         }
     }
 
@@ -1606,7 +1605,7 @@ bool AppInit2(thread_group &threadGroup)
         for (auto const &strFile : gArgs.GetArgs("-loadblock"))
             vImportFiles.push_back(strFile);
     }
-    threadGroup.create_thread("importFiles", &ThreadImport, vImportFiles);
+    threadGroup.create_thread(&ThreadImport, vImportFiles);
 
     if (pnetMan->getChainActive()->chainActive.Tip() == nullptr)
     {
@@ -1679,7 +1678,7 @@ bool AppInit2(thread_group &threadGroup)
         pwalletMain->ReacceptWalletTransactions();
 
         // Run a thread to flush wallet periodically
-        threadGroup.create_thread("flushWalletDB", &ThreadFlushWalletDB, boost::ref(pwalletMain->strWalletFile));
+        threadGroup.create_thread(&ThreadFlushWalletDB, boost::ref(pwalletMain->strWalletFile));
     }
 
     return !shutdown_threads.load();

@@ -14,8 +14,7 @@ private:
     std::vector<std::thread> threads;
     std::atomic<bool> *killswitch;
     // disable default constructor
-    thread_group(){}
-
+    thread_group() {}
 public:
     thread_group(std::atomic<bool> *_killswitch)
     {
@@ -24,7 +23,7 @@ public:
     }
     void interrupt_all() { killswitch->store(true); }
     template <class Fn, class... Args>
-    void create_thread(std::string name, Fn &&f, Args &&... args)
+    void create_thread(Fn &&f, Args &&... args)
     {
         threads.push_back(std::thread(f, args...));
     }
@@ -41,7 +40,7 @@ public:
         }
         threads.clear();
     }
-    
+
     ~thread_group()
     {
         interrupt_all();

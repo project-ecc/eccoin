@@ -2531,7 +2531,7 @@ bool CConnman::Start(std::string &strNodeError)
     interruptNet.store(false);
 
     // Send and receive from sockets, accept connections
-    netThreads.create_thread("net", &CConnman::ThreadSocketHandler, this);
+    netThreads.create_thread(&CConnman::ThreadSocketHandler, this);
 
     if (!gArgs.GetBoolArg("-dnsseed", true))
     {
@@ -2539,23 +2539,23 @@ bool CConnman::Start(std::string &strNodeError)
     }
     else
     {
-        netThreads.create_thread("dnsseed", &CConnman::ThreadDNSAddressSeed, this);
+        netThreads.create_thread(&CConnman::ThreadDNSAddressSeed, this);
     }
 
     // Initiate outbound connections from -addnode
-    netThreads.create_thread("addcon", &CConnman::ThreadOpenAddedConnections, this);
+    netThreads.create_thread(&CConnman::ThreadOpenAddedConnections, this);
 
     // Initiate outbound connections unless connect=0
     if (!gArgs.IsArgSet("-connect") || gArgs.GetArgs("-connect").size() != 1 || gArgs.GetArgs("-connect")[0] != "0")
     {
-        netThreads.create_thread("opencon", &CConnman::ThreadOpenConnections, this);
+        netThreads.create_thread(&CConnman::ThreadOpenConnections, this);
     }
 
     // Process messages
-    netThreads.create_thread("msghand", &CConnman::ThreadMessageHandler, this);
+    netThreads.create_thread(&CConnman::ThreadMessageHandler, this);
 
     // Dump network addresses
-    netThreads.create_thread("dumpdata", &CConnman::DumpData, this, DUMP_ADDRESSES_INTERVAL);
+    netThreads.create_thread(&CConnman::DumpData, this, DUMP_ADDRESSES_INTERVAL);
 
     return true;
 }
