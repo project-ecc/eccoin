@@ -6,10 +6,13 @@
 #include "script/script.h"
 #include "key.h"
 #include "keystore.h"
+#include "main.h"
 #include "policy/policy.h"
+#include "script/interpreter.h"
 #include "script/script_error.h"
 #include "script/sign.h"
 #include "test/test_bitcoin.h"
+#include "wallet/wallet.h"
 
 #include <vector>
 
@@ -40,7 +43,7 @@ static bool Verify(const CScript &scriptSig, const CScript &scriptPubKey, bool f
     txTo.vout[0].nValue = 1;
 
     return VerifyScript(scriptSig, scriptPubKey, fStrict ? SCRIPT_VERIFY_P2SH : SCRIPT_VERIFY_NONE,
-        TransactionSignatureChecker(&txTo, 0, txFrom.vout[0].nValue), &err);
+        TransactionSignatureChecker(&txTo, 0), &err);
 }
 
 
@@ -96,7 +99,7 @@ BOOST_AUTO_TEST_CASE(sign)
         txTo[i].vin[0].prevout.n = i;
         txTo[i].vin[0].prevout.hash = txFrom.GetHash();
         txTo[i].vout[0].nValue = 1;
-        BOOST_CHECK_MESSAGE(IsMine(keystore, txFrom.vout[i].scriptPubKey, 0), strprintf("IsMine %d", i));
+        BOOST_CHECK_MESSAGE(IsMine(keystore, txFrom.vout[i].scriptPubKey), strprintf("IsMine %d", i));
     }
     for (int i = 0; i < 8; i++)
     {
@@ -105,25 +108,26 @@ BOOST_AUTO_TEST_CASE(sign)
     // All of the above should be OK, and the txTos have valid signatures
     // Check to make sure signature verification fails if we use the wrong ScriptSig:
     for (int i = 0; i < 8; i++)
+    {
         for (int j = 0; j < 8; j++)
         {
             CScript sigSave = txTo[i].vin[0].scriptSig;
             txTo[i].vin[0].scriptSig = txTo[j].vin[0].scriptSig;
 
             const CTxOut &output = txFrom.vout[txTo[i].vin[0].prevout.n];
-#ifdef BITCOIN_CASH
-            bool sigOK = CScriptCheck(nullptr, output.scriptPubKey, output.nValue, txTo[i], 0,
-                SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_STRICTENC | SCRIPT_ENABLE_SIGHASH_FORKID, false)();
-#else
-            bool sigOK = CScriptCheck(nullptr, output.scriptPubKey, output.nValue, txTo[i], 0,
-                SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_STRICTENC, false)();
-#endif
+            bool sigOK = CScriptCheck(
+                output.scriptPubKey, output.nValue, txTo[i], 0, SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_STRICTENC, false)();
             if (i == j)
+            {
                 BOOST_CHECK_MESSAGE(sigOK, strprintf("VerifySignature %d %d", i, j));
+            }
             else
+            {
                 BOOST_CHECK_MESSAGE(!sigOK, strprintf("VerifySignature %d %d", i, j));
+            }
             txTo[i].vin[0].scriptSig = sigSave;
         }
+    }
 }
 
 BOOST_AUTO_TEST_CASE(norecurse)
@@ -199,7 +203,7 @@ BOOST_AUTO_TEST_CASE(set)
         txTo[i].vin[0].prevout.hash = txFrom.GetHash();
         txTo[i].vout[0].nValue = 1 * CENT;
         txTo[i].vout[0].scriptPubKey = inner[i];
-        BOOST_CHECK_MESSAGE(IsMine(keystore, txFrom.vout[i].scriptPubKey, 0), strprintf("IsMine %d", i));
+        BOOST_CHECK_MESSAGE(IsMine(keystore, txFrom.vout[i].scriptPubKey), strprintf("IsMine %d", i));
     }
     for (int i = 0; i < 4; i++)
     {

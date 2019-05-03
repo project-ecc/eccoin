@@ -10,10 +10,15 @@ BITCOIN_INCLUDES=-I$(builddir) -I$(builddir)/build $(BDB_CPPFLAGS) $(BOOST_CPPFL
 
 BITCOIN_INCLUDES += -I$(srcdir)/secp256k1/include
 BITCOIN_INCLUDES += -I$(srcdir)/univalue/include
+BITCOIN_INCLUDES += -I$(srcdir)/rsm
 
 LIBBITCOIN_SERVER=libbitcoin_server.a
 LIBSECP256K1=secp256k1/libsecp256k1.la
 LIBUNIVALUE=univalue/libunivalue.la
+
+if ENABLE_ZMQ
+LIBBITCOIN_ZMQ=libbitcoin_zmq.a
+endif
 
 $(LIBSECP256K1): $(wildcard secp256k1/src/*) $(wildcard secp256k1/include/*)
 	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) -C $(@D) $(@F)
@@ -25,7 +30,8 @@ $(LIBUNIVALUE): $(wildcard univalue/lib/*) $(wildcard univalue/include/*)
 # Make is not made aware of per-object dependencies to avoid limiting building parallelization
 # But to build the less dependent modules first, we manually select their order here:
 EXTRA_LIBRARIES += \
- $(LIBBITCOIN_SERVER)
+ $(LIBBITCOIN_SERVER) \
+ $(LIBBITCOIN_ZMQ)
 
 bin_PROGRAMS =
 TESTS =
@@ -38,8 +44,6 @@ endif
 .PHONY: FORCE check-symbols check-security check-formatting
 # bitcoin core #
 BITCOIN_CORE_H = \
-  addrdb.h \
-  addrman.h \
   amount.h \
   args.h \
   arith_uint256.h \
@@ -81,28 +85,29 @@ BITCOIN_CORE_H = \
   keystore.h \
   limitedmap.h \
   main.h \
-  messages.h \
   memusage.h \
   merkleblock.h \
-  net.h \
-  netaddress.h \
-  netbase.h \
-  netmessagemaker.h \
+  net/addrdb.h \
+  net/addrman.h \
+  net/messages.h \
+  net/net.h \
+  net/netaddress.h \
+  net/netbase.h \
+  net/nodestate.h \
+  net/protocol.h \
   networks/netman.h \
   networks/network.h \
   networks/networktemplate.h \
-  noui.h \
   policy/fees.h \
   policy/policy.h \
   pow.h \
   prevector.h \
   chain/block.h \
   chain/tx.h \
-  pbkdf2.h \
+  crypto/pbkdf2.h \
   processblock.h \
   processheader.h \
   processtx.h \
-  protocol.h \
   pubkey.h \
   random.h \
   reverselock.h \
@@ -110,7 +115,7 @@ BITCOIN_CORE_H = \
   rpc/rpcclient.h \
   rpc/rpcprotocol.h \
   rpc/rpcserver.h \
-  scheduler.h \
+  rsm/recursive_shared_mutex.h \
   script/interpreter.h \
   script/script.h \
   script/script_error.h \
@@ -126,16 +131,17 @@ BITCOIN_CORE_H = \
   support/cleanse.h \
   support/pagelocker.h \
   sync.h \
-  threadinterrupt.h \
+  sync_rsm.h \
+  threadgroup.h \
   threadsafety.h \
   timedata.h \
   tinyformat.h \
   torcontrol.h \
   txdb.h \
   txmempool.h \
-  ui_interface.h \
   uint256.h \
   undo.h \
+  util/logger.h \
   util/util.h \
   util/utilmoneystr.h \
   util/utilstrencodings.h \
@@ -148,7 +154,11 @@ BITCOIN_CORE_H = \
   wallet/db.h \
   wallet/wallet.h \
   wallet/wallet_ismine.h \
-  wallet/walletdb.h
+  wallet/walletdb.h \
+  zmq/zmqabstractnotifier.h \
+  zmq/zmqconfig.h\
+  zmq/zmqnotificationinterface.h \
+  zmq/zmqpublishnotifier.h
 
 build/build.h: FORCE
 	@$(MKDIR_P) $(builddir)/build
@@ -161,8 +171,10 @@ libbitcoin_server_a-clientversion.$(OBJEXT): build/build.h
 libbitcoin_server_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES) $(MINIUPNPC_CPPFLAGS) $(EVENT_CFLAGS) $(EVENT_PTHREADS_CFLAGS)
 libbitcoin_server_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIC_FLAGS) $(PIE_FLAGS)
 libbitcoin_server_a_SOURCES = \
-  addrdb.cpp \
-  addrman.cpp \
+  sync.cpp \
+  sync_rsm.cpp \
+  net/addrdb.cpp \
+  net/addrman.cpp \
   blockgeneration/blockgeneration.cpp \
   blockgeneration/miner.cpp \
   blockgeneration/minter.cpp \
@@ -177,9 +189,8 @@ libbitcoin_server_a_SOURCES = \
   kernel.cpp \
   main.cpp \
   merkleblock.cpp \
-  net.cpp \
-  netaddress.cpp \
-  noui.cpp \
+  net/net.cpp \
+  net/netaddress.cpp \
   policy/fees.cpp \
   policy/policy.cpp \
   pow.cpp \
@@ -190,6 +201,7 @@ libbitcoin_server_a_SOURCES = \
   rpc/rpcnet.cpp \
   rpc/rpcrawtransaction.cpp \
   rpc/rpcserver.cpp \
+  rsm/recursive_shared_mutex.cpp \
   script/sigcache.cpp \
   timedata.cpp \
   torcontrol.cpp \
@@ -209,17 +221,17 @@ libbitcoin_server_a_SOURCES = \
   crypto/hash.cpp \
   key.cpp \
   keystore.cpp \
-  netbase.cpp \
+  net/netbase.cpp \
   chain/block.cpp \
   chain/blockindex.cpp \
   processblock.cpp \
   processheader.cpp \
   processtx.cpp \
   chain/tx.cpp \
-  protocol.cpp \
+  net/nodestate.cpp \
+  net/protocol.cpp \
   pubkey.cpp \
-  scheduler.cpp \
-  pbkdf2.cpp \
+  crypto/pbkdf2.cpp \
   script/interpreter.cpp \
   script/script.cpp \
   script/script_error.cpp \
@@ -234,12 +246,12 @@ libbitcoin_server_a_SOURCES = \
   compat/glibcxx_sanity.cpp \
   compat/strnlen.cpp \
   networks/netman.cpp \
-  messages.cpp \
+  net/messages.cpp \
   random.cpp \
   rpc/rpcprotocol.cpp \
   support/cleanse.cpp \
-  sync.cpp \
   uint256.cpp \
+  util/logger.cpp \
   util/util.cpp \
   util/utilmoneystr.cpp \
   util/utilstrencodings.cpp \
@@ -271,8 +283,16 @@ libbitcoin_server_a_SOURCES = \
   wallet/wallet_ismine.cpp \
   wallet/walletdb.cpp \
   rpc/rpcclient.cpp \
-  threadinterrupt.cpp \
   $(BITCOIN_CORE_H)
+
+if ENABLE_ZMQ
+libbitcoin_zmq_a_CPPFLAGS = $(BITCOIN_INCLUDES) $(ZMQ_CFLAGS)
+libbitcoin_zmq_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+libbitcoin_zmq_a_SOURCES = \
+  zmq/zmqabstractnotifier.cpp \
+  zmq/zmqnotificationinterface.cpp \
+  zmq/zmqpublishnotifier.cpp
+endif
 
 if GLIBC_BACK_COMPAT
 libbitcoin_server_a_SOURCES += compat/glibc_compat.cpp
@@ -286,6 +306,7 @@ eccoind_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
 
 eccoind_LDADD = \
   $(LIBBITCOIN_SERVER) \
+  $(LIBBITCOIN_ZMQ) \
   $(LIBBITCOIN_CRYPTO) \
   $(LIBUNIVALUE) \
   $(LIBLEVELDB) \
@@ -293,7 +314,7 @@ eccoind_LDADD = \
   $(LIBMEMENV) \
   $(LIBSECP256K1)
 
-eccoind_LDADD += $(BOOST_LIBS) $(BDB_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(MINIUPNPC_LIBS) $(EVENT_PTHREADS_LIBS) $(EVENT_LIBS)
+eccoind_LDADD += $(BOOST_LIBS) $(BDB_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(MINIUPNPC_LIBS) $(EVENT_PTHREADS_LIBS) $(EVENT_LIBS) $(ZMQ_LIBS)
 
 #
 CLEANFILES = $(EXTRA_LIBRARIES)
@@ -315,6 +336,7 @@ CLEANFILES += support/*.gcda support/*.gcno
 CLEANFILES += univalue/*.gcda univalue/*.gcno
 CLEANFILES += wallet/*.gcda wallet/*.gcno
 CLEANFILES += wallet/test/*.gcda wallet/test/*.gcno
+CLEANFILES += zmq/*.gcda zmq/*.gcno
 
 DISTCLEANFILES = build/build.h
 

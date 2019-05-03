@@ -20,7 +20,7 @@
 
 /**
  * Server/client environment: argument handling, config file parsing,
- * logging, thread wrappers
+ * thread wrappers
  */
 #ifndef BITCOIN_UTIL_H
 #define BITCOIN_UTIL_H
@@ -41,94 +41,23 @@
 #include <boost/signals2/signal.hpp>
 #include <boost/thread/exceptions.hpp>
 
-static const bool DEFAULT_LOGTIMEMICROS = false;
-static const bool DEFAULT_LOGIPS = false;
-static const bool DEFAULT_LOGTIMESTAMPS = true;
+#define UNIQUE2(pfx, LINE) pfx##LINE
+#define UNIQUE1(pfx, LINE) UNIQUE2(pfx, LINE)
+/// UNIQUIFY is a macro that appends the current file's line number to the passed prefix, creating a symbol
+// that is unique in this file.
+#define UNIQUIFY(pfx) UNIQUE1(pfx, __LINE__)
 
-/** Signals for translation. */
-class CTranslationInterface
-{
-public:
-    /** Translate a message to the native language of the user. */
-    boost::signals2::signal<std::string(const char *psz)> Translate;
-};
-
-extern bool fDebug;
 extern bool fDaemon;
-extern bool fPrintToConsole;
-extern bool fPrintToDebugLog;
 extern bool fServer;
 extern std::string strMiscWarning;
-extern bool fLogTimestamps;
-extern bool fLogTimeMicros;
-extern bool fLogIPs;
-extern volatile bool fReopenDebugLog;
-extern CTranslationInterface translationInterface;
 
 extern const char *const CONF_FILENAME;
 extern const char *const PID_FILENAME;
 
-/**
- * Translation function: Call Translate signal on UI interface, which returns a boost::optional result.
- * If no translation slot is registered, nothing is returned, and simply return the input.
- */
-inline std::string _(const char *psz)
-{
-    boost::optional<std::string> rv = translationInterface.Translate(psz);
-    return rv ? (*rv) : psz;
-}
 
 void SetupEnvironment();
 bool SetupNetworking();
 
-/** Return true if log accepts specified category */
-bool LogAcceptCategory(const char *category);
-/** Send a string to the log output */
-int LogPrintStr(const std::string &str);
-
-#define LogPrintf(...) LogPrint(NULL, __VA_ARGS__)
-
-/**
- * When we switch to C++11, this can be switched to variadic templates instead
- * of this macro-based construction (see tinyformat.h).
- */
-#define MAKE_ERROR_AND_LOG_FUNC(n)                                                              \
-    /**   Print to debug.log if -debug=category switch is given OR category is NULL. */         \
-    template <TINYFORMAT_ARGTYPES(n)>                                                           \
-    static inline int LogPrint(const char *category, const char *format, TINYFORMAT_VARARGS(n)) \
-    {                                                                                           \
-        if (!LogAcceptCategory(category))                                                       \
-            return 0;                                                                           \
-        return LogPrintStr(tfm::format(format, TINYFORMAT_PASSARGS(n)));                        \
-    }                                                                                           \
-    /**   Log error and return false */                                                         \
-    template <TINYFORMAT_ARGTYPES(n)>                                                           \
-    static inline bool error(const char *format, TINYFORMAT_VARARGS(n))                         \
-    {                                                                                           \
-        LogPrintStr("ERROR: " + tfm::format(format, TINYFORMAT_PASSARGS(n)) + "\n");            \
-        return false;                                                                           \
-    }
-
-TINYFORMAT_FOREACH_ARGNUM(MAKE_ERROR_AND_LOG_FUNC)
-
-/**
- * Zero-arg versions of logging and error, these are not covered by
- * TINYFORMAT_FOREACH_ARGNUM
- */
-static inline int LogPrint(const char *category, const char *format)
-{
-    if (!LogAcceptCategory(category))
-        return 0;
-    return LogPrintStr(format);
-}
-static inline bool error(const char *format)
-{
-    LogPrintStr(std::string("ERROR: ") + format + "\n");
-    return false;
-}
-
-void PrintException(const std::exception *pex, const char *pszThread);
-void PrintExceptionContinue(const std::exception *pex, const char *pszThread);
 void ParseParameters(int argc, const char *const argv[]);
 void FileCommit(FILE *fileout);
 bool TruncateFile(FILE *file, unsigned int length);
@@ -147,8 +76,6 @@ void CreatePidFile(const fs::path &path, pid_t pid);
 fs::path GetSpecialFolderPath(int nFolder, bool fCreate = true);
 #endif
 fs::path GetTempPath();
-void OpenDebugLog();
-void ShrinkDebugFile();
 void runCommand(const std::string &strCommand);
 
 inline bool IsSwitchChar(char c)
@@ -187,37 +114,6 @@ int GetNumCores();
 
 void SetThreadPriority(int nPriority);
 void RenameThread(const char *name);
-
-/**
- * .. and a wrapper that just calls func once
- */
-template <typename Callable>
-void TraceThread(const char *name, Callable func)
-{
-    std::string s = strprintf("Eccoin-%s", name);
-    RenameThread(s.c_str());
-    try
-    {
-        LogPrintf("%s thread start\n", name);
-        func();
-        LogPrintf("%s thread exit\n", name);
-    }
-    catch (const boost::thread_interrupted &)
-    {
-        LogPrintf("%s thread interrupt\n", name);
-        throw;
-    }
-    catch (const std::exception &e)
-    {
-        PrintExceptionContinue(&e, name);
-        throw;
-    }
-    catch (...)
-    {
-        PrintExceptionContinue(NULL, name);
-        throw;
-    }
-}
 
 inline int64_t roundint64(double d) { return (int64_t)(d > 0 ? d + 0.5 : d - 0.5); }
 bool WildcardMatch(const char *psz, const char *mask);

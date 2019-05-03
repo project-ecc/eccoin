@@ -33,14 +33,12 @@ bool AcceptBlockHeader(const CBlockHeader &block,
     AssertLockHeld(cs_main);
     // Check for duplicate
     uint256 hash = block.GetHash();
-    BlockMap::iterator miSelf = pnetMan->getChainActive()->mapBlockIndex.find(hash);
-    CBlockIndex *pindex = NULL;
+    CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(hash);
     if (hash != chainparams.GetConsensus().hashGenesisBlock)
     {
-        if (miSelf != pnetMan->getChainActive()->mapBlockIndex.end())
+        if (pindex)
         {
             // Block header is already known.
-            pindex = miSelf->second;
             if (ppindex)
                 *ppindex = pindex;
             if (pindex->nStatus & BLOCK_FAILED_MASK)
@@ -52,11 +50,11 @@ bool AcceptBlockHeader(const CBlockHeader &block,
             return false;
 
         // Get prev block index
-        CBlockIndex *pindexPrev = NULL;
-        BlockMap::iterator mi = pnetMan->getChainActive()->mapBlockIndex.find(block.hashPrevBlock);
-        if (mi == pnetMan->getChainActive()->mapBlockIndex.end())
+        CBlockIndex *pindexPrev = pnetMan->getChainActive()->LookupBlockIndex(block.hashPrevBlock);
+        if (!pindexPrev)
+        {
             return state.DoS(10, error("%s: prev block not found", __func__), 0, "bad-prevblk");
-        pindexPrev = (*mi).second;
+        }
         if (pindexPrev->nStatus & BLOCK_FAILED_MASK)
             return state.DoS(100, error("%s: prev block invalid", __func__), REJECT_INVALID, "bad-prevblk");
 
@@ -67,11 +65,15 @@ bool AcceptBlockHeader(const CBlockHeader &block,
         if (!ContextualCheckBlockHeader(block, state, pindexPrev))
             return false;
     }
-    if (pindex == NULL)
+    if (pindex == nullptr)
+    {
         pindex = pnetMan->getChainActive()->AddToBlockIndex(block);
+    }
 
     if (ppindex)
+    {
         *ppindex = pindex;
+    }
 
     return true;
 }

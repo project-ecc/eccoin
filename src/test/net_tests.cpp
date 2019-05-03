@@ -1,10 +1,10 @@
 // Copyright (c) 2012-2016 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-#include "net.h"
-#include "addrman.h"
+#include "net/net.h"
 #include "crypto/hash.h"
-#include "netbase.h"
+#include "net/addrman.h"
+#include "net/netbase.h"
 #include "serialize.h"
 #include "streams.h"
 #include "test/test_bitcoin.h"
@@ -62,7 +62,7 @@ public:
 CDataStream AddrmanToStream(CAddrManSerializationMock &_addrman)
 {
     CDataStream ssPeersIn(SER_DISK, CLIENT_VERSION);
-    ssPeersIn << FLATDATA(Params().DiskMagic());
+    ssPeersIn << FLATDATA(pnetMan->getActivePaymentNetwork()->MessageStart());
     ssPeersIn << _addrman;
     std::string str = ssPeersIn.str();
     std::vector<uint8_t> vchData(str.begin(), str.end());
@@ -113,7 +113,7 @@ BOOST_AUTO_TEST_CASE(caddrdb_read)
     CDataStream ssPeers2 = AddrmanToStream(addrmanUncorrupted);
 
     CAddrMan addrman2;
-    CAddrDB adb(Params());
+    CAddrDB adb;
     BOOST_CHECK(addrman2.size() == 0);
     adb.Read(addrman2, ssPeers2);
     BOOST_CHECK(addrman2.size() == 3);
@@ -149,7 +149,7 @@ BOOST_AUTO_TEST_CASE(caddrdb_read_corrupted)
     CDataStream ssPeers2 = AddrmanToStream(addrmanCorrupted);
 
     CAddrMan addrman2;
-    CAddrDB adb(Params());
+    CAddrDB adb;
     BOOST_CHECK(addrman2.size() == 0);
     adb.Read(addrman2, ssPeers2);
     BOOST_CHECK(addrman2.size() == 0);
@@ -177,41 +177,6 @@ BOOST_AUTO_TEST_CASE(cnode_simple_test)
     std::unique_ptr<CNode> pnode2(new CNode(id++, NODE_NETWORK, height, hSocket, addr, 1, 1, pszDest, fInboundIn));
     BOOST_CHECK(pnode2->fInbound == true);
     BOOST_CHECK(pnode2->fFeeler == false);
-}
-
-BOOST_AUTO_TEST_CASE(test_getSubVersionEB)
-{
-    BOOST_CHECK_EQUAL(getSubVersionEB(13800000000), "13800.0");
-    BOOST_CHECK_EQUAL(getSubVersionEB(3800000000), "3800.0");
-    BOOST_CHECK_EQUAL(getSubVersionEB(14000000), "14.0");
-    BOOST_CHECK_EQUAL(getSubVersionEB(1540000), "1.5");
-    BOOST_CHECK_EQUAL(getSubVersionEB(1560000), "1.5");
-    BOOST_CHECK_EQUAL(getSubVersionEB(210000), "0.2");
-    BOOST_CHECK_EQUAL(getSubVersionEB(10000), "0.0");
-    BOOST_CHECK_EQUAL(getSubVersionEB(0), "0.0");
-}
-
-BOOST_AUTO_TEST_CASE(test_userAgentLength)
-{
-    GlobalConfig config;
-
-    config.SetMaxBlockSize(8000000);
-    std::string long_uacomment = "very very very very very very very very very "
-                                 "very very very very very very very very very "
-                                 "very very very very very very very very very "
-                                 "very very very very very very very very very "
-                                 "very very very very very very very very very "
-                                 "very very very very very very very very very "
-                                 "very very very very very very very very very "
-                                 "very very very very very very long comment";
-    gArgs.ForceSetMultiArg("-uacomment", long_uacomment);
-
-    BOOST_CHECK_EQUAL(userAgent(config).size(), MAX_SUBVERSION_LENGTH);
-    BOOST_CHECK_EQUAL(userAgent(config), "/Bitcoin ABC:0.17.3(EB8.0; very very very very very "
-                                         "very very very very very very very very very very very "
-                                         "very very very very very very very very very very very "
-                                         "very very very very very very very very very very very "
-                                         "very very very very very very very ve)/");
 }
 
 BOOST_AUTO_TEST_SUITE_END()

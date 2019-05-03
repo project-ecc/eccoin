@@ -32,7 +32,6 @@
 
 #include <stdint.h>
 
-#include <boost/thread.hpp>
 
 static const char DB_COIN = 'C';
 static const char DB_COINS = 'c';
@@ -226,7 +225,11 @@ bool CBlockTreeDB::LoadBlockIndexGuts()
     // Load mapBlockIndex
     while (pcursor->Valid())
     {
-        boost::this_thread::interruption_point();
+        if (shutdown_threads.load())
+        {
+            LogPrintf("LoadBlockIndexGuts(): Shutdown requested. Exiting.\n");
+            return false;
+        }
         std::pair<char, uint256> key;
         if (pcursor->GetKey(key) && key.first == DB_BLOCK_INDEX)
         {
@@ -366,8 +369,7 @@ bool CCoinsViewDB::Upgrade()
         return true;
     }
 
-    LogPrintf("Upgrading database...\n");
-    uiInterface.InitMessage(_("Upgrading database...this may take a while"));
+    LogPrintf("Upgrading database...this may take a while\n");
     size_t batch_size = 1 << 24;
     CDBBatch batch(db);
 
@@ -375,7 +377,11 @@ bool CCoinsViewDB::Upgrade()
     std::pair<unsigned char, uint256> prev_key = {DB_COINS, uint256()};
     while (pcursor->Valid())
     {
-        boost::this_thread::interruption_point();
+        if (shutdown_threads.load())
+        {
+            LogPrintf("CCoinsViewDB::Upgrade(): Shutdown requested. Exiting.\n");
+            return false;
+        }
 
         if (pcursor->GetKey(key) && key.first == DB_COINS)
         {

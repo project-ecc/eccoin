@@ -10,6 +10,9 @@
 
 #include <boost/thread.hpp>
 
+class CConnman;
+class CNode;
+
 extern CNetworkManager *pnetman;
 
 /** Basic testing setup.

@@ -90,7 +90,6 @@
 #include <boost/algorithm/string/case_conv.hpp> // for to_lower()
 #include <boost/algorithm/string/predicate.hpp> // for startswith() and endswith()
 #include <boost/program_options/detail/config_file.hpp>
-#include <boost/thread.hpp>
 #include <openssl/conf.h>
 #include <openssl/crypto.h>
 #include <openssl/rand.h>
@@ -157,6 +156,12 @@ std::vector<std::string> CArgsManager::GetArgs(const std::string &strArg)
     if (IsArgSet(strArg))
         return mapMultiArgs.at(strArg);
     return {};
+}
+
+std::map<std::string, std::string> CArgsManager::GetMapArgs()
+{
+    LOCK(cs_args);
+    return mapArgs;
 }
 
 bool CArgsManager::IsArgSet(const std::string &strArg)

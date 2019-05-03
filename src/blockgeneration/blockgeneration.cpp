@@ -67,7 +67,7 @@ std::unique_ptr<CBlockTemplate> CreateNewBlock(CWallet *pwallet, const CScript &
     return CreateNewPoWBlock(pwallet, scriptPubKeyIn);
 }
 
-boost::thread_group *minerThreads = nullptr;
+thread_group *minerThreads = nullptr;
 
 void ThreadMiner(void *parg, bool shutdownOnly)
 {
@@ -82,11 +82,11 @@ void ThreadMiner(void *parg, bool shutdownOnly)
     {
         return;
     }
-    minerThreads = new boost::thread_group();
+    minerThreads = new thread_group(&shutdown_threads);
     CWallet *pwallet = (CWallet *)parg;
     try
     {
-        minerThreads->create_thread(boost::bind(&EccMiner, pwallet));
+        minerThreads->create_thread(&EccMiner, pwallet);
     }
     catch (std::exception &e)
     {
@@ -101,7 +101,7 @@ void ThreadMiner(void *parg, bool shutdownOnly)
     LogPrintf("Thread Miner thread exiting \n");
 }
 
-boost::thread_group *minterThreads = nullptr;
+thread_group *minterThreads = nullptr;
 
 void ThreadMinter(void *parg, bool shutdownOnly)
 {
@@ -116,11 +116,11 @@ void ThreadMinter(void *parg, bool shutdownOnly)
     {
         return;
     }
-    minterThreads = new boost::thread_group();
+    minterThreads = new thread_group(&shutdown_threads);
     CWallet *pwallet = (CWallet *)parg;
     try
     {
-        minterThreads->create_thread(boost::bind(&EccMinter, pwallet));
+        minterThreads->create_thread(&EccMinter, pwallet);
     }
     catch (std::exception &e)
     {

@@ -21,7 +21,7 @@
 
 #include "chain/block.h"
 #include "consensus/params.h"
-#include "protocol.h"
+#include "net/protocol.h"
 
 #include <vector>
 

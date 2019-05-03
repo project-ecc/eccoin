@@ -11,7 +11,7 @@ from io import BytesIO
 MY_VERSION = 60001  # past bip-31 for ping/pong
 MY_SUBVERSION = b"/python-mininode-tester:0.0.3/"
 
-COIN = 100000000  # 1 btc in satoshis
+COIN = 1000000  # 1 ecc in satoshis
 
 # One lock for synchronizing all data access between the networking thread (see
 # NetworkThread below) and the thread running the test logic.  For simplicity,

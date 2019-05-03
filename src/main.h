@@ -24,7 +24,7 @@
 #include "amount.h"
 #include "chain/chain.h"
 #include "coins.h"
-#include "net.h"
+#include "net/net.h"
 #include "script/script_error.h"
 #include "sync.h"
 #include "uint256.h"
@@ -55,15 +55,13 @@ class CValidationState;
 struct LockPoints;
 /** Default for returning change from tx back an address we already owned instead of a new one (try to select address
  * with most value in it). */
-static const bool DEFAULT_RETURN_CHANGE = true;
-/** Default for accepting alerts from the P2P network. */
-static const bool DEFAULT_ALERTS = false;
+static const bool DEFAULT_RETURN_CHANGE = false;
 /** Default for DEFAULT_WHITELISTRELAY. */
 static const bool DEFAULT_WHITELISTRELAY = true;
 /** Default for DEFAULT_WHITELISTFORCERELAY. */
 static const bool DEFAULT_WHITELISTFORCERELAY = true;
-/** Default for -minrelaytxfee, minimum relay fee for transactions */
-static const unsigned int DEFAULT_MIN_RELAY_TX_FEE = 1;
+/** Default for -minrelaytxfee, minimum relay fee for transactions (satoshis per KB) */
+static const unsigned int DEFAULT_MIN_RELAY_TX_FEE = 1000;
 /** Default for -maxorphantx, maximum number of orphan transactions kept in memory */
 static const unsigned int DEFAULT_MAX_ORPHAN_TRANSACTIONS = 100;
 /** Default for -limitancestorcount, max number of in-mempool ancestors */
@@ -117,8 +115,7 @@ static const int64_t BLOCK_DOWNLOAD_TIMEOUT_BASE = 1000000;
 /** Additional block download timeout per parallel downloading peer (i.e. 5 min) */
 static const int64_t BLOCK_DOWNLOAD_TIMEOUT_PER_PEER = 500000;
 
-static const unsigned int DEFAULT_LIMITFREERELAY = 15;
-static const bool DEFAULT_RELAYPRIORITY = true;
+static const unsigned int DEFAULT_LIMITFREERELAY = 1000;
 
 /** Default for -permitbaremultisig */
 static const bool DEFAULT_PERMIT_BAREMULTISIG = true;
@@ -128,8 +125,6 @@ static const bool DEFAULT_TXINDEX = true;
 static const unsigned int DEFAULT_BANSCORE_THRESHOLD = 100;
 
 static const bool DEFAULT_TESTSAFEMODE = false;
-/** Default for -mempoolreplacement */
-static const bool DEFAULT_ENABLE_REPLACEMENT = true;
 /** The minimum value possible for -limitfreerelay when rate limiting */
 static const unsigned int DEFAULT_MIN_LIMITFREERELAY = 1;
 /** The default value for -minrelaytxfee */
@@ -164,8 +159,6 @@ extern bool fCheckBlockIndex;
 extern bool fCheckpointsEnabled;
 extern size_t nCoinCacheUsage;
 extern CFeeRate minRelayTxFee;
-extern bool fAlerts;
-extern bool fEnableReplacement;
 
 struct COrphanTx
 {
@@ -246,24 +239,6 @@ unsigned int GetNextTargetRequired(const CBlockIndex *pindexLast, bool fProofOfS
 int64_t GetProofOfWorkReward(int64_t nFees, const int nHeight, uint256 prevHash);
 int64_t GetProofOfStakeReward(int64_t nCoinAge, int nHeight);
 
-/**
- * Process an incoming block. This only returns after the best known valid
- * block is made active. Note that it does not, however, guarantee that the
- * specific block passed to it has been checked for validity!
- *
- * @param[out]  state   This may be set to an Error state if any error occurred processing it, including during
- * validation/connection/etc of otherwise unrelated blocks during reorganisation; or it may be set to an Invalid state
- * if pblock is itself invalid (but this is not guaranteed even when the block is checked). If you want to *possibly*
- * get feedback on whether pblock is valid, you must also install a CValidationInterface (see validationinterface.h) -
- * this will have its BlockChecked method called whenever *any* block completes validation.
- * @param[in]   pfrom   The node which we are receiving the block from; it is added to mapBlockSource and may be
- * penalised if the block is invalid.
- * @param[in]   pblock  The block we want to process.
- * @param[in]   fForceProcessing Process this block even if unrequested; used for non-network block sources and
- * whitelisted peers.
- * @param[out]  dbp     If pblock is stored to disk (or already there), this will be set to its location.
- * @return True if state.IsValid()
- */
 /** Check whether enough disk space is available for an incoming block */
 bool CheckDiskSpace(uint64_t nAdditionalBytes = 0);
 /** Open a block file (blk?????.dat) */

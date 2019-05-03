@@ -23,22 +23,22 @@
 #include "httpserver.h"
 #include "init.h"
 #include "networks/netman.h"
-#include "noui.h"
 #include "rpc/rpcserver.h"
-#include "scheduler.h"
+#include "sync.h"
+#include "threadgroup.h"
+#include "util/logger.h"
 #include "util/util.h"
 
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/thread.hpp>
 
 #include <stdio.h>
 
-void WaitForShutdown(boost::thread_group *threadGroup)
+void WaitForShutdown(thread_group *threadGroup)
 {
     bool fShutdown = ShutdownRequested();
     // Tell the main threads to shutdown.
-    while (!fShutdown)
+    while (fShutdown == false)
     {
         MilliSleep(200);
         fShutdown = ShutdownRequested();
@@ -56,8 +56,8 @@ void WaitForShutdown(boost::thread_group *threadGroup)
 //
 bool AppInit(int argc, char *argv[])
 {
-    boost::thread_group threadGroup;
-    CScheduler scheduler;
+    shutdown_threads.store(false);
+    thread_group threadGroup(&shutdown_threads);
 
     bool fRet = false;
 
@@ -91,7 +91,7 @@ bool AppInit(int argc, char *argv[])
     // Process help and version before taking care about datadir
     if (gArgs.IsArgSet("-?") || gArgs.IsArgSet("-h") || gArgs.IsArgSet("-help") || gArgs.IsArgSet("-version"))
     {
-        std::string strUsage = _("Eccoind") + " " + _("version") + " " + FormatFullVersion() + "\n";
+        std::string strUsage = "Eccoind version " + FormatFullVersion() + "\n";
 
         if (gArgs.IsArgSet("-version"))
         {
@@ -99,8 +99,7 @@ bool AppInit(int argc, char *argv[])
         }
         else
         {
-            strUsage +=
-                "\n" + _("Usage:") + "\n" + "  eccoind [options]                     " + _("Start Eccoind") + "\n";
+            strUsage += "\nUsage:\neccoind [options]                     Start Eccoind\n";
 
             strUsage += "\n" + HelpMessage();
         }
@@ -159,7 +158,7 @@ bool AppInit(int argc, char *argv[])
         // Set this early so that parameter interactions go to console
         InitLogging();
         InitParameterInteraction();
-        fRet = AppInit2(threadGroup, scheduler);
+        fRet = AppInit2(threadGroup);
     }
     catch (const std::exception &e)
     {
@@ -173,9 +172,6 @@ bool AppInit(int argc, char *argv[])
     if (!fRet)
     {
         Interrupt(threadGroup);
-        // threadGroup.join_all(); was left out intentionally here, because we didn't re-test all of
-        // the startup-failure cases to make sure they don't result in a hang due to some
-        // thread-blocking-waiting-for-another-thread-during-startup case
     }
     else
     {
@@ -189,9 +185,6 @@ bool AppInit(int argc, char *argv[])
 int main(int argc, char *argv[])
 {
     SetupEnvironment();
-
-    // Connect eccoind signal handlers
-    noui_connect();
 
     return (AppInit(argc, argv) ? 0 : 1);
 }

@@ -39,8 +39,7 @@ class TxPropagationTest (BitcoinTestFramework):
         # generate non-empty blocks on the mining node to get a balance
         for x in range(0, 50):
             self.nodes[0].generate(1)
-
-        self.sync_blocks()
+            self.sync_blocks()
 
         self.nodes[0].sendtoaddress(self.nodes[1].getnewaddress(), 100)
         time.sleep(1)

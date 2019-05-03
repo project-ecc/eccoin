@@ -13,10 +13,9 @@
 #include "consensus/validation.h"
 #include "crypto/sha256.h"
 #include "fs.h"
-#include "init.h"
 #include "key.h"
 #include "main.h"
-#include "messages.h"
+#include "net/messages.h"
 #include "processblock.h"
 #include "pubkey.h"
 #include "random.h"
@@ -24,30 +23,27 @@
 #include "test/testutil.h"
 #include "txdb.h"
 #include "txmempool.h"
-#include "ui_interface.h"
+
+#include "util/logger.h"
 #include <boost/program_options.hpp>
 #include <boost/test/unit_test.hpp>
 
 #include <memory>
 
-#include <boost/thread.hpp>
-
-extern bool fPrintToConsole;
-extern void noui_connect();
 CWallet *pwallet = nullptr;
-
 
 BasicTestingSetup::BasicTestingSetup(const std::string &chainName)
 {
     ECC_Start();
     SetupEnvironment();
     SetupNetworking();
-    fPrintToDebugLog = false; // don't want to write to debug.log file
+    g_logger->fPrintToDebugLog = false; // don't want to write to debug.log file
     fCheckBlockIndex = true;
     pnetMan = new CNetworkManager();
     pwallet = new CWallet("walletFile");
     pnetMan->SetParams(chainName);
-    noui_connect();
+    // Deterministic randomness for tests.
+    g_connman = std::make_unique<CConnman>(0x1337, 0x1337);
 }
 
 BasicTestingSetup::~BasicTestingSetup() { ECC_Stop(); }
@@ -77,10 +73,11 @@ TestingSetup::~TestingSetup()
     pnetMan->getChainActive()->pcoinsTip.reset();
     pcoinsdbview = nullptr;
     pnetMan->getChainActive()->pblocktree.reset();
+    g_connman.reset();
     fs::remove_all(pathTemp);
 }
 
-TestChain100Setup::TestChain100Setup() : TestingSetup("TESTNET0-TEMPORARY")
+TestChain100Setup::TestChain100Setup() : TestingSetup("REGTEST")
 {
     // Generate a 100-block chain:
     coinbaseKey.MakeNewKey(true);
@@ -100,8 +97,8 @@ TestChain100Setup::TestChain100Setup() : TestingSetup("TESTNET0-TEMPORARY")
 CBlock TestChain100Setup::CreateAndProcessBlock(const std::vector<CTransactionRef> &txns, const CScript &scriptPubKey)
 {
     std::unique_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(pwallet, scriptPubKey, false));
-    std::shared_ptr<CBlock> pblock = std::make_shared<CBlock>();
-    *pblock = pblocktemplate->block;
+    CBlock block = pblocktemplate->block;
+    CBlock *pblock = &block;
 
     // Replace mempool-selected txns with just coinbase plus passed-in txns:
     pblock->vtx.resize(1);
@@ -109,7 +106,7 @@ CBlock TestChain100Setup::CreateAndProcessBlock(const std::vector<CTransactionRe
         pblock->vtx.push_back(tx);
     // IncrementExtraNonce creates a valid coinbase and merkleRoot
     unsigned int extraNonce = 0;
-    IncrementExtraNonce(pblock.get(), pnetMan->getChainActive()->chainActive.Tip(), extraNonce);
+    IncrementExtraNonce(pblock, pnetMan->getChainActive()->chainActive.Tip(), extraNonce);
 
     while (!CheckProofOfWork(pblock->GetHash(), pblock->nBits, pnetMan->getActivePaymentNetwork()->GetConsensus()))
         ++pblock->nNonce;
@@ -134,14 +131,14 @@ CTxMemPoolEntry TestMemPoolEntryHelper::FromTx(CTransaction &tx, CTxMemPool *poo
         inChainValue, spendsCoinbase, sigOpCount, lp);
 }
 
-void ShutdownTest(void *parg) { exit(0); }
-void StartShutdownTest() { exit(0); }
-bool ShutdownRequestedTest() { return false; }
+void Shutdown(void *parg) { exit(0); }
+// void StartShutdown() { exit(0); }
+// bool ShutdownRequested() { return false; }
 using namespace boost::program_options;
 
 struct StartupShutdown
 {
-    void StartupShutdownTest()
+    StartupShutdown()
     {
         options_description optDef("Options");
         optDef.add_options()("testhelp", "program options information")(
@@ -163,17 +160,17 @@ struct StartupShutdown
             std::string s = opts["log_bitcoin"].as<std::string>();
             if (s == "console")
             {
-                fPrintToConsole = true;
-                fPrintToDebugLog = false;
+                g_logger->fPrintToConsole = true;
+                g_logger->fPrintToDebugLog = false;
             }
             else if (s == "none")
             {
-                fPrintToConsole = false;
-                fPrintToDebugLog = false;
+                g_logger->fPrintToConsole = false;
+                g_logger->fPrintToDebugLog = false;
             }
         }
     }
-    // ~StartupShutdownTest() { }
+    ~StartupShutdown() {}
 };
 
 BOOST_GLOBAL_FIXTURE(StartupShutdown);

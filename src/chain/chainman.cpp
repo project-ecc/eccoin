@@ -22,16 +22,27 @@
 #include "init.h"
 #include "kernel.h"
 #include "main.h"
-#include "messages.h"
+#include "net/messages.h"
+#include "net/nodestate.h"
 #include "networks/netman.h"
 #include "processblock.h"
 #include "processheader.h"
 #include "txmempool.h"
 #include "undo.h"
-#include <boost/thread.hpp>
+
+CBlockIndex *CChainManager::LookupBlockIndex(const uint256 &hash)
+{
+    READLOCK(cs_mapBlockIndex);
+    BlockMap::iterator mi = mapBlockIndex.find(hash);
+    if (mi == mapBlockIndex.end())
+        return nullptr;
+    return mi->second; // I can return this CBlockIndex because header pointers are never deleted
+}
+
 
 CBlockIndex *CChainManager::AddToBlockIndex(const CBlockHeader &block)
 {
+    WRITELOCK(cs_mapBlockIndex);
     // Check for duplicate
     uint256 hash = block.GetHash();
     BlockMap::iterator it = mapBlockIndex.find(hash);
@@ -66,6 +77,7 @@ CBlockIndex *CChainManager::AddToBlockIndex(const CBlockHeader &block)
 
 CBlockIndex *CChainManager::FindForkInGlobalIndex(const CChain &chain, const CBlockLocator &locator)
 {
+    READLOCK(cs_mapBlockIndex);
     // Find the first block the caller has in the main chain
     for (auto const &hash : locator.vHave)
     {
@@ -82,8 +94,8 @@ CBlockIndex *CChainManager::FindForkInGlobalIndex(const CChain &chain, const CBl
 
 bool CChainManager::IsInitialBlockDownload()
 {
+    READLOCK(cs_mapBlockIndex);
     const CNetworkTemplate &chainParams = pnetMan->getActivePaymentNetwork();
-    LOCK(cs_main);
     if (fImporting || fReindex)
         return true;
     if (fCheckpointsEnabled && chainActive.Height() < Checkpoints::GetTotalBlocksEstimate(chainParams.Checkpoints()))
@@ -102,6 +114,7 @@ CBlockIndex *CChainManager::InsertBlockIndex(uint256 hash)
 {
     if (hash.IsNull())
         return NULL;
+    WRITELOCK(cs_mapBlockIndex);
 
     // Return existing
     BlockMap::iterator mi = mapBlockIndex.find(hash);
@@ -136,9 +149,7 @@ bool CChainManager::InitBlockIndex(const CNetworkTemplate &chainparams)
     {
         try
         {
-            std::shared_ptr<CBlock> spblock = std::make_shared<CBlock>();
-            CBlock &block = *spblock;
-            block = chainparams.GenesisBlock();
+            CBlock block = chainparams.GenesisBlock();
             // Start new block file
             unsigned int nBlockSize = ::GetSerializeSize(block, SER_DISK, CLIENT_VERSION);
             CDiskBlockPos blockPos;
@@ -163,7 +174,7 @@ bool CChainManager::InitBlockIndex(const CNetworkTemplate &chainparams)
             pindex->SetStakeModifier(nStakeModifier);
             if (!ReceivedBlockTransactions(block, state, pindex, blockPos))
                 return error("InitBlockIndex(): genesis block not accepted");
-            if (!ActivateBestChain(state, chainparams, spblock))
+            if (!ActivateBestChain(state, chainparams, &block))
                 return error("InitBlockIndex(): genesis block cannot be activated");
             // Force a chainstate write so that when we VerifyDB in a moment, it doesn't check stale data
             return FlushStateToDisk(state, FLUSH_STATE_ALWAYS);
@@ -189,10 +200,20 @@ bool CChainManager::LoadBlockIndexDB()
 {
     int64_t nStart = GetTimeMillis();
     if (!pblocktree->LoadBlockIndexGuts())
+    {
         return false;
+    }
+
+    LOCK(cs_main);
+    WRITELOCK(cs_mapBlockIndex);
+
     LogPrintf("LoadBlockIndexGuts %15dms\n", GetTimeMillis() - nStart);
 
-    boost::this_thread::interruption_point();
+    if (shutdown_threads.load())
+    {
+        LogPrintf("LoadBlockIndexDB(): Shutdown requested. returning...\n");
+        return false;
+    }
 
     // Calculate nChainWork
     std::vector<std::pair<int, CBlockIndex *> > vSortedByHeight;
@@ -312,6 +333,7 @@ bool CChainManager::LoadBlockIndexDB()
 
 bool CChainManager::LoadExternalBlockFile(const CNetworkTemplate &chainparams, FILE *fileIn, CDiskBlockPos *dbp)
 {
+    WRITELOCK(cs_mapBlockIndex);
     // std::map of disk positions for blocks with unknown parent (only used for reindex)
     static std::multimap<uint256, CDiskBlockPos> mapBlocksUnknownParent;
     int64_t nStart = GetTimeMillis();
@@ -324,7 +346,10 @@ bool CChainManager::LoadExternalBlockFile(const CNetworkTemplate &chainparams, F
         uint64_t nRewind = blkdat.GetPos();
         while (!blkdat.eof())
         {
-            boost::this_thread::interruption_point();
+            if (shutdown_threads.load())
+            {
+                break;
+            }
 
             blkdat.SetPos(nRewind);
             nRewind++; // start one byte further next time, in case of failure
@@ -357,8 +382,7 @@ bool CChainManager::LoadExternalBlockFile(const CNetworkTemplate &chainparams, F
                     dbp->nPos = nBlockPos;
                 blkdat.SetLimit(nBlockPos + nSize);
                 blkdat.SetPos(nBlockPos);
-                std::shared_ptr<CBlock> spblock = std::make_shared<CBlock>();
-                CBlock &block = *spblock;
+                CBlock block;
                 blkdat >> block;
                 nRewind = blkdat.GetPos();
 
@@ -378,7 +402,7 @@ bool CChainManager::LoadExternalBlockFile(const CNetworkTemplate &chainparams, F
                 if (mapBlockIndex.count(hash) == 0 || (mapBlockIndex[hash]->nStatus & BLOCK_HAVE_DATA) == 0)
                 {
                     CValidationState state;
-                    if (ProcessNewBlock(state, chainparams, NULL, spblock, true, dbp))
+                    if (ProcessNewBlock(state, chainparams, NULL, &block, true, dbp))
                         nLoaded++;
                     if (state.IsError())
                         break;
@@ -407,7 +431,7 @@ bool CChainManager::LoadExternalBlockFile(const CNetworkTemplate &chainparams, F
                             LogPrintf("%s: Processing out of order child %s of %s\n", __func__,
                                 block.GetHash().ToString(), head.ToString());
                             CValidationState dummy;
-                            if (ProcessNewBlock(dummy, chainparams, NULL, spblock, true, &it->second))
+                            if (ProcessNewBlock(dummy, chainparams, NULL, &block, true, &it->second))
                             {
                                 nLoaded++;
                                 queue.push_back(block.GetHash());
@@ -437,9 +461,9 @@ void CChainManager::UnloadBlockIndex()
 {
     LOCK(cs_main);
     setBlockIndexCandidates.clear();
-    chainActive.SetTip(NULL);
-    pindexBestInvalid = NULL;
-    pindexBestHeader = NULL;
+    chainActive.SetTip(nullptr);
+    pindexBestInvalid = nullptr;
+    pindexBestHeader = nullptr;
     mempool.clear();
     mapOrphanTransactions.clear();
     mapOrphanTransactionsByPrev.clear();
@@ -453,17 +477,20 @@ void CChainManager::UnloadBlockIndex()
     nPreferredDownload = 0;
     setDirtyBlockIndex.clear();
     setDirtyFileInfo.clear();
-    mapNodeState.clear();
-    recentRejects.reset(NULL);
+    nodestateman.Clear();
+    recentRejects.reset(nullptr);
     versionbitscache.Clear();
     for (int b = 0; b < VERSIONBITS_NUM_BITS; b++)
     {
         warningcache[b].clear();
     }
 
-    for (auto &entry : mapBlockIndex)
     {
-        delete entry.second;
+        WRITELOCK(cs_mapBlockIndex);
+        for (auto &entry : mapBlockIndex)
+        {
+            delete entry.second;
+        }
+        mapBlockIndex.clear();
     }
-    mapBlockIndex.clear();
 }

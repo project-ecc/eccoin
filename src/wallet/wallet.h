@@ -23,11 +23,11 @@
 
 #include "amount.h"
 #include "consensus/consensus.h"
-#include "net.h"
+#include "net/net.h"
 #include "policy/policy.h"
 #include "streams.h"
 #include "tinyformat.h"
-#include "ui_interface.h"
+
 #include "util/utilstrencodings.h"
 #include "validationinterface.h"
 #include "wallet/crypter.h"
@@ -61,7 +61,7 @@ static const CAmount DEFAULT_TRANSACTION_FEE = 0;
 //! -paytxfee will warn if called with a higher fee than this amount (in satoshis) per KB
 static const CAmount nHighTransactionFeeWarning = 0.01 * COIN;
 //! -fallbackfee default
-static const CAmount DEFAULT_FALLBACK_FEE = 20000;
+static const CAmount DEFAULT_FALLBACK_FEE = 1000;
 //! -mintxfee default
 static const CAmount DEFAULT_TRANSACTION_MINFEE = 1000;
 //! -maxtxfee default
@@ -75,7 +75,7 @@ static const CAmount MIN_CHANGE = CENT;
 //! Default for -spendzeroconfchange
 static const bool DEFAULT_SPEND_ZEROCONF_CHANGE = true;
 //! Default for -sendfreetransactions
-static const bool DEFAULT_SEND_FREE_TRANSACTIONS = true;
+static const bool DEFAULT_SEND_FREE_TRANSACTIONS = false;
 //! -txconfirmtarget default
 static const unsigned int DEFAULT_TX_CONFIRM_TARGET = COINBASE_MATURITY;
 //! Largest (in bytes) free transaction we're willing to create
@@ -318,6 +318,8 @@ public:
         nImmatureWatchCreditCached = 0;
         nChangeCached = 0;
         nOrderPos = -1;
+        hashBlock = uint256();
+        nIndex = -1;
     }
 
     ADD_SERIALIZE_METHODS
@@ -485,7 +487,8 @@ private:
         CAmount &nValueRet) const;
     bool SelectCoins(const CAmount &nTargetValue,
         std::set<std::pair<const CWalletTx *, unsigned int> > &setCoinsRet,
-        CAmount &nValueRet) const;
+        CAmount &nValueRet,
+        const std::vector<CTxIn> &vin) const;
     bool SelectCoins(CAmount nTargetValue,
         unsigned int nSpendTime,
         std::set<std::pair<const CWalletTx *, unsigned int> > &setCoinsRet,
@@ -597,8 +600,10 @@ public:
     /**
      * populate vCoins with vector of available COutputs.
      */
-    void AvailableCoinsByOwner(std::vector<COutput> &vCoins, const CRecipient &recipient) const;
-    void AvailableCoins(std::vector<COutput> &vCoins, bool fOnlyConfirmed = true, bool fIncludeZeroValue = false) const;
+    void AvailableCoins(std::vector<COutput> &vCoins,
+        bool fOnlyConfirmed = true,
+        bool fIncludeZeroValue = false,
+        const std::vector<CTxIn> &vin = {}) const;
 
     /**
      * Shuffle and select coins until nTargetValue is reached while avoiding
@@ -684,7 +689,7 @@ public:
 
     void MarkDirty();
     bool AddToWallet(const CWalletTx &wtxIn, bool fFromLoadWallet, CWalletDB *pwalletdb);
-    void SyncTransaction(const CTransactionRef &ptx, const CBlock *pblock = nullptr);
+    void SyncTransaction(const CTransactionRef &ptx, const CBlock *pblock, int txIndex = -1);
     bool AddToWalletIfInvolvingMe(const CTransactionRef &ptx, const CBlock *pblock, bool fUpdate);
     int ScanForWalletTransactions(CBlockIndex *pindexStart, bool fUpdate = false);
     void ReacceptWalletTransactions();
@@ -720,7 +725,8 @@ public:
         CAmount &nFeeRet,
         int &nChangePosRet,
         std::string &strFailReason,
-        bool sign = true);
+        bool sign = true,
+        const std::vector<CTxIn> &vin = {});
 
     bool CommitTransaction(CWalletTx &wtxNew, CReserveKey &reservekey, CConnman *connman, CValidationState &state);
 
@@ -766,11 +772,6 @@ public:
     void SetBestChain(const CBlockLocator &loc);
 
     DBErrors LoadWallet(bool &fFirstRunRet);
-    void TransactionAddedToMempool(const CTransactionRef &tx) override;
-    void BlockConnected(const std::shared_ptr<const CBlock> &pblock,
-        const CBlockIndex *pindex,
-        const std::vector<CTransactionRef> &vtxConflicted) override;
-    void BlockDisconnected(const std::shared_ptr<const CBlock> &pblock) override;
 
     DBErrors ZapWalletTx(std::vector<CWalletTx> &vWtx);
 
@@ -779,8 +780,6 @@ public:
     bool AddressIsMine(const CTxDestination &address);
 
     bool DelAddressBook(const CTxDestination &address);
-
-    void UpdatedTransaction(const uint256 &hashTx);
 
     void Inventory(const uint256 &hash)
     {
@@ -830,24 +829,6 @@ public:
 
     //! Verify the wallet database and perform salvage if required
     static bool Verify(const std::string &walletFile, std::string &warningString, std::string &errorString);
-
-    /**
-     * Address book entry changed.
-     * @note called with lock cs_wallet held.
-     */
-    boost::signals2::signal<void(CWallet *wallet,
-        const CTxDestination &address,
-        const std::string &label,
-        bool isMine,
-        const std::string &purpose,
-        ChangeType status)>
-        NotifyAddressBookChanged;
-
-    /**
-     * Wallet transaction added, removed or updated.
-     * @note called with lock cs_wallet held.
-     */
-    boost::signals2::signal<void(CWallet *wallet, const uint256 &hashTx, ChangeType status)> NotifyTransactionChanged;
 
     /** Show progress e.g. for rescan */
     boost::signals2::signal<void(const std::string &title, int nProgress)> ShowProgress;

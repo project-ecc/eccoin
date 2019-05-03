@@ -20,19 +20,13 @@
 
 #include "coins.h"
 
-#include "memusage.h"
-#include "random.h"
-#include "util/util.h"
-#include <assert.h>
-
-#include "coins.h"
-
 #include "consensus/consensus.h"
 #include "memusage.h"
 #include "random.h"
+#include "util/logger.h"
 #include "util/util.h"
-
 #include <assert.h>
+
 
 bool CCoinsView::GetCoin(const COutPoint &outpoint, Coin &coin) const { return false; }
 bool CCoinsView::HaveCoin(const COutPoint &outpoint) const { return false; }
@@ -91,7 +85,7 @@ size_t CCoinsViewCache::ResetCachedCoinUsage() const
 
 CCoinsMap::iterator CCoinsViewCache::FetchCoin(const COutPoint &outpoint) const
 {
-    AssertLockHeld(cs_utxo);
+    LOCK(cs_utxo);
     CCoinsMap::iterator it = cacheCoins.find(outpoint);
     if (it != cacheCoins.end())
         return it;
@@ -510,6 +504,7 @@ double CCoinsViewCache::GetPriority(const CTransaction &tx, int nHeight, CAmount
 CCoinsViewCursor::~CCoinsViewCursor() {}
 static const size_t nMaxOutputsPerBlock =
     DEFAULT_LARGEST_TRANSACTION / ::GetSerializeSize(CTxOut(), SER_NETWORK, PROTOCOL_VERSION);
+
 const Coin &AccessByTxid(const CCoinsViewCache &view, const uint256 &txid)
 {
     COutPoint iter(txid, 0);

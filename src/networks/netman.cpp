@@ -28,8 +28,8 @@
 
 void AppendParamsHelpMessages(std::string &strUsage, bool debugHelp)
 {
-    strUsage += HelpMessageGroup(_("Chain selection options:"));
-    strUsage += HelpMessageOpt("-testnet", _("Use the test chain"));
+    strUsage += HelpMessageGroup("Chain selection options:");
+    strUsage += HelpMessageOpt("-testnet", "Use the test chain");
     if (debugHelp)
     {
         strUsage += HelpMessageOpt("-regtest",

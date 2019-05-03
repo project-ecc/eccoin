@@ -10,6 +10,7 @@ src/test/buildenv.py
 *.tar.gz
 
 *.exe
+src/eccoind
 src/bitcoin
 src/bitcoind
 src/bitcoin-cli

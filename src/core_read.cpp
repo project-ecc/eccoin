@@ -24,6 +24,7 @@
 #include "script/script.h"
 #include "serialize.h"
 #include "streams.h"
+#include "util/logger.h"
 #include "util/util.h"
 #include "util/utilstrencodings.h"
 #include "version.h"

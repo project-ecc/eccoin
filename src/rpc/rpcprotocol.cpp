@@ -23,6 +23,7 @@
 #include "args.h"
 #include "random.h"
 #include "tinyformat.h"
+#include "util/logger.h"
 #include "util/util.h"
 #include "util/utilstrencodings.h"
 #include "util/utiltime.h"
@@ -105,9 +106,6 @@ bool GenerateAuthCookie(std::string *cookie_out)
     GetRandBytes(rand_pwd, 32);
     std::string cookie = COOKIEAUTH_USER + ":" + EncodeBase64(&rand_pwd[0], 32);
 
-    /** the umask determines what permissions are used to create this file -
-     * these are set to 077 in init.cpp unless overridden with -sysperms.
-     */
     std::ofstream file;
     fs::path filepath = GetAuthCookieFile();
     file.open(filepath.string().c_str());

@@ -18,16 +18,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <boost/thread.hpp>
 
+#include "verifydb.h"
 #include "init.h"
 #include "main.h"
 #include "processblock.h"
-#include "verifydb.h"
 
 
-CVerifyDB::CVerifyDB() { uiInterface.ShowProgress(_("Verifying blocks..."), 0); }
-CVerifyDB::~CVerifyDB() { uiInterface.ShowProgress("", 100); }
+CVerifyDB::CVerifyDB() {}
+CVerifyDB::~CVerifyDB() {}
 bool CVerifyDB::VerifyDB(const CNetworkTemplate &chainparams, CCoinsView *coinsview, int nCheckLevel, int nCheckDepth)
 {
     LOCK(cs_main);
@@ -50,11 +49,11 @@ bool CVerifyDB::VerifyDB(const CNetworkTemplate &chainparams, CCoinsView *coinsv
     for (CBlockIndex *pindex = pnetMan->getChainActive()->chainActive.Tip(); pindex && pindex->pprev;
          pindex = pindex->pprev)
     {
-        boost::this_thread::interruption_point();
-        uiInterface.ShowProgress(_("Verifying blocks..."),
-            std::max(1, std::min(
-                            99, (int)(((double)(pnetMan->getChainActive()->chainActive.Height() - pindex->nHeight)) /
-                                      (double)nCheckDepth * (nCheckLevel >= 4 ? 50 : 100)))));
+        if (shutdown_threads.load())
+        {
+            LogPrintf("VerifyDB(): Shutdown requested. Exiting.\n");
+            return false;
+        }
         if (pindex->nHeight < pnetMan->getChainActive()->chainActive.Height() - nCheckDepth)
             break;
         CBlock block;
@@ -112,11 +111,11 @@ bool CVerifyDB::VerifyDB(const CNetworkTemplate &chainparams, CCoinsView *coinsv
         CBlockIndex *pindex = pindexState;
         while (pindex != pnetMan->getChainActive()->chainActive.Tip())
         {
-            boost::this_thread::interruption_point();
-            uiInterface.ShowProgress(_("Verifying blocks..."),
-                std::max(1, std::min(99, 100 - (int)(((double)(pnetMan->getChainActive()->chainActive.Height() -
-                                                               pindex->nHeight)) /
-                                                     (double)nCheckDepth * 50))));
+            if (shutdown_threads.load())
+            {
+                LogPrintf("VerifyDB(): [lower] Shutdown requested. Exiting.\n");
+                return false;
+            }
             pindex = pnetMan->getChainActive()->chainActive.Next(pindex);
             CBlock block;
             if (!ReadBlockFromDisk(block, pindex, chainparams.GetConsensus()))

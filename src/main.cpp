@@ -20,7 +20,6 @@
 
 #include "main.h"
 
-#include "addrman.h"
 #include "args.h"
 #include "arith_uint256.h"
 #include "chain/chain.h"
@@ -33,8 +32,9 @@
 #include "init.h"
 #include "kernel.h"
 #include "merkleblock.h"
-#include "messages.h"
-#include "net.h"
+#include "net/addrman.h"
+#include "net/messages.h"
+#include "net/net.h"
 #include "networks/netman.h"
 #include "networks/networktemplate.h"
 #include "policy/policy.h"
@@ -49,7 +49,7 @@
 #include "tinyformat.h"
 #include "txdb.h"
 #include "txmempool.h"
-#include "ui_interface.h"
+
 #include "undo.h"
 #include "util/util.h"
 #include "util/utilmoneystr.h"
@@ -62,7 +62,7 @@
 #include <boost/math/distributions/poisson.hpp>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_int_distribution.hpp>
-#include <boost/thread.hpp>
+
 #include <random>
 #include <random>
 #include <sstream>
@@ -88,8 +88,6 @@ unsigned int nBytesPerSigOp = DEFAULT_BYTES_PER_SIGOP;
 bool fCheckBlockIndex = false;
 bool fCheckpointsEnabled = DEFAULT_CHECKPOINTS_ENABLED;
 size_t nCoinCacheUsage = 5000 * 300;
-bool fAlerts = DEFAULT_ALERTS;
-bool fEnableReplacement = DEFAULT_ENABLE_REPLACEMENT;
 
 /** Fees smaller than this (in satoshi) are considered zero fee (for relaying, mining and transaction creation) */
 CFeeRate minRelayTxFee = CFeeRate(DEFAULT_MIN_RELAY_TX_FEE);
@@ -171,12 +169,7 @@ int nPeersWithValidatedDownloads = 0;
 // Registration of network node signals.
 //
 
-int GetHeight()
-{
-    LOCK(cs_main);
-    return pnetMan->getChainActive()->chainActive.Height();
-}
-
+int GetHeight() { return pnetMan->getChainActive()->chainActive.Height(); }
 //////////////////////////////////////////////////////////////////////////////
 //
 // mapOrphanTransactions
@@ -532,7 +525,7 @@ bool AcceptToMemoryPoolWorker(CTxMemPool &pool,
 
     // Check for conflicts with in-memory transactions
     {
-        LOCK(pool.cs); // protect pool.mapNextTx
+        READLOCK(pool.cs); // protect pool.mapNextTx
         for (auto const &txin : tx.vin)
         {
             auto itConflicting = pool.mapNextTx.find(txin.prevout);
@@ -551,7 +544,7 @@ bool AcceptToMemoryPoolWorker(CTxMemPool &pool,
         CAmount nValueIn = 0;
         LockPoints lp;
         {
-            LOCK(pool.cs);
+            WRITELOCK(pool.cs);
             CCoinsViewMemPool viewMemPool(pnetMan->getChainActive()->pcoinsTip.get(), pool);
             view.SetBackend(viewMemPool);
 
@@ -658,13 +651,6 @@ bool AcceptToMemoryPoolWorker(CTxMemPool &pool,
             return state.DoS(0, false, REJECT_INSUFFICIENTFEE, "mempool min fee not met", false,
                 strprintf("%d < %d", nFees, mempoolRejectFee));
         }
-        else if (gArgs.GetBoolArg("-relaypriority", DEFAULT_RELAYPRIORITY) &&
-                 nModifiedFees < ::minRelayTxFee.GetFee(nSize) &&
-                 !AllowFree(entry.GetPriority(pnetMan->getChainActive()->chainActive.Height() + 1)))
-        {
-            // Require that free transactions have sufficient priority to be mined in the next block.
-            return state.DoS(0, false, REJECT_INSUFFICIENTFEE, "insufficient priority");
-        }
 
         // Continuously rate-limit free (really, very-low-fee) transactions
         // This mitigates 'penny-flooding' -- sending thousands of free transactions just to
@@ -731,12 +717,7 @@ bool AcceptToMemoryPoolWorker(CTxMemPool &pool,
             nFees);
         if (fLimitFree && nModifiedFees < ::minRelayTxFee.GetFee(nSize))
         {
-            static CCriticalSection csFreeLimiter;
             static double dFreeCount;
-            static int64_t nLastTime;
-            int64_t nNow = GetTime();
-
-            LOCK(csFreeLimiter);
 
             // Use an exponentially decaying ~10-minute window:
             dFreeCount *= pow(1.0 - 1.0 / 600.0, (double)(nNow - nLastTime));
@@ -744,12 +725,14 @@ bool AcceptToMemoryPoolWorker(CTxMemPool &pool,
             // -limitfreerelay unit is thousand-bytes-per-minute
             // At default rate it would take over a month to fill 1GB
             if (dFreeCount >= gArgs.GetArg("-limitfreerelay", DEFAULT_LIMITFREERELAY) * 10 * 1000)
+            {
                 return state.DoS(0, false, REJECT_INSUFFICIENTFEE, "rate limited free transaction");
+            }
             LogPrint("mempool", "Rate limit dFreeCount: %g => %g\n", dFreeCount, dFreeCount + nSize);
             dFreeCount += nSize;
         }
 
-        if (fRejectAbsurdFee && tx.nVersion == 1 && nFees > ::minRelayTxFee.GetFee(nSize) * 10000)
+        if (fRejectAbsurdFee && tx.nVersion == 1 && nFees > maxTxFee)
         {
             LogPrintf("Absurdly-high-fee of %d for tx with version of 1 \n", nFees);
             return state.Invalid(false, REJECT_HIGHFEE, "absurdly-high-fee",
@@ -796,7 +779,7 @@ bool AcceptToMemoryPoolWorker(CTxMemPool &pool,
                 __func__, hash.ToString(), FormatStateMessage(state));
         }
         {
-            LOCK(pool.cs);
+            WRITELOCK(pool.cs);
             if (!pool._CalculateMemPoolAncestors(entry, setAncestors, nLimitAncestors, nLimitAncestorSize,
                     nLimitDescendants, nLimitDescendantSize, errString))
             {
@@ -805,7 +788,7 @@ bool AcceptToMemoryPoolWorker(CTxMemPool &pool,
         }
 
         {
-            LOCK(pool.cs);
+            WRITELOCK(pool.cs);
             // Store transaction in memory
             pool.addUnchecked(hash, entry, setAncestors, !pnetMan->getChainActive()->IsInitialBlockDownload());
         }
@@ -820,8 +803,13 @@ bool AcceptToMemoryPoolWorker(CTxMemPool &pool,
                 return state.DoS(0, false, REJECT_INSUFFICIENTFEE, "mempool full");
             }
         }
+
+        if (!fRejectAbsurdFee)
+        {
+            SyncWithWallets(ptx, nullptr, -1);
+        }
     }
-    GetMainSignals().TransactionAddedToMempool(ptx);
+
     return true;
 }
 
@@ -902,6 +890,10 @@ bool ReadBlockFromDisk(CBlock &block, const CDiskBlockPos &pos, const Consensus:
 
 bool ReadBlockFromDisk(CBlock &block, const CBlockIndex *pindex, const Consensus::Params &consensusParams)
 {
+    if (!pindex)
+    {
+        return false;
+    }
     if (!ReadBlockFromDisk(block, pindex->GetBlockPos(), consensusParams))
     {
         return false;
@@ -949,8 +941,7 @@ bool CScriptCheck::operator()()
 
 int GetSpendHeight(const CCoinsViewCache &inputs)
 {
-    LOCK(cs_main);
-    CBlockIndex *pindexPrev = pnetMan->getChainActive()->mapBlockIndex.find(inputs.GetBestBlock())->second;
+    CBlockIndex *pindexPrev = pnetMan->getChainActive()->LookupBlockIndex(inputs.GetBestBlock());
     return pindexPrev->nHeight + 1;
 }
 
@@ -1017,10 +1008,7 @@ bool CheckTxInputs(const CTransaction &tx, CValidationState &state, const CCoins
         if (nStakeReward >
             GetProofOfStakeReward(tx.GetCoinAge(nCoinAge, true), nSpendHeight) + DEFAULT_TRANSACTION_MINFEE)
         {
-            if (fDebug)
-            {
-                LogPrintf("nStakeReward = %d , CoinAge = %d \n", nStakeReward, nCoinAge);
-            }
+            LogPrint("kernel", "nStakeReward = %d , CoinAge = %d \n", nStakeReward, nCoinAge);
             return state.DoS(100, false, REJECT_INVALID, "bad-txns-stake-reward-too-high", false,
                 strprintf("ConnectInputs() : %s stake reward exceeded", tx.GetHash().ToString().substr(0, 10).c_str()));
         }
@@ -1116,9 +1104,7 @@ bool AbortNode(const std::string &strMessage, const std::string &userMessage)
 {
     strMiscWarning = strMessage;
     LogPrintf("*** %s\n", strMessage);
-    uiInterface.ThreadSafeMessageBox(
-        userMessage.empty() ? _("Error: A fatal internal error occurred, see debug.log for details") : userMessage, "",
-        CClientUIInterface::MSG_ERROR);
+    LogPrintf("Error: A fatal internal error occurred, see debug.log for details\n");
     StartShutdown();
     return false;
 }
@@ -1332,15 +1318,18 @@ bool InvalidateBlock(CValidationState &state, const Consensus::Params &consensus
 
     // The resulting new best tip may not be in setBlockIndexCandidates anymore, so
     // add it again.
-    BlockMap::iterator it = pnetMan->getChainActive()->mapBlockIndex.begin();
-    while (it != pnetMan->getChainActive()->mapBlockIndex.end())
     {
-        if (it->second->IsValid(BLOCK_VALID_TRANSACTIONS) && it->second->nChainTx &&
-            !setBlockIndexCandidates.value_comp()(it->second, pnetMan->getChainActive()->chainActive.Tip()))
+        READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+        BlockMap::iterator it = pnetMan->getChainActive()->mapBlockIndex.begin();
+        while (it != pnetMan->getChainActive()->mapBlockIndex.end())
         {
-            setBlockIndexCandidates.insert(it->second);
+            if (it->second->IsValid(BLOCK_VALID_TRANSACTIONS) && it->second->nChainTx &&
+                !setBlockIndexCandidates.value_comp()(it->second, pnetMan->getChainActive()->chainActive.Tip()))
+            {
+                setBlockIndexCandidates.insert(it->second);
+            }
+            it++;
         }
-        it++;
     }
 
     InvalidChainFound(pindex);
@@ -1355,6 +1344,7 @@ bool ReconsiderBlock(CValidationState &state, CBlockIndex *pindex)
 
     int nHeight = pindex->nHeight;
 
+    READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
     // Remove the invalidity flag from this block
     if (!pindex->IsValid())
     {
@@ -1757,7 +1747,7 @@ bool CheckDiskSpace(uint64_t nAdditionalBytes)
 
     // Check for nMinDiskSpace bytes (currently 50MB)
     if (nFreeBytesAvailable < nMinDiskSpace + nAdditionalBytes)
-        return AbortNode("Disk space is low!", _("Error: Disk space is low!"));
+        return AbortNode("Disk space is low!", "Error: Disk space is low!");
 
     return true;
 }
@@ -1805,42 +1795,33 @@ std::string GetWarnings(const std::string &strFor)
 {
     std::string strStatusBar;
     std::string strRPC;
-    std::string strGUI;
 
     if (!CLIENT_VERSION_IS_RELEASE)
     {
         strStatusBar =
             "This is a pre-release test build - use at your own risk - do not use for mining or merchant applications";
-        strGUI = _(
-            "This is a pre-release test build - use at your own risk - do not use for mining or merchant applications");
     }
 
     if (gArgs.GetBoolArg("-testsafemode", DEFAULT_TESTSAFEMODE))
-        strStatusBar = strRPC = strGUI = "testsafemode enabled";
+        strStatusBar = strRPC = "testsafemode enabled";
 
     // Misc warnings like out of disk space and clock is wrong
     if (strMiscWarning != "")
     {
-        strStatusBar = strGUI = strMiscWarning;
+        strStatusBar = strMiscWarning;
     }
 
     if (fLargeWorkForkFound)
     {
         strStatusBar = strRPC =
             "Warning: The network does not appear to fully agree! Some miners appear to be experiencing issues.";
-        strGUI =
-            _("Warning: The network does not appear to fully agree! Some miners appear to be experiencing issues.");
     }
     else if (fLargeWorkInvalidChainFound)
     {
         strStatusBar = strRPC = "Warning: We do not appear to fully agree with our peers! You may need to upgrade, or "
                                 "other nodes may need to upgrade.";
-        strGUI = _("Warning: We do not appear to fully agree with our peers! You may need to upgrade, or other nodes "
-                   "may need to upgrade.");
     }
 
-    if (strFor == "gui")
-        return strGUI;
     else if (strFor == "statusbar")
         return strStatusBar;
     else if (strFor == "rpc")
@@ -1964,6 +1945,12 @@ static const CAmount OLD_MAX_MONEY = 50000000000 * COIN;
 // miner's coin base reward
 int64_t GetProofOfWorkReward(int64_t nFees, const int nHeight, uint256 prevHash)
 {
+    if (pnetMan->getActivePaymentNetwork()->MineBlocksOnDemand())
+    {
+        // just return 50 coins for regtest and the fees
+        return (50 * COIN) + nFees;
+    }
+
     int64_t nSubsidy = 100000 * COIN;
 
     if (nHeight == 1)
@@ -1994,10 +1981,7 @@ int64_t GetProofOfStakeReward(int64_t nCoinAge, int nHeight)
     if (CMS == MAX_MONEY)
     {
         // if we are already at max money supply limits (25 billion coins, we return 0 as no new coins are to be minted
-        if (fDebug)
-        {
-            LogPrintf("GetProofOfStakeReward(): create=%i nCoinAge=%d\n", 0, nCoinAge);
-        }
+        LogPrint("kernel", "GetProofOfStakeReward(): create=%i nCoinAge=%d\n", 0, nCoinAge);
         return 0;
     }
     if (nHeight > 500000 && nHeight < 1005000)
@@ -2013,10 +1997,7 @@ int64_t GetProofOfStakeReward(int64_t nCoinAge, int nHeight)
             nRewardCoinYear = 0;
         }
         int64_t nSubsidy = nCoinAge * nRewardCoinYear / 365;
-        if (fDebug)
-        {
-            LogPrintf("GetProofOfStakeReward(): create=%s nCoinAge=%d\n", FormatMoney(nSubsidy).c_str(), nCoinAge);
-        }
+        LogPrint("kernel", "GetProofOfStakeReward(): create=%s nCoinAge=%d\n", FormatMoney(nSubsidy).c_str(), nCoinAge);
         return nSubsidy;
     }
 
@@ -2036,9 +2017,6 @@ int64_t GetProofOfStakeReward(int64_t nCoinAge, int nHeight)
             nSubsidy = nSubsidy - difference;
         }
     }
-    if (fDebug)
-    {
-        LogPrintf("GetProofOfStakeReward(): create=%s nCoinAge=%d\n", FormatMoney(nSubsidy).c_str(), nCoinAge);
-    }
+    LogPrint("kernel", "GetProofOfStakeReward(): create=%s nCoinAge=%d\n", FormatMoney(nSubsidy).c_str(), nCoinAge);
     return nSubsidy;
 }

@@ -28,7 +28,7 @@
 #include "keystore.h"
 #include "main.h"
 #include "merkleblock.h"
-#include "net.h"
+#include "net/net.h"
 #include "policy/policy.h"
 #include "rpcserver.h"
 #include "script/script.h"
@@ -45,6 +45,8 @@
 #include <boost/assign/list_of.hpp>
 
 #include <univalue.h>
+
+void RelayTransaction(const CTransaction &tx, CConnman &connman);
 
 void ScriptPubKeyToJSON(const CScript &scriptPubKey, UniValue &out, bool fIncludeHex)
 {
@@ -113,10 +115,9 @@ void TxToJSON(const CTransaction &tx, const uint256 hashBlock, UniValue &entry)
     if (!hashBlock.IsNull())
     {
         entry.push_back(Pair("blockhash", hashBlock.GetHex()));
-        BlockMap::iterator mi = pnetMan->getChainActive()->mapBlockIndex.find(hashBlock);
-        if (mi != pnetMan->getChainActive()->mapBlockIndex.end() && (*mi).second)
+        CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(hashBlock);
+        if (pindex)
         {
-            CBlockIndex *pindex = (*mi).second;
             if (pnetMan->getChainActive()->chainActive.Contains(pindex))
             {
                 entry.push_back(
@@ -265,6 +266,7 @@ UniValue gettxoutproof(const UniValue &params, bool fHelp)
     uint256 hashBlock;
     if (params.size() > 1)
     {
+        READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
         hashBlock = uint256S(params[1].get_str());
         if (!pnetMan->getChainActive()->mapBlockIndex.count(hashBlock))
             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
@@ -285,6 +287,7 @@ UniValue gettxoutproof(const UniValue &params, bool fHelp)
         if (!GetTransaction(oneTxid, tx, pnetMan->getActivePaymentNetwork()->GetConsensus(), hashBlock, false) ||
             hashBlock.IsNull())
             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Transaction not yet in block");
+        READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
         if (!pnetMan->getChainActive()->mapBlockIndex.count(hashBlock))
             throw JSONRPCError(RPC_INTERNAL_ERROR, "Transaction index corrupt");
         pblockindex = pnetMan->getChainActive()->mapBlockIndex[hashBlock];
@@ -337,12 +340,13 @@ UniValue verifytxoutproof(const UniValue &params, bool fHelp)
     if (merkleBlock.txn.ExtractMatches(vMatch) != merkleBlock.header.hashMerkleRoot)
         return res;
 
-    LOCK(cs_main);
+    auto *pindex = pnetMan->getChainActive()->LookupBlockIndex(merkleBlock.header.GetHash());
 
-    if (!pnetMan->getChainActive()->mapBlockIndex.count(merkleBlock.header.GetHash()) ||
-        !pnetMan->getChainActive()->chainActive.Contains(
-            pnetMan->getChainActive()->mapBlockIndex[merkleBlock.header.GetHash()]))
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found in chain");
+    {
+        LOCK(cs_main);
+        if (!pindex || !pnetMan->getChainActive()->chainActive.Contains(pindex))
+            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found in chain");
+    }
 
     for (auto const &hash : vMatch)
         res.push_back(hash.GetHex());
@@ -676,7 +680,7 @@ UniValue signrawtransaction(const UniValue &params, bool fHelp)
     CCoinsView viewDummy;
     CCoinsViewCache view(&viewDummy);
     {
-        LOCK(mempool.cs);
+        READLOCK(mempool.cs);
         CCoinsViewCache &viewChain = *pnetMan->getChainActive()->pcoinsTip;
         CCoinsViewMemPool viewMempool(&viewChain, mempool);
         view.SetBackend(viewMempool); // temporarily switch cache backend to db+mempool view
@@ -806,7 +810,6 @@ UniValue signrawtransaction(const UniValue &params, bool fHelp)
             continue;
         }
         const CScript &prevPubKey = coin.out.scriptPubKey;
-        const CAmount &amount = coin.out.nValue;
 
         txin.scriptSig.clear();
         // Only sign SIGHASH_SINGLE if there's a corresponding output:
@@ -912,7 +915,6 @@ UniValue sendrawtransaction(const UniValue &params, bool fHelp)
         throw JSONRPCError(RPC_CLIENT_P2P_DISABLED, "Error: Peer-to-peer functionality missing or disabled");
     }
 
-    CInv inv(MSG_TX, txid);
-    g_connman->ForEachNode([&inv](CNode *pnode) { pnode->PushInventory(inv); });
+    RelayTransaction(ttx, *g_connman);
     return txid.GetHex();
 }

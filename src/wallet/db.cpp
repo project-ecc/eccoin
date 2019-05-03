@@ -20,10 +20,11 @@
 
 #include "db.h"
 
-#include "addrman.h"
 #include "args.h"
 #include "crypto/hash.h"
-#include "protocol.h"
+#include "net/addrman.h"
+#include "net/protocol.h"
+#include "threadgroup.h"
 #include "util/util.h"
 #include "util/utilstrencodings.h"
 
@@ -80,7 +81,9 @@ void CDBEnv::Close() { EnvShutdown(); }
 bool CDBEnv::Open(const fs::path &pathIn)
 {
     if (fDbEnvInit)
+    {
         return true;
+    }
 
     boost::this_thread::interruption_point();
 
@@ -108,7 +111,10 @@ bool CDBEnv::Open(const fs::path &pathIn)
         DB_CREATE | DB_INIT_LOCK | DB_INIT_LOG | DB_INIT_MPOOL | DB_INIT_TXN | DB_THREAD | DB_RECOVER | nEnvFlags,
         S_IRUSR | S_IWUSR);
     if (ret != 0)
+    {
+        dbenv->close(0);
         return error("CDBEnv::Open: Error %d opening database environment: %s\n", ret, DbEnv::strerror(ret));
+    }
 
     fDbEnvInit = true;
     fMockDb = false;
@@ -118,7 +124,9 @@ bool CDBEnv::Open(const fs::path &pathIn)
 void CDBEnv::MakeMock()
 {
     if (fDbEnvInit)
+    {
         throw std::runtime_error("CDBEnv::MakeMock: Already initialized");
+    }
 
     boost::this_thread::interruption_point();
 
@@ -372,22 +380,24 @@ bool CDB::Rewrite(const std::string &strFile, const char *pszSkip)
                     if (ret > 0)
                     {
                         LogPrintf("CDB::Rewrite: Can't create database file %s\n", strFileRes);
+                        pdbCopy->close(0);
                         fSuccess = false;
                     }
 
                     Dbc *pcursor = db.GetCursor();
                     if (pcursor)
+                    {
                         while (fSuccess)
                         {
                             CDataStream ssKey(SER_DISK, CLIENT_VERSION);
                             CDataStream ssValue(SER_DISK, CLIENT_VERSION);
-                            int ret = db.ReadAtCursor(pcursor, ssKey, ssValue, DB_NEXT);
-                            if (ret == DB_NOTFOUND)
+                            int ret1 = db.ReadAtCursor(pcursor, ssKey, ssValue, DB_NEXT);
+                            if (ret1 == DB_NOTFOUND)
                             {
                                 pcursor->close();
                                 break;
                             }
-                            else if (ret != 0)
+                            else if (ret1 != 0)
                             {
                                 pcursor->close();
                                 fSuccess = false;
@@ -407,12 +417,19 @@ bool CDB::Rewrite(const std::string &strFile, const char *pszSkip)
                             if (ret2 > 0)
                                 fSuccess = false;
                         }
+                    }
                     if (fSuccess)
                     {
                         db.Close();
                         bitdb.CloseDb(strFile);
                         if (pdbCopy->close(0))
+                        {
                             fSuccess = false;
+                        }
+                        else
+                        {
+                            pdbCopy->close(0);
+                        }
                         delete pdbCopy;
                     }
                 }

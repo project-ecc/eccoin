@@ -27,7 +27,7 @@
 #include "init.h"
 #include "random.h"
 #include "sync.h"
-#include "ui_interface.h"
+
 #include "util/util.h"
 #include "util/utilstrencodings.h"
 
@@ -159,12 +159,13 @@ CAmount AmountFromValue(const UniValue &value)
     return amount;
 }
 
+// NOTE originally used 8 not 6
 CAmount AmountFromValue_Original(const UniValue &value)
 {
     if (!value.isNum() && !value.isStr())
         throw JSONRPCError(RPC_TYPE_ERROR, "Amount is not a number or string");
     CAmount amount;
-    if (!ParseFixedPoint(value.getValStr(), 8, &amount))
+    if (!ParseFixedPoint(value.getValStr(), 6, &amount))
         throw JSONRPCError(RPC_TYPE_ERROR, "Invalid amount");
     if (!MoneyRange(amount))
         throw JSONRPCError(RPC_TYPE_ERROR, "Amount out of range");
@@ -359,8 +360,9 @@ static const CRPCCommand vRPCCommands[] = {
     /* Wallet */
     {"wallet", "addmultisigaddress", &addmultisigaddress, true}, {"wallet", "backupwallet", &backupwallet, true},
     {"wallet", "dumpprivkey", &dumpprivkey, true}, {"wallet", "dumpwallet", &dumpwallet, true},
-    {"wallet", "encryptwallet", &encryptwallet, true}, {"wallet", "getbalance", &getbalance, false},
-    {"wallet", "getnewaddress", &getnewaddress, true}, {"wallet", "getrawchangeaddress", &getrawchangeaddress, true},
+    {"wallet", "listaddresses", &listaddresses, true}, {"wallet", "encryptwallet", &encryptwallet, true},
+    {"wallet", "getbalance", &getbalance, false}, {"wallet", "getnewaddress", &getnewaddress, true},
+    {"wallet", "getrawchangeaddress", &getrawchangeaddress, true},
     {"wallet", "getreceivedbyaddress", &getreceivedbyaddress, false},
     {"wallet", "gettransaction", &gettransaction, false}, {"wallet", "abandontransaction", &abandontransaction, false},
     {"wallet", "getunconfirmedbalance", &getunconfirmedbalance, false},
@@ -758,8 +760,8 @@ static UniValue CallRPC(BaseRequestHandler *rh, const std::string &strMethod, co
         if (!GetAuthCookie(&strRPCUserColonPass))
         {
             throw std::runtime_error(
-                strprintf(_("Could not locate RPC credentials. No authentication cookie could be found, and RPC "
-                            "password is not set.  See -rpcpassword and -stdinrpcpass.  Configuration file: (%s)"),
+                strprintf("Could not locate RPC credentials. No authentication cookie could be found, and RPC "
+                          "password is not set.  See -rpcpassword and -stdinrpcpass.  Configuration file: (%s)",
                     gArgs.GetConfigFile().string().c_str()));
         }
     }

@@ -79,7 +79,7 @@ BOOST_AUTO_TEST_CASE(util_sharedcriticalsection)
     } while (0);
 
     { // If the read lock does not allow simultaneous locking, this code will hang in the join_all
-        boost::thread_group thrds;
+        thread_group thrds;
         READLOCK(cs);
         thrds.create_thread(boost::bind(ThreadSharedCritTest, &cs));
         thrds.join_all();
@@ -90,7 +90,7 @@ BOOST_AUTO_TEST_CASE(util_sharedcriticalsection)
         threadExited = false;
         readVal = 0;
         critVal = 1;
-        boost::thread_group thrds;
+        thread_group thrds;
         {
             WRITELOCK(cs);
             thrds.create_thread(boost::bind(ThreadSharedCritTest, &cs));
@@ -121,7 +121,7 @@ BOOST_AUTO_TEST_CASE(util_threadcorral)
     CThreadCorral corral;
 
     { // ensure that regions lock out other regions, but not the current region.
-        boost::thread_group thrds;
+        thread_group thrds;
         int readVals[3] = {0, 0, 0};
         {
             CORRAL(corral, 1);

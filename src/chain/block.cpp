@@ -171,17 +171,14 @@ bool CBlock::CheckBlockSignature() const
                 std::vector<unsigned char> &vchPubKey = vSolutions[0];
                 if (vchBlockSig.empty())
                 {
-                    LogPrintf("sig is empty? \n");
                     continue;
                 }
                 if (!CPubKey(vchPubKey).Verify(GetHash(), vchBlockSig))
                 {
-                    LogPrintf("probably will see this message \n");
                     continue;
                 }
                 return true;
             }
-            LogPrintf("got here somehow?");
         }
     }
     LogPrintf("CheckBlockSignature failed \n");

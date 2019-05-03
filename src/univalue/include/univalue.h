@@ -1,7 +1,7 @@
 // Copyright 2014 BitPay Inc.
 // Copyright 2015 Bitcoin Core Developers
 // Distributed under the MIT software license, see the accompanying
-// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+// file COPYING or https://opensource.org/licenses/mit-license.php.
 
 #ifndef __UNIVALUE_H__
 #define __UNIVALUE_H__
@@ -14,7 +14,6 @@
 #include <map>
 #include <cassert>
 
-#include <sstream>        // .get_int64()
 #include <utility>        // std::pair
 
 class UniValue {
@@ -26,14 +25,8 @@ public:
         typ = initialType;
         val = initialStr;
     }
-    UniValue(unsigned int val_) {
-       setInt((uint64_t)val_);
-    }
-    UniValue(unsigned long val_) {
-       setInt((uint64_t)val_);
-    }
-    UniValue(unsigned long long val_) {
-        setInt((uint64_t)val_);
+    UniValue(uint64_t val_) {
+        setInt(val_);
     }
     UniValue(int64_t val_) {
         setInt(val_);
@@ -136,6 +129,10 @@ public:
         UniValue tmpVal(val_);
         return pushKV(key, tmpVal);
     }
+    bool pushKV(const std::string& key, bool val_) {
+        UniValue tmpVal((bool)val_);
+        return pushKV(key, tmpVal);
+    }
     bool pushKV(const std::string& key, int val_) {
         UniValue tmpVal((int64_t)val_);
         return pushKV(key, tmpVal);
@@ -203,17 +200,10 @@ static inline std::pair<std::string,UniValue> Pair(const char *cKey, std::string
     return std::make_pair(key, uVal);
 }
 
-static inline std::pair<std::string,UniValue> Pair(const char *cKey, unsigned long ulVal)
+static inline std::pair<std::string,UniValue> Pair(const char *cKey, uint64_t u64Val)
 {
     std::string key(cKey);
-    UniValue uVal(ulVal);
-    return std::make_pair(key, uVal);
-}
-
-static inline std::pair<std::string,UniValue> Pair(const char *cKey, unsigned long long ullVal)
-{
-    std::string key(cKey);
-    UniValue uVal(ullVal);
+    UniValue uVal(u64Val);
     return std::make_pair(key, uVal);
 }
 

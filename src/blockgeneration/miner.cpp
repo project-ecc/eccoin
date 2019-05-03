@@ -27,7 +27,7 @@
 #include "crypto/scrypt.h"
 #include "init.h"
 #include "kernel.h"
-#include "net.h"
+#include "net/net.h"
 #include "networks/netman.h"
 #include "networks/networktemplate.h"
 #include "policy/policy.h"
@@ -131,27 +131,17 @@ std::unique_ptr<CBlockTemplate> CreateNewPoWBlock(CWallet *pwallet, const CScrip
     pblocktemplate->vTxFees.push_back(-1); // updated at end
     pblocktemplate->vTxSigOps.push_back(-1); // updated at end
 
-    // Largest block you're willing to create:
-    unsigned int nBlockMaxSize = gArgs.GetArg("-blockmaxsize", MAX_BLOCK_SIZE_GEN / 2);
-    // Limit to betweeen 1K and MAX_BLOCK_SIZE-1K for sanity:
-    nBlockMaxSize = std::max((unsigned int)1000, std::min((unsigned int)(MAX_BLOCK_SIZE - 1000), nBlockMaxSize));
-
-    // How much of the block should be dedicated to high-priority transactions,
-    // included regardless of the fees they pay
-    unsigned int nBlockPrioritySize = gArgs.GetArg("-blockprioritysize", 27000);
-    nBlockPrioritySize = std::min(nBlockMaxSize, nBlockPrioritySize);
-
-    // Minimum block size you want to create; block will be filled with free transactions
-    // until there are no more or the block reaches this size:
-    unsigned int nBlockMinSize = gArgs.GetArg("-blockminsize", 0);
-    nBlockMinSize = std::min(nBlockMaxSize, nBlockMinSize);
+    uint64_t nBlockMaxSize = MAX_BLOCK_SIZE - 1000;
+    uint64_t nBlockPrioritySize = DEFTAUL_BLOCK_PRIORITY_SIZE;
+    uint64_t nBlockMinSize = 0;
 
     // Collect memory pool transactions into the block
     CTxMemPool::setEntries inBlock;
     CTxMemPool::setEntries waitSet;
 
     // ppcoin: if coinstake available add coinstake tx
-    static int64_t nLastCoinStakeSearchTime = GetAdjustedTime(); // only initialized at startup
+    // Commented out unused variable assuming no side effect within GetAdjustedTime()
+    // static int64_t nLastCoinStakeSearchTime = GetAdjustedTime(); // only initialized at startup
     CBlockIndex *pindexPrev = pnetMan->getChainActive()->chainActive.Tip();
 
 
@@ -171,11 +161,12 @@ std::unique_ptr<CBlockTemplate> CreateNewPoWBlock(CWallet *pwallet, const CScrip
     pblock->nBits = GetNextTargetRequired(pindexPrev, false);
     // Collect memory pool transactions into the block
     {
-        LOCK2(cs_main, mempool.cs);
-        CBlockIndex *pindexPrev = pnetMan->getChainActive()->chainActive.Tip();
-        const int nHeight = pindexPrev->nHeight + 1;
+        LOCK(cs_main);
+        READLOCK(mempool.cs);
+        CBlockIndex *_pindexPrev = pnetMan->getChainActive()->chainActive.Tip();
+        const int nHeight = _pindexPrev->nHeight + 1;
         pblock->nTime = GetAdjustedTime();
-        const int64_t nMedianTimePast = pindexPrev->GetMedianTimePast();
+        const int64_t nMedianTimePast = _pindexPrev->GetMedianTimePast();
 
         pblock->nVersion = 4;
 
@@ -191,7 +182,7 @@ std::unique_ptr<CBlockTemplate> CreateNewPoWBlock(CWallet *pwallet, const CScrip
             {
                 double dPriority = mi->GetPriority(nHeight);
                 CAmount dummy;
-                mempool.ApplyDeltas(mi->GetTx().GetHash(), dPriority, dummy);
+                mempool._ApplyDeltas(mi->GetTx().GetHash(), dPriority, dummy);
                 vecPriority.push_back(TxCoinAgePriority(dPriority, mi));
             }
             std::make_heap(vecPriority.begin(), vecPriority.end(), pricomparer);
@@ -323,12 +314,12 @@ std::unique_ptr<CBlockTemplate> CreateNewPoWBlock(CWallet *pwallet, const CScrip
         nLastBlockSize = nBlockSize;
 
         // Fill in header
-        pblock->hashPrevBlock = pindexPrev->GetBlockHash();
-        pblock->nTime = std::max(pindexPrev->GetMedianTimePast() + 1, pblock->GetMaxTransactionTime());
-        pblock->nTime = std::max(pblock->GetBlockTime(), pindexPrev->GetBlockTime() - nMaxClockDrift);
-        UpdateTime(pblock, pnetMan->getActivePaymentNetwork()->GetConsensus(), pindexPrev);
+        pblock->hashPrevBlock = _pindexPrev->GetBlockHash();
+        pblock->nTime = std::max(_pindexPrev->GetMedianTimePast() + 1, pblock->GetMaxTransactionTime());
+        pblock->nTime = std::max(pblock->GetBlockTime(), _pindexPrev->GetBlockTime() - nMaxClockDrift);
+        UpdateTime(pblock, pnetMan->getActivePaymentNetwork()->GetConsensus(), _pindexPrev);
         pblock->vtx[0]->vout[0].nValue =
-            GetProofOfWorkReward(nFees, pindexPrev->nHeight + 1, pindexPrev->GetBlockHash());
+            GetProofOfWorkReward(nFees, _pindexPrev->nHeight + 1, _pindexPrev->GetBlockHash());
         pblock->nNonce = 0;
     }
 
@@ -379,9 +370,7 @@ void FormatHashBuffers(CBlock *pblock, char *pmidstate, char *pdata, char *phash
 }
 
 
-bool CheckWork(const std::shared_ptr<const CBlock> pblock,
-    CWallet &wallet,
-    boost::shared_ptr<CReserveScript> coinbaseScript)
+bool CheckWork(const CBlock *pblock, CWallet &wallet, boost::shared_ptr<CReserveScript> coinbaseScript)
 {
     arith_uint256 hash = UintToArith256(pblock->GetHash());
     arith_uint256 hashTarget = arith_uint256(pblock->nBits);
@@ -396,16 +385,22 @@ bool CheckWork(const std::shared_ptr<const CBlock> pblock,
 
     // Found a solution
     {
-        LOCK(cs_main);
-        if (pblock->hashPrevBlock != pnetMan->getChainActive()->chainActive.Tip()->GetBlockHash())
+        CBlockIndex *ptip = pnetMan->getChainActive()->chainActive.Tip();
+        if (ptip == nullptr)
+        {
+            return false;
+        }
+        if (pblock->hashPrevBlock != ptip->GetBlockHash())
+        {
             return error("BMiner : generated block is stale");
+        }
 
         // Remove key from key pool
         coinbaseScript->KeepScript();
 
         // Track how many getdata requests this block gets
         {
-            LOCK(wallet.cs_wallet);
+            LOCK2(cs_main, wallet.cs_wallet);
             wallet.mapRequestCount[pblock->GetHash()] = 0;
         }
 
@@ -422,7 +417,7 @@ bool CheckWork(const std::shared_ptr<const CBlock> pblock,
 void EccMiner(CWallet *pwallet)
 {
     void *scratchbuf = scrypt_buffer_alloc();
-    LogPrintf("CPUMiner started for proof-of-%s\n", "stake");
+    LogPrintf("CPUMiner started for proof-of-work\n");
     SetThreadPriority(THREAD_PRIORITY_LOWEST);
     // Make this thread recognisable as the mining thread
     RenameThread("ecc-miner");
@@ -442,19 +437,19 @@ void EccMiner(CWallet *pwallet)
     unsigned int nExtraNonce = 0;
     while (true)
     {
-        if (fShutdown)
+        if (shutdown_threads.load())
             return;
         if (!g_connman)
         {
             MilliSleep(1000);
-            if (fShutdown)
+            if (shutdown_threads.load())
                 return;
         }
-        while (g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL) < 6 ||
+        while (g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL) < DEFAULT_MIN_BLOCK_GEN_PEERS ||
                pnetMan->getChainActive()->IsInitialBlockDownload() || pwallet->IsLocked())
         {
             MilliSleep(1000);
-            if (fShutdown)
+            if (shutdown_threads.load())
                 return;
         }
         //
@@ -514,8 +509,7 @@ void EccMiner(CWallet *pwallet)
                         break;
                     }
                     SetThreadPriority(THREAD_PRIORITY_NORMAL);
-                    const std::shared_ptr<const CBlock> spblock = std::make_shared<const CBlock>(*pblock);
-                    CheckWork(spblock, *pwalletMain, coinbaseScript);
+                    CheckWork(pblock, *pwalletMain, coinbaseScript);
                     SetThreadPriority(THREAD_PRIORITY_LOWEST);
                     break;
                 }
@@ -543,7 +537,7 @@ void EccMiner(CWallet *pwallet)
                 }
             }
             // Check for stop or if block needs to be rebuilt
-            if (fShutdown)
+            if (shutdown_threads.load())
                 return;
             if (g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL))
                 break;

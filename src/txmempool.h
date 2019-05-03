@@ -463,7 +463,7 @@ private:
 
     void trackPackageRemoved(const CFeeRate &rate);
 
-    boost::mutex cs_txPerSec;
+    std::mutex cs_txPerSec;
     double nTxPerSec; // BU: tx's per second accepted into the mempool
 
 public:
@@ -488,7 +488,7 @@ public:
                 CompareTxMemPoolEntryByScore> > >
         indexed_transaction_set;
 
-    mutable CCriticalSection cs;
+    mutable CSharedCriticalSection cs;
     indexed_transaction_set mapTx;
     typedef indexed_transaction_set::nth_index<0>::type::iterator txiter;
     struct CompareIteratorByHash
@@ -657,31 +657,31 @@ public:
 
     unsigned long size()
     {
-        LOCK(cs);
+        READLOCK(cs);
         return mapTx.size();
     }
     unsigned long _size() { return mapTx.size(); }
     uint64_t GetTotalTxSize()
     {
-        LOCK(cs);
+        READLOCK(cs);
         return totalTxSize;
     }
 
     bool exists(uint256 hash) const
     {
-        LOCK(cs);
+        READLOCK(cs);
         return (mapTx.count(hash) != 0);
     }
     bool _exists(uint256 hash) const { return (mapTx.count(hash) != 0); }
     double TransactionsPerSecond()
     {
-        boost::mutex::scoped_lock lock(cs_txPerSec);
+        std::lock_guard<std::mutex> lock(cs_txPerSec);
         return nTxPerSec;
     }
 
     bool exists(const COutPoint &outpoint) const
     {
-        LOCK(cs);
+        READLOCK(cs);
         auto it = mapTx.find(outpoint.hash);
         return (it != mapTx.end() && outpoint.n < it->GetTx().vout.size());
     }

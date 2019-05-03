@@ -24,8 +24,8 @@
 #include "clientversion.h"
 #include "init.h"
 #include "main.h"
-#include "net.h"
-#include "netbase.h"
+#include "net/net.h"
+#include "net/netbase.h"
 #include "rpcserver.h"
 #include "timedata.h"
 #include "util/util.h"
@@ -120,7 +120,6 @@ UniValue getinfo(const UniValue &params, bool fHelp)
             obj.push_back(Pair("unlocked_until", nWalletUnlockTime));
         }
     }
-    obj.push_back(Pair("staking", minerThreads != NULL));
     obj.push_back(Pair("paytxfee", ValueFromAmount(payTxFee.GetFeePerK())));
     obj.push_back(Pair("relayfee", ValueFromAmount(::minRelayTxFee.GetFeePerK())));
     obj.push_back(Pair("errors", GetWarnings("statusbar")));
