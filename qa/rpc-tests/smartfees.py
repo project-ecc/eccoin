@@ -115,32 +115,6 @@ def check_estimates(node, fees_seen, max_invalid, print_estimates = True):
             raise AssertionError("Estimated fee (%f) larger than last fee (%f) for lower number of confirms"
                                  %(float(e),float(last_e)))
         last_e = e
-    valid_estimate = False
-    invalid_estimates = 0
-    for i,e in enumerate(all_estimates): # estimate is for i+1
-        if e >= 0:
-            valid_estimate = True
-            # estimatesmartfee should return the same result
-            assert_equal(node.estimatesmartfee(i+1)["feerate"], e)
-
-        else:
-            invalid_estimates += 1
-
-            # estimatesmartfee should still be valid
-            approx_estimate = node.estimatesmartfee(i+1)["feerate"]
-            answer_found = node.estimatesmartfee(i+1)["blocks"]
-            assert(approx_estimate > 0)
-            assert(answer_found > i+1)
-
-            # Once we're at a high enough confirmation count that we can give an estimate
-            # We should have estimates for all higher confirmation counts
-            if valid_estimate:
-                raise AssertionError("Invalid estimate appears at higher confirm count than valid estimate")
-
-    # Check on the expected number of different confirmation counts
-    # that we might not have valid estimates for
-    if invalid_estimates > max_invalid:
-        raise AssertionError("More than (%d) invalid estimates"%(max_invalid))
     return all_estimates
 
 
