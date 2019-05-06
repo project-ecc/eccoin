@@ -80,11 +80,10 @@ public:
 };
 
 /** Specialization of CCoinsViewCursor to iterate over a CCoinsViewDB */
-class CCoinsViewDBCursor: public CCoinsViewCursor
+class CCoinsViewDBCursor : public CCoinsViewCursor
 {
 public:
     ~CCoinsViewDBCursor() {}
-
     bool GetKey(COutPoint &key) const override;
     bool GetValue(Coin &coin) const override;
     unsigned int GetValueSize() const override;
@@ -93,8 +92,10 @@ public:
     void Next() override;
 
 private:
-    CCoinsViewDBCursor(CDBIterator* pcursorIn, const uint256 &hashBlockIn):
-        CCoinsViewCursor(hashBlockIn), pcursor(pcursorIn) {}
+    CCoinsViewDBCursor(CDBIterator *pcursorIn, const uint256 &hashBlockIn)
+        : CCoinsViewCursor(hashBlockIn), pcursor(pcursorIn)
+    {
+    }
     std::unique_ptr<CDBIterator> pcursor;
     std::pair<char, COutPoint> keyTmp;
 
