@@ -37,16 +37,4 @@ void InterruptHTTPRPC();
  */
 void StopHTTPRPC();
 
-/** Start HTTP REST subsystem.
- * Precondition; HTTP and RPC has been started.
- */
-bool StartREST();
-/** Interrupt RPC REST subsystem.
- */
-void InterruptREST();
-/** Stop HTTP REST subsystem.
- * Precondition; HTTP and RPC has been stopped.
- */
-void StopREST();
-
 #endif
