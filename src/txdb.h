@@ -73,9 +73,32 @@ public:
         const uint256 &hashBlock,
         const uint64_t nBestCoinHeight,
         size_t &nChildCachedCoinsUsage) override;
+    CCoinsViewCursor *Cursor() const override;
 
     //! Attempt to update from an older database format. Returns whether an error occurred.
     bool Upgrade();
+};
+
+/** Specialization of CCoinsViewCursor to iterate over a CCoinsViewDB */
+class CCoinsViewDBCursor: public CCoinsViewCursor
+{
+public:
+    ~CCoinsViewDBCursor() {}
+
+    bool GetKey(COutPoint &key) const override;
+    bool GetValue(Coin &coin) const override;
+    unsigned int GetValueSize() const override;
+
+    bool Valid() const override;
+    void Next() override;
+
+private:
+    CCoinsViewDBCursor(CDBIterator* pcursorIn, const uint256 &hashBlockIn):
+        CCoinsViewCursor(hashBlockIn), pcursor(pcursorIn) {}
+    std::unique_ptr<CDBIterator> pcursor;
+    std::pair<char, COutPoint> keyTmp;
+
+    friend class CCoinsViewDB;
 };
 
 /** Access to the block database (blocks/index/) */

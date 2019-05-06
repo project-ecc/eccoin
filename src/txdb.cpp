@@ -141,6 +141,60 @@ bool CCoinsViewDB::BatchWrite(CCoinsMap &mapCoins,
     return ret;
 }
 
+CCoinsViewCursor *CCoinsViewDB::Cursor() const
+{
+    CCoinsViewDBCursor *i = new CCoinsViewDBCursor(const_cast<CDBWrapper&>(db).NewIterator(), GetBestBlock());
+    /* It seems that there are no "const iterators" for LevelDB.  Since we
+       only need read operations on it, use a const-cast to get around
+       that restriction.  */
+    i->pcursor->Seek(DB_COIN);
+    // Cache key of first record
+    if (i->pcursor->Valid()) {
+        CoinEntry entry(&i->keyTmp.second);
+        i->pcursor->GetKey(entry);
+        i->keyTmp.first = entry.key;
+    } else {
+        i->keyTmp.first = 0; // Make sure Valid() and GetKey() return false
+    }
+    return i;
+}
+
+bool CCoinsViewDBCursor::GetKey(COutPoint &key) const
+{
+    // Return cached key
+    if (keyTmp.first == DB_COIN) {
+        key = keyTmp.second;
+        return true;
+    }
+    return false;
+}
+
+bool CCoinsViewDBCursor::GetValue(Coin &coin) const
+{
+    return pcursor->GetValue(coin);
+}
+
+unsigned int CCoinsViewDBCursor::GetValueSize() const
+{
+    return pcursor->GetValueSize();
+}
+
+bool CCoinsViewDBCursor::Valid() const
+{
+    return keyTmp.first == DB_COIN;
+}
+
+void CCoinsViewDBCursor::Next()
+{
+    pcursor->Next();
+    CoinEntry entry(&keyTmp.second);
+    if (!pcursor->Valid() || !pcursor->GetKey(entry)) {
+        keyTmp.first = 0; // Invalidate cached key after last record so that Valid() and GetKey() return false
+    } else {
+        keyTmp.first = entry.key;
+    }
+}
+
 CBlockTreeDB::CBlockTreeDB(size_t nCacheSize, bool fMemory, bool fWipe)
     : CDBWrapper(GetDataDir() / "blocks" / "index", nCacheSize, fMemory, fWipe)
 {
@@ -166,6 +220,7 @@ bool CBlockTreeDB::ReadReindexing(bool &fReindexing)
 }
 
 bool CBlockTreeDB::ReadLastBlockFile(int &nFile) { return Read(DB_LAST_BLOCK, nFile); }
+
 bool CBlockTreeDB::WriteBatchSync(const std::vector<std::pair<int, const CBlockFileInfo *> > &fileInfo,
     int nLastFile,
     const std::vector<const CBlockIndex *> &blockinfo)
