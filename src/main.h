@@ -452,6 +452,9 @@ bool CheckBlock(const CBlock &block, CValidationState &state, bool fCheckPOW = t
 /** Context-dependent validity checks */
 bool ContextualCheckBlock(const CBlock &block, CValidationState &state, CBlockIndex *pindexPrev);
 
+/* Calculate the amount of disk space the block & undo files currently use */
+uint64_t CalculateCurrentUsage();
+
 extern std::set<CBlockIndex *, CBlockIndexWorkComparator> setBlockIndexCandidates;
 
 class CBlockFileInfo
