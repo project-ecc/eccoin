@@ -745,7 +745,10 @@ UniValue getblockchaininfo(const UniValue &params, bool fHelp)
             "  \"difficulty\": xxxxxx,     (numeric) the current difficulty\n"
             "  \"mediantime\": xxxxxx,     (numeric) median time for the current best block\n"
             "  \"verificationprogress\": xxxx, (numeric) estimate of verification progress [0..1]\n"
+            "  \"initialblockdownload\": xxxx, (bool) (debug information) estimate of whether this node is in Initial "
+            "Block Download mode.\n"
             "  \"chainwork\": \"xxxx\"     (string) total amount of work in active chain, in hexadecimal\n"
+            "  \"size_on_disk\": xxxxxx,       (numeric) the estimated size of the block and undo files on disk\n"
             "  \"pruned\": xx,             (boolean) if the blocks are subject to pruning\n"
             "  \"pruneheight\": xxxxxx,    (numeric) heighest block available\n"
             "  \"softforks\": [            (array) status of softforks in progress\n"
@@ -787,7 +790,9 @@ UniValue getblockchaininfo(const UniValue &params, bool fHelp)
     obj.push_back(Pair("verificationprogress",
         Checkpoints::GuessVerificationProgress(pnetMan->getActivePaymentNetwork()->Checkpoints(),
                            pnetMan->getChainActive()->chainActive.Tip())));
+    obj.push_back(Pair("initialblockdownload", pnetMan->getChainActive()->IsInitialBlockDownload()));
     obj.push_back(Pair("chainwork", pnetMan->getChainActive()->chainActive.Tip()->nChainWork.GetHex()));
+    obj.push_back(Pair("size_on_disk", CalculateCurrentUsage()));
 
     const Consensus::Params &consensusParams = pnetMan->getActivePaymentNetwork()->GetConsensus();
     CBlockIndex *tip = pnetMan->getChainActive()->chainActive.Tip();
