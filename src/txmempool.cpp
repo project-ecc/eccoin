@@ -1009,11 +1009,6 @@ CFeeRate CTxMemPool::estimateFee(int nBlocks) const
     READLOCK(cs);
     return minerPolicyEstimator->estimateFee(nBlocks);
 }
-CFeeRate CTxMemPool::estimateSmartFee(int nBlocks, int *answerFoundAtBlocks) const
-{
-    READLOCK(cs);
-    return minerPolicyEstimator->estimateSmartFee(nBlocks, answerFoundAtBlocks, *this);
-}
 
 bool CTxMemPool::WriteFeeEstimates(CAutoFile &fileout) const
 {

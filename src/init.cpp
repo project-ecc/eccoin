@@ -85,7 +85,6 @@ std::unique_ptr<PeerLogicValidation> peerLogic;
 
 bool fFeeEstimatesInitialized = false;
 static const bool DEFAULT_PROXYRANDOMIZE = true;
-static const bool DEFAULT_REST_ENABLE = false;
 static const bool DEFAULT_DISABLE_SAFEMODE = false;
 static const bool DEFAULT_STOPAFTERBLOCKIMPORT = false;
 
@@ -184,7 +183,6 @@ void Interrupt(thread_group &threadGroup)
     InterruptHTTPServer();
     InterruptHTTPRPC();
     InterruptRPC();
-    InterruptREST();
     InterruptTorControl();
     InterruptScriptCheck();
 }
@@ -207,7 +205,6 @@ void Shutdown()
     mempool.AddTransactionsUpdated(1);
 
     StopHTTPRPC();
-    StopREST();
     StopRPC();
     StopHTTPServer();
 
@@ -612,7 +609,6 @@ std::string HelpMessage()
 
     strUsage += HelpMessageGroup(("RPC server options:"));
     strUsage += HelpMessageOpt("-server", ("Accept command line and JSON-RPC commands"));
-    strUsage += HelpMessageOpt("-rest", strprintf(("Accept public REST requests (default: %u)"), DEFAULT_REST_ENABLE));
     strUsage += HelpMessageOpt(
         "-rpcbind=<addr>", ("Bind to given address to listen for JSON-RPC connections. Use [host]:port notation for "
                             "IPv6. This option can be specified multiple times (default: bind to all interfaces)"));
@@ -782,8 +778,6 @@ bool AppInitServers(thread_group &threadGroup)
     if (!StartRPC())
         return false;
     if (!StartHTTPRPC())
-        return false;
-    if (gArgs.GetBoolArg("-rest", DEFAULT_REST_ENABLE) && !StartREST())
         return false;
     if (!StartHTTPServer())
         return false;

@@ -1305,37 +1305,3 @@ UniValue estimatefee(const UniValue &params, bool fHelp)
 
     return ValueFromAmount(feeRate.GetFeePerK());
 }
-
-UniValue estimatesmartfee(const UniValue &params, bool fHelp)
-{
-    if (fHelp || params.size() != 1)
-        throw std::runtime_error("estimatesmartfee nblocks\n"
-                                 "\nWARNING: This interface is unstable and may disappear or change!\n"
-                                 "\nEstimates the approximate fee per kilobyte needed for a transaction to begin\n"
-                                 "confirmation within nblocks blocks if possible and return the number of blocks\n"
-                                 "for which the estimate is valid.\n"
-                                 "\nArguments:\n"
-                                 "1. nblocks     (numeric)\n"
-                                 "\nResult:\n"
-                                 "{\n"
-                                 "  \"feerate\" : x.x,     (numeric) estimate fee-per-kilobyte (in BTC)\n"
-                                 "  \"blocks\" : n         (numeric) block number where estimate was found\n"
-                                 "}\n"
-                                 "\n"
-                                 "A negative value is returned if not enough transactions and blocks\n"
-                                 "have been observed to make an estimate for any number of blocks.\n"
-                                 "However it will not return a value below the mempool reject fee.\n"
-                                 "\nExample:\n" +
-                                 HelpExampleCli("estimatesmartfee", "6"));
-
-    RPCTypeCheck(params, boost::assign::list_of(UniValue::VNUM));
-
-    int nBlocks = params[0].get_int();
-
-    UniValue result(UniValue::VOBJ);
-    int answerFound;
-    CFeeRate feeRate = mempool.estimateSmartFee(nBlocks, &answerFound);
-    result.push_back(Pair("feerate", feeRate == CFeeRate(0) ? -1.0 : ValueFromAmount(feeRate.GetFeePerK())));
-    result.push_back(Pair("blocks", answerFound));
-    return result;
-}
