@@ -124,6 +124,7 @@ test_test_bitcoin_LDADD = \
   $(EVENT_LIBS) \
   $(BOOST_LIBS) \
   $(BOOST_UNIT_TEST_FRAMEWORK_LIB) \
+  $(LIBRSM) \
   $(LIBSECP256K1) \
   $(EVENT_LIBS) \
   $(EVENT_PTHREADS_LIBS)
@@ -160,6 +161,7 @@ test_test_bitcoin_fuzzy_LDADD = \
   $(LIBLEVELDB) \
   $(LIBLEVELDB_SSE42) \
   $(LIBMEMENV) \
+  $(LIBRSM) \
   $(LIBSECP256K1)
 
 test_test_bitcoin_fuzzy_LDADD += $(BOOST_LIBS) $(BDB_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(MINIUPNPC_LIBS) $(EVENT_PTHREADS_LIBS) $(EVENT_LIBS) $(ZMQ_LIBS)

@@ -7,7 +7,7 @@
 #ifndef SYNC_RSM_H
 #define SYNC_RSM_H
 
-#include "rsm/recursive_shared_mutex.h"
+#include "recursive_shared_mutex.h"
 #include "sync.h"
 #include "threadsafety.h"
 #include "util/util.h"
