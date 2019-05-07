@@ -593,9 +593,6 @@ UniValue sendmany(const UniValue &params, bool fHelp)
     LOCK2(cs_main, pwalletMain->cs_wallet);
 
     UniValue sendTo = params[0].get_obj();
-    int nMinDepth = 1;
-    if (params.size() > 1)
-        nMinDepth = params[1].get_int();
 
     CWalletTx wtx;
     wtx.strFromAccount = "*";
@@ -805,10 +802,10 @@ UniValue ListReceived(const UniValue &params, bool fByAccounts)
 
         if (fByAccounts)
         {
-            tallyitem &item = mapAccountTally[strAccount];
-            item.nAmount += nAmount;
-            item.nConf = std::min(item.nConf, nConf);
-            item.fIsWatchonly = fIsWatchonly;
+            tallyitem &_item = mapAccountTally[strAccount];
+            _item.nAmount += nAmount;
+            _item.nConf = std::min(_item.nConf, nConf);
+            _item.fIsWatchonly = fIsWatchonly;
         }
         else
         {
@@ -824,9 +821,9 @@ UniValue ListReceived(const UniValue &params, bool fByAccounts)
             UniValue transactions(UniValue::VARR);
             if (it != mapTally.end())
             {
-                for (auto const &item : (*it).second.txids)
+                for (auto const &_item : (*it).second.txids)
                 {
-                    transactions.push_back(item.GetHex());
+                    transactions.push_back(_item.GetHex());
                 }
             }
             obj.push_back(Pair("txids", transactions));
@@ -1986,10 +1983,10 @@ UniValue listunspent(const UniValue &params, bool fHelp)
         entry.push_back(Pair("scriptPubKey", HexStr(pk.begin(), pk.end())));
         if (pk.IsPayToScriptHash())
         {
-            CTxDestination address;
-            if (ExtractDestination(pk, address))
+            CTxDestination _address;
+            if (ExtractDestination(pk, _address))
             {
-                const CScriptID &hash = boost::get<CScriptID>(address);
+                const CScriptID &hash = boost::get<CScriptID>(_address);
                 CScript redeemScript;
                 if (pwalletMain->GetCScript(hash, redeemScript))
                     entry.push_back(Pair("redeemScript", HexStr(redeemScript.begin(), redeemScript.end())));

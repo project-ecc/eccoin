@@ -28,7 +28,7 @@
 #include <leveldb/helpers/memenv/memenv.h>
 #include <stdint.h>
 
-void HandleError(const leveldb::Status &status) throw(dbwrapper_error)
+void HandleError(const leveldb::Status &status)
 {
     if (status.ok())
         return;

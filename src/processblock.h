@@ -81,7 +81,7 @@ bool ConnectBlock(const CBlock &block,
  *  In case pfClean is provided, operation will try to be tolerant about errors, and *pfClean
  *  will be true if no problems were found. Otherwise, the return value will be false in case
  *  of problems. Note that in any case, coins may be modified. */
-bool DisconnectBlock(const CBlock &block,
+int DisconnectBlock(const CBlock &block,
     CValidationState &state,
     const CBlockIndex *pindex,
     CCoinsViewCache &coins,

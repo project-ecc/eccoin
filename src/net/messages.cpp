@@ -908,7 +908,6 @@ void static ProcessGetData(CNode *pfrom, CConnman &connman, const Consensus::Par
             // Send stream from relay memory
             bool push = false;
             auto mi = mapRelay.find(inv.hash);
-            int nSendFlags = 0;
             if (mi != mapRelay.end())
             {
                 connman.PushMessage(pfrom, NetMsgType::TX, mi->second);
