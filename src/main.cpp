@@ -55,7 +55,6 @@
 #include "util/utilmoneystr.h"
 #include "util/utilstrencodings.h"
 #include "validationinterface.h"
-#include "versionbits.h"
 
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/foreach.hpp>
@@ -1140,29 +1139,6 @@ void static FlushBlockFile(bool fFinalize = false)
     }
 }
 
-// Protected by cs_main
-VersionBitsCache versionbitscache;
-
-int32_t ComputeBlockVersion(const CBlockIndex *pindexPrev, const Consensus::Params &params)
-{
-    LOCK(cs_main);
-    int32_t nVersion = VERSIONBITS_TOP_BITS;
-
-    for (int i = 0; i < (int)Consensus::MAX_VERSION_BITS_DEPLOYMENTS; i++)
-    {
-        ThresholdState state = VersionBitsState(pindexPrev, params, (Consensus::DeploymentPos)i, versionbitscache);
-        if (state == THRESHOLD_LOCKED_IN || state == THRESHOLD_STARTED)
-        {
-            nVersion |= VersionBitsMask(params, (Consensus::DeploymentPos)i);
-        }
-    }
-
-    return nVersion;
-}
-
-// Protected by cs_main
-ThresholdConditionCache warningcache[VERSIONBITS_NUM_BITS];
-
 /**
  * Update the on-disk chain state.
  * The caches and indexes are flushed depending on the mode we're called with
@@ -1834,12 +1810,6 @@ std::string CBlockFileInfo::ToString() const
 {
     return strprintf("CBlockFileInfo(blocks=%u, size=%u, heights=%u...%u, time=%s...%s)", nBlocks, nSize, nHeightFirst,
         nHeightLast, DateTimeStrFormat("%Y-%m-%d", nTimeFirst), DateTimeStrFormat("%Y-%m-%d", nTimeLast));
-}
-
-ThresholdState VersionBitsTipState(const Consensus::Params &params, Consensus::DeploymentPos pos)
-{
-    LOCK(cs_main);
-    return VersionBitsState(pnetMan->getChainActive()->chainActive.Tip(), params, pos, versionbitscache);
 }
 
 class CMainCleanup

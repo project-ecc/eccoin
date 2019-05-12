@@ -30,7 +30,6 @@
 #include "uint256.h"
 #include "undo.h"
 #include "util/utiltime.h"
-#include "versionbits.h"
 
 #include <algorithm>
 #include <exception>
@@ -202,7 +201,6 @@ extern std::map<uint256, std::set<uint256> > mapOrphanTransactionsByPrev GUARDED
 ;
 void LimitMempoolSize(CTxMemPool &pool, size_t limit, unsigned long age);
 extern std::set<CBlockIndex *> setDirtyBlockIndex;
-extern ThresholdConditionCache warningcache[VERSIONBITS_NUM_BITS];
 void PruneBlockIndexCandidates();
 bool CheckIndexAgainstCheckpoint(const CBlockIndex *pindexPrev,
     CValidationState &state,
@@ -286,9 +284,6 @@ bool AcceptToMemoryPool(CTxMemPool &pool,
 
 /** Convert CValidationState to a human-readable message for logging */
 std::string FormatStateMessage(const CValidationState &state);
-
-/** Get the BIP9 state for a given deployment at the current tip. */
-ThresholdState VersionBitsTipState(const Consensus::Params &params, Consensus::DeploymentPos pos);
 
 struct CDiskTxPos : public CDiskBlockPos
 {
@@ -553,8 +548,6 @@ bool FindBlockPos(CValidationState &state,
 bool AbortNode(const std::string &strMessage, const std::string &userMessage = "");
 extern uint32_t nBlockSequenceId;
 extern std::set<int> setDirtyFileInfo;
-/// versionbitscache was originally static in main.cpp might need to revert the change to non static
-extern VersionBitsCache versionbitscache;
 
 extern int GetHeight();
 

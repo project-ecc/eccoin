@@ -185,8 +185,6 @@ validationinterface.h
 verifydb.cpp
 verifydb.h
 version.h
-versionbits.cpp
-versionbits.h
 wallet/crypter.cpp
 wallet/crypter.h
 wallet/db.cpp

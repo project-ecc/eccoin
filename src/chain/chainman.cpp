@@ -479,11 +479,6 @@ void CChainManager::UnloadBlockIndex()
     setDirtyFileInfo.clear();
     nodestateman.Clear();
     recentRejects.reset(nullptr);
-    versionbitscache.Clear();
-    for (int b = 0; b < VERSIONBITS_NUM_BITS; b++)
-    {
-        warningcache[b].clear();
-    }
 
     {
         WRITELOCK(cs_mapBlockIndex);

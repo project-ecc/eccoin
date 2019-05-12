@@ -703,33 +703,6 @@ static UniValue SoftForkDesc(const std::string &name,
     return rv;
 }
 
-UniValue BIP9SoftForkDesc(const std::string &name,
-    const Consensus::Params &consensusParams,
-    Consensus::DeploymentPos id)
-{
-    UniValue rv(UniValue::VOBJ);
-    rv.push_back(Pair("id", name));
-    switch (VersionBitsTipState(consensusParams, id))
-    {
-    case THRESHOLD_DEFINED:
-        rv.push_back(Pair("status", "defined"));
-        break;
-    case THRESHOLD_STARTED:
-        rv.push_back(Pair("status", "started"));
-        break;
-    case THRESHOLD_LOCKED_IN:
-        rv.push_back(Pair("status", "locked_in"));
-        break;
-    case THRESHOLD_ACTIVE:
-        rv.push_back(Pair("status", "active"));
-        break;
-    case THRESHOLD_FAILED:
-        rv.push_back(Pair("status", "failed"));
-        break;
-    }
-    return rv;
-}
-
 UniValue getblockchaininfo(const UniValue &params, bool fHelp)
 {
     if (fHelp || params.size() != 0)
