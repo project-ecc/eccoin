@@ -51,29 +51,9 @@
 
 bool fLargeWorkForkFound = false;
 bool fLargeWorkInvalidChainFound = false;
-CBlockIndex *pindexBestForkTip = NULL, *pindexBestForkBase = NULL;
+CBlockIndex *pindexBestForkTip = nullptr;
+CBlockIndex *pindexBestForkBase = nullptr;
 
-
-/**
- * Threshold condition checker that triggers when unknown versionbits are seen on the network.
- */
-class WarningBitsConditionChecker : public AbstractThresholdConditionChecker
-{
-private:
-    int bit;
-
-public:
-    WarningBitsConditionChecker(int bitIn) : bit(bitIn) {}
-    int64_t BeginTime(const Consensus::Params &params) const { return 0; }
-    int64_t EndTime(const Consensus::Params &params) const { return std::numeric_limits<int64_t>::max(); }
-    int Period(const Consensus::Params &params) const { return params.nMinerConfirmationWindow; }
-    int Threshold(const Consensus::Params &params) const { return params.nRuleChangeActivationThreshold; }
-    bool Condition(const CBlockIndex *pindex, const Consensus::Params &params) const
-    {
-        return ((pindex->nVersion & VERSIONBITS_TOP_MASK) == VERSIONBITS_TOP_BITS) &&
-               ((pindex->nVersion >> bit) & 1) != 0 && ((ComputeBlockVersion(pindex->pprev, params) >> bit) & 1) == 0;
-    }
-};
 
 /** Store block on disk. If dbp is non-NULL, the file is known to already reside on disk */
 bool AcceptBlock(const CBlock *pblock,
@@ -220,52 +200,6 @@ void UpdateTip(CBlockIndex *pindexNew)
         pnetMan->getChainActive()->pcoinsTip->GetCacheSize());
 
     cvBlockChange.notify_all();
-
-    // Check the version of the last 100 blocks to see if we need to upgrade:
-    static bool fWarned = false;
-    if (!pnetMan->getChainActive()->IsInitialBlockDownload())
-    {
-        int nUpgraded = 0;
-        const CBlockIndex *pindex = pnetMan->getChainActive()->chainActive.Tip();
-        for (int bit = 0; bit < VERSIONBITS_NUM_BITS; bit++)
-        {
-            WarningBitsConditionChecker checker(bit);
-            ThresholdState state = checker.GetStateFor(pindex, chainParams.GetConsensus(), warningcache[bit]);
-            if (state == THRESHOLD_ACTIVE || state == THRESHOLD_LOCKED_IN)
-            {
-                if (state == THRESHOLD_ACTIVE)
-                {
-                    strMiscWarning = strprintf("Warning: unknown new rules activated (versionbit %i)", bit);
-                    if (!fWarned)
-                    {
-                        fWarned = true;
-                    }
-                }
-                else
-                {
-                    LogPrintf("%s: unknown new rules are about to activate (versionbit %i)\n", __func__, bit);
-                }
-            }
-        }
-        for (int i = 0; i < 100 && pindex != NULL; i++)
-        {
-            int32_t nExpectedVersion = ComputeBlockVersion(pindex->pprev, chainParams.GetConsensus());
-            if (pindex->nVersion > VERSIONBITS_LAST_OLD_BLOCK_VERSION && (pindex->nVersion & ~nExpectedVersion) != 0)
-                ++nUpgraded;
-            pindex = pindex->pprev;
-        }
-        if (nUpgraded > 0)
-            LogPrintf("%s: %d of last 100 blocks have unexpected version\n", __func__, nUpgraded);
-        if (nUpgraded > 100 / 2)
-        {
-            // strMiscWarning is read by GetWarnings(), called by Qt and the JSON-RPC code to warn the user:
-            strMiscWarning = "Warning: Unknown block versions being mined! It's possible unknown rules are in effect";
-            if (!fWarned)
-            {
-                fWarned = true;
-            }
-        }
-    }
 }
 
 /** Disconnect chainActive's tip. You probably want to call mempool.removeForReorg and manually re-limit mempool size

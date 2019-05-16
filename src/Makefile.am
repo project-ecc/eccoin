@@ -152,7 +152,6 @@ BITCOIN_CORE_H = \
   validationinterface.h \
   verifydb.h \
   version.h \
-  versionbits.h \
   wallet/crypter.h \
   wallet/db.h \
   wallet/wallet.h \
@@ -209,7 +208,6 @@ libbitcoin_server_a_SOURCES = \
   txdb.cpp \
   txmempool.cpp \
   validationinterface.cpp \
-  versionbits.cpp \
   amount.cpp \
   arith_uint256.cpp \
   base58.cpp \
