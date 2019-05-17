@@ -1502,21 +1502,6 @@ bool AppInit2(thread_group &threadGroup)
                     break;
                 }
 
-                /// check for services folder, if does not exist. make it
-                fs::path servicesFolder = (GetDataDir() / "services");
-                if (fs::exists(servicesFolder))
-                {
-                    if (!fs::is_directory(servicesFolder))
-                    {
-                        LogPrintf("services exists but is not a folder, check your eccoin data files \n");
-                        assert(false);
-                    }
-                }
-                else
-                {
-                    fs::create_directory(servicesFolder);
-                }
-
                 // verify the blocks
                 LogPrintf("Verifying blocks...");
 
