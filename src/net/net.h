@@ -302,6 +302,8 @@ public:
     // Whether a ping is requested.
     std::atomic<bool> fPingQueued;
 
+    std::atomic<uint64_t> nNetworkServiceVersion;
+
     CNode(NodeId id,
         ServiceFlags nLocalServicesIn,
         SOCKET hSocketIn,
@@ -620,6 +622,8 @@ public:
 
     unsigned int GetReceiveFloodSize() const;
 
+    CPubKey GetRoutingKey() const;
+
 private:
     struct ListenSocket
     {
@@ -725,6 +729,9 @@ private:
 
     std::atomic<bool> interruptNet;
     thread_group netThreads;
+
+    CKey pub_routing_key;
+    CPubKey pub_routing_id;
 };
 
 extern std::unique_ptr<CConnman> g_connman;

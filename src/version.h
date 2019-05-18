@@ -21,16 +21,24 @@ static const int MIN_PROTO_VERSION = 60037;
 //! "filter*" commands are disabled without NODE_BLOOM after and including this version
 static const int NO_BLOOM_VERSION = 60034;
 
+static const int NETWORK_SERVICE_PROTOCOL_VERSION = 60040;
+
 /**
  * Versioning for network services
  */
 
-#define NETWORK_SERVICE_VERSION_MAJOR 0
-#define NETWORK_SERVICE_VERSION_MINOR 1
-#define NETWORK_SERVICE_VERSION_REVISION 0
+#define MAJOR(major) 1000000 * major
+#define MINOR(minor) 1000 * minor
+#define REVISION(revision) 1 * revision
 
-// version of the service transaction resolution code
-static const int NETWORK_SERVICE_VERSION =
-    10000 * NETWORK_SERVICE_VERSION_MAJOR + 100 * NETWORK_SERVICE_VERSION_MINOR + 1 * NETWORK_SERVICE_VERSION_REVISION;
+// version of the network service code
+static const uint64_t NETWORK_SERVICE_VERSION = MAJOR(0) + MINOR(1) + REVISION(0);
+
+// AODV routing for public routing ids was introduced in this network service version
+static const uint64_t MIN_AODV_VERSION = MAJOR(0) + MINOR(1) + REVISION(0);
+
+// This nodes AODV protocol version, this is unrelated to the network service version
+static const uint64_t AODV_PROTOCOL_VERSION = MAJOR(0) + MINOR(1) + REVISION(1);
+
 
 #endif // BITCOIN_VERSION_H

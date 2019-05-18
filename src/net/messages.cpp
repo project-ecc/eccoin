@@ -1158,11 +1158,18 @@ bool static ProcessMessage(CNode *pfrom,
             CNodeStateAccessor state(nodestateman, pfrom->GetId());
             state->fCurrentlyConnected = true;
         }
+
         // Tell our peer we prefer to receive headers rather than inv's
         // We send this to non-NODE NETWORK peers as well, because even
         // non-NODE NETWORK peers can announce blocks (such as pruning
         // nodes)
         connman.PushMessage(pfrom, NetMsgType::SENDHEADERS);
+
+        if (pfrom->nVersion >= NETWORK_SERVICE_PROTOCOL_VERSION)
+        {
+            connman.PushMessage(pfrom, NetMsgType::NSVERSION, NETWORK_SERVICE_VERSION);
+        }
+
         pfrom->fSuccessfullyConnected = true;
     }
 
@@ -1180,6 +1187,22 @@ bool static ProcessMessage(CNode *pfrom,
             mapInboundConnectionTracker[ipAddress].nLastEvictionTime = GetTime();
         }
         return false;
+    }
+    else if (strCommand == NetMsgType::NSVERSION)
+    {
+        uint64_t netservice = 0;
+        vRecv >> netservice;
+        pfrom->nNetworkServiceVersion = netservice;
+        if (netservice >= MIN_AODV_VERSION)
+        {
+            connman.PushMessage(pfrom, NetMsgType::NSVERACK, g_connman->GetRoutingKey());
+        }
+    }
+
+    else if (strCommand == NetMsgType::NSVERACK)
+    {
+        CPubKey peerPubKey;
+        vRecv >> peerPubKey;
     }
 
     else if (strCommand == NetMsgType::ADDR)
