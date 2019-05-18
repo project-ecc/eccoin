@@ -695,10 +695,14 @@ void ThreadImport(std::vector<fs::path> vImportFiles)
         {
             CDiskBlockPos pos(nFile, 0);
             if (!fs::exists(GetBlockPosFilename(pos, "blk")))
+            {
                 break; // No block files left to reindex
+            }
             FILE *file = OpenBlockFile(pos, true);
             if (!file)
+            {
                 break; // This error is logged in OpenBlockFile
+            }
             LogPrintf("Reindexing block file blk%05u.dat...\n", (unsigned int)nFile);
             pnetMan->getChainActive()->LoadExternalBlockFile(chainparams, file, &pos);
             nFile++;
@@ -1440,7 +1444,6 @@ bool AppInit2(thread_group &threadGroup)
     LogPrintf("* Using %.1fMiB for chain state database\n", nCoinDBCache * (1.0 / 1024 / 1024));
     LogPrintf("* Using %.1fMiB for in-memory UTXO set\n", nCoinCacheUsage * (1.0 / 1024 / 1024));
 
-    LOCK(cs_main);
     bool fLoaded = false;
     while (!fLoaded)
     {

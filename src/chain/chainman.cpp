@@ -333,7 +333,6 @@ bool CChainManager::LoadBlockIndexDB()
 
 bool CChainManager::LoadExternalBlockFile(const CNetworkTemplate &chainparams, FILE *fileIn, CDiskBlockPos *dbp)
 {
-    WRITELOCK(cs_mapBlockIndex);
     // std::map of disk positions for blocks with unknown parent (only used for reindex)
     static std::multimap<uint256, CDiskBlockPos> mapBlocksUnknownParent;
     int64_t nStart = GetTimeMillis();
@@ -348,7 +347,7 @@ bool CChainManager::LoadExternalBlockFile(const CNetworkTemplate &chainparams, F
         {
             if (shutdown_threads.load())
             {
-                break;
+                return nLoaded;
             }
 
             blkdat.SetPos(nRewind);
@@ -453,7 +452,9 @@ bool CChainManager::LoadExternalBlockFile(const CNetworkTemplate &chainparams, F
         AbortNode(std::string("System error: ") + e.what());
     }
     if (nLoaded > 0)
+    {
         LogPrintf("Loaded %i blocks from external file in %dms\n", nLoaded, GetTimeMillis() - nStart);
+    }
     return nLoaded > 0;
 }
 
