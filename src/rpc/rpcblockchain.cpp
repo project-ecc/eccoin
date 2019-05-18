@@ -760,9 +760,6 @@ UniValue getblockchaininfo(const UniValue &params, bool fHelp)
     obj.push_back(Pair("bestblockhash", pnetMan->getChainActive()->chainActive.Tip()->GetBlockHash().GetHex()));
     obj.push_back(Pair("difficulty", (double)GetDifficulty()));
     obj.push_back(Pair("mediantime", (int64_t)pnetMan->getChainActive()->chainActive.Tip()->GetMedianTimePast()));
-    obj.push_back(Pair("verificationprogress",
-        Checkpoints::GuessVerificationProgress(pnetMan->getActivePaymentNetwork()->Checkpoints(),
-                           pnetMan->getChainActive()->chainActive.Tip())));
     obj.push_back(Pair("initialblockdownload", pnetMan->getChainActive()->IsInitialBlockDownload()));
     obj.push_back(Pair("chainwork", pnetMan->getChainActive()->chainActive.Tip()->nChainWork.GetHex()));
     obj.push_back(Pair("size_on_disk", CalculateCurrentUsage()));

@@ -189,13 +189,12 @@ void UpdateTip(CBlockIndex *pindexNew)
     nTimeBestReceived = GetTime();
     mempool.AddTransactionsUpdated(1);
 
-    LogPrintf("%s: new best=%s  height=%d  log2_work=%.8g  tx=%lu  date=%s progress=%f  cache=%.1fMiB(%utx)\n",
-        __func__, pnetMan->getChainActive()->chainActive.Tip()->GetBlockHash().ToString(),
+    LogPrintf("%s: new best=%s  height=%d  log2_work=%.8g  tx=%lu  date=%s cache=%.1fMiB(%utx)\n", __func__,
+        pnetMan->getChainActive()->chainActive.Tip()->GetBlockHash().ToString(),
         pnetMan->getChainActive()->chainActive.Height(),
         log(pnetMan->getChainActive()->chainActive.Tip()->nChainWork.getdouble()) / log(2.0),
         (unsigned long)(pnetMan->getChainActive()->chainActive.Tip()->nChainTx),
         DateTimeStrFormat("%Y-%m-%d %H:%M:%S", pnetMan->getChainActive()->chainActive.Tip()->GetBlockTime()),
-        Checkpoints::GuessVerificationProgress(chainParams.Checkpoints(), pnetMan->getChainActive()->chainActive.Tip()),
         pnetMan->getChainActive()->pcoinsTip->DynamicMemoryUsage() * (1.0 / (1 << 20)),
         pnetMan->getChainActive()->pcoinsTip->GetCacheSize());
 

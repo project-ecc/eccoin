@@ -1241,6 +1241,7 @@ int CWallet::ScanForWalletTransactions(CBlockIndex *pindexStart, bool fUpdate)
     int ret = 0;
     int64_t nNow = GetTime();
     CBlockIndex *pindex = pindexStart;
+    int nEndHeight = pnetMan->getChainActive()->chainActive.Tip()->nHeight;
     {
         LOCK2(cs_main, cs_wallet);
 
@@ -1253,22 +1254,8 @@ int CWallet::ScanForWalletTransactions(CBlockIndex *pindexStart, bool fUpdate)
 
         // show rescan progress in GUI as dialog or on splashscreen, if -rescan on startup
         ShowProgress(("Rescanning..."), 0);
-        double dProgressStart =
-            Checkpoints::GuessVerificationProgress(pnetMan->getActivePaymentNetwork()->Checkpoints(), pindex, false);
-        double dProgressTip = Checkpoints::GuessVerificationProgress(
-            pnetMan->getActivePaymentNetwork()->Checkpoints(), pnetMan->getChainActive()->chainActive.Tip(), false);
         while (pindex)
         {
-            if (pindex->nHeight % 100 == 0 && dProgressTip - dProgressStart > 0.0)
-            {
-                ShowProgress(("Rescanning..."),
-                    std::max(1, std::min(
-                                    99, (int)((Checkpoints::GuessVerificationProgress(
-                                                   pnetMan->getActivePaymentNetwork()->Checkpoints(), pindex, false) -
-                                                  dProgressStart) /
-                                              (dProgressTip - dProgressStart) * 100))));
-            }
-
             CBlock block;
             ReadBlockFromDisk(block, pindex, pnetMan->getActivePaymentNetwork()->GetConsensus());
             for (auto &ptx : block.vtx)
@@ -1282,8 +1269,7 @@ int CWallet::ScanForWalletTransactions(CBlockIndex *pindexStart, bool fUpdate)
             if (GetTime() >= nNow + 60)
             {
                 nNow = GetTime();
-                LogPrintf("Still rescanning. At block %d. Progress=%f\n", pindex->nHeight,
-                    Checkpoints::GuessVerificationProgress(pnetMan->getActivePaymentNetwork()->Checkpoints(), pindex));
+                LogPrintf("Still rescanning. At block %d out of %d\n", pindex->nHeight, nEndHeight);
             }
         }
         ShowProgress(("Rescanning..."), 100); // hide progress dialog in GUI

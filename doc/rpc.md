@@ -23,7 +23,7 @@ Examples:
 
 addmultisigaddress
 ------------------
-Add a nrequired-to-sign multisignature address to the wallet. 
+Add a nrequired-to-sign multisignature address to the wallet.
 
 Each key is a Bitcoin address or hex-encoded public key. If 'account' is specified (DEPRECATED), assign address to that account.
 
@@ -39,7 +39,7 @@ Arguments:
      ]
 3. account        (string, OPTIONAL) DEPRECATED. An account to assign the addresses to.
 
-Result: 
+Result:
 bitcoinaddress  (string) A bitcoin address associated with the keys.
 
 Examples:
@@ -57,10 +57,10 @@ addnode "node" "add|remove|onetry"
 Arguments:
 1. "node"     (string, required) The node (see getpeerinfo for nodes)
 2. "command"  (string, required) 'add' to add a node to the list, 'remove' to remove a node from the list, 'onetry' to try a connection to the node once
-      
-Result: 
+
+Result:
 none
-      
+
 Examples:
 1. Add a node to the node list
 	addnode "192.168.0.6:8333" "add"
@@ -68,19 +68,19 @@ Examples:
 	addnode "192.168.0.6:8333" "remove"
 3. Try a connection to a node once
 	addnode "192.168.0.6:8333" "onetry"
-			
-			
+
+
 backupwallet
 ------------
 Safely copies wallet.dat to destination, which can be a directory or a path with filename.
 
 Syntax:
 backupwallet "destination"
-            
+
 Arguments:
 1. "destination"   (string) The destination directory or file
 
-Result: 
+Result:
 no output, but a file with the name given should appear in the desired directory
 
 Examples:
@@ -98,21 +98,21 @@ clearbanned
 Arguments:
 none
 
-Result: 
+Result:
 none
 
 Examples:
 1. Delete the list of nodes that are banned from connecting to our node
 	clearbanned
 
-	
+
 createmultisig
 --------------
 Creates a multi-signature address with n signature of m keys required. It returns a json object with the address and redeemScript.
 
 Syntax:
 createmultisig nrequired ["key",...]
-            
+
 Arguments:
 1. nrequired      (numeric, required) The number of required signatures out of the n keys or addresses.
 2. "keys"       (string, required) A json array of keys which are E-CurrencyCoin addresses or hex-encoded public keys
@@ -140,7 +140,7 @@ Decode a hex-encoded script.
 
 Syntax:
 decodescript "hex"
-            
+
 Arguments:
 1. "hex"     (string) the hex encoded script
 
@@ -155,7 +155,7 @@ JSON object in the following format
      "address"     (string) E-CurrencyCoin address
      ,...
   ],
-  "p2sh", 
+  "p2sh",
   "address" (string) script address
 }
 
@@ -188,7 +188,7 @@ Reveals the private key corresponding to 'address'. Then the importprivkey can b
 
 Syntax:
 dumpprivkey "address"
-       
+
 Arguments:
 1. "address"   (string, required) The E-CurrencyCoin address for the private key
 
@@ -221,7 +221,7 @@ dumpwallet "test"
 encryptwallet
 -------------
 Encrypts the wallet with 'passphrase'. This is for first time encryption. After this, any calls that interact with private keys such as sending or signing will require the passphrase to be set prior the making these calls. Use the walletpassphrase call for this, and then walletlock call. If the wallet is already encrypted, use the walletpassphrasechange call. Note that this will shutdown the server.
-	   
+
 Syntax:			
 encryptwallet "passphrase"
 
@@ -230,12 +230,12 @@ Arguments:
 
 Result:
 no output, but it will shut down the server to finish the process			
-			
+
 Examples:
 1. Encrypt you wallet with the password 123abc
 	encryptwallet "123abc"
 
-	
+
 generate
 --------
 Mine blocks immediately (before the RPC call returns). Note: this function can only be used on the regtest network
@@ -253,7 +253,7 @@ Examples:
 1. Generate 11 blocks
 	generate 11
 
-		
+
 getaccount
 ----------
 DEPRECATED. Returns the account associated with the given address.
@@ -271,14 +271,14 @@ Examples:
 1. Get the account for the address ED1ZrZNe3JUo7ZycKEYQQiQAWd9y54F4XZ
 	getaccount "ED1ZrZNe3JUo7ZycKEYQQiQAWd9y54F4XZ"
 
-			
+
 getaccountaddress
 -----------------
 DEPRECATED. Returns the current Bitcoin address for receiving payments to this account.
-			
+
 Syntax:
 "getaccountaddress "account"
-			
+
 Arguments:
 "1. "account"       (string, required) The account name for the address. It can also be set to the empty string "" to represent the default account. The account does not need to exist, it will be created and a new address created  if there is no account by the given name.
 
@@ -289,14 +289,14 @@ Examples:
 1. Get address for account myaccount
 	getaccountaddress "myaccount"
 
-			
+
 getaddednodeinfo
 ----------------
 Returns information about the given added node, or all added nodes (note that onetry addnodes are not listed here) If dns is false, only a list of added nodes will be provided, otherwise connected information will also be available.
 
 Syntax:			
 getaddednodeinfo dns ( "node" )
-			
+
 Arguments:
 1. dns        (boolean, required) If false, only a list of added nodes will be provided, otherwise connected information will also be available.
 2. "node"   (string, optional) If provided, return information about this specific node, otherwise all nodes are returned.
@@ -316,7 +316,7 @@ Result:
   }
   ,...
 ]
-			
+
 Examples:
 1. Get information about all connected nodes
 	getaddednodeinfo "true"
@@ -333,13 +333,13 @@ getaddressesbyaccount "account"
 
 Arguments:
 1. "account"  (string, required) The account name.
-            
+
 Result: JSON array of string
 [                     
   "bitcoinaddress"  (string) a bitcoin address associated with the given account
   ,...
 ]
-			
+
 Examples:
 1. Get the address of the account tabby
 	getaddressesbyaccount "tabby"
@@ -351,7 +351,7 @@ If account is not specified, returns the server's total available balance. If ac
 
 Syntax:
 getbalance ( "account" minconf includeWatchonly )
-			
+
 Arguments:
 1. "account"      (string, optional) DEPRECATED. The selected account, or "*" for entire wallet. It may be the default account using "".
 2. minconf          (numeric, optional, default=1) Only include transactions confirmed at least this many times.
@@ -370,13 +370,13 @@ Examples:
 getbestblockhash
 ----------------
 Returns the hash of the best (tip) block in the longest block chain.
-			
+
 Syntax:
 getbestblockhash
 
 Arguments:
 none
-			
+
 Result
 "hex"      (string) the block hash hex encoded
 
@@ -388,10 +388,10 @@ Examples
 getblock
 --------
 If verbose is false, returns a string that is serialized, hex-encoded data for block 'hash'. If verbose is true, returns an Object with information about block <hash>.
-        
+
 Syntax:
 "getblock "hash" ( verbose )
-		
+
 Arguments:
 "1. "hash"          (string, required) The block hash
 "2. verbose           (boolean, optional, default=true) true for a json object, false for the hex encoded data
@@ -417,7 +417,7 @@ Result (for verbose = true):
   "previousblockhash" : "hash",  (string) The hash of the previous block
   "nextblockhash" : "hash"       (string) The hash of the next block
 }
-			
+
 Result (for verbose=false):
 "data"             (string) A string that is serialized, hex-encoded data for block 'hash'.
 
@@ -438,7 +438,6 @@ getblockchaininfo
             "  "bestblockhash": "...", (string) the hash of the currently best block
             "  "difficulty": xxxxxx,     (numeric) the current difficulty
             "  "mediantime": xxxxxx,     (numeric) median time for the current best block
-            "  "verificationprogress": xxxx, (numeric) estimate of verification progress [0..1]
             "  "chainwork": "xxxx"     (string) total amount of work in active chain, in hexadecimal
             "  "pruned": xx,             (boolean) if the blocks are subject to pruning
             "  "pruneheight": xxxxxx,    (numeric) heighest block available
@@ -543,7 +542,7 @@ getblocktemplate
             "      {
             "         "data" : "xxxx",          (string) transaction data encoded in hexadecimal (byte-for-byte)
             "         "hash" : "xxxx",          (string) hash/id encoded in little-endian hexadecimal
-            "         "depends" : [              (array) array of numbers 
+            "         "depends" : [              (array) array of numbers
             "             n                        (numeric) transactions before this one (by 1-based index in 'transactions' list) that must be present in the final block if this one is
             "             ,...
             "         ],
@@ -554,13 +553,13 @@ getblocktemplate
             "      ,...
             "  ],
             "  "coinbaseaux" : {                  (json object) data that should be included in the coinbase's scriptSig content
-            "      "flags" : "flags"            (string) 
+            "      "flags" : "flags"            (string)
             "  },
             "  "coinbasevalue" : n,               (numeric) maximum allowable input to coinbase transaction, including the generation award and transaction fees (in Satoshis)
             "  "coinbasetxn" : { ... },           (json object) information for coinbase transaction
             "  "target" : "xxxx",               (string) The hash target
             "  "mintime" : xxx,                   (numeric) The minimum timestamp appropriate for next block time in seconds since epoch (Jan 1 1970 GMT)
-            "  "mutable" : [                      (array of string) list of ways the block template may be changed 
+            "  "mutable" : [                      (array of string) list of ways the block template may be changed
             "     "value"                         (string) A way the block template may be changed, e.g. 'time', 'transactions', 'prevblock'
             "     ,...
             "  ],
