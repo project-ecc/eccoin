@@ -137,7 +137,7 @@ public:
     bool IsProofOfStake() const;
     bool IsProofOfWork() const;
     std::pair<COutPoint, unsigned int> GetProofOfStake() const;
-    bool SignScryptBlock(const CKeyStore &keystore);
+    bool SignBlock(const CKeyStore &keystore);
     bool CheckBlockSignature() const;
     int64_t GetMaxTransactionTime() const;
 };

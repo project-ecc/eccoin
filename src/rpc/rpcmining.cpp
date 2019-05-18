@@ -201,10 +201,13 @@ UniValue generateBlocks(boost::shared_ptr<CReserveScript> coinbaseScript,
         // Blocks to validate when we've just mined one of our own blocks.
         LOCK(cs_main);
 
-        if (!pblock->SignScryptBlock(*pwalletMain))
+        if (fProofOfStake)
         {
-            LogPrintf("signging block in generate RPC call failed \n");
-            continue;
+            if (!pblock->SignBlock(*pwalletMain))
+            {
+                LogPrintf("signging block in generate RPC call failed \n");
+                continue;
+            }
         }
 
         CValidationState state;

@@ -369,7 +369,7 @@ void EccMinter(CWallet *pwallet)
         }
         CBlock *pblock = &pblocktemplate->block;
         IncrementExtraNonce(pblock, pindexPrev, nExtraNonce);
-        if (!pblock->SignScryptBlock(*pwalletMain))
+        if (!pblock->SignBlock(*pwalletMain))
         {
             continue;
         }

@@ -504,10 +504,6 @@ void EccMiner(CWallet *pwallet)
                     // Found a solution
                     pblock->nNonce = nNonceFound;
                     assert(result == UintToArith256(pblock->GetHash()));
-                    if (!pblock->SignScryptBlock(*pwalletMain))
-                    {
-                        break;
-                    }
                     SetThreadPriority(THREAD_PRIORITY_NORMAL);
                     CheckWork(pblock, *pwalletMain, coinbaseScript);
                     SetThreadPriority(THREAD_PRIORITY_LOWEST);

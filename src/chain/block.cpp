@@ -70,66 +70,27 @@ std::pair<COutPoint, unsigned int> CBlock::GetProofOfStake() const
 }
 
 
-bool CBlock::SignScryptBlock(const CKeyStore &keystore)
+bool CBlock::SignBlock(const CKeyStore &keystore)
 {
     std::vector<std::vector<unsigned char> > vSolutions;
     txnouttype whichType;
+    const CTxOut& txout = vtx[1]->vout[1];
+    if (!Solver(txout.scriptPubKey, whichType, vSolutions))
+        return false;
 
-    if (!IsProofOfStake())
+    if (whichType == TX_PUBKEY)
     {
-        for (unsigned int i = 0; i < vtx[0]->vout.size(); i++)
-        {
-            const CTxOut &txout = vtx[0]->vout[i];
+        // Sign
+        std::vector<unsigned char> &vchPubKey = vSolutions[0];
+        CKey key;
 
-            if (!Solver(txout.scriptPubKey, whichType, vSolutions))
-                continue;
-
-            if (whichType == TX_PUBKEY)
-            {
-                // Sign
-                std::vector<unsigned char> &vchPubKey = vSolutions[0];
-                CKey key;
-
-                if (!keystore.GetKey(Hash160(vchPubKey), key))
-                {
-                    continue;
-                }
-                if (key.GetPubKey() != vchPubKey)
-                {
-                    continue;
-                }
-                if (!key.Sign(GetHash(), vchBlockSig))
-                {
-                    continue;
-                }
-
-                return true;
-            }
-        }
-    }
-    else
-    {
-        const CTxOut &txout = vtx[1]->vout[1];
-
-        if (!Solver(txout.scriptPubKey, whichType, vSolutions))
+        if (!keystore.GetKey(Hash160(vchPubKey), key))
+            return false;
+        if (key.GetPubKey() != vchPubKey)
             return false;
 
-        if (whichType == TX_PUBKEY)
-        {
-            // Sign
-            std::vector<unsigned char> &vchPubKey = vSolutions[0];
-            CKey key;
-
-            if (!keystore.GetKey(Hash160(vchPubKey), key))
-                return false;
-            if (key.GetPubKey() != vchPubKey)
-                return false;
-
-            return key.Sign(GetHash(), vchBlockSig);
-        }
+        return key.Sign(GetHash(), vchBlockSig);
     }
-
-    LogPrintf("Sign failed\n");
     return false;
 }
 
@@ -140,48 +101,17 @@ bool CBlock::CheckBlockSignature() const
 
     std::vector<std::vector<unsigned char> > vSolutions;
     txnouttype whichType;
+    const CTxOut& txout = vtx[1]->vout[1];
 
-    if (IsProofOfStake())
+    if (!Solver(txout.scriptPubKey, whichType, vSolutions))
+        return false;
+    if (whichType == TX_PUBKEY)
     {
-        const CTxOut &txout = vtx[1]->vout[1];
-
-        if (!Solver(txout.scriptPubKey, whichType, vSolutions))
+        std::vector<unsigned char> &vchPubKey = vSolutions[0];
+        if (vchBlockSig.empty())
             return false;
-        if (whichType == TX_PUBKEY)
-        {
-            std::vector<unsigned char> &vchPubKey = vSolutions[0];
-            if (vchBlockSig.empty())
-                return false;
-            return CPubKey(vchPubKey).Verify(GetHash(), vchBlockSig);
-        }
+        return CPubKey(vchPubKey).Verify(GetHash(), vchBlockSig);
     }
-    else
-    {
-        for (unsigned int i = 0; i < vtx[0]->vout.size(); i++)
-        {
-            const CTxOut &txout = vtx[0]->vout[i];
-
-            if (!Solver(txout.scriptPubKey, whichType, vSolutions))
-            {
-                return false;
-            }
-            if (whichType == TX_PUBKEY)
-            {
-                // Verify
-                std::vector<unsigned char> &vchPubKey = vSolutions[0];
-                if (vchBlockSig.empty())
-                {
-                    continue;
-                }
-                if (!CPubKey(vchPubKey).Verify(GetHash(), vchBlockSig))
-                {
-                    continue;
-                }
-                return true;
-            }
-        }
-    }
-    LogPrintf("CheckBlockSignature failed \n");
     return false;
 }
 
