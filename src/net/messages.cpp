@@ -1192,6 +1192,12 @@ bool static ProcessMessage(CNode *pfrom,
             // nodes)
             connman.PushMessage(pfrom, NetMsgType::SENDHEADERS);
         }
+
+        if (pfrom->nVersion >= NETWORK_SERVICE_PROTOCOL_VERSION)
+        {
+            connman.PushMessage(pfrom, NetMsgType::NSVERSION, NETWORK_SERVICE_VERSION);
+        }
+
         pfrom->fSuccessfullyConnected = true;
     }
 
@@ -1209,6 +1215,22 @@ bool static ProcessMessage(CNode *pfrom,
             mapInboundConnectionTracker[ipAddress].nLastEvictionTime = GetTime();
         }
         return false;
+    }
+    else if (strCommand == NetMsgType::NSVERSION)
+    {
+        uint64_t netservice = 0;
+        vRecv >> netservice;
+        pfrom->nNetworkServiceVersion = netservice;
+        if (netservice >= MIN_AODV_VERSION)
+        {
+            connman.PushMessage(pfrom, NetMsgType::NSVERACK, g_connman->GetRoutingKey());
+        }
+    }
+
+    else if (strCommand == NetMsgType::NSVERACK)
+    {
+        CPubKey peerPubKey;
+        vRecv >> peerPubKey;
     }
 
     else if (strCommand == NetMsgType::ADDR)

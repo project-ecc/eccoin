@@ -45,13 +45,17 @@ const char *GETADDR = "getaddr";
 const char *MEMPOOL = "mempool";
 const char *PING = "ping";
 const char *PONG = "pong";
-const char *ALERT = "alert";
 const char *NOTFOUND = "notfound";
 const char *FILTERLOAD = "filterload";
 const char *FILTERADD = "filteradd";
 const char *FILTERCLEAR = "filterclear";
 const char *REJECT = "reject";
 const char *SENDHEADERS = "sendheaders";
+const char *RREQ = "rreq";
+const char *RREP = "rrep";
+const char *RERR = "rerr";
+const char *NSVERSION = "nsversion";
+const char *NSVERACK = "nsverack";
 };
 
 static const char *ppszTypeName[] = {
@@ -66,8 +70,10 @@ static const char *ppszTypeName[] = {
 const static std::string allNetMessageTypes[] = {NetMsgType::VERSION, NetMsgType::VERACK, NetMsgType::ADDR,
     NetMsgType::INV, NetMsgType::GETDATA, NetMsgType::MERKLEBLOCK, NetMsgType::GETBLOCKS, NetMsgType::GETHEADERS,
     NetMsgType::TX, NetMsgType::HEADERS, NetMsgType::BLOCK, NetMsgType::GETADDR, NetMsgType::MEMPOOL, NetMsgType::PING,
-    NetMsgType::PONG, NetMsgType::ALERT, NetMsgType::NOTFOUND, NetMsgType::FILTERLOAD, NetMsgType::FILTERADD,
-    NetMsgType::FILTERCLEAR, NetMsgType::REJECT, NetMsgType::SENDHEADERS};
+    NetMsgType::PONG, NetMsgType::NOTFOUND, NetMsgType::FILTERLOAD, NetMsgType::FILTERADD, NetMsgType::FILTERCLEAR,
+    NetMsgType::REJECT, NetMsgType::SENDHEADERS, NetMsgType::RREQ, NetMsgType::RREP, NetMsgType::RERR,
+    NetMsgType::NSVERSION, NetMsgType::NSVERACK};
+
 const static std::vector<std::string> allNetMessageTypesVec(allNetMessageTypes,
     allNetMessageTypes + ARRAYLEN(allNetMessageTypes));
 
