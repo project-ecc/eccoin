@@ -196,6 +196,7 @@ testScripts = [ RpcTest(t) for t in [
     'txpropagate',
     'wallet',
     'walletbackup',
+    'zapwallettxes',
     #
     Disabled('mempool_limit', "FAILS"),
     Disabled('mempool_reorg', "FAILS"),
@@ -208,7 +209,6 @@ testScripts = [ RpcTest(t) for t in [
     Disabled('invalidtxrequest', "FAILS"),
     Disabled('merkle_blocks', "FAILS"),
     Disabled('miningtest', "FAILS"),
-    Disabled('zapwallettxes', "FAILS"),
     Disabled('sendheaders', "FAILS"),
     Disabled('signrawtransactions', "FAILS"),
     #

@@ -1663,7 +1663,7 @@ bool AppInit2(thread_group &threadGroup)
     // ********************************************************* Step 12: finished
 
     SetRPCWarmupFinished();
-    LogPrintf("Done loading");
+    LogPrintf("Done loading\n");
 
 
     if (pwalletMain)
