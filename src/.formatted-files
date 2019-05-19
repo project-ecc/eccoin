@@ -13,6 +13,8 @@ blockgeneration/miner.cpp
 blockgeneration/miner.h
 blockgeneration/minter.cpp
 blockgeneration/minter.h
+blockstorage/blockstorage.cpp
+blockstorage/blockstorage.h
 bloom.cpp
 bloom.h
 chain/block.cpp

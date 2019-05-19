@@ -21,6 +21,7 @@
 #include "net/messages.h"
 
 #include "args.h"
+#include "blockstorage/blockstorage.h"
 #include "chain/chain.h"
 #include "chain/tx.h"
 #include "consensus/validation.h"
@@ -847,10 +848,13 @@ void static ProcessGetData(CNode *pfrom, CConnman &connman, const Consensus::Par
             {
                 // Send block from disk
                 CBlock block;
-                if (!ReadBlockFromDisk(block, pindex, consensusParams))
                 {
-                    LogPrintf("cannot load block from disk");
-                    assert(false);
+                    LOCK(cs_blockstorage);
+                    if (!ReadBlockFromDisk(block, pindex, consensusParams))
+                    {
+                        LogPrintf("cannot load block from disk");
+                        assert(false);
+                    }
                 }
                 if (inv.type == MSG_BLOCK)
                 {

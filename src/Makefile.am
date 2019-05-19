@@ -56,6 +56,7 @@ BITCOIN_CORE_H = \
   blockgeneration/compare.h \
   blockgeneration/miner.h \
   blockgeneration/minter.h \
+  blockstorage/blockstorage.h \
   bloom.h \
   chain/chain.h \
   chain/chainman.h \
@@ -180,6 +181,7 @@ libbitcoin_server_a_SOURCES = \
   blockgeneration/blockgeneration.cpp \
   blockgeneration/miner.cpp \
   blockgeneration/minter.cpp \
+  blockstorage/blockstorage.cpp \
   bloom.cpp \
   chain/chain.cpp \
   chain/checkpoints.cpp \

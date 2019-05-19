@@ -17,6 +17,8 @@
  */
 
 #include "chainman.h"
+
+#include "blockstorage/blockstorage.h"
 #include "checkpoints.h"
 #include "consensus/consensus.h"
 #include "init.h"
@@ -422,6 +424,7 @@ bool CChainManager::LoadExternalBlockFile(const CNetworkTemplate &chainparams, F
                     std::pair<std::multimap<uint256, CDiskBlockPos>::iterator,
                         std::multimap<uint256, CDiskBlockPos>::iterator>
                         range = mapBlocksUnknownParent.equal_range(head);
+                    LOCK(cs_blockstorage);
                     while (range.first != range.second)
                     {
                         std::multimap<uint256, CDiskBlockPos>::iterator it = range.first;
