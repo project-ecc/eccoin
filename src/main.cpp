@@ -1646,8 +1646,12 @@ bool ContextualCheckBlock(const CBlock &block, CValidationState &state, CBlockIn
     int nLockTimeFlags = 0;
     nLockTimeFlags |= LOCKTIME_MEDIAN_TIME_PAST;
 
-    int64_t nLockTimeCutoff =
-        (nLockTimeFlags & LOCKTIME_MEDIAN_TIME_PAST) ? pindexPrev->GetMedianTimePast() : block.GetBlockTime();
+    int64_t nLockTimeCutoff;
+    if (pindexPrev == nullptr)
+        nLockTimeCutoff = block.GetBlockTime();
+    else
+        nLockTimeCutoff =
+            (nLockTimeFlags & LOCKTIME_MEDIAN_TIME_PAST) ? pindexPrev->GetMedianTimePast() : block.GetBlockTime();
 
     // Check that all transactions are finalized
     for (auto const &tx : block.vtx)
