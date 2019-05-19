@@ -94,10 +94,9 @@ CFeeRate minRelayTxFee = CFeeRate(DEFAULT_MIN_RELAY_TX_FEE);
 CTxMemPool mempool(::minRelayTxFee);
 
 
-std::map<uint256, COrphanTx> mapOrphanTransactions GUARDED_BY(cs_main);
-;
-std::map<uint256, std::set<uint256> > mapOrphanTransactionsByPrev GUARDED_BY(cs_main);
-;
+CCriticalSection cs_orphans;
+std::map<uint256, COrphanTx> mapOrphanTransactions GUARDED_BY(cs_orphans);
+std::map<uint256, std::set<uint256> > mapOrphanTransactionsByPrev GUARDED_BY(cs_orphans);
 
 
 /**
@@ -1806,6 +1805,7 @@ public:
     ~CMainCleanup()
     {
         // orphan transactions
+        LOCK(cs_orphans);
         mapOrphanTransactions.clear();
         mapOrphanTransactionsByPrev.clear();
     }

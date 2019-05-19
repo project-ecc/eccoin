@@ -142,6 +142,7 @@ static const int LAST_POW_BLOCK = 86400;
 extern CCriticalSection cs_LastBlockFile;
 extern CScript COINBASE_FLAGS;
 extern CCriticalSection cs_main;
+extern CCriticalSection cs_orphans;
 extern CTxMemPool mempool;
 extern uint64_t nLastBlockTx;
 extern uint64_t nLastBlockSize;
@@ -195,9 +196,9 @@ struct CBlockIndexWorkComparator
 
 extern CBlockIndex *pindexBestInvalid;
 extern std::multimap<CBlockIndex *, CBlockIndex *> mapBlocksUnlinked;
-extern std::map<uint256, COrphanTx> mapOrphanTransactions GUARDED_BY(cs_main);
+extern std::map<uint256, COrphanTx> mapOrphanTransactions GUARDED_BY(cs_orphans);
 ;
-extern std::map<uint256, std::set<uint256> > mapOrphanTransactionsByPrev GUARDED_BY(cs_main);
+extern std::map<uint256, std::set<uint256> > mapOrphanTransactionsByPrev GUARDED_BY(cs_orphans);
 ;
 void LimitMempoolSize(CTxMemPool &pool, size_t limit, unsigned long age);
 extern std::set<CBlockIndex *> setDirtyBlockIndex;

@@ -460,14 +460,17 @@ bool CChainManager::LoadExternalBlockFile(const CNetworkTemplate &chainparams, F
 
 void CChainManager::UnloadBlockIndex()
 {
+    {
+        LOCK(cs_orphans);
+        mapOrphanTransactions.clear();
+        mapOrphanTransactionsByPrev.clear();
+    }
     LOCK(cs_main);
     setBlockIndexCandidates.clear();
     chainActive.SetTip(nullptr);
     pindexBestInvalid = nullptr;
     pindexBestHeader = nullptr;
     mempool.clear();
-    mapOrphanTransactions.clear();
-    mapOrphanTransactionsByPrev.clear();
     nSyncStarted = 0;
     mapBlocksUnlinked.clear();
     vinfoBlockFile.clear();
