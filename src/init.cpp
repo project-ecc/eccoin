@@ -187,7 +187,7 @@ void Interrupt(thread_group &threadGroup)
     InterruptScriptCheck();
 }
 
-void Shutdown()
+void Shutdown(thread_group &threadGroup)
 {
     LogPrintf("%s: In progress...\n", __func__);
     static CCriticalSection cs_Shutdown;
@@ -196,6 +196,7 @@ void Shutdown()
     {
         return;
     }
+    threadGroup.join_all();
 
     /// Note: Shutdown() must be able to handle cases in which AppInit2() failed part of the way,
     /// for example if the data directory was found to be locked.
@@ -203,6 +204,16 @@ void Shutdown()
     /// module was initialized.
     RenameThread("bitcoin-shutoff");
     mempool.AddTransactionsUpdated(1);
+
+    {
+        LOCK(cs_main);
+        if (pnetMan->getChainActive()->pcoinsTip != nullptr)
+        {
+            // Flush state and clear cache completely to release as much memory as possible before continuing.
+            FlushStateToDisk();
+            pnetMan->getChainActive()->pcoinsTip->Clear();
+        }
+    }
 
     StopHTTPRPC();
     StopRPC();
@@ -239,24 +250,18 @@ void Shutdown()
 
     {
         LOCK(cs_main);
-        if (pnetMan)
+        if (pnetMan->getChainActive()->pcoinsTip != nullptr)
         {
-            if (pnetMan->getChainActive()->pcoinsTip != nullptr)
-            {
-                FlushStateToDisk();
-            }
-            pnetMan->getChainActive()->pcoinsTip.reset();
-            pnetMan->getChainActive()->pcoinsTip = nullptr;
+            FlushStateToDisk();
         }
+        pnetMan->getChainActive()->pcoinsTip.reset();
+        pnetMan->getChainActive()->pcoinsTip = nullptr;
         pcoinscatcher.reset();
         pcoinscatcher = nullptr;
         pcoinsdbview.reset();
         pcoinsdbview = nullptr;
-        if (pnetMan)
-        {
-            pnetMan->getChainActive()->pblocktree.reset();
-            pnetMan->getChainActive()->pblocktree = nullptr;
-        }
+        pnetMan->getChainActive()->pblocktree.reset();
+        pnetMan->getChainActive()->pblocktree = nullptr;
     }
 
     if (pwalletMain)

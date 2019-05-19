@@ -177,7 +177,7 @@ bool AppInit(int argc, char *argv[])
     {
         WaitForShutdown(&threadGroup);
     }
-    Shutdown();
+    Shutdown(threadGroup);
 
     return fRet;
 }

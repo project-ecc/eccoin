@@ -74,6 +74,7 @@ void ThreadMiner(void *parg, bool shutdownOnly)
     if (minerThreads != nullptr)
     {
         minerThreads->interrupt_all();
+        minerThreads->join_all();
         delete minerThreads;
         minerThreads = nullptr;
         return;
@@ -108,6 +109,7 @@ void ThreadMinter(void *parg, bool shutdownOnly)
     if (minterThreads != nullptr)
     {
         minterThreads->interrupt_all();
+        minterThreads->join_all();
         delete minterThreads;
         minterThreads = nullptr;
         return;

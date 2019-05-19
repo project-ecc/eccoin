@@ -3571,7 +3571,7 @@ bool CWallet::InitLoadWallet()
 
     if (gArgs.GetBoolArg("-zapwallettxes", false))
     {
-        LogPrintf("Zapping all transactions from wallet...");
+        LogPrintf("Zapping all transactions from wallet...\n");
 
         CWallet *tempWallet = new CWallet(walletFile);
         DBErrors nZapWalletRet = tempWallet->ZapWalletTx(vWtx);
