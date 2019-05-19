@@ -821,6 +821,7 @@ bool AcceptToMemoryPool(CTxMemPool &pool,
     bool fRejectAbsurdFee)
 {
     std::vector<COutPoint> vCoinsToUncache;
+    LOCK(cs_main);
     bool res = AcceptToMemoryPoolWorker(
         pool, state, tx, fLimitFree, pfMissingInputs, fOverrideMempoolLimit, fRejectAbsurdFee, vCoinsToUncache);
     if (pfMissingInputs && !res && !*pfMissingInputs)
