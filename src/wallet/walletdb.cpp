@@ -640,7 +640,7 @@ DBErrors CWalletDB::FindWalletTx(CWallet *pwallet, std::vector<uint256> &vTxHash
         int nMinVersion = 0;
         if (Read((std::string) "minversion", nMinVersion))
         {
-            if (nMinVersion > CLIENT_VERSION)
+            if (nMinVersion > WALLET_VERSION)
                 return DB_TOO_NEW;
             pwallet->LoadMinVersion(nMinVersion);
         }
