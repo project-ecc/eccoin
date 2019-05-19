@@ -82,7 +82,6 @@ std::unique_ptr<CRollingBloomFilter> recentRejects;
 std::map<uint256, std::pair<NodeId, std::list<QueuedBlock>::iterator> > mapBlocksInFlight;
 uint256 hashRecentRejectsChainTip;
 std::map<uint256, std::pair<NodeId, bool> > mapBlockSource;
-/** Relay map, protected by cs_main. */
 CCriticalSection cs_mapRelay;
 std::map<uint256, CTransaction> mapRelay;
 std::deque<std::pair<int64_t, std::map<uint256, CTransaction>::iterator> > vRelayExpiration;

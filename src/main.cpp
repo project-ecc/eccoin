@@ -821,6 +821,7 @@ bool AcceptToMemoryPool(CTxMemPool &pool,
     bool fRejectAbsurdFee)
 {
     std::vector<COutPoint> vCoinsToUncache;
+    LOCK(cs_main);
     bool res = AcceptToMemoryPoolWorker(
         pool, state, tx, fLimitFree, pfMissingInputs, fOverrideMempoolLimit, fRejectAbsurdFee, vCoinsToUncache);
     if (pfMissingInputs && !res && !*pfMissingInputs)
@@ -1266,8 +1267,7 @@ void PruneBlockIndexCandidates()
 
 bool InvalidateBlock(CValidationState &state, const Consensus::Params &consensusParams, CBlockIndex *pindex)
 {
-    AssertLockHeld(cs_main);
-
+    WRITELOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
     // Mark the block itself as invalid.
     pindex->nStatus |= BLOCK_FAILED_VALID;
     setDirtyBlockIndex.insert(pindex);
@@ -1292,20 +1292,15 @@ bool InvalidateBlock(CValidationState &state, const Consensus::Params &consensus
     LimitMempoolSize(mempool, gArgs.GetArg("-maxmempool", DEFAULT_MAX_MEMPOOL_SIZE) * 1000000,
         gArgs.GetArg("-mempoolexpiry", DEFAULT_MEMPOOL_EXPIRY) * 60 * 60);
 
-    // The resulting new best tip may not be in setBlockIndexCandidates anymore, so
-    // add it again.
+    BlockMap::iterator it = pnetMan->getChainActive()->mapBlockIndex.begin();
+    while (it != pnetMan->getChainActive()->mapBlockIndex.end())
     {
-        READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
-        BlockMap::iterator it = pnetMan->getChainActive()->mapBlockIndex.begin();
-        while (it != pnetMan->getChainActive()->mapBlockIndex.end())
+        if (it->second->IsValid(BLOCK_VALID_TRANSACTIONS) && it->second->nChainTx &&
+            !setBlockIndexCandidates.value_comp()(it->second, pnetMan->getChainActive()->chainActive.Tip()))
         {
-            if (it->second->IsValid(BLOCK_VALID_TRANSACTIONS) && it->second->nChainTx &&
-                !setBlockIndexCandidates.value_comp()(it->second, pnetMan->getChainActive()->chainActive.Tip()))
-            {
-                setBlockIndexCandidates.insert(it->second);
-            }
-            it++;
+            setBlockIndexCandidates.insert(it->second);
         }
+        it++;
     }
 
     InvalidChainFound(pindex);
@@ -1316,11 +1311,8 @@ bool InvalidateBlock(CValidationState &state, const Consensus::Params &consensus
 
 bool ReconsiderBlock(CValidationState &state, CBlockIndex *pindex)
 {
-    AssertLockHeld(cs_main);
-
     int nHeight = pindex->nHeight;
-
-    READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+    WRITELOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
     // Remove the invalidity flag from this block
     if (!pindex->IsValid())
     {
@@ -1337,7 +1329,6 @@ bool ReconsiderBlock(CValidationState &state, CBlockIndex *pindex)
             pindexBestInvalid = NULL;
         }
     }
-
     // Remove the invalidity flag from all descendants.
     BlockMap::iterator it = pnetMan->getChainActive()->mapBlockIndex.begin();
     while (it != pnetMan->getChainActive()->mapBlockIndex.end())
@@ -1655,8 +1646,12 @@ bool ContextualCheckBlock(const CBlock &block, CValidationState &state, CBlockIn
     int nLockTimeFlags = 0;
     nLockTimeFlags |= LOCKTIME_MEDIAN_TIME_PAST;
 
-    int64_t nLockTimeCutoff =
-        (nLockTimeFlags & LOCKTIME_MEDIAN_TIME_PAST) ? pindexPrev->GetMedianTimePast() : block.GetBlockTime();
+    int64_t nLockTimeCutoff;
+    if (pindexPrev == nullptr)
+        nLockTimeCutoff = block.GetBlockTime();
+    else
+        nLockTimeCutoff =
+            (nLockTimeFlags & LOCKTIME_MEDIAN_TIME_PAST) ? pindexPrev->GetMedianTimePast() : block.GetBlockTime();
 
     // Check that all transactions are finalized
     for (auto const &tx : block.vtx)
