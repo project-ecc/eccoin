@@ -807,7 +807,6 @@ static std::set<CBlockIndex *, CompareBlocksByHeight> GetChainTips()
     std::set<CBlockIndex *> setOrphans;
     std::set<CBlockIndex *> setPrevs;
 
-    AssertLockHeld(cs_main); // for chainActive
     READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
     for (const std::pair<const uint256, CBlockIndex *> &item : pnetMan->getChainActive()->mapBlockIndex)
     {
