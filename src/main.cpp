@@ -442,11 +442,9 @@ unsigned int GetP2SHSigOpCount(const CTransaction &tx, const CCoinsViewCache &in
     unsigned int nSigOps = 0;
     for (unsigned int i = 0; i < tx.vin.size(); i++)
     {
-        const CTxOut &prevout = inputs.AccessCoin(tx.vin[i].prevout).out;
-        if (prevout.scriptPubKey.IsPayToScriptHash())
-        {
-            nSigOps += prevout.scriptPubKey.GetSigOpCount(tx.vin[i].scriptSig);
-        }
+        CoinAccessor coin(inputs, tx.vin[i].prevout);
+        if (coin && coin->out.scriptPubKey.IsPayToScriptHash())
+            nSigOps += coin->out.scriptPubKey.GetSigOpCount(tx.vin[i].scriptSig);
     }
     return nSigOps;
 }
@@ -621,8 +619,8 @@ bool AcceptToMemoryPoolWorker(CTxMemPool &pool,
         bool fSpendsCoinbase = false;
         for (auto const &txin : tx.vin)
         {
-            const Coin coin = view.AccessCoin(txin.prevout);
-            if (coin.IsCoinBase())
+            CoinAccessor coin(view, txin.prevout);
+            if (coin->IsCoinBase())
             {
                 fSpendsCoinbase = true;
                 break;
@@ -905,28 +903,6 @@ bool ReadBlockFromDisk(CBlock &block, const CBlockIndex *pindex, const Consensus
     return true;
 }
 
-void UpdateCoins(const CTransaction &tx, CValidationState &state, CCoinsViewCache &inputs, CTxUndo &txundo, int nHeight)
-{
-    // mark inputs spent
-    if (!tx.IsCoinBase())
-    {
-        txundo.vprevout.reserve(tx.vin.size());
-        for (auto const &txin : tx.vin)
-        {
-            txundo.vprevout.emplace_back();
-            inputs.SpendCoin(txin.prevout, &txundo.vprevout.back());
-        }
-    }
-    // add outputs
-    AddCoins(inputs, tx, nHeight);
-}
-
-void UpdateCoins(const CTransaction &tx, CValidationState &state, CCoinsViewCache &inputs, int nHeight)
-{
-    CTxUndo txundo;
-    UpdateCoins(tx, state, inputs, txundo, nHeight);
-}
-
 bool CScriptCheck::operator()()
 {
     const CScript &scriptSig = ptxTo->vin[nIn].scriptSig;
@@ -959,7 +935,8 @@ bool CheckTxInputs(const CTransaction &tx, CValidationState &state, const CCoins
     for (uint64_t i = 0; i < tx.vin.size(); i++)
     {
         const COutPoint &prevout = tx.vin[i].prevout;
-        const Coin &coin = inputs.AccessCoin(prevout);
+        Coin coin;
+        inputs.GetCoin(prevout, coin); // Make a copy so I don't hold the utxo lock
         assert(!coin.IsSpent());
 
         // If prev is coinbase or coinstake, check that it's matured
@@ -1044,16 +1021,16 @@ bool CheckInputs(const CTransaction &tx,
             for (unsigned int i = 0; i < tx.vin.size(); i++)
             {
                 const COutPoint &prevout = tx.vin[i].prevout;
-                const Coin &coin = inputs.AccessCoin(prevout);
-                assert(!coin.IsSpent());
+                CoinAccessor coin(inputs, prevout);
+                assert(!coin->IsSpent());
 
                 // We very carefully only pass in things to CScriptCheck which
                 // are clearly committed. This provides
                 // a sanity check that our caching is not introducing consensus
                 // failures through additional data in, eg, the coins being
                 // spent being checked as a part of CScriptCheck.
-                const CScript &scriptPubKey = coin.out.scriptPubKey;
-                const CAmount amount = coin.out.nValue;
+                const CScript &scriptPubKey = coin->out.scriptPubKey;
+                const CAmount amount = coin->out.nValue;
 
                 // Verify signature
                 CScriptCheck check(scriptPubKey, amount, tx, i, flags, cacheStore);

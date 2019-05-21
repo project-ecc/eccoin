@@ -21,6 +21,7 @@
 #include "txmempool.h"
 
 #include "clientversion.h"
+#include "coins.h"
 #include "consensus/consensus.h"
 #include "consensus/validation.h"
 #include "main.h"
@@ -733,11 +734,11 @@ void CTxMemPool::removeForReorg(const CCoinsViewCache *pcoins, unsigned int nMem
                 indexed_transaction_set::const_iterator it2 = mapTx.find(txin.prevout.hash);
                 if (it2 != mapTx.end())
                     continue;
-                const Coin &coin = pcoins->AccessCoin(txin.prevout);
+                CoinAccessor coin(*pcoins, txin.prevout);
                 if (nCheckFrequency != 0)
-                    assert(!coin.IsSpent());
-                if (coin.IsSpent() ||
-                    (coin.IsCoinBase() && ((signed long)nMemPoolHeight) - coin.nHeight < COINBASE_MATURITY))
+                    assert(!coin->IsSpent());
+                if (coin->IsSpent() ||
+                    (coin->IsCoinBase() && ((signed long)nMemPoolHeight) - coin->nHeight < COINBASE_MATURITY))
                 {
                     transactionsToRemove.push_back(tx);
                     break;
@@ -918,7 +919,7 @@ void CTxMemPool::check(const CCoinsViewCache *pcoins) const
         {
             CValidationState state;
             assert(CheckInputs(tx, state, mempoolDuplicate, false, 0, false, NULL));
-            UpdateCoins(tx, state, mempoolDuplicate, 1000000);
+            UpdateCoins(tx, mempoolDuplicate, 1000000);
         }
     }
     unsigned int stepsSinceLastRemove = 0;
@@ -936,7 +937,7 @@ void CTxMemPool::check(const CCoinsViewCache *pcoins) const
         else
         {
             assert(CheckInputs(entry->GetTx(), state, mempoolDuplicate, false, 0, false, NULL));
-            UpdateCoins(entry->GetTx(), state, mempoolDuplicate, 1000000);
+            UpdateCoins(entry->GetTx(), mempoolDuplicate, 1000000);
             stepsSinceLastRemove = 0;
         }
     }
