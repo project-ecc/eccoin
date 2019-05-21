@@ -82,12 +82,14 @@ bool CVerifyDB::VerifyDB(const CNetworkTemplate &chainparams, CCoinsView *coinsv
             (coins.DynamicMemoryUsage() + pnetMan->getChainActive()->pcoinsTip->DynamicMemoryUsage()) <=
                 nCoinCacheUsage)
         {
-            bool fClean = true;
-            if (!DisconnectBlock(block, state, pindex, coins, &fClean))
+            DisconnectResult res = DisconnectBlock(block, pindex, coins);
+            if (res == DISCONNECT_FAILED)
+            {
                 return error("VerifyDB(): *** irrecoverable inconsistency in block data at %d, hash=%s",
                     pindex->nHeight, pindex->GetBlockHash().ToString());
+            }
             pindexState = pindex->pprev;
-            if (!fClean)
+            if (res == DISCONNECT_UNCLEAN)
             {
                 nGoodTransactions = 0;
                 pindexFailure = pindex;

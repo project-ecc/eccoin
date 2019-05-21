@@ -150,6 +150,12 @@ bool ProcessNewBlock(CValidationState &state,
     bool fForceProcessing,
     CDiskBlockPos *dbp)
 {
+    if (!CheckBlockHeader(*pblock, state, true))
+    {
+        // block header is bad
+        // demerit the sender
+        return error("%s: CheckBlockHeader FAILED", __func__);
+    }
     // Preliminary checks
     bool checked = CheckBlock(*pblock, state);
 
@@ -174,7 +180,12 @@ bool ProcessNewBlock(CValidationState &state,
     }
 
     if (!ActivateBestChain(state, chainparams, pblock))
-        return error("%s: ActivateBestChain failed", __func__);
+    {
+        if (state.IsInvalid() || state.IsError())
+            return error("%s: ActivateBestChain failed", __func__);
+        else
+            return false;
+    }
 
     return true;
 }
@@ -217,8 +228,10 @@ bool DisconnectTip(CValidationState &state, const Consensus::Params &consensusPa
     int64_t nStart = GetTimeMicros();
     {
         CCoinsViewCache view(pnetMan->getChainActive()->pcoinsTip.get());
-        if (!DisconnectBlock(block, state, pindexDelete, view))
+        if (DisconnectBlock(block, pindexDelete, view) != DISCONNECT_OK)
+        {
             return error("DisconnectTip(): DisconnectBlock %s failed", pindexDelete->GetBlockHash().ToString());
+        }
         assert(view.Flush());
     }
     LogPrint("bench", "- Disconnect block: %.2fms\n", (GetTimeMicros() - nStart) * 0.001);
@@ -276,6 +289,7 @@ bool ConnectTip(CValidationState &state,
     CBlockIndex *pindexNew,
     const CBlock *pblock)
 {
+    AssertLockHeld(cs_main);
     assert(pindexNew->pprev == pnetMan->getChainActive()->chainActive.Tip());
     // Read block from disk.
     int64_t nTime1 = GetTimeMicros();
@@ -461,7 +475,8 @@ bool ActivateBestChainStep(CValidationState &state,
     std::vector<CBlockIndex *> vpindexToConnect;
     bool fContinue = true;
     int nHeight = pindexFork ? pindexFork->nHeight : -1;
-    while (fContinue && nHeight != pindexMostWork->nHeight)
+    bool fBlock = true;
+    while (fContinue && nHeight < pindexMostWork->nHeight)
     {
         // Don't iterate the entire list of potential improvements toward the best tip, as we likely only need
         // a few blocks along the way.
@@ -477,16 +492,17 @@ bool ActivateBestChainStep(CValidationState &state,
         nHeight = nTargetHeight;
 
         // Connect new blocks.
-        BOOST_REVERSE_FOREACH (CBlockIndex *pindexConnect, vpindexToConnect)
+        CBlockIndex *pindexNewTip = nullptr;
+        for (auto i = vpindexToConnect.rbegin(); i != vpindexToConnect.rend(); i++)
         {
-            if (!ConnectTip(state, chainparams, pindexConnect, pindexConnect == pindexMostWork ? pblock : nullptr))
+            CBlockIndex *pindexConnect = *i;
+            if (!ConnectTip(state, chainparams, pindexConnect, pindexConnect == pindexMostWork && fBlock ? pblock : nullptr))
             {
                 if (state.IsInvalid())
                 {
                     // The block violates a consensus rule.
                     if (!state.CorruptionPossible())
                         InvalidChainFound(vpindexToConnect.back());
-                    state = CValidationState();
                     fInvalidFound = true;
                     fContinue = false;
                     break;
@@ -499,6 +515,14 @@ bool ActivateBestChainStep(CValidationState &state,
             }
             else
             {
+                pindexNewTip = pindexConnect;
+                if (!pnetMan->getChainActive()->IsInitialBlockDownload())
+                {
+                    // Notify external zmq listeners about the new tip.
+                    GetMainSignals().UpdatedBlockTip(pindexConnect);
+                }
+                BlockNotifyCallback(pnetMan->getChainActive()->IsInitialBlockDownload(), pindexNewTip);
+
                 PruneBlockIndexCandidates();
                 if (!pindexOldTip ||
                     pnetMan->getChainActive()->chainActive.Tip()->nChainWork > pindexOldTip->nChainWork)
@@ -508,6 +532,52 @@ bool ActivateBestChainStep(CValidationState &state,
                     break;
                 }
             }
+        }
+        if (fInvalidFound)
+            break; // stop processing more blocks if the last one was invalid.
+
+        if (fContinue)
+        {
+            pindexMostWork = FindMostWorkChain();
+            if (!pindexMostWork)
+                return false;
+        }
+        fBlock = false; // read next blocks from disk
+    }
+
+    // Relay Inventory
+    CBlockIndex *pindexNewTip = pnetMan->getChainActive()->chainActive.Tip();
+    if (pindexFork != pindexNewTip)
+    {
+        if (!pnetMan->getChainActive()->IsInitialBlockDownload())
+        {
+            // Find the hashes of all blocks that weren't previously in the best chain.
+            std::vector<uint256> vHashes;
+            CBlockIndex *pindexToAnnounce = pindexNewTip;
+            while (pindexToAnnounce != pindexFork)
+            {
+                vHashes.push_back(pindexToAnnounce->GetBlockHash());
+                pindexToAnnounce = pindexToAnnounce->pprev;
+                if (vHashes.size() == MAX_BLOCKS_TO_ANNOUNCE)
+                {
+                    // Limit announcements in case of a huge reorganization.
+                    // Rely on the peer's synchronization mechanism in that case.
+                    break;
+                }
+            }
+
+            // Relay inventory, but don't relay old inventory during initial block download.
+            const int nNewHeight = pindexNewTip->nHeight;
+            g_connman->ForEachNode([nNewHeight, &vHashes](CNode *pnode)
+            {
+                if (nNewHeight > (pnode->nStartingHeight != -1 ? pnode->nStartingHeight - 2000 : 0))
+                {
+                    for (const uint256 &hash : boost::adaptors::reverse(vHashes))
+                    {
+                        pnode->PushBlockHash(hash);
+                    }
+                }
+            });
         }
     }
 
@@ -521,9 +591,14 @@ bool ActivateBestChainStep(CValidationState &state,
     mempool.check(pnetMan->getChainActive()->pcoinsTip.get());
     // Callbacks/notifications for a new best chain.
     if (fInvalidFound)
+    {
         CheckForkWarningConditionsOnNewFork(vpindexToConnect.back());
+        return false;
+    }
     else
+    {
         CheckForkWarningConditions();
+    }
     return true;
 }
 
@@ -534,7 +609,9 @@ bool ActivateBestChainStep(CValidationState &state,
  */
 bool ActivateBestChain(CValidationState &state, const CNetworkTemplate &chainparams, const CBlock *pblock)
 {
-    CBlockIndex *pindexMostWork = NULL;
+    CBlockIndex *pindexMostWork = nullptr;
+    LOCK(cs_main);
+
     do
     {
         if (shutdown_threads.load())
@@ -542,79 +619,30 @@ bool ActivateBestChain(CValidationState &state, const CNetworkTemplate &chainpar
             break;
         }
 
-        if (ShutdownRequested())
-            break;
-
-        CBlockIndex *pindexNewTip = NULL;
-        const CBlockIndex *pindexFork;
-        bool fInitialDownload;
+        pindexMostWork = FindMostWorkChain();
+        if (!pindexMostWork)
         {
-            LOCK(cs_main);
-
-            CBlockIndex *pindexOldTip = pnetMan->getChainActive()->chainActive.Tip();
-            pindexMostWork = FindMostWorkChain();
-
-            // Whether we have anything to do at all.
-            if (pindexMostWork == nullptr || pindexMostWork == pnetMan->getChainActive()->chainActive.Tip())
-                return true;
-
-            if (!ActivateBestChainStep(state, chainparams, pindexMostWork,
-                    pblock && pblock->GetHash() == pindexMostWork->GetBlockHash() ? pblock : nullptr))
-            {
-                return false;
-            }
-
-            pindexNewTip = pnetMan->getChainActive()->chainActive.Tip();
-            pindexFork = pnetMan->getChainActive()->chainActive.FindFork(pindexOldTip);
-            fInitialDownload = pnetMan->getChainActive()->IsInitialBlockDownload();
+            return true;
         }
-        // When we reach this point, we switched to a new tip (stored in pindexNewTip).
 
-        // Notifications/callbacks that can run without cs_main
-        // Always notify the UI if a new block tip was connected
-        if (pindexFork != pindexNewTip)
+        // Whether we have anything to do at all.
+        if (pnetMan->getChainActive()->chainActive.Tip() != nullptr)
         {
-            BlockNotifyCallback(fInitialDownload, pindexNewTip);
-
-            if (!fInitialDownload)
-            {
-                // Find the hashes of all blocks that weren't previously in the best chain.
-                std::vector<uint256> vHashes;
-                CBlockIndex *pindexToAnnounce = pindexNewTip;
-                while (pindexToAnnounce != pindexFork)
-                {
-                    vHashes.push_back(pindexToAnnounce->GetBlockHash());
-                    pindexToAnnounce = pindexToAnnounce->pprev;
-                    if (vHashes.size() == MAX_BLOCKS_TO_ANNOUNCE)
-                    {
-                        // Limit announcements in case of a huge reorganization.
-                        // Rely on the peer's synchronization mechanism in that case.
-                        break;
-                    }
-                }
-                // Relay inventory, but don't relay old inventory during initial block
-                // download.
-                const int nNewHeight = pindexNewTip->nHeight;
-                g_connman->ForEachNode([nNewHeight, &vHashes](CNode *pnode) {
-                    if (nNewHeight > (pnode->nStartingHeight != -1 ? pnode->nStartingHeight - 2000 : 0))
-                    {
-                        for (const uint256 &hash : boost::adaptors::reverse(vHashes))
-                        {
-                            pnode->PushBlockHash(hash);
-                        }
-                    }
-                });
-                // Notify external listeners about the new tip.
-                if (!vHashes.empty())
-                {
-                    GetMainSignals().UpdatedBlockTip(pindexNewTip);
-                }
-            }
+            if (pindexMostWork->nChainWork <= pnetMan->getChainActive()->chainActive.Tip()->nChainWork)
+            return true;
         }
-    } while (pindexMostWork != pnetMan->getChainActive()->chainActive.Tip());
+        if (!ActivateBestChainStep(state, chainparams, pindexMostWork,
+                pblock && pblock->GetHash() == pindexMostWork->GetBlockHash() ? pblock : nullptr))
+        {
+            return false;
+        }
+        pindexMostWork = FindMostWorkChain();
+        if (!pindexMostWork)
+            return false;
+        pblock = nullptr;
+    } while (pindexMostWork->nChainWork > pnetMan->getChainActive()->chainActive.Tip()->nChainWork);
     CheckBlockIndex(chainparams.GetConsensus());
-
-    // Write changes periodically to disk, after relay.
+    // Write changes periodically to disk
     if (!FlushStateToDisk(state, FLUSH_STATE_PERIODIC))
     {
         return false;
@@ -1142,24 +1170,8 @@ bool ConnectBlock(const CBlock &block,
     }
 
     unsigned int flags = SCRIPT_VERIFY_P2SH;
-
-    // Start enforcing the DERSIG (BIP66) rules, for block.nVersion=3 blocks,
-    // when 75% of the network has upgraded:
-    if (block.nVersion >= 3 && IsSuperMajority(3, pindex->pprev,
-                                   chainparams.GetConsensus().nMajorityEnforceBlockUpgrade, chainparams.GetConsensus()))
-    {
-        flags |= SCRIPT_VERIFY_DERSIG;
-    }
-
-    // Start enforcing CHECKLOCKTIMEVERIFY, (BIP65) for block.nVersion=4
-    // blocks, when 75% of the network has upgraded:
-    if (block.nVersion >= 4 && IsSuperMajority(4, pindex->pprev,
-                                   chainparams.GetConsensus().nMajorityEnforceBlockUpgrade, chainparams.GetConsensus()))
-    {
-        flags |= SCRIPT_VERIFY_CHECKLOCKTIMEVERIFY;
-    }
-
-    // Start enforcing BIP68 (sequence locks) and BIP112 (CHECKSEQUENCEVERIFY) using versionbits logic.
+    flags |= SCRIPT_VERIFY_DERSIG;
+    flags |= SCRIPT_VERIFY_CHECKLOCKTIMEVERIFY;
     int nLockTimeFlags = 0;
     flags |= SCRIPT_VERIFY_CHECKSEQUENCEVERIFY;
     nLockTimeFlags |= LOCKTIME_VERIFY_SEQUENCE;
@@ -1187,6 +1199,7 @@ bool ConnectBlock(const CBlock &block,
     }
     else
     {
+        // PoW block
         blockundo.vtxundo.reserve(block.vtx.size() - 1);
     }
     for (unsigned int i = 0; i < block.vtx.size(); i++)
@@ -1216,7 +1229,7 @@ bool ConnectBlock(const CBlock &block,
             prevheights.resize(tx.vin.size());
             for (size_t j = 0; j < tx.vin.size(); j++)
             {
-                prevheights[j] = view.AccessCoin(tx.vin[j].prevout).nHeight;
+                prevheights[j] = CoinAccessor(view, tx.vin[j].prevout)->nHeight;
             }
 
             if (!SequenceLocks(tx, nLockTimeFlags, &prevheights, *pindex))
@@ -1260,7 +1273,8 @@ bool ConnectBlock(const CBlock &block,
         {
             blockundo.vtxundo.push_back(CTxUndo());
         }
-        UpdateCoins(tx, state, view, i == 0 ? undoDummy : blockundo.vtxundo.back(), pindex->nHeight);
+        bool useDummy = (i == 0 && tx.IsCoinStake() == false);
+        UpdateCoins(tx, view, useDummy ? undoDummy : blockundo.vtxundo.back(), pindex->nHeight);
 
         vPos.push_back(std::make_pair(tx.GetHash(), pos));
         pos.nTxOffset += ::GetSerializeSize(tx, SER_DISK, CLIENT_VERSION);
@@ -1414,7 +1428,7 @@ bool ConnectBlock(const CBlock &block,
  * @param out The out point that corresponds to the tx input.
  * @return True on success.
  */
-DisconnectResult ApplyTxInUndo(Coin &&undo, CCoinsViewCache &view, const COutPoint &out)
+int ApplyTxInUndo(Coin &&undo, CCoinsViewCache &view, const COutPoint &out)
 {
     bool fClean = true;
     if (view.HaveCoin(out))
@@ -1427,11 +1441,13 @@ DisconnectResult ApplyTxInUndo(Coin &&undo, CCoinsViewCache &view, const COutPoi
         // information only in undo records for the last spend of a transactions
 
         // outputs. This implies that it must be present for some other output of the same tx.
-        const Coin &alternate = AccessByTxid(view, out.hash);
-        if (!alternate.IsSpent())
+        CoinAccessor alternate(view, out.hash);
+        if (!alternate->IsSpent())
         {
-            undo.nHeight = alternate.nHeight;
-            undo.fCoinBase = alternate.fCoinBase;
+            undo.nHeight = alternate->nHeight;
+            undo.fCoinBase = alternate->fCoinBase;
+            undo.fCoinStake = alternate->fCoinStake;
+            undo.nTime = alternate->nTime;
         }
         else
         {
@@ -1442,17 +1458,11 @@ DisconnectResult ApplyTxInUndo(Coin &&undo, CCoinsViewCache &view, const COutPoi
     return fClean ? DISCONNECT_OK : DISCONNECT_UNCLEAN;
 }
 
-
-int DisconnectBlock(const CBlock &block,
-    CValidationState &state,
-    const CBlockIndex *pindex,
-    CCoinsViewCache &view,
-    bool *pfClean)
+/** Undo the effects of this block (with given index) on the UTXO set represented by coins.
+ *  When UNCLEAN or FAILED is returned, view is left in an indeterminate state. */
+DisconnectResult DisconnectBlock(const CBlock &block, const CBlockIndex *pindex, CCoinsViewCache &view)
 {
     assert(pindex->GetBlockHash() == view.GetBestBlock());
-
-    if (pfClean)
-        *pfClean = false;
 
     bool fClean = true;
 
@@ -1460,22 +1470,59 @@ int DisconnectBlock(const CBlock &block,
     CDiskBlockPos pos = pindex->GetUndoPos();
     if (pos.IsNull())
     {
-        return error("DisconnectBlock(): no undo data available");
+        error("DisconnectBlock(): no undo data available");
+        return DISCONNECT_FAILED;
     }
     if (!UndoReadFromDisk(blockUndo, pos, pindex->pprev->GetBlockHash()))
     {
-        return error("DisconnectBlock(): failure reading undo data");
+        error("DisconnectBlock(): failure reading undo data");
+        return DISCONNECT_FAILED;
     }
-
-    if (blockUndo.vtxundo.size() + 1 != block.vtx.size())
+    if (blockUndo.vtxundo.size() + 1 != block.vtx.size() && block.IsProofOfWork())
     {
-        return error("DisconnectBlock(): block and undo data inconsistent");
+        error("DisconnectBlock(): block and undo data inconsistent, PoW");
+        return DISCONNECT_FAILED;
     }
+    if (blockUndo.vtxundo.size() != block.vtx.size() && block.IsProofOfStake())
+    {
+        error("DisconnectBlock(): block and undo data inconsistent, PoS");
+        return DISCONNECT_FAILED;
+    }
+    // undo transactions in reverse of the OTI algorithm order (so add inputs first, then remove outputs)
 
-    // undo transactions in reverse order
-    for (int i = block.vtx.size() - 1; i >= 0; i--)
+    // restore inputs
+    unsigned int start = 1;
+    if (block.IsProofOfStake())
+    {
+        start = 0;
+    }
+    for (unsigned int i = start; i < block.vtx.size(); i++) // i=1 to skip the coinbase, it has no inputs
     {
         const CTransaction &tx = *(block.vtx[i]);
+        CTxUndo &txundo = blockUndo.vtxundo[i - start];
+        if (txundo.vprevout.size() != tx.vin.size())
+        {
+            error("DisconnectBlock(): transaction and undo data inconsistent");
+            return DISCONNECT_FAILED;
+        }
+        for (unsigned int j = tx.vin.size(); j-- > 0;)
+        {
+            const COutPoint &out = tx.vin[j].prevout;
+            int res = ApplyTxInUndo(std::move(txundo.vprevout[j]), view, out);
+            if (res == DISCONNECT_FAILED)
+            {
+                error("DisconnectBlock(): ApplyTxInUndo failed");
+                return DISCONNECT_FAILED;
+            }
+            fClean = fClean && res != DISCONNECT_UNCLEAN;
+        }
+        // At this point, all of txundo.vprevout should have been moved out.
+    }
+
+    // remove outputs
+    for (unsigned int j = 0; j < block.vtx.size(); j++)
+    {
+        const CTransaction &tx = *(block.vtx[j]);
         uint256 hash = tx.GetHash();
 
         // Check that all outputs are available and match the outputs in the block itself exactly.
@@ -1488,25 +1535,9 @@ int DisconnectBlock(const CBlock &block,
                 view.SpendCoin(out, &coin);
                 if (tx.vout[o] != coin.out)
                 {
+                    error("DisconnectBlock(): transaction output mismatch");
                     fClean = false; // transaction output mismatch
                 }
-            }
-        }
-        // restore inputs
-        if (!tx.IsCoinBase()) // not coinbases
-        {
-            CTxUndo &txundo = blockUndo.vtxundo[i - 1];
-            if (txundo.vprevout.size() != tx.vin.size())
-            {
-                return error("DisconnectBlock(): transaction and undo data inconsistent");
-            }
-            for (unsigned int j = tx.vin.size(); j-- > 0;)
-            {
-                const COutPoint &out = tx.vin[j].prevout;
-                int res = ApplyTxInUndo(std::move(txundo.vprevout[j]), view, out);
-                if (res == DISCONNECT_FAILED)
-                    return DISCONNECT_FAILED;
-                fClean = fClean && res != DISCONNECT_UNCLEAN;
             }
         }
     }
@@ -1514,11 +1545,5 @@ int DisconnectBlock(const CBlock &block,
     // move best block pointer to prevout block
     view.SetBestBlock(pindex->pprev->GetBlockHash());
 
-    if (pfClean)
-    {
-        *pfClean = fClean;
-        return true;
-    }
-
-    return fClean;
+    return fClean ? DISCONNECT_OK : DISCONNECT_UNCLEAN;
 }
