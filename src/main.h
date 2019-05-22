@@ -342,14 +342,6 @@ bool CheckInputs(const CTransaction &tx,
     bool cacheStore,
     std::vector<CScriptCheck> *pvChecks = nullptr);
 
-/** Apply the effects of this transaction on the UTXO set represented by view */
-void UpdateCoins(const CTransaction &tx, CValidationState &state, CCoinsViewCache &inputs, int nHeight);
-void UpdateCoins(const CTransaction &tx,
-    CValidationState &state,
-    CCoinsViewCache &inputs,
-    CTxUndo &txundo,
-    int nHeight);
-
 /**
  * Check if transaction is final and can be included in a block with the
  * specified height and time. Consensus critical.

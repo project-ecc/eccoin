@@ -48,6 +48,7 @@
 
 #include <unordered_map>
 
+class CTxUndo;
 struct CCoinsStats
 {
     int nHeight;
@@ -79,12 +80,12 @@ public:
     CTxOut out;
 
     //! whether containing transaction was a coinbase
-    uint32_t fCoinBase : 1;
+    uint8_t fCoinBase : 1;
 
-    uint32_t fCoinStake : 1;
+    uint8_t fCoinStake : 1;
 
     //! at which height this containing transaction was included in the active block chain
-    uint32_t nHeight : 31;
+    uint32_t nHeight;
 
     uint64_t nTime;
 
@@ -101,14 +102,14 @@ public:
     void Clear()
     {
         out.SetNull();
-        fCoinBase = false;
-        fCoinStake = false;
+        fCoinBase = 0;
+        fCoinStake = 0;
         nHeight = 0;
         nTime = 0;
     }
 
     //! empty constructor
-    Coin() : fCoinBase(false), nHeight(0) {}
+    Coin() { Clear(); }
     bool IsCoinBase() const { return fCoinBase; }
     bool IsCoinStake() const { return fCoinStake; }
     template <typename Stream>
@@ -134,7 +135,7 @@ public:
     template <typename Stream>
     void Unserialize(Stream &s)
     {
-        uint32_t code = 0;
+        uint8_t code = 0;
         ::Unserialize(s, VARINT(code));
         fCoinBase = code & 1;
         fCoinStake = code & 2;
@@ -201,7 +202,7 @@ private:
 class CCoinsView
 {
 public:
-    mutable CCriticalSection cs_utxo;
+    mutable CSharedCriticalSection cs_utxo;
 
     //! Retrieve the Coin (unspent transaction output) for a given outpoint.
     virtual bool GetCoin(const COutPoint &outpoint, Coin &coin) const;
@@ -254,6 +255,9 @@ public:
 /** CCoinsView that adds a memory cache for transactions to another CCoinsView */
 class CCoinsViewCache : public CCoinsViewBacked
 {
+    friend class CoinAccessor;
+    friend class CoinModifier;
+
 protected:
     /**
      * Make mutable so that we can "fill the cache" even from Get-methods
@@ -262,7 +266,7 @@ protected:
     mutable uint256 hashBlock;
     mutable uint64_t nBestCoinHeight;
     mutable CCoinsMap cacheCoins;
-
+    mutable CSharedCriticalSection csCacheInsert;
     /* Cached dynamic memory usage for the inner Coin objects. */
     mutable size_t cachedCoinsUsage;
 
@@ -292,7 +296,7 @@ public:
      * more efficient than GetCoin. Modifications to other cache entries are
      * allowed while accessing the returned pointer.
      */
-    const Coin &AccessCoin(const COutPoint &output) const;
+    const Coin &_AccessCoin(const COutPoint &output) const;
 
     /**
      * Add a coin. Set potential_overwrite to true if a non-pruned version may
@@ -343,6 +347,7 @@ public:
 
     //! Calculate the size of the cache (in bytes)
     size_t DynamicMemoryUsage() const;
+    size_t _DynamicMemoryUsage() const;
 
     //! Recalculate and Reset the size of cachedCoinsUsage
     size_t ResetCachedCoinUsage() const;
@@ -368,7 +373,7 @@ public:
     double GetPriority(const CTransaction &tx, int nHeight, CAmount &inChainInputValue) const;
 
 private:
-    CCoinsMap::iterator FetchCoin(const COutPoint &outpoint) const;
+    CCoinsMap::iterator FetchCoin(const COutPoint &outpoint, CDeferredSharedLocker *lock) const;
 
     /**
      * By making the copy constructor private, we prevent accidentally using it when one intends to create a cache on
@@ -377,13 +382,55 @@ private:
     CCoinsViewCache(const CCoinsViewCache &);
 };
 
+class CoinModifier
+{
+protected:
+    const CCoinsViewCache *cache;
+    CCoinsMap::const_iterator it;
+    const Coin *coin;
+
+public:
+    operator bool() const { return coin != nullptr; }
+    const Coin *operator->() { return coin; }
+    const Coin &operator*() { return *coin; }
+    CoinModifier(const CCoinsViewCache &cacheObj, const COutPoint &output);
+    ~CoinModifier();
+    friend class CCoinsViewCache;
+};
+
+
+/**
+ * A reference to an immutable cache entry.  This class holds the appropriate lock for you
+ * while you access the underlying data.
+ */
+class CoinAccessor
+{
+protected:
+    const CCoinsViewCache *cache;
+    CCoinsMap::const_iterator it;
+    const Coin *coin;
+    CDeferredSharedLocker lock;
+
+public:
+    operator bool() const { return coin != nullptr; }
+    const Coin *operator->() { return coin; }
+    const Coin &operator*() { return *coin; }
+    CoinAccessor(const CCoinsViewCache &cacheObj, const COutPoint &output);
+    // finds the first unspent output in this tx (slow)
+    CoinAccessor(const CCoinsViewCache &cacheObj, const uint256 &txid);
+    ~CoinAccessor();
+    friend class CCoinsViewCache;
+};
+
 //! Utility function to add all of a transaction's outputs to a cache.
 // It assumes that overwrites are only possible for coinbase transactions,
 // TODO: pass in a boolean to limit these possible overwrites to known
 // (pre-BIP34) cases.
 void AddCoins(CCoinsViewCache &cache, const CTransaction &tx, int nHeight);
 
-//! Utility function to find any unspent output with a given txid.
-const Coin &AccessByTxid(const CCoinsViewCache &cache, const uint256 &txid);
+/** Apply the effects of this transaction on the UTXO set represented by view */
+void UpdateCoins(const CTransaction &tx, CCoinsViewCache &inputs, int nHeight);
+void UpdateCoins(const CTransaction &tx, CCoinsViewCache &inputs, CTxUndo &txundo, int nHeight);
+
 
 #endif // BITCOIN_COINS_H

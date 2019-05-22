@@ -422,27 +422,13 @@ class WalletTest (BitcoinTestFramework):
                             {"address": self.nodes[2].getaddressforms(p2shAddress2)["bitcoincash"]},
                             {"label": ""})
 
+        '''
         #check if wallet or blochchain maintenance changes the balance
         self.sync_all()
         blocks = self.nodes[0].generate(2)
         self.sync_all()
         balance_nodes = [self.nodes[i].getbalance() for i in range(3)]
         block_count = self.nodes[0].getblockcount()
-        '''
-
-        # Check modes:
-        #   - True: unicode escaped as \u....
-        #   - False: unicode directly as UTF-8
-        '''
-        for mode in [True, False]:
-            self.nodes[0].ensure_ascii = mode
-            # unicode check: Basic Multilingual Plane, Supplementary Plane respectively
-            for s in [u'рыба', u'𝅘𝅥𝅯']:
-                addr = self.nodes[0].getaccountaddress(s)
-                label = self.nodes[0].getaccount(addr)
-                assert_equal(label, s)
-                assert(s in self.nodes[0].listaccounts().keys())
-        self.nodes[0].ensure_ascii = True # restore to default
 
 
         # maintenance tests
@@ -464,12 +450,17 @@ class WalletTest (BitcoinTestFramework):
                 time.sleep(0.1)
             assert_equal(balance_nodes, [self.nodes[i].getbalance() for i in range(3)])
 
+        '''
         # Exercise listsinceblock with the last two blocks
         coinbase_tx_1 = self.nodes[0].listsinceblock(blocks[0])
         assert_equal(coinbase_tx_1["lastblock"], blocks[1])
         assert_equal(len(coinbase_tx_1["transactions"]), 1)
+        assert_equal(len(coinbase_tx_1["transactions"]), 2)
+        print(coinbase_tx_1["transactions"][0])
         assert_equal(coinbase_tx_1["transactions"][0]["blockhash"], blocks[1])
         assert_equal(coinbase_tx_1["transactions"][0]["satoshi"], Decimal('2500000000'))
+        assert_equal(coinbase_tx_1["transactions"][0]["amount"], Decimal('50.000000'))
+        print(self.nodes[0].listsinceblock(blocks[1])["transactions"])
         assert_equal(len(self.nodes[0].listsinceblock(blocks[1])["transactions"]), 0)
         '''
 

@@ -10,6 +10,7 @@ import test_framework.loginit
 
 from test_framework.test_framework import BitcoinTestFramework
 from test_framework.util import assert_equal
+from test_framework.util import *
 
 class GetChainTipsTest (BitcoinTestFramework):
 
@@ -42,9 +43,18 @@ class GetChainTipsTest (BitcoinTestFramework):
         assert_equal (longTip['height'], 220)
         assert_equal (tips[0]['status'], 'active')
 
-        # Join the network halves and check that we now have two tips
-        # (at least at the nodes that previously had the short chain).
-        self.join_network ()
+        stop_nodes(self.nodes)
+        wait_bitcoinds()
+        self.is_network_split = False
+        self.nodes = self.setup_nodes()
+        connect_nodes_bi(self.nodes, 0, 1)
+        connect_nodes_bi(self.nodes, 0, 2)
+        connect_nodes_bi(self.nodes, 0, 3)
+        connect_nodes_bi(self.nodes, 1, 2)
+        connect_nodes_bi(self.nodes, 1, 3)
+        connect_nodes_bi(self.nodes, 2, 3)
+        self.sync_blocks()
+        self.sync_all()
 
         tips = self.nodes[0].getchaintips ()
         assert_equal (len (tips), 2)

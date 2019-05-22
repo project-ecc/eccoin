@@ -35,7 +35,7 @@ void StartShutdown();
 bool ShutdownRequested();
 /** Interrupt threads */
 void Interrupt(thread_group &threadGroup);
-void Shutdown();
+void Shutdown(thread_group &threadGroup);
 //! Initialize the logging infrastructure
 void InitLogging();
 //! Parameter interaction: change current parameters depending on various rules

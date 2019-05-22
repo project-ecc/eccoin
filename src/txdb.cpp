@@ -90,7 +90,7 @@ bool CCoinsViewDB::BatchWrite(CCoinsMap &mapCoins,
     const uint64_t nBestCoinHeight,
     size_t &nChildCachedCoinsUsage)
 {
-    LOCK(cs_utxo);
+    WRITELOCK(cs_utxo);
     CDBBatch batch(db);
     size_t count = 0;
     size_t changed = 0;
