@@ -109,10 +109,7 @@ public:
     }
 
     //! empty constructor
-    Coin()
-    {
-        Clear();
-    }
+    Coin() { Clear(); }
     bool IsCoinBase() const { return fCoinBase; }
     bool IsCoinStake() const { return fCoinStake; }
     template <typename Stream>
@@ -299,7 +296,7 @@ public:
      * more efficient than GetCoin. Modifications to other cache entries are
      * allowed while accessing the returned pointer.
      */
-     const Coin &_AccessCoin(const COutPoint &output) const;
+    const Coin &_AccessCoin(const COutPoint &output) const;
 
     /**
      * Add a coin. Set potential_overwrite to true if a non-pruned version may
@@ -433,10 +430,7 @@ void AddCoins(CCoinsViewCache &cache, const CTransaction &tx, int nHeight);
 
 /** Apply the effects of this transaction on the UTXO set represented by view */
 void UpdateCoins(const CTransaction &tx, CCoinsViewCache &inputs, int nHeight);
-void UpdateCoins(const CTransaction &tx,
-    CCoinsViewCache &inputs,
-    CTxUndo &txundo,
-    int nHeight);
+void UpdateCoins(const CTransaction &tx, CCoinsViewCache &inputs, CTxUndo &txundo, int nHeight);
 
 
 #endif // BITCOIN_COINS_H

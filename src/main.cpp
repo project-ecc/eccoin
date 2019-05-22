@@ -1248,7 +1248,8 @@ void PruneBlockIndexCandidates()
     // Note that we can't delete the current block itself, as we may need to return to it later in case a
     // reorganization to a better block fails.
     std::set<CBlockIndex *, CBlockIndexWorkComparator>::iterator it = setBlockIndexCandidates.begin();
-    while (it != setBlockIndexCandidates.end() && setBlockIndexCandidates.value_comp()(*it, pnetMan->getChainActive()->chainActive.Tip()))
+    while (it != setBlockIndexCandidates.end() &&
+           setBlockIndexCandidates.value_comp()(*it, pnetMan->getChainActive()->chainActive.Tip()))
     {
         setBlockIndexCandidates.erase(it++);
     }

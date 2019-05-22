@@ -341,7 +341,7 @@ bool CheckInputs(const CTransaction &tx,
     unsigned int flags,
     bool cacheStore,
     std::vector<CScriptCheck> *pvChecks = nullptr);
-    
+
 /**
  * Check if transaction is final and can be included in a block with the
  * specified height and time. Consensus critical.

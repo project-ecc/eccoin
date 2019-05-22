@@ -81,9 +81,7 @@ bool ConnectBlock(const CBlock &block,
  *  In case pfClean is provided, operation will try to be tolerant about errors, and *pfClean
  *  will be true if no problems were found. Otherwise, the return value will be false in case
  *  of problems. Note that in any case, coins may be modified. */
-DisconnectResult DisconnectBlock(const CBlock &block,
-    const CBlockIndex *pindex,
-    CCoinsViewCache &coins);
+DisconnectResult DisconnectBlock(const CBlock &block, const CBlockIndex *pindex, CCoinsViewCache &coins);
 
 /** Find the best known block, and make it the tip of the block chain */
 bool ActivateBestChain(CValidationState &state, const CNetworkTemplate &chainparams, const CBlock *pblock = nullptr);

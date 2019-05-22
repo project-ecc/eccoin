@@ -203,8 +203,7 @@ unsigned int CTransaction::CalculateModifiedSize(unsigned int nTxSize) const
 std::string CTransaction::ToString() const
 {
     std::string str;
-    str += strprintf(
-        "CTransaction(hash=%s, ver=%d, nTime=%u, vin.size=%u, vout.size=%u, nLockTime=%u)\n",
+    str += strprintf("CTransaction(hash=%s, ver=%d, nTime=%u, vin.size=%u, vout.size=%u, nLockTime=%u)\n",
         GetHash().ToString().substr(0, 10), nVersion, nTime, vin.size(), vout.size(), nLockTime);
     for (unsigned int i = 0; i < vin.size(); i++)
         str += "    " + vin[i].ToString() + "\n";

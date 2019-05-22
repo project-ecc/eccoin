@@ -496,7 +496,8 @@ bool ActivateBestChainStep(CValidationState &state,
         for (auto i = vpindexToConnect.rbegin(); i != vpindexToConnect.rend(); i++)
         {
             CBlockIndex *pindexConnect = *i;
-            if (!ConnectTip(state, chainparams, pindexConnect, pindexConnect == pindexMostWork && fBlock ? pblock : nullptr))
+            if (!ConnectTip(
+                    state, chainparams, pindexConnect, pindexConnect == pindexMostWork && fBlock ? pblock : nullptr))
             {
                 if (state.IsInvalid())
                 {
@@ -568,8 +569,7 @@ bool ActivateBestChainStep(CValidationState &state,
 
             // Relay inventory, but don't relay old inventory during initial block download.
             const int nNewHeight = pindexNewTip->nHeight;
-            g_connman->ForEachNode([nNewHeight, &vHashes](CNode *pnode)
-            {
+            g_connman->ForEachNode([nNewHeight, &vHashes](CNode *pnode) {
                 if (nNewHeight > (pnode->nStartingHeight != -1 ? pnode->nStartingHeight - 2000 : 0))
                 {
                     for (const uint256 &hash : boost::adaptors::reverse(vHashes))
@@ -629,7 +629,7 @@ bool ActivateBestChain(CValidationState &state, const CNetworkTemplate &chainpar
         if (pnetMan->getChainActive()->chainActive.Tip() != nullptr)
         {
             if (pindexMostWork->nChainWork <= pnetMan->getChainActive()->chainActive.Tip()->nChainWork)
-            return true;
+                return true;
         }
         if (!ActivateBestChainStep(state, chainparams, pindexMostWork,
                 pblock && pblock->GetHash() == pindexMostWork->GetBlockHash() ? pblock : nullptr))
