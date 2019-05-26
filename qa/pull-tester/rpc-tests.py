@@ -186,6 +186,7 @@ testScripts = [ RpcTest(t) for t in [
     'getchaintips',
     'httpbasics',
     'keypool',
+    'listtransactions',
     #'mempool_limit',
     #'mempool_reorg',
     #'mempool_resurrect_test',
@@ -213,7 +214,6 @@ testScripts = [ RpcTest(t) for t in [
     Disabled('signrawtransactions', "FAILS"),
     #
     Disabled('wallet-dump', "TIMEOUT"),
-    Disabled('listtransactions', "TIMEOUT"),
     Disabled('receivedby', "TIMEOUT"),
     Disabled('txn_doublespend --mineblock', "TIMEOUT"),
     Disabled('txn_clone', "TIMEOUT"),
