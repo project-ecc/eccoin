@@ -180,7 +180,7 @@ if ENABLE_ZMQ:
 testScripts = [ RpcTest(t) for t in [
     #'rawtransactions', ???
     #'rest', ???
-    # 'multi_rpc', ???
+    'multi_rpc',
     # 'fundrawtransaction', ???
     # 'reindex', ???
     'getchaintips',
