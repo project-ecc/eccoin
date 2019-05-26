@@ -194,6 +194,7 @@ testScripts = [ RpcTest(t) for t in [
     'nodehandling',
     'proxy_test',
     'txpropagate',
+    'verifydb',
     'wallet',
     'walletbackup',
     'zapwallettxes',
