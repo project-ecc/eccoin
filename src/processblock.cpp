@@ -1268,13 +1268,11 @@ bool ConnectBlock(const CBlock &block,
         }
 
         CTxUndo undoDummy;
-        if (i > 0 || tx.IsCoinStake())
+        if (i > 0)
         {
             blockundo.vtxundo.push_back(CTxUndo());
         }
-        bool useDummy = (i == 0 && tx.IsCoinStake() == false);
-        UpdateCoins(tx, view, useDummy ? undoDummy : blockundo.vtxundo.back(), pindex->nHeight);
-
+        UpdateCoins(tx, view, i == 0 ? undoDummy : blockundo.vtxundo.back(), pindex->nHeight);
         vPos.push_back(std::make_pair(tx.GetHash(), pos));
         pos.nTxOffset += ::GetSerializeSize(tx, SER_DISK, CLIENT_VERSION);
     }
@@ -1432,28 +1430,26 @@ int ApplyTxInUndo(Coin &&undo, CCoinsViewCache &view, const COutPoint &out)
     bool fClean = true;
     if (view.HaveCoin(out))
     {
+        LogPrintf("Apply Undo: Unclean disconnect of (%s, %d)\n", out.hash.ToString(), out.n);
         fClean = false; // overwriting transaction output
     }
     if (undo.nHeight == 0)
     {
         // Missing undo metadata (height and coinbase). Older versions included this
         // information only in undo records for the last spend of a transactions
-
         // outputs. This implies that it must be present for some other output of the same tx.
         CoinAccessor alternate(view, out.hash);
-        if (!alternate->IsSpent())
+        if (alternate->IsSpent())
         {
-            undo.nHeight = alternate->nHeight;
-            undo.fCoinBase = alternate->fCoinBase;
-            undo.fCoinStake = alternate->fCoinStake;
-            undo.nTime = alternate->nTime;
-        }
-        else
-        {
+            LogPrintf("Apply Undo: Coin (%s, %d) is spent\n", out.hash.ToString(), out.n);
             return DISCONNECT_FAILED; // adding output for transaction without known metadata
         }
+        undo.nHeight = alternate->nHeight;
+        undo.fCoinBase = alternate->fCoinBase;
+        undo.fCoinStake = alternate->fCoinStake;
+        undo.nTime = alternate->nTime;
     }
-    view.AddCoin(out, std::move(undo), undo.fCoinBase);
+    view.AddCoin(out, std::move(undo), !fClean);
     return fClean ? DISCONNECT_OK : DISCONNECT_UNCLEAN;
 }
 
@@ -1477,31 +1473,22 @@ DisconnectResult DisconnectBlock(const CBlock &block, const CBlockIndex *pindex,
         error("DisconnectBlock(): failure reading undo data");
         return DISCONNECT_FAILED;
     }
-    if (blockUndo.vtxundo.size() + 1 != block.vtx.size() && block.IsProofOfWork())
+    if (blockUndo.vtxundo.size() + 1 != block.vtx.size())
     {
-        error("DisconnectBlock(): block and undo data inconsistent, PoW");
-        return DISCONNECT_FAILED;
-    }
-    if (blockUndo.vtxundo.size() != block.vtx.size() && block.IsProofOfStake())
-    {
-        error("DisconnectBlock(): block and undo data inconsistent, PoS");
+        error("DisconnectBlock(): block and undo data inconsistent, vtxundo.size +1 %u != vtx.size %u",
+            blockUndo.vtxundo.size() + 1, block.vtx.size());
         return DISCONNECT_FAILED;
     }
     // undo transactions in reverse of the OTI algorithm order (so add inputs first, then remove outputs)
-
-    // restore inputs
-    unsigned int start = 1;
-    if (block.IsProofOfStake())
-    {
-        start = 0;
-    }
-    for (unsigned int i = start; i < block.vtx.size(); i++) // i=1 to skip the coinbase, it has no inputs
+    for (unsigned int i = 1; i < block.vtx.size(); i++) // i=1 to skip the coinbase, it has no inputs
     {
         const CTransaction &tx = *(block.vtx[i]);
-        CTxUndo &txundo = blockUndo.vtxundo[i - start];
+        CTxUndo &txundo = blockUndo.vtxundo[i - 1];
         if (txundo.vprevout.size() != tx.vin.size())
         {
-            error("DisconnectBlock(): transaction and undo data inconsistent");
+            error("DisconnectBlock(): transaction and undo data inconsistent, vprevout.size %u  != vin.size %u with tx "
+                  "hash %s",
+                txundo.vprevout.size(), tx.vin.size(), tx.GetHash().ToString().c_str());
             return DISCONNECT_FAILED;
         }
         for (unsigned int j = tx.vin.size(); j-- > 0;)
@@ -1531,10 +1518,11 @@ DisconnectResult DisconnectBlock(const CBlock &block, const CBlockIndex *pindex,
             {
                 COutPoint out(hash, o);
                 Coin coin;
-                view.SpendCoin(out, &coin);
-                if (tx.vout[o] != coin.out)
+                bool is_spent = view.SpendCoin(out, &coin);
+                if (!is_spent || tx.vout[o] != coin.out)
                 {
                     error("DisconnectBlock(): transaction output mismatch");
+                    error("%s != %s", tx.vout[o].ToString().c_str(), coin.out.ToString().c_str());
                     fClean = false; // transaction output mismatch
                 }
             }

@@ -443,6 +443,7 @@ unsigned int GetP2SHSigOpCount(const CTransaction &tx, const CCoinsViewCache &in
     for (unsigned int i = 0; i < tx.vin.size(); i++)
     {
         CoinAccessor coin(inputs, tx.vin[i].prevout);
+        assert(!coin->IsSpent());
         if (coin && coin->out.scriptPubKey.IsPayToScriptHash())
             nSigOps += coin->out.scriptPubKey.GetSigOpCount(tx.vin[i].scriptSig);
     }
