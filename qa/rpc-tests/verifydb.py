@@ -79,6 +79,13 @@ class VerifyDbTest (BitcoinTestFramework):
             j = randint(1, 5)
             for k in range(j):
                 self.nodes[1].sendtoaddress(self.nodes[0].getnewaddress(), 1)
+        #pos blocks
+        self.sync_all()
+        for i in range (100):
+            self.nodes[1].generatepos(1)
+            j = randint(1, 5)
+            for k in range(j):
+                self.nodes[1].sendtoaddress(self.nodes[0].getnewaddress(), 1)
         self.sync_all()
 
         #stop the nodes
