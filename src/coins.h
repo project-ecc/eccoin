@@ -46,6 +46,7 @@
 #include <boost/thread/locks.hpp>
 #include <boost/thread/shared_mutex.hpp>
 
+#include <inttypes.h>
 #include <unordered_map>
 
 class CTxUndo;
@@ -146,6 +147,10 @@ public:
 
     bool IsSpent() const { return out.IsNull(); }
     size_t DynamicMemoryUsage() const { return memusage::DynamicUsage(out.scriptPubKey); }
+    std::string ToString()
+    {
+        return strprintf("%s, %u, %u, %u, %" PRIu64 "", out.ToString(), fCoinBase, fCoinStake, nHeight, nTime);
+    }
 };
 
 class SaltedOutpointHasher
@@ -309,7 +314,7 @@ public:
      * If no unspent output exists for the passed outpoint, this call
      * has no effect.
      */
-    void SpendCoin(const COutPoint &outpoint, Coin *moveto = nullptr);
+    bool SpendCoin(const COutPoint &outpoint, Coin *moveto = nullptr);
 
     /**
      * Push the modifications applied to this cache to its base.

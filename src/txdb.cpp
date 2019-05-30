@@ -113,8 +113,8 @@ bool CCoinsViewDB::BatchWrite(CCoinsMap &mapCoins,
             else
             {
                 batch.Write(entry, it->second.coin);
-                it->second.flags = 0;
-                it++;
+                nChildCachedCoinsUsage -= nUsage;
+                it = mapCoins.erase(it);
             }
             changed++;
 
