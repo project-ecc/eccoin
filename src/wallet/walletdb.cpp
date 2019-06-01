@@ -39,10 +39,11 @@
 // CWalletDB
 //
 
-bool CWalletDB::WriteName(const std::string &strAddress, const std::string &strName)
+bool CWalletDB::WriteName(const std::string &strAddress)
 {
     nWalletDBUpdated++;
-    return Write(std::make_pair(std::string("name"), strAddress), strName);
+    std::string str = "";
+    return Write(std::make_pair(std::string("name"), strAddress), str);
 }
 
 bool CWalletDB::EraseName(const std::string &strAddress)
@@ -272,17 +273,11 @@ bool ReadKeyValue(CWallet *pwallet,
         // Taking advantage of the fact that pair serialization
         // is just the two items serialized one after the other
         ssKey >> strType;
-        if (strType == "name")
+        if (strType == "purpose")
         {
             std::string strAddress;
             ssKey >> strAddress;
-            ssValue >> pwallet->mapAddressBook[CBitcoinAddress(strAddress).Get()].name;
-        }
-        else if (strType == "purpose")
-        {
-            std::string strAddress;
-            ssKey >> strAddress;
-            ssValue >> pwallet->mapAddressBook[CBitcoinAddress(strAddress).Get()].purpose;
+            ssValue >> pwallet->mapAddressBook[CBitcoinAddress(strAddress).Get()].type;
         }
         else if (strType == "tx")
         {
@@ -491,18 +486,6 @@ bool ReadKeyValue(CWallet *pwallet,
         else if (strType == "orderposnext")
         {
             ssValue >> pwallet->nOrderPosNext;
-        }
-        else if (strType == "destdata")
-        {
-            std::string strAddress, strKey, strValue;
-            ssKey >> strAddress;
-            ssKey >> strKey;
-            ssValue >> strValue;
-            if (!pwallet->LoadDestData(CBitcoinAddress(strAddress).Get(), strKey, strValue))
-            {
-                strErr = "Error reading wallet database: LoadDestData failed";
-                return false;
-            }
         }
     }
     catch (...)
@@ -913,16 +896,4 @@ bool CWalletDB::Recover(CDBEnv &dbenv, const std::string &filename, bool fOnlyKe
 bool CWalletDB::Recover(CDBEnv &dbenv, const std::string &filename)
 {
     return CWalletDB::Recover(dbenv, filename, false);
-}
-
-bool CWalletDB::WriteDestData(const std::string &address, const std::string &key, const std::string &value)
-{
-    nWalletDBUpdated++;
-    return Write(std::make_pair(std::string("destdata"), std::make_pair(address, key)), value);
-}
-
-bool CWalletDB::EraseDestData(const std::string &address, const std::string &key)
-{
-    nWalletDBUpdated++;
-    return Erase(std::make_pair(std::string("destdata"), std::make_pair(address, key)));
 }

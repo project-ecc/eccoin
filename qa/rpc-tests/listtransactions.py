@@ -20,16 +20,19 @@ def txFromHex(hexstring):
 
 
 class ListTransactionsTest(BitcoinTestFramework):
+    def setup_chain(self, bitcoinConfDict=None, wallets=None):
+        print("Initializing test directory "+self.options.tmpdir)
+        initialize_chain_clean(self.options.tmpdir, 3, bitcoinConfDict, wallets)
 
     def setup_network(self, split=False):
-        enable_mocktime()
-        self.node_args = ["","","",""]
         self.nodes = []
         self.nodes.append(start_node(0, self.options.tmpdir, ))
         self.nodes.append(start_node(1, self.options.tmpdir, ))
-        self.is_network_split=False
-        connect_nodes_bi(self.nodes,0,1)
-        self.is_network_split=False
+        self.nodes.append(start_node(2, self.options.tmpdir, ))
+        connect_nodes_bi(self.nodes, 0, 1)
+        connect_nodes_bi(self.nodes, 0, 2)
+        connect_nodes_bi(self.nodes, 1, 2)
+        self.is_network_split = False
         self.sync_all()
 
     def run_test(self):
@@ -42,19 +45,19 @@ class ListTransactionsTest(BitcoinTestFramework):
         self.sync_all()
         assert_array_result(self.nodes[0].listtransactions(),
                             {"txid": txid},
-                            {"category": "send", "account": "", "amount": Decimal("-0.1"), "confirmations": 0})
+                            {"category": "send", "amount": Decimal("-0.1"), "confirmations": 0})
         assert_array_result(self.nodes[1].listtransactions(),
                             {"txid": txid},
-                            {"category": "receive", "account": "", "amount": Decimal("0.1"), "confirmations": 0})
+                            {"category": "receive", "amount": Decimal("0.1"), "confirmations": 0})
         # mine a block, confirmations should change:
         self.nodes[0].generate(1)
         self.sync_all()
         assert_array_result(self.nodes[0].listtransactions(),
                             {"txid": txid},
-                            {"category": "send", "account": "", "amount": Decimal("-0.1"), "confirmations": 1})
+                            {"category": "send", "amount": Decimal("-0.1"), "confirmations": 1})
         assert_array_result(self.nodes[1].listtransactions(),
                             {"txid": txid},
-                            {"category": "receive", "account": "", "amount": Decimal("0.1"), "confirmations": 1})
+                            {"category": "receive", "amount": Decimal("0.1"), "confirmations": 1})
 
 
         from1 = self.nodes[0].getnewaddress()
@@ -95,28 +98,21 @@ class ListTransactionsTest(BitcoinTestFramework):
                             {"txid": txid, "address": from1})
         assert_array_result(self.nodes[1].listtransactions(),
                             {"category": "send", "amount": Decimal("-0.44")},
-                            {"txid": txid, "account": ""})
+                            {"txid": txid})
         assert_array_result(self.nodes[1].listtransactions(),
                             {"category": "receive", "amount": Decimal("0.44")},
                             {"txid": txid, "address": toself})
 
-        self.nodes.append(start_node(2, self.options.tmpdir, ))
-        self.nodes.append(start_node(3, self.options.tmpdir, ))
-        connect_nodes_bi(self.nodes,0,2)
-        connect_nodes_bi(self.nodes,0,3)
-        connect_nodes_bi(self.nodes,1,2)
-        connect_nodes_bi(self.nodes,1,3)
-        connect_nodes_bi(self.nodes,2,3)
-        curPos = len(self.nodes[2].listtransactions("", 100, 0, False));
         multisig = self.nodes[1].createmultisig(1, [self.nodes[1].getnewaddress()])
-        self.nodes[2].importaddress(multisig["redeemScript"], "watchonly", False, True)
+        self.nodes[2].importaddress(multisig["redeemScript"], False, True)
         txid = self.nodes[1].sendtoaddress(multisig["address"], 0.1)
+        self.sync_all()
         self.nodes[1].generate(1)
         self.sync_all()
-        assert(len(self.nodes[2].listtransactions("", 100, curPos, False)) == 0)
-        assert_array_result(self.nodes[2].listtransactions("watchonly", 100, 0, True),
+        assert(len(self.nodes[2].listtransactions(100, 0, False)) == 0)
+        assert_array_result(self.nodes[2].listtransactions(100, 0, True),
                             {"category": "receive", "amount": Decimal("0.1")},
-                            {"txid": txid, "account": "watchonly"})
+                            {"txid": txid})
 
 
 if __name__ == '__main__':

@@ -126,16 +126,19 @@ public:
     }
 };
 
+namespace AddressBookType
+{
+extern const char *UNKNOWN;
+extern const char *SEND;
+extern const char *RECEIVE;
+};
+
 /** Address book data */
 class CAddressBookData
 {
 public:
-    std::string name;
-    std::string purpose;
-
-    CAddressBookData() { purpose = "unknown"; }
-    typedef std::map<std::string, std::string> StringMap;
-    StringMap destdata;
+    std::string type;
+    CAddressBookData() { type = AddressBookType::UNKNOWN; }
 };
 
 struct CRecipient
@@ -660,15 +663,6 @@ public:
     bool AddCScript(const CScript &redeemScript);
     bool LoadCScript(const CScript &redeemScript);
 
-    //! Adds a destination data tuple to the store, and saves it to disk
-    bool AddDestData(const CTxDestination &dest, const std::string &key, const std::string &value);
-    //! Erases a destination data tuple in the store and on disk
-    bool EraseDestData(const CTxDestination &dest, const std::string &key);
-    //! Adds a destination data tuple to the store, without saving it to disk
-    bool LoadDestData(const CTxDestination &dest, const std::string &key, const std::string &value);
-    //! Look up a destination data tuple in the store, return true if found false otherwise
-    bool GetDestData(const CTxDestination &dest, const std::string &key, std::string *value) const;
-
     //! Adds a watch-only address to the store, and saves it to disk.
     bool AddWatchOnly(const CScript &dest);
     bool RemoveWatchOnly(const CScript &dest);
@@ -755,8 +749,6 @@ public:
     std::set<std::set<CTxDestination> > GetAddressGroupings();
     std::map<CTxDestination, CAmount> GetAddressBalances();
 
-    std::set<CTxDestination> GetAccountAddresses(const std::string &strAccount) const;
-
     isminetype IsMine(const CTxIn &txin) const;
     CAmount GetDebit(const CTxIn &txin, const isminefilter &filter) const;
     isminetype IsMine(const CTxOut &txout) const;
@@ -775,11 +767,9 @@ public:
 
     DBErrors ZapWalletTx(std::vector<CWalletTx> &vWtx);
 
-    bool SetAddressBook(const CTxDestination &address, const std::string &strName, const std::string &purpose);
+    bool SetAddressBook(const CTxDestination &address, const std::string &strType);
 
     bool AddressIsMine(const CTxDestination &address);
-
-    bool DelAddressBook(const CTxDestination &address);
 
     void Inventory(const uint256 &hash)
     {

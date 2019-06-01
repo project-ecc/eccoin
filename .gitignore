@@ -117,6 +117,7 @@ linux-build
 win32-build
 test/config.ini
 test/cache/*
+cache/*
 
 !src/leveldb*/Makefile
 
