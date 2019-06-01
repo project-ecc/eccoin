@@ -67,12 +67,6 @@
 #include <random>
 #include <sstream>
 
-/**
- * Global state
- */
-
-CCriticalSection cs_main;
-
 
 int64_t nTimeBestReceived = 0;
 
@@ -94,8 +88,6 @@ CFeeRate minRelayTxFee = CFeeRate(DEFAULT_MIN_RELAY_TX_FEE);
 
 CTxMemPool mempool(::minRelayTxFee);
 
-
-CCriticalSection cs_orphans;
 std::map<uint256, COrphanTx> mapOrphanTransactions GUARDED_BY(cs_orphans);
 std::map<uint256, std::set<uint256> > mapOrphanTransactionsByPrev GUARDED_BY(cs_orphans);
 
@@ -1697,19 +1689,6 @@ std::string CBlockFileInfo::ToString() const
     return strprintf("CBlockFileInfo(blocks=%u, size=%u, heights=%u...%u, time=%s...%s)", nBlocks, nSize, nHeightFirst,
         nHeightLast, DateTimeStrFormat("%Y-%m-%d", nTimeFirst), DateTimeStrFormat("%Y-%m-%d", nTimeLast));
 }
-
-class CMainCleanup
-{
-public:
-    CMainCleanup() {}
-    ~CMainCleanup()
-    {
-        // orphan transactions
-        LOCK(cs_orphans);
-        mapOrphanTransactions.clear();
-        mapOrphanTransactionsByPrev.clear();
-    }
-} instance_of_cmaincleanup;
 
 // ppcoin: find last block index up to pindex
 const CBlockIndex *GetLastBlockIndex(const CBlockIndex *pindex, bool fProofOfStake)

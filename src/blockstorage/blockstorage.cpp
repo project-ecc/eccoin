@@ -5,8 +5,6 @@
 #include "streams.h"
 #include "util/logger.h"
 
-CCriticalSection cs_blockstorage;
-
 fs::path GetBlockPosFilename(const CDiskBlockPos &pos, const char *prefix)
 {
     return GetDataDir() / "blocks" / strprintf("%s%05u.dat", prefix, pos.nFile);

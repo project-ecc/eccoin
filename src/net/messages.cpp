@@ -2727,16 +2727,3 @@ bool SendMessages(CNode *pto, CConnman &connman)
     }
     return true;
 }
-
-class CNetProcessingCleanup
-{
-public:
-    CNetProcessingCleanup() {}
-    ~CNetProcessingCleanup()
-    {
-        // orphan transactions
-        LOCK(cs_orphans);
-        mapOrphanTransactions.clear();
-        mapOrphanTransactionsByPrev.clear();
-    }
-} instance_of_cnetprocessingcleanup;
