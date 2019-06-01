@@ -21,6 +21,7 @@
 #include "chain/tx.h"
 
 #include "args.h"
+#include "blockstorage/blockstorage.h"
 #include "chain/chain.h"
 #include "consensus/consensus.h"
 #include "crypto/hash.h"
@@ -255,8 +256,11 @@ uint64_t CTransaction::GetCoinAge(uint64_t nCoinAge, bool byValue) const
         // Read block header
         CBlock block;
         CDiskBlockPos blockPos(txindex.nFile, txindex.nPos);
-        if (!ReadBlockFromDisk(block, blockPos, pnetMan->getActivePaymentNetwork()->GetConsensus()))
-            return false; // unable to read block of previous transaction
+        {
+            LOCK(cs_blockstorage);
+            if (!ReadBlockFromDisk(block, blockPos, pnetMan->getActivePaymentNetwork()->GetConsensus()))
+                return false; // unable to read block of previous transaction
+        }
         if (block.GetBlockTime() + pnetMan->getActivePaymentNetwork()->getStakeMinAge() > nTime)
             continue; // only count coins meeting min age requirement
 
@@ -308,8 +312,11 @@ bool CTransaction::GetCoinAge(uint64_t &nCoinAge) const
         // Read block header
         CBlock block;
         CDiskBlockPos blockPos(txindex.nFile, txindex.nPos);
-        if (!ReadBlockFromDisk(block, blockPos, pnetMan->getActivePaymentNetwork()->GetConsensus()))
-            return false; // unable to read block of previous transaction
+        {
+            LOCK(cs_blockstorage);
+            if (!ReadBlockFromDisk(block, blockPos, pnetMan->getActivePaymentNetwork()->GetConsensus()))
+                return false; // unable to read block of previous transaction
+        }
         if (block.GetBlockTime() + pnetMan->getActivePaymentNetwork()->getStakeMinAge() > nTime)
             continue; // only count coins meeting min age requirement
 
@@ -395,6 +402,7 @@ bool GetTransaction(const uint256 &hash,
     if (pindexSlow)
     {
         CBlock block;
+        LOCK(cs_blockstorage);
         if (ReadBlockFromDisk(block, pindexSlow, consensusParams))
         {
             for (auto const &tx : block.vtx)

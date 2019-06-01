@@ -4,8 +4,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "zmqpublishnotifier.h"
-//#include "blockstorage/blockstorage.h"
-//#include "chainparams.h"
+#include "blockstorage/blockstorage.h"
 #include "main.h"
 #include "util/util.h"
 
@@ -151,7 +150,7 @@ bool CZMQPublishRawBlockNotifier::NotifyBlock(const CBlockIndex *pindex)
     const Consensus::Params &consensusParams = pnetMan->getActivePaymentNetwork()->GetConsensus();
     CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
     {
-        LOCK(cs_main);
+        LOCK(cs_blockstorage);
         CBlock block;
         if (!ReadBlockFromDisk(block, pindex, consensusParams))
         {

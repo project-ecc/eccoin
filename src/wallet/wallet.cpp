@@ -22,6 +22,7 @@
 
 #include "args.h"
 #include "base58.h"
+#include "blockstorage/blockstorage.h"
 #include "chain/chain.h"
 #include "chain/checkpoints.h"
 #include "chain/tx.h"
@@ -1257,7 +1258,10 @@ int CWallet::ScanForWalletTransactions(CBlockIndex *pindexStart, bool fUpdate)
         while (pindex)
         {
             CBlock block;
-            ReadBlockFromDisk(block, pindex, pnetMan->getActivePaymentNetwork()->GetConsensus());
+            {
+                LOCK(cs_blockstorage);
+                ReadBlockFromDisk(block, pindex, pnetMan->getActivePaymentNetwork()->GetConsensus());
+            }
             for (auto &ptx : block.vtx)
             {
                 if (AddToWalletIfInvolvingMe(ptx, &block, fUpdate))
@@ -3389,7 +3393,7 @@ bool CWallet::CreateCoinStake(const CKeyStore &keystore,
         // Read block header
         CBlock block;
         {
-            LOCK2(cs_main, cs_wallet);
+            LOCK(cs_blockstorage);
             CDiskBlockPos blockPos(txindex.nFile, txindex.nPos);
             if (!ReadBlockFromDisk(block, blockPos, pnetMan->getActivePaymentNetwork()->GetConsensus()))
                 continue;

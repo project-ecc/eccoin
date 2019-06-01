@@ -21,6 +21,7 @@
 #include "net/messages.h"
 
 #include "args.h"
+#include "blockstorage/blockstorage.h"
 #include "chain/chain.h"
 #include "chain/tx.h"
 #include "consensus/validation.h"
@@ -56,7 +57,7 @@
 // Messages
 //
 
-void EraseOrphansFor(NodeId peer) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
+void EraseOrphansFor(NodeId peer) EXCLUSIVE_LOCKS_REQUIRED(cs_orphans);
 
 /**
  * Filter for transactions that were recently rejected by
@@ -149,32 +150,37 @@ void FinalizeNode(NodeId nodeid, bool &fUpdateConnectionTime)
         fUpdateConnectionTime = true;
     }
 
+    {
+        LOCK(cs_main);
+        for (const QueuedBlock &entry : state->vBlocksInFlight)
+        {
+            mapBlocksInFlight.erase(entry.hash);
+        }
+        // Get rid of stale mapBlockSource entries for this peer as they may leak
+        // if we don't clean them up (I saw on the order of ~100 stale entries on
+        // a full resynch in my testing -- these entries stay forever).
+        // Performance note: most of the time mapBlockSource has 0 or 1 entries.
+        // During synch of blockchain it may end up with as many as 1000 entries,
+        // which still only takes ~1ms to iterate through on even old hardware.
+        // So this memleak cleanup is not expensive and worth doing since even
+        // small leaks are bad. :)
+        for (auto it = mapBlockSource.begin(); it != mapBlockSource.end(); /*NA*/)
+        {
+            if (it->second.first == nodeid)
+            {
+                mapBlockSource.erase(it++);
+            }
+            else
+            {
+                ++it;
+            }
+        }
+    }
+    {
+        LOCK(cs_orphans);
+        EraseOrphansFor(nodeid);
+    }
     LOCK(cs_main);
-    for (const QueuedBlock &entry : state->vBlocksInFlight)
-    {
-        mapBlocksInFlight.erase(entry.hash);
-    }
-    // Get rid of stale mapBlockSource entries for this peer as they may leak
-    // if we don't clean them up (I saw on the order of ~100 stale entries on
-    // a full resynch in my testing -- these entries stay forever).
-    // Performance note: most of the time mapBlockSource has 0 or 1 entries.
-    // During synch of blockchain it may end up with as many as 1000 entries,
-    // which still only takes ~1ms to iterate through on even old hardware.
-    // So this memleak cleanup is not expensive and worth doing since even
-    // small leaks are bad. :)
-    for (auto it = mapBlockSource.begin(); it != mapBlockSource.end(); /*NA*/)
-    {
-        if (it->second.first == nodeid)
-        {
-            mapBlockSource.erase(it++);
-        }
-        else
-        {
-            ++it;
-        }
-    }
-
-    EraseOrphansFor(nodeid);
     nPreferredDownload -= state->fPreferredDownload;
     nPeersWithValidatedDownloads -= (state->nBlocksInFlightValidHeaders != 0);
     assert(nPeersWithValidatedDownloads >= 0);
@@ -371,7 +377,7 @@ static void RelayAddress(const CAddress &addr, bool fReachable, CConnman &connma
     connman.ForEachNodeThen(std::move(sortfunc), std::move(pushfunc));
 }
 
-bool AddOrphanTx(const CTransaction &tx, NodeId peer) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
+bool AddOrphanTx(const CTransaction &tx, NodeId peer) EXCLUSIVE_LOCKS_REQUIRED(cs_orphans)
 {
     uint256 hash = tx.GetHash();
     if (mapOrphanTransactions.count(hash))
@@ -402,7 +408,7 @@ bool AddOrphanTx(const CTransaction &tx, NodeId peer) EXCLUSIVE_LOCKS_REQUIRED(c
 }
 
 
-void static EraseOrphanTx(uint256 hash) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
+void static EraseOrphanTx(uint256 hash) EXCLUSIVE_LOCKS_REQUIRED(cs_orphans)
 {
     std::map<uint256, COrphanTx>::iterator it = mapOrphanTransactions.find(hash);
     if (it == mapOrphanTransactions.end())
@@ -419,7 +425,7 @@ void static EraseOrphanTx(uint256 hash) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
     mapOrphanTransactions.erase(it);
 }
 
-void EraseOrphansFor(NodeId peer)
+void EraseOrphansFor(NodeId peer) EXCLUSIVE_LOCKS_REQUIRED(cs_orphans)
 {
     int nErased = 0;
     std::map<uint256, COrphanTx>::iterator iter = mapOrphanTransactions.begin();
@@ -437,7 +443,7 @@ void EraseOrphansFor(NodeId peer)
 }
 
 
-unsigned int LimitOrphanTxSize(unsigned int nMaxOrphans) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
+unsigned int LimitOrphanTxSize(unsigned int nMaxOrphans) EXCLUSIVE_LOCKS_REQUIRED(cs_orphans)
 {
     unsigned int nEvicted = 0;
     while (mapOrphanTransactions.size() > nMaxOrphans)
@@ -754,7 +760,7 @@ bool AlreadyHave(const CInv &inv) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
             hashRecentRejectsChainTip = pnetMan->getChainActive()->chainActive.Tip()->GetBlockHash();
             recentRejects->reset();
         }
-
+        LOCK(cs_orphans);
         return recentRejects->contains(inv.hash) || mempool.exists(inv.hash) || mapOrphanTransactions.count(inv.hash) ||
                // Best effort: only try output 0 and 1
                pnetMan->getChainActive()->pcoinsTip->HaveCoinInCache(COutPoint(inv.hash, 0)) ||
@@ -842,10 +848,13 @@ void static ProcessGetData(CNode *pfrom, CConnman &connman, const Consensus::Par
             {
                 // Send block from disk
                 CBlock block;
-                if (!ReadBlockFromDisk(block, pindex, consensusParams))
                 {
-                    LogPrintf("cannot load block from disk");
-                    assert(false);
+                    LOCK(cs_blockstorage);
+                    if (!ReadBlockFromDisk(block, pindex, consensusParams))
+                    {
+                        LogPrintf("cannot load block from disk");
+                        assert(false);
+                    }
                 }
                 if (inv.type == MSG_BLOCK)
                 {
@@ -1530,6 +1539,7 @@ bool static ProcessMessage(CNode *pfrom,
             std::set<NodeId> setMisbehaving;
             while (!vWorkQueue.empty())
             {
+                LOCK(cs_orphans);
                 auto itByPrev = mapOrphanTransactionsByPrev.find(vWorkQueue[0].hash);
                 vWorkQueue.pop_front();
                 if (itByPrev == mapOrphanTransactionsByPrev.end())
@@ -1631,6 +1641,7 @@ bool static ProcessMessage(CNode *pfrom,
                 // unbounded
                 unsigned int nMaxOrphanTx =
                     (unsigned int)std::max(int64_t(0), gArgs.GetArg("-maxorphantx", DEFAULT_MAX_ORPHAN_TRANSACTIONS));
+                LOCK(cs_orphans);
                 unsigned int nEvicted = LimitOrphanTxSize(nMaxOrphanTx);
                 if (nEvicted > 0)
                 {
@@ -2716,15 +2727,3 @@ bool SendMessages(CNode *pto, CConnman &connman)
     }
     return true;
 }
-
-class CNetProcessingCleanup
-{
-public:
-    CNetProcessingCleanup() {}
-    ~CNetProcessingCleanup()
-    {
-        // orphan transactions
-        mapOrphanTransactions.clear();
-        mapOrphanTransactionsByPrev.clear();
-    }
-} instance_of_cnetprocessingcleanup;

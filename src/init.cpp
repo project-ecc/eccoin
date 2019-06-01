@@ -23,6 +23,7 @@
 #include "amount.h"
 #include "args.h"
 #include "blockgeneration/blockgeneration.h"
+#include "blockstorage/blockstorage.h"
 #include "chain/chain.h"
 #include "chain/checkpoints.h"
 #include "compat/sanity.h"

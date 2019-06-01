@@ -19,6 +19,7 @@
  */
 
 #include "base58.h"
+#include "blockstorage/blockstorage.h"
 #include "chain/chain.h"
 #include "chain/tx.h"
 #include "coins.h"
@@ -259,8 +260,6 @@ UniValue gettxoutproof(const UniValue &params, bool fHelp)
         oneTxid = hash;
     }
 
-    LOCK(cs_main);
-
     CBlockIndex *pblockindex = NULL;
 
     uint256 hashBlock;
@@ -274,6 +273,7 @@ UniValue gettxoutproof(const UniValue &params, bool fHelp)
     }
     else
     {
+        LOCK(cs_main);
         CoinAccessor coin(*pnetMan->getChainActive()->pcoinsTip, oneTxid);
         if (coin && !coin->IsSpent() && coin->nHeight > 0 &&
             coin->nHeight <= pnetMan->getChainActive()->chainActive.Height())
@@ -295,9 +295,12 @@ UniValue gettxoutproof(const UniValue &params, bool fHelp)
     }
 
     CBlock block;
-    if (!ReadBlockFromDisk(block, pblockindex, pnetMan->getActivePaymentNetwork()->GetConsensus()))
     {
-        throw JSONRPCError(RPC_INTERNAL_ERROR, "Can't read block from disk");
+        LOCK(cs_blockstorage);
+        if (!ReadBlockFromDisk(block, pblockindex, pnetMan->getActivePaymentNetwork()->GetConsensus()))
+        {
+            throw JSONRPCError(RPC_INTERNAL_ERROR, "Can't read block from disk");
+        }
     }
 
     unsigned int ntxFound = 0;

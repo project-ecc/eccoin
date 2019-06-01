@@ -56,6 +56,7 @@ BITCOIN_CORE_H = \
   blockgeneration/compare.h \
   blockgeneration/miner.h \
   blockgeneration/minter.h \
+  blockstorage/blockstorage.h \
   bloom.h \
   chain/chain.h \
   chain/chainman.h \
@@ -173,6 +174,7 @@ libbitcoin_server_a-clientversion.$(OBJEXT): build/build.h
 libbitcoin_server_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES) $(MINIUPNPC_CPPFLAGS) $(EVENT_CFLAGS) $(EVENT_PTHREADS_CFLAGS)
 libbitcoin_server_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIC_FLAGS) $(PIE_FLAGS)
 libbitcoin_server_a_SOURCES = \
+  globals.cpp \
   sync.cpp \
   sync_rsm.cpp \
   net/addrdb.cpp \
@@ -180,6 +182,7 @@ libbitcoin_server_a_SOURCES = \
   blockgeneration/blockgeneration.cpp \
   blockgeneration/miner.cpp \
   blockgeneration/minter.cpp \
+  blockstorage/blockstorage.cpp \
   bloom.cpp \
   chain/chain.cpp \
   chain/checkpoints.cpp \

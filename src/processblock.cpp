@@ -28,6 +28,7 @@
 #include <sstream>
 
 #include "args.h"
+#include "blockstorage/blockstorage.h"
 #include "chain/checkpoints.h"
 #include "checkqueue.h"
 #include "crypto/hash.h"
@@ -221,8 +222,11 @@ bool DisconnectTip(CValidationState &state, const Consensus::Params &consensusPa
     // Read block from disk.
     std::shared_ptr<CBlock> pblock = std::make_shared<CBlock>();
     CBlock &block = *pblock;
-    if (!ReadBlockFromDisk(block, pindexDelete, consensusParams))
-        return AbortNode(state, "Failed to read block");
+    {
+        LOCK(cs_blockstorage);
+        if (!ReadBlockFromDisk(block, pindexDelete, consensusParams))
+            return AbortNode(state, "Failed to read block");
+    }
     // Apply the block atomically to the chain state.
     int64_t nStart = GetTimeMicros();
     {
@@ -296,6 +300,7 @@ bool ConnectTip(CValidationState &state,
     CBlock block;
     if (!pblock)
     {
+        LOCK(cs_blockstorage);
         if (!ReadBlockFromDisk(block, pindexNew, chainparams.GetConsensus()))
         {
             return AbortNode(state, "Failed to read block");

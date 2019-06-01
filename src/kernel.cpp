@@ -20,6 +20,7 @@
 #include <algorithm>
 
 #include "args.h"
+#include "blockstorage/blockstorage.h"
 #include "chain/chain.h"
 #include "consensus/consensus.h"
 #include "crypto/scrypt.h"
@@ -129,11 +130,14 @@ bool ComputeNextStakeModifier(const CBlockIndex *pindexPrev, const CTransaction 
     CBlock block;
     CBlockIndex *index = pnetMan->getChainActive()->LookupBlockIndex(blockHashOfTx);
 
-    if (!ReadBlockFromDisk(block, index, pnetMan->getActivePaymentNetwork()->GetConsensus()))
     {
-        // unable to read block of previous transaction
-        LogPrint("kernel", "ComputeNextStakeModifier() : read block failed");
-        return false;
+        LOCK(cs_blockstorage);
+        if (!ReadBlockFromDisk(block, index, pnetMan->getActivePaymentNetwork()->GetConsensus()))
+        {
+            // unable to read block of previous transaction
+            LogPrint("kernel", "ComputeNextStakeModifier() : read block failed");
+            return false;
+        }
     }
 
     if (!GetKernelStakeModifier(block.GetHash(), nStakeModifier))
@@ -285,10 +289,13 @@ bool CheckProofOfStake(int nHeight, const CTransaction &tx, uint256 &hashProofOf
     CBlock block;
     CBlockIndex *index = pnetMan->getChainActive()->LookupBlockIndex(blockHashOfTx);
 
-    if (!ReadBlockFromDisk(block, index, pnetMan->getActivePaymentNetwork()->GetConsensus()))
     {
-        LogPrint("kernel", "CheckProofOfStake() : read block failed");
-        return false;
+        LOCK(cs_blockstorage);
+        if (!ReadBlockFromDisk(block, index, pnetMan->getActivePaymentNetwork()->GetConsensus()))
+        {
+            LogPrint("kernel", "CheckProofOfStake() : read block failed");
+            return false;
+        }
     }
 
     CDiskTxPos txindex;
