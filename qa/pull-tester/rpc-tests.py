@@ -194,6 +194,7 @@ testScripts = [ RpcTest(t) for t in [
     'mintingtest',
     'nodehandling',
     'proxy_test',
+    'receivedby',
     'txpropagate',
     'verifydb',
     'wallet',
@@ -215,7 +216,6 @@ testScripts = [ RpcTest(t) for t in [
     Disabled('signrawtransactions', "FAILS"),
     #
     Disabled('wallet-dump', "TIMEOUT"),
-    Disabled('receivedby', "TIMEOUT"),
     Disabled('txn_doublespend --mineblock', "TIMEOUT"),
     Disabled('txn_clone', "TIMEOUT"),
     Disabled('notify', "TIMEOUT"),
