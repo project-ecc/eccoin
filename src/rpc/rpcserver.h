@@ -217,16 +217,11 @@ extern UniValue submitblock(const UniValue &params, bool fHelp);
 extern UniValue estimatefee(const UniValue &params, bool fHelp);
 
 extern UniValue getnewaddress(const UniValue &params, bool fHelp); // in rpcwallet.cpp
-extern UniValue getaccountaddress(const UniValue &params, bool fHelp);
 extern UniValue getrawchangeaddress(const UniValue &params, bool fHelp);
-extern UniValue setaccount(const UniValue &params, bool fHelp);
-extern UniValue getaccount(const UniValue &params, bool fHelp);
-extern UniValue getaddressesbyaccount(const UniValue &params, bool fHelp);
 extern UniValue sendtoaddress(const UniValue &params, bool fHelp);
 extern UniValue signmessage(const UniValue &params, bool fHelp);
 extern UniValue verifymessage(const UniValue &params, bool fHelp);
 extern UniValue getreceivedbyaddress(const UniValue &params, bool fHelp);
-extern UniValue getreceivedbyaccount(const UniValue &params, bool fHelp);
 extern UniValue getbalance(const UniValue &params, bool fHelp);
 extern UniValue getunconfirmedbalance(const UniValue &params, bool fHelp);
 extern UniValue sendfrom(const UniValue &params, bool fHelp);
@@ -234,10 +229,8 @@ extern UniValue sendmany(const UniValue &params, bool fHelp);
 extern UniValue addmultisigaddress(const UniValue &params, bool fHelp);
 extern UniValue createmultisig(const UniValue &params, bool fHelp);
 extern UniValue listreceivedbyaddress(const UniValue &params, bool fHelp);
-extern UniValue listreceivedbyaccount(const UniValue &params, bool fHelp);
 extern UniValue listtransactions(const UniValue &params, bool fHelp);
 extern UniValue listaddressgroupings(const UniValue &params, bool fHelp);
-extern UniValue listaccounts(const UniValue &params, bool fHelp);
 extern UniValue listsinceblock(const UniValue &params, bool fHelp);
 extern UniValue gettransaction(const UniValue &params, bool fHelp);
 extern UniValue abandontransaction(const UniValue &params, bool fHelp);

@@ -94,7 +94,7 @@ public:
     {
     }
 
-    bool WriteName(const std::string &strAddress, const std::string &strName);
+    bool WriteName(const std::string &strAddress);
     bool EraseName(const std::string &strAddress);
 
     bool WritePurpose(const std::string &strAddress, const std::string &purpose);
@@ -126,11 +126,6 @@ public:
     bool ErasePool(int64_t nPool);
 
     bool WriteMinVersion(int nVersion);
-
-    /// Write destination data key,value tuple to database
-    bool WriteDestData(const std::string &address, const std::string &key, const std::string &value);
-    /// Erase destination data tuple from wallet database
-    bool EraseDestData(const std::string &address, const std::string &key);
 
     DBErrors ReorderTransactions(CWallet *pwallet);
     DBErrors LoadWallet(CWallet *pwallet);
