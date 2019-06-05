@@ -179,10 +179,9 @@ if ENABLE_ZMQ:
 #Tests
 testScripts = [ RpcTest(t) for t in [
     #'rawtransactions', ???
-    #'rest', ???
     'multi_rpc',
     # 'fundrawtransaction', ???
-    # 'reindex', ???
+    'reindex',
     'getchaintips',
     'httpbasics',
     'keypool',
