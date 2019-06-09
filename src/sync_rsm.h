@@ -22,34 +22,23 @@ typedef recursive_shared_mutex CRecursiveSharedCriticalSection;
 #define RSCRITSEC(x) CRecursiveSharedCriticalSection x
 #else
 
-class CRecursiveSharedCriticalSection
+class CRecursiveSharedCriticalSection : recursive_shared_mutex
 {
 public:
-    class LockInfoRecursive
-    {
-    public:
-        const char *file;
-        unsigned int line;
-        uint32_t count;
-        LockInfoRecursive() : file(""), line(0), count(0) {}
-        LockInfoRecursive(const char *f, unsigned int l, uint32_t c) : file(f), line(l), count(c){}
-    };
-
-    recursive_shared_mutex internal_lock;
-    std::mutex setlock;
-    std::map<uint64_t, LockInfoRecursive> sharedowners;
     const char *name;
     uint64_t exclusiveOwner;
     uint64_t exclusiveOwnerCount;
     CRecursiveSharedCriticalSection(const char *name);
     CRecursiveSharedCriticalSection();
     ~CRecursiveSharedCriticalSection();
-    void lock_shared();
-    bool try_lock_shared();
-    void unlock_shared();
-    void lock();
-    void unlock();
-    bool try_lock();
+    // shared lock functions
+    void lock_shared() SHARED_LOCK_FUNCTION() { recursive_shared_mutex::lock_shared(); }
+    bool try_lock_shared() SHARED_TRYLOCK_FUNCTION(true) { return recursive_shared_mutex::try_lock_shared(); }
+    void unlock_shared() UNLOCK_FUNCTION() { recursive_shared_mutex::unlock_shared(); }
+    // exclusive lock functions
+    void lock() EXCLUSIVE_LOCK_FUNCTION() { recursive_shared_mutex::lock(); }
+    bool try_lock() EXCLUSIVE_TRYLOCK_FUNCTION(true) { return recursive_shared_mutex::try_lock(); }
+    void unlock() UNLOCK_FUNCTION() { recursive_shared_mutex::unlock(); }
 };
 #define RSCRITSEC(zzname) CRecursiveSharedCriticalSection zzname(#zzname)
 #endif
