@@ -94,6 +94,7 @@ BITCOIN_CORE_H = \
   merkleblock.h \
   net/addrdb.h \
   net/addrman.h \
+  net/aodv.h \
   net/messages.h \
   net/net.h \
   net/netaddress.h \
@@ -196,6 +197,7 @@ libbitcoin_server_a_SOURCES = \
   merkleblock.cpp \
   net/net.cpp \
   net/netaddress.cpp \
+  net/aodv.cpp \
   policy/fees.cpp \
   policy/policy.cpp \
   pow.cpp \
@@ -279,6 +281,7 @@ libbitcoin_server_a_SOURCES = \
   crypto/scrypt.cpp \
   wallet/crypter.cpp \
   wallet/db.cpp \
+  rpc/rpcaodv.cpp \
   rpc/rpcdump.cpp \
   rpc/rpcwallet.cpp \
   wallet/wallet.cpp \

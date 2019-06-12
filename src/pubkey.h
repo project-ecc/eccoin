@@ -25,6 +25,7 @@
 #include "crypto/hash.h"
 #include "serialize.h"
 #include "uint256.h"
+#include "util/utilstrencodings.h"
 
 #include <stdexcept>
 #include <vector>
@@ -72,6 +73,16 @@ public:
             ch.emplace_back(vch[i]);
         }
         return ch;
+    }
+
+    std::string Raw64Encoded() const
+    {
+        std::vector<unsigned char> ch;
+        for (unsigned int i = 0; i < size(); i++)
+        {
+            ch.emplace_back(vch[i]);
+        }
+        return EncodeBase64(&ch[0], size());
     }
 
     //! Initialize a public key using begin/end iterators to byte data.
