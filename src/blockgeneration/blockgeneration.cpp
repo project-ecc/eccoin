@@ -102,7 +102,6 @@ void ThreadMiner(void *parg, bool shutdownOnly)
     }
     nHPSTimerStart = 0;
     dHashesPerSec = 0;
-    LogPrintf("Thread Miner thread exiting \n");
 }
 
 thread_group *minterThreads = nullptr;
@@ -135,7 +134,6 @@ void ThreadMinter(void *parg, bool shutdownOnly)
     {
         PrintException(NULL, "ThreadECCMinter()");
     }
-    LogPrintf("Thread Minter thread exiting \n");
 }
 
 void ThreadGeneration(void *parg, bool shutdownOnly, bool fProofOfStake)
