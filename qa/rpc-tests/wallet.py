@@ -107,8 +107,9 @@ class WalletTest (BitcoinTestFramework):
         assert_equal(len(self.nodes[2].listlockunspent()), 0)
 
         # Have node1 generate 100 blocks (so node0 can recover the fee)
-        self.nodes[1].generate(100)
-        self.sync_all()
+        for i in range(4):
+            self.nodes[1].generate(25)
+            self.sync_all()
 
         # node0 should end up with 100 btc in block rewards plus fees, but
         # minus the 21 plus fees sent to node2
