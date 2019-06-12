@@ -26,8 +26,8 @@
 #include "util/util.h"
 #include "wallet/wallet.h"
 
-std::atomic<bool> shutdown_miner_threads;
-std::atomic<bool> shutdown_minter_threads;
+std::atomic<bool> shutdown_miner_threads(false);
+std::atomic<bool> shutdown_minter_threads(false);
 
 void IncrementExtraNonce(CBlock *pblock, CBlockIndex *pindexPrev, unsigned int &nExtraNonce)
 {
