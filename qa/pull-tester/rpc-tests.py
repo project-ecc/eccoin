@@ -490,7 +490,7 @@ class RPCTestHandler:
 
                 if proc.poll() is not None:
                     if not got_outputs[0]:
-                        comms(3)
+                        comms(50)
                     log_stdout.seek(0), log_stderr.seek(0)
                     stdout = log_stdout.read()
                     stderr = log_stderr.read()
