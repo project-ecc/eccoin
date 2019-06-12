@@ -100,7 +100,7 @@ uint32_t GetFetchFlags(CNode *pfrom, const CBlockIndex *pprev, const Consensus::
 void PushNodeVersion(CNode *pnode, CConnman &connman, int64_t nTime)
 {
     ServiceFlags nLocalNodeServices = pnode->GetLocalServices();
-    int nNodeStartingHeight = pnode->GetMyStartingHeight();
+    int nNodeStartingHeight = pnetMan->getChainActive()->chainActive.Height();
     NodeId nodeid = pnode->GetId();
     CAddress addr = pnode->addr;
 
