@@ -2450,8 +2450,6 @@ bool CConnman::Start(std::string &strNodeError)
     }
     nMaxOutboundTimeframe = MAX_UPLOAD_TIMEFRAME;
 
-    SetBestHeight(pnetMan->getChainActive()->chainActive.Height());
-
     LogPrintf("Generating random routing id...");
 
     pub_routing_key.MakeNewKey(true);

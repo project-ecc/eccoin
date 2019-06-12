@@ -248,6 +248,7 @@ public:
     const uint64_t nKeyedNetGroup;
     std::atomic_bool fPauseRecv;
     std::atomic_bool fPauseSend;
+    CPubKey routing_id;
 
 protected:
     mapMsgCmdSize mapSendBytesPerMsgCmd;
@@ -497,6 +498,32 @@ public:
         }
     }
 
+    template <typename... Args>
+    void PushMessageAll(const std::string sCommand, Args &&... args)
+    {
+        LOCK(cs_vNodes);
+        for (auto &&node : vNodes)
+        {
+            if (NodeFullyConnected(node))
+            {
+                PushMessage(node, sCommand, std::forward<Args>(args)...);
+            }
+        }
+    }
+
+    template <typename... Args>
+    void PushMessageAll(const CPubKey &source, const std::string sCommand, Args &&... args)
+    {
+        LOCK(cs_vNodes);
+        for (auto &&node : vNodes)
+        {
+            if (NodeFullyConnected(node) && node->routing_id != source)
+            {
+                PushMessage(node, sCommand, std::forward<Args>(args)...);
+            }
+        }
+    }
+
     template <typename Callable>
     void ForEachNode(Callable &&func)
     {
@@ -613,9 +640,6 @@ public:
 
     uint64_t GetTotalBytesRecv();
     uint64_t GetTotalBytesSent();
-
-    void SetBestHeight(int height);
-    int GetBestHeight() const;
 
     /** Get a unique deterministic randomizer. */
     CSipHasher GetDeterministicRandomizer(uint64_t id) const;

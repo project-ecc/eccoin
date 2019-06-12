@@ -8,6 +8,7 @@
 
 #include "net/messages.h"
 
+#include "aodv.h"
 #include "args.h"
 #include "blockstorage/blockstorage.h"
 #include "chain/chain.h"
@@ -1203,6 +1204,9 @@ bool static ProcessMessage(CNode *pfrom,
     {
         CPubKey peerPubKey;
         vRecv >> peerPubKey;
+        pfrom->routing_id = peerPubKey;
+        g_aodvtable.AddPeerKeyId(peerPubKey, pfrom->GetId(), true);
+        g_aodvtable.AddPeerKeyId(peerPubKey, pfrom->GetId(), true);
     }
 
     else if (strCommand == NetMsgType::ADDR)
@@ -2049,6 +2053,62 @@ bool static ProcessMessage(CNode *pfrom,
         }
     }
 
+    else if (strCommand == NetMsgType::RREQ)
+    {
+        /**
+         * A peer has requested a route to a specific id. we need to:
+         * keep track of who sent the request, make sure it was unique,
+         * check our routing table to see if we know of it, if we do respond with a RREP,
+         * otherwise forward this request to our peers except the one that sent it.
+         *
+         * if we have the node we will respond with our preffered privacy settings.
+         */
+        uint64_t nonce = 0;
+        CPubKey searchKey;
+        vRecv >> nonce;
+        vRecv >> searchKey;
+        bool peerKnown = g_aodvtable.HaveKeyEntry(searchKey) || connman.GetRoutingKey() == searchKey;
+        if (peerKnown)
+        {
+            connman.PushMessage(pfrom, NetMsgType::RREP, nonce, searchKey, peerKnown);
+        }
+        else
+        {
+            RequestRouteToPeer(connman, pfrom->routing_id, nonce, searchKey);
+            RecordRequestOrigin(nonce, pfrom->routing_id);
+        }
+    }
+
+    else if (strCommand == NetMsgType::RREP)
+    {
+        uint64_t nonce = 0;
+        CPubKey searchKey;
+        bool found;
+        vRecv >> nonce;
+        vRecv >> searchKey;
+        vRecv >> found;
+        /**
+         * we got a response from someone who knows of or has what we are looking for.
+         * if they allow direct connections try to form one with them to reduce network load.
+         * if they dont, try to establish a more or less direct route to the general area of peers
+         * to proceed with an application specific conversation
+         */
+        if (found)
+        {
+            RecordRouteToPeer(searchKey, pfrom->GetId());
+            CPubKey source;
+            if (GetRequestOrigin(nonce, source))
+            {
+                AddResponseToQueue(source, nonce, searchKey);
+            }
+        }
+    }
+
+    else if (strCommand == NetMsgType::RERR)
+    {
+        // intentionally left blank
+    }
+
     else
     {
         // Ignore unknown commands for extensibility
@@ -2646,5 +2706,26 @@ bool SendMessages(CNode *pto, CConnman &connman)
     {
         connman.PushMessage(pto, NetMsgType::GETDATA, vGetData);
     }
+
+    std::set<RREQRESPONSE> responseQueue_copy;
+    {
+        RECURSIVEREADLOCK(g_aodvtable.cs_aodv);
+        for (const auto &response : g_aodvtable.responseQueue)
+        {
+            if (response.source == pto->routing_id)
+            {
+                connman.PushMessage(pto, NetMsgType::RREP, response.nonce, response.pubkey, response.found);
+            }
+            else
+            {
+                responseQueue_copy.emplace(response);
+            }
+        }
+    }
+    {
+        RECURSIVEWRITELOCK(g_aodvtable.cs_aodv);
+        g_aodvtable.responseQueue = responseQueue_copy;
+    }
+
     return true;
 }
