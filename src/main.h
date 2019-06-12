@@ -259,7 +259,6 @@ enum FlushStateMode
 };
 bool FlushStateToDisk(CValidationState &state, FlushStateMode mode);
 extern int nPreferredDownload;
-extern int nSyncStarted;
 extern int64_t nTimeBestReceived;
 extern int nPeersWithValidatedDownloads;
 

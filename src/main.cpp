@@ -116,9 +116,6 @@ CBlockIndex *pindexBestInvalid;
  */
 std::set<CBlockIndex *, CBlockIndexWorkComparator> setBlockIndexCandidates;
 
-/** Number of nodes with fSyncStarted. */
-int nSyncStarted = 0;
-
 /** All pairs A->B, where A (or one of its ancestors) misses transactions, but B has transactions.
  * Pruned nodes may have entries where B is missing data.
  */

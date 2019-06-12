@@ -140,11 +140,6 @@ void FinalizeNode(NodeId nodeid, bool &fUpdateConnectionTime)
     fUpdateConnectionTime = false;
     CNodeStateAccessor state(nodestateman, nodeid);
 
-    if (state->fSyncStarted)
-    {
-        nSyncStarted--;
-    }
-
     if (state->nMisbehavior == 0 && state->fCurrentlyConnected)
     {
         fUpdateConnectionTime = true;
@@ -2391,13 +2386,9 @@ bool SendMessages(CNode *pto, CConnman &connman)
 
     if (!nodestate->fSyncStarted && !pto->fClient && !fImporting && !fReindex)
     {
-        // Only actively request headers from a single peer, unless we're close
-        // to today.
-        if ((nSyncStarted == 0 && fFetch) ||
-            pnetMan->getChainActive()->pindexBestHeader->GetBlockTime() > GetAdjustedTime() - 24 * 60 * 60)
+        if (fFetch || pnetMan->getChainActive()->pindexBestHeader->GetBlockTime() > GetAdjustedTime() - 24 * 60 * 60)
         {
             nodestate->fSyncStarted = true;
-            nSyncStarted++;
             const CBlockIndex *pindexStart = pnetMan->getChainActive()->pindexBestHeader;
             /**
              * If possible, start at the block preceding the currently best
