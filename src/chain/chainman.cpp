@@ -474,7 +474,6 @@ void CChainManager::UnloadBlockIndex()
     pindexBestInvalid = nullptr;
     pindexBestHeader = nullptr;
     mempool.clear();
-    nSyncStarted = 0;
     mapBlocksUnlinked.clear();
     vinfoBlockFile.clear();
     nLastBlockFile = 0;
