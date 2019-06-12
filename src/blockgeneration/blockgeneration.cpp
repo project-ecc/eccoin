@@ -26,6 +26,9 @@
 #include "util/util.h"
 #include "wallet/wallet.h"
 
+std::atomic<bool> shutdown_miner_threads;
+std::atomic<bool> shutdown_minter_threads;
+
 void IncrementExtraNonce(CBlock *pblock, CBlockIndex *pindexPrev, unsigned int &nExtraNonce)
 {
     // Update nExtraNonce
@@ -83,7 +86,7 @@ void ThreadMiner(void *parg, bool shutdownOnly)
     {
         return;
     }
-    minerThreads = new thread_group(&shutdown_threads);
+    minerThreads = new thread_group(&shutdown_miner_threads);
     CWallet *pwallet = (CWallet *)parg;
     try
     {
@@ -118,7 +121,7 @@ void ThreadMinter(void *parg, bool shutdownOnly)
     {
         return;
     }
-    minterThreads = new thread_group(&shutdown_threads);
+    minterThreads = new thread_group(&shutdown_minter_threads);
     CWallet *pwallet = (CWallet *)parg;
     try
     {
