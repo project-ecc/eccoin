@@ -399,8 +399,8 @@ CNode *CConnman::ConnectNode(CAddress addrConnect, const char *pszDest, bool fCo
         // Add node
         NodeId id = GetNewNodeId();
         uint64_t nonce = GetDeterministicRandomizer(RANDOMIZER_ID_LOCALHOSTNONCE).Write(id).Finalize();
-        CNode *pnode = new CNode(id, nLocalServices, GetBestHeight(), hSocket, addrConnect,
-            CalculateKeyedNetGroup(addrConnect), nonce, pszDest ? pszDest : "", false);
+        CNode *pnode = new CNode(id, nLocalServices, hSocket, addrConnect, CalculateKeyedNetGroup(addrConnect), nonce,
+            pszDest ? pszDest : "", false);
         pnode->nServicesExpected = ServiceFlags(addrConnect.nServices & nRelevantServices);
         pnode->AddRef();
 
@@ -1151,8 +1151,7 @@ void CConnman::AcceptConnection(const ListenSocket &hListenSocket)
     NodeId id = GetNewNodeId();
     uint64_t nonce = GetDeterministicRandomizer(RANDOMIZER_ID_LOCALHOSTNONCE).Write(id).Finalize();
 
-    CNode *pnode =
-        new CNode(id, nLocalServices, GetBestHeight(), hSocket, addr, CalculateKeyedNetGroup(addr), nonce, "", true);
+    CNode *pnode = new CNode(id, nLocalServices, hSocket, addr, CalculateKeyedNetGroup(addr), nonce, "", true);
     pnode->AddRef();
     pnode->fWhitelisted = whitelisted;
 
@@ -2464,8 +2463,6 @@ bool CConnman::Start(std::string &strNodeError)
     }
     nMaxOutboundTimeframe = MAX_UPLOAD_TIMEFRAME;
 
-    SetBestHeight(pnetMan->getChainActive()->chainActive.Height());
-
     LogPrintf("Loading addresses...");
     // Load addresses from peers.dat
     int64_t nStart = GetTimeMillis();
@@ -2877,13 +2874,10 @@ uint64_t CConnman::GetTotalBytesSent()
 }
 
 ServiceFlags CConnman::GetLocalServices() const { return nLocalServices; }
-void CConnman::SetBestHeight(int height) { nBestHeight.store(height, std::memory_order_release); }
-int CConnman::GetBestHeight() const { return nBestHeight.load(std::memory_order_acquire); }
 unsigned int CConnman::GetReceiveFloodSize() const { return nReceiveFloodSize; }
 unsigned int CConnman::GetSendBufferSize() const { return nSendBufferMaxSize; }
 CNode::CNode(NodeId idIn,
     ServiceFlags nLocalServicesIn,
-    int nMyStartingHeightIn,
     SOCKET hSocketIn,
     const CAddress &addrIn,
     uint64_t nKeyedNetGroupIn,
@@ -2892,7 +2886,7 @@ CNode::CNode(NodeId idIn,
     bool fInboundIn)
     : nTimeConnected(GetSystemTimeInSeconds()), addr(addrIn), fInbound(fInboundIn), id(idIn),
       nKeyedNetGroup(nKeyedNetGroupIn), addrKnown(5000, 0.001), filterInventoryKnown(50000, 0.000001),
-      nLocalServices(nLocalServicesIn), nMyStartingHeight(nMyStartingHeightIn), nSendVersion(0)
+      nLocalServices(nLocalServicesIn), nSendVersion(0)
 {
     nServices = NODE_NONE;
     nServicesExpected = NODE_NONE;

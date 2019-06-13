@@ -26,7 +26,7 @@ class ReindexTest(BitcoinTestFramework):
     def run_test(self):
 
         # Generate enough blocks that we can spend some coinbase.
-        nBlocks = 101
+        nBlocks = 35
         self.nodes[0].generate(nBlocks)
         self.sync_all()
 

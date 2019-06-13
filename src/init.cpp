@@ -974,18 +974,16 @@ bool AppInit2(thread_group &threadGroup)
     // Trim requested connection counts, to fit into system limitations
     initMaxConnections =
         std::max(std::min(initMaxConnections, (int)(FD_SETSIZE - nBind - MIN_CORE_FILEDESCRIPTORS)), 0);
-    initFD = RaiseFileDescriptorLimit(initMaxConnections + MIN_CORE_FILEDESCRIPTORS);
-    if (initFD < MIN_CORE_FILEDESCRIPTORS)
+    int nFD = RaiseFileDescriptorLimit(initMaxConnections + MIN_CORE_FILEDESCRIPTORS);
+    if (nFD < MIN_CORE_FILEDESCRIPTORS)
     {
-        return InitError(("Not enough file descriptors available."));
+        return InitError("Not enough file descriptors available.");
     }
-    initMaxConnections = std::min(initFD - MIN_CORE_FILEDESCRIPTORS, initMaxConnections);
+    initMaxConnections = std::min(nFD - MIN_CORE_FILEDESCRIPTORS, initMaxConnections);
 
     if (initMaxConnections < nUserMaxConnections)
     {
-        LogPrintf("Reducing -maxconnections from %d to %d, because of system limitations.", nUserMaxConnections,
-            initMaxConnections);
-        InitWarning(strprintf(("Reducing -maxconnections from %d to %d, because of system limitations."),
+        InitWarning(strprintf("Reducing -maxconnections from %d to %d, because of system limitations.",
             nUserMaxConnections, initMaxConnections));
     }
 
