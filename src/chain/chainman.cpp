@@ -17,6 +17,8 @@
  */
 
 #include "chainman.h"
+
+#include "blockstorage/blockstorage.h"
 #include "checkpoints.h"
 #include "consensus/consensus.h"
 #include "init.h"
@@ -333,7 +335,6 @@ bool CChainManager::LoadBlockIndexDB()
 
 bool CChainManager::LoadExternalBlockFile(const CNetworkTemplate &chainparams, FILE *fileIn, CDiskBlockPos *dbp)
 {
-    WRITELOCK(cs_mapBlockIndex);
     // std::map of disk positions for blocks with unknown parent (only used for reindex)
     static std::multimap<uint256, CDiskBlockPos> mapBlocksUnknownParent;
     int64_t nStart = GetTimeMillis();
@@ -348,7 +349,7 @@ bool CChainManager::LoadExternalBlockFile(const CNetworkTemplate &chainparams, F
         {
             if (shutdown_threads.load())
             {
-                break;
+                return nLoaded;
             }
 
             blkdat.SetPos(nRewind);
@@ -423,6 +424,7 @@ bool CChainManager::LoadExternalBlockFile(const CNetworkTemplate &chainparams, F
                     std::pair<std::multimap<uint256, CDiskBlockPos>::iterator,
                         std::multimap<uint256, CDiskBlockPos>::iterator>
                         range = mapBlocksUnknownParent.equal_range(head);
+                    LOCK(cs_blockstorage);
                     while (range.first != range.second)
                     {
                         std::multimap<uint256, CDiskBlockPos>::iterator it = range.first;
@@ -453,21 +455,25 @@ bool CChainManager::LoadExternalBlockFile(const CNetworkTemplate &chainparams, F
         AbortNode(std::string("System error: ") + e.what());
     }
     if (nLoaded > 0)
+    {
         LogPrintf("Loaded %i blocks from external file in %dms\n", nLoaded, GetTimeMillis() - nStart);
+    }
     return nLoaded > 0;
 }
 
 void CChainManager::UnloadBlockIndex()
 {
+    {
+        LOCK(cs_orphans);
+        mapOrphanTransactions.clear();
+        mapOrphanTransactionsByPrev.clear();
+    }
     LOCK(cs_main);
     setBlockIndexCandidates.clear();
     chainActive.SetTip(nullptr);
     pindexBestInvalid = nullptr;
     pindexBestHeader = nullptr;
     mempool.clear();
-    mapOrphanTransactions.clear();
-    mapOrphanTransactionsByPrev.clear();
-    nSyncStarted = 0;
     mapBlocksUnlinked.clear();
     vinfoBlockFile.clear();
     nLastBlockFile = 0;
@@ -479,11 +485,6 @@ void CChainManager::UnloadBlockIndex()
     setDirtyFileInfo.clear();
     nodestateman.Clear();
     recentRejects.reset(nullptr);
-    versionbitscache.Clear();
-    for (int b = 0; b < VERSIONBITS_NUM_BITS; b++)
-    {
-        warningcache[b].clear();
-    }
 
     {
         WRITELOCK(cs_mapBlockIndex);

@@ -30,7 +30,6 @@
 #include "uint256.h"
 #include "undo.h"
 #include "util/utiltime.h"
-#include "versionbits.h"
 
 #include <algorithm>
 #include <exception>
@@ -143,6 +142,7 @@ static const int LAST_POW_BLOCK = 86400;
 extern CCriticalSection cs_LastBlockFile;
 extern CScript COINBASE_FLAGS;
 extern CCriticalSection cs_main;
+extern CCriticalSection cs_orphans;
 extern CTxMemPool mempool;
 extern uint64_t nLastBlockTx;
 extern uint64_t nLastBlockSize;
@@ -196,13 +196,12 @@ struct CBlockIndexWorkComparator
 
 extern CBlockIndex *pindexBestInvalid;
 extern std::multimap<CBlockIndex *, CBlockIndex *> mapBlocksUnlinked;
-extern std::map<uint256, COrphanTx> mapOrphanTransactions GUARDED_BY(cs_main);
+extern std::map<uint256, COrphanTx> mapOrphanTransactions GUARDED_BY(cs_orphans);
 ;
-extern std::map<uint256, std::set<uint256> > mapOrphanTransactionsByPrev GUARDED_BY(cs_main);
+extern std::map<uint256, std::set<uint256> > mapOrphanTransactionsByPrev GUARDED_BY(cs_orphans);
 ;
 void LimitMempoolSize(CTxMemPool &pool, size_t limit, unsigned long age);
 extern std::set<CBlockIndex *> setDirtyBlockIndex;
-extern ThresholdConditionCache warningcache[VERSIONBITS_NUM_BITS];
 void PruneBlockIndexCandidates();
 bool CheckIndexAgainstCheckpoint(const CBlockIndex *pindexPrev,
     CValidationState &state,
@@ -241,12 +240,6 @@ int64_t GetProofOfStakeReward(int64_t nCoinAge, int nHeight);
 
 /** Check whether enough disk space is available for an incoming block */
 bool CheckDiskSpace(uint64_t nAdditionalBytes = 0);
-/** Open a block file (blk?????.dat) */
-FILE *OpenBlockFile(const CDiskBlockPos &pos, bool fReadOnly = false);
-/** Open an undo file (rev?????.dat) */
-FILE *OpenUndoFile(const CDiskBlockPos &pos, bool fReadOnly = false);
-/** Translation to a filesystem path */
-fs::path GetBlockPosFilename(const CDiskBlockPos &pos, const char *prefix);
 
 /** Format a string that describes several potential problems detected by the core.
  * strFor can have three values:
@@ -266,7 +259,6 @@ enum FlushStateMode
 };
 bool FlushStateToDisk(CValidationState &state, FlushStateMode mode);
 extern int nPreferredDownload;
-extern int nSyncStarted;
 extern int64_t nTimeBestReceived;
 extern int nPeersWithValidatedDownloads;
 
@@ -286,9 +278,6 @@ bool AcceptToMemoryPool(CTxMemPool &pool,
 
 /** Convert CValidationState to a human-readable message for logging */
 std::string FormatStateMessage(const CValidationState &state);
-
-/** Get the BIP9 state for a given deployment at the current tip. */
-ThresholdState VersionBitsTipState(const Consensus::Params &params, Consensus::DeploymentPos pos);
 
 struct CDiskTxPos : public CDiskBlockPos
 {
@@ -346,14 +335,6 @@ bool CheckInputs(const CTransaction &tx,
     unsigned int flags,
     bool cacheStore,
     std::vector<CScriptCheck> *pvChecks = nullptr);
-
-/** Apply the effects of this transaction on the UTXO set represented by view */
-void UpdateCoins(const CTransaction &tx, CValidationState &state, CCoinsViewCache &inputs, int nHeight);
-void UpdateCoins(const CTransaction &tx,
-    CValidationState &state,
-    CCoinsViewCache &inputs,
-    CTxUndo &txundo,
-    int nHeight);
 
 /**
  * Check if transaction is final and can be included in a block with the
@@ -438,12 +419,6 @@ public:
     ScriptError GetScriptError() const { return error; }
 };
 
-
-/** Functions for disk access for blocks */
-bool WriteBlockToDisk(const CBlock &block, CDiskBlockPos &pos, const CMessageHeader::MessageMagic &messageStart);
-bool ReadBlockFromDisk(CBlock &block, const CDiskBlockPos &pos, const Consensus::Params &consensusParams);
-bool ReadBlockFromDisk(CBlock &block, const CBlockIndex *pindex, const Consensus::Params &consensusParams);
-
 /** Functions for validating blocks and updating the block tree */
 
 /** Context-independent validity checks */
@@ -451,6 +426,9 @@ bool CheckBlock(const CBlock &block, CValidationState &state, bool fCheckPOW = t
 
 /** Context-dependent validity checks */
 bool ContextualCheckBlock(const CBlock &block, CValidationState &state, CBlockIndex *pindexPrev);
+
+/* Calculate the amount of disk space the block & undo files currently use */
+uint64_t CalculateCurrentUsage();
 
 extern std::set<CBlockIndex *, CBlockIndexWorkComparator> setBlockIndexCandidates;
 
@@ -553,8 +531,6 @@ bool FindBlockPos(CValidationState &state,
 bool AbortNode(const std::string &strMessage, const std::string &userMessage = "");
 extern uint32_t nBlockSequenceId;
 extern std::set<int> setDirtyFileInfo;
-/// versionbitscache was originally static in main.cpp might need to revert the change to non static
-extern VersionBitsCache versionbitscache;
 
 extern int GetHeight();
 

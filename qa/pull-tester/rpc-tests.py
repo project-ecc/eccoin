@@ -179,13 +179,13 @@ if ENABLE_ZMQ:
 #Tests
 testScripts = [ RpcTest(t) for t in [
     #'rawtransactions', ???
-    #'rest', ???
-    # 'multi_rpc', ???
+    'multi_rpc',
     # 'fundrawtransaction', ???
-    # 'reindex', ???
+    'reindex',
     'getchaintips',
     'httpbasics',
     'keypool',
+    'listtransactions',
     #'mempool_limit',
     #'mempool_reorg',
     #'mempool_resurrect_test',
@@ -193,9 +193,12 @@ testScripts = [ RpcTest(t) for t in [
     'mintingtest',
     'nodehandling',
     'proxy_test',
+    'receivedby',
     'txpropagate',
+    'verifydb',
     'wallet',
     'walletbackup',
+    'zapwallettxes',
     #
     Disabled('mempool_limit', "FAILS"),
     Disabled('mempool_reorg', "FAILS"),
@@ -208,13 +211,10 @@ testScripts = [ RpcTest(t) for t in [
     Disabled('invalidtxrequest', "FAILS"),
     Disabled('merkle_blocks', "FAILS"),
     Disabled('miningtest', "FAILS"),
-    Disabled('zapwallettxes', "FAILS"),
     Disabled('sendheaders', "FAILS"),
     Disabled('signrawtransactions', "FAILS"),
     #
     Disabled('wallet-dump', "TIMEOUT"),
-    Disabled('listtransactions', "TIMEOUT"),
-    Disabled('receivedby', "TIMEOUT"),
     Disabled('txn_doublespend --mineblock', "TIMEOUT"),
     Disabled('txn_clone', "TIMEOUT"),
     Disabled('notify', "TIMEOUT"),
@@ -490,7 +490,7 @@ class RPCTestHandler:
 
                 if proc.poll() is not None:
                     if not got_outputs[0]:
-                        comms(3)
+                        comms(50)
                     log_stdout.seek(0), log_stderr.seek(0)
                     stdout = log_stdout.read()
                     stderr = log_stderr.read()

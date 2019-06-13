@@ -3,7 +3,6 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE cxx_rsm
 
 #include "test_cxx_rsm.h"

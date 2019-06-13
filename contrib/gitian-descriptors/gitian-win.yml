@@ -1,5 +1,5 @@
 ---
-name: "eccoin-win-0.2.5.15"
+name: "eccoin-win-0.2.5.16"
 enable_cache: true
 suites:
 - "bionic"

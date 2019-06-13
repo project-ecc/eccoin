@@ -26,6 +26,9 @@
 #include "util/util.h"
 #include "wallet/wallet.h"
 
+std::atomic<bool> shutdown_miner_threads(false);
+std::atomic<bool> shutdown_minter_threads(false);
+
 void IncrementExtraNonce(CBlock *pblock, CBlockIndex *pindexPrev, unsigned int &nExtraNonce)
 {
     // Update nExtraNonce
@@ -74,6 +77,7 @@ void ThreadMiner(void *parg, bool shutdownOnly)
     if (minerThreads != nullptr)
     {
         minerThreads->interrupt_all();
+        minerThreads->join_all();
         delete minerThreads;
         minerThreads = nullptr;
         return;
@@ -82,7 +86,7 @@ void ThreadMiner(void *parg, bool shutdownOnly)
     {
         return;
     }
-    minerThreads = new thread_group(&shutdown_threads);
+    minerThreads = new thread_group(&shutdown_miner_threads);
     CWallet *pwallet = (CWallet *)parg;
     try
     {
@@ -98,7 +102,6 @@ void ThreadMiner(void *parg, bool shutdownOnly)
     }
     nHPSTimerStart = 0;
     dHashesPerSec = 0;
-    LogPrintf("Thread Miner thread exiting \n");
 }
 
 thread_group *minterThreads = nullptr;
@@ -108,6 +111,7 @@ void ThreadMinter(void *parg, bool shutdownOnly)
     if (minterThreads != nullptr)
     {
         minterThreads->interrupt_all();
+        minterThreads->join_all();
         delete minterThreads;
         minterThreads = nullptr;
         return;
@@ -116,7 +120,7 @@ void ThreadMinter(void *parg, bool shutdownOnly)
     {
         return;
     }
-    minterThreads = new thread_group(&shutdown_threads);
+    minterThreads = new thread_group(&shutdown_minter_threads);
     CWallet *pwallet = (CWallet *)parg;
     try
     {
@@ -130,7 +134,6 @@ void ThreadMinter(void *parg, bool shutdownOnly)
     {
         PrintException(NULL, "ThreadECCMinter()");
     }
-    LogPrintf("Thread Minter thread exiting \n");
 }
 
 void ThreadGeneration(void *parg, bool shutdownOnly, bool fProofOfStake)

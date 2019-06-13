@@ -113,9 +113,10 @@ void CNetworkManager::ConstructLegacyNetworkTemplate()
     assert(legacyTemplate->genesis.hashMerkleRoot ==
            uint256S("0x4db82fe8b45f3dae2b7c7b8be5ec4c37e72e25eaf989b9db24ce1d0fd37eed8b"));
 
-    legacyTemplate->vSeeds.push_back(CDNSSeedData("CryptoUnitedSeed", "www.cryptounited.io", true));
-    legacyTemplate->vSeeds.push_back(CDNSSeedData("ECC-Seed1", "138.197.100.45", true));
-    legacyTemplate->vSeeds.push_back(CDNSSeedData("ECC-Seed3", "eccnode.altj.com", true));
+    legacyTemplate->vSeeds.push_back(CDNSSeedData("ECC-Seed1", "eccserver1.ddns.net", true));
+    legacyTemplate->vSeeds.push_back(CDNSSeedData("ECC-Seed2", "eccnode.altj.com", true));
+    legacyTemplate->vSeeds.push_back(CDNSSeedData("ECC-Seed3", "5.189.131.197", true));
+    legacyTemplate->vSeeds.push_back(CDNSSeedData("ECC-Seed4", "185.21.216.160", true));
 
     legacyTemplate->base58Prefixes[CNetworkTemplate::PUBKEY_ADDRESS] = std::vector<unsigned char>(1, 33);
     legacyTemplate->base58Prefixes[CNetworkTemplate::SCRIPT_ADDRESS] = std::vector<unsigned char>(1, 8);

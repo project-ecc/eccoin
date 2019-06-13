@@ -145,7 +145,7 @@ class RawTransactionsTest(BitcoinTestFramework):
         wallet.sort(key=lambda x: x["amount"], reverse=False)
         utxo = wallet.pop()
         amt = utxo["amount"]
-        addr = self.nodes[0].getaddressforms(self.nodes[0].getnewaddress())["legacy"]
+        addr = self.nodes[0].getnewaddress()
         outp = {addr: amt-decimal.Decimal(.0001)}  # give some fee
         txn = createrawtransaction([utxo], outp, createWastefulOutput)  # create a nonstandard tx
         signedtxn = self.nodes[0].signrawtransaction(txn)

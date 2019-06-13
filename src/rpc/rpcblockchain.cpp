@@ -20,6 +20,7 @@
 
 #include "amount.h"
 #include "args.h"
+#include "blockstorage/blockstorage.h"
 #include "chain/chain.h"
 #include "chain/checkpoints.h"
 #include "chain/tx.h"
@@ -421,23 +422,26 @@ UniValue getblock(const UniValue &params, bool fHelp)
             HelpExampleCli("getblock", "\"00000000c937983704a73af28acdec37b049d214adbda81d7e2a3dd146f6ed09\"") +
             HelpExampleRpc("getblock", "\"00000000c937983704a73af28acdec37b049d214adbda81d7e2a3dd146f6ed09\""));
 
-    LOCK(cs_main);
-
     std::string strHash = params[0].get_str();
     uint256 hash(uint256S(strHash));
 
     bool fVerbose = true;
+    CBlockIndex *pblockindex;
     if (params.size() > 1)
         fVerbose = params[1].get_bool();
-
-    CBlockIndex *pblockindex = pnetMan->getChainActive()->LookupBlockIndex(hash);
-    if (!pblockindex)
-        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
+    {
+        LOCK(cs_main);
+        pblockindex = pnetMan->getChainActive()->LookupBlockIndex(hash);
+        if (!pblockindex)
+            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
+    }
 
     CBlock block;
-
-    if (!ReadBlockFromDisk(block, pblockindex, pnetMan->getActivePaymentNetwork()->GetConsensus()))
-        throw JSONRPCError(RPC_INTERNAL_ERROR, "Can't read block from disk");
+    {
+        LOCK(cs_blockstorage);
+        if (!ReadBlockFromDisk(block, pblockindex, pnetMan->getActivePaymentNetwork()->GetConsensus()))
+            throw JSONRPCError(RPC_INTERNAL_ERROR, "Can't read block from disk");
+    }
 
     if (!fVerbose)
     {
@@ -627,7 +631,7 @@ UniValue gettxout(const UniValue &params, bool fHelp)
     if ((unsigned int)coin.nHeight == MEMPOOL_HEIGHT)
         ret.push_back(Pair("confirmations", 0));
     else
-        ret.push_back(Pair("confirmations", pindex->nHeight - coin.nHeight + 1));
+        ret.push_back(Pair("confirmations", (int64_t)(pindex->nHeight - coin.nHeight + 1)));
     ret.push_back(Pair("value", ValueFromAmount(coin.out.nValue)));
     UniValue o(UniValue::VOBJ);
     ScriptPubKeyToJSON(coin.out.scriptPubKey, o, true);
@@ -703,33 +707,6 @@ static UniValue SoftForkDesc(const std::string &name,
     return rv;
 }
 
-UniValue BIP9SoftForkDesc(const std::string &name,
-    const Consensus::Params &consensusParams,
-    Consensus::DeploymentPos id)
-{
-    UniValue rv(UniValue::VOBJ);
-    rv.push_back(Pair("id", name));
-    switch (VersionBitsTipState(consensusParams, id))
-    {
-    case THRESHOLD_DEFINED:
-        rv.push_back(Pair("status", "defined"));
-        break;
-    case THRESHOLD_STARTED:
-        rv.push_back(Pair("status", "started"));
-        break;
-    case THRESHOLD_LOCKED_IN:
-        rv.push_back(Pair("status", "locked_in"));
-        break;
-    case THRESHOLD_ACTIVE:
-        rv.push_back(Pair("status", "active"));
-        break;
-    case THRESHOLD_FAILED:
-        rv.push_back(Pair("status", "failed"));
-        break;
-    }
-    return rv;
-}
-
 UniValue getblockchaininfo(const UniValue &params, bool fHelp)
 {
     if (fHelp || params.size() != 0)
@@ -745,7 +722,10 @@ UniValue getblockchaininfo(const UniValue &params, bool fHelp)
             "  \"difficulty\": xxxxxx,     (numeric) the current difficulty\n"
             "  \"mediantime\": xxxxxx,     (numeric) median time for the current best block\n"
             "  \"verificationprogress\": xxxx, (numeric) estimate of verification progress [0..1]\n"
+            "  \"initialblockdownload\": xxxx, (bool) (debug information) estimate of whether this node is in Initial "
+            "Block Download mode.\n"
             "  \"chainwork\": \"xxxx\"     (string) total amount of work in active chain, in hexadecimal\n"
+            "  \"size_on_disk\": xxxxxx,       (numeric) the estimated size of the block and undo files on disk\n"
             "  \"pruned\": xx,             (boolean) if the blocks are subject to pruning\n"
             "  \"pruneheight\": xxxxxx,    (numeric) heighest block available\n"
             "  \"softforks\": [            (array) status of softforks in progress\n"
@@ -784,10 +764,9 @@ UniValue getblockchaininfo(const UniValue &params, bool fHelp)
     obj.push_back(Pair("bestblockhash", pnetMan->getChainActive()->chainActive.Tip()->GetBlockHash().GetHex()));
     obj.push_back(Pair("difficulty", (double)GetDifficulty()));
     obj.push_back(Pair("mediantime", (int64_t)pnetMan->getChainActive()->chainActive.Tip()->GetMedianTimePast()));
-    obj.push_back(Pair("verificationprogress",
-        Checkpoints::GuessVerificationProgress(pnetMan->getActivePaymentNetwork()->Checkpoints(),
-                           pnetMan->getChainActive()->chainActive.Tip())));
+    obj.push_back(Pair("initialblockdownload", pnetMan->getChainActive()->IsInitialBlockDownload()));
     obj.push_back(Pair("chainwork", pnetMan->getChainActive()->chainActive.Tip()->nChainWork.GetHex()));
+    obj.push_back(Pair("size_on_disk", CalculateCurrentUsage()));
 
     const Consensus::Params &consensusParams = pnetMan->getActivePaymentNetwork()->GetConsensus();
     CBlockIndex *tip = pnetMan->getChainActive()->chainActive.Tip();
@@ -832,7 +811,6 @@ static std::set<CBlockIndex *, CompareBlocksByHeight> GetChainTips()
     std::set<CBlockIndex *> setOrphans;
     std::set<CBlockIndex *> setPrevs;
 
-    AssertLockHeld(cs_main); // for chainActive
     READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
     for (const std::pair<const uint256, CBlockIndex *> &item : pnetMan->getChainActive()->mapBlockIndex)
     {

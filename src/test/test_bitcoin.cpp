@@ -173,4 +173,9 @@ struct StartupShutdown
     ~StartupShutdown() {}
 };
 
+
+#if BOOST_VERSION >= 106500
+BOOST_TEST_GLOBAL_FIXTURE(StartupShutdown);
+#else
 BOOST_GLOBAL_FIXTURE(StartupShutdown);
+#endif

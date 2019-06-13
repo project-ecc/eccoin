@@ -166,13 +166,13 @@ BOOST_AUTO_TEST_CASE(coins_cache_simulation_test)
             Coin &coin = result[COutPoint(txid, 0)];
             if ((insecure_rand() % 500) == 0)
             {
-                const Coin &entry = AccessByTxid(*stack.back(), txid);
-                BOOST_CHECK(coin == entry);
+                CoinAccessor entry(*stack.back(), txid);
+                BOOST_CHECK(coin == *entry);
             }
             else
             {
-                LOCK(stack.back()->cs_utxo);
-                const Coin &entry = stack.back()->AccessCoin(COutPoint(txid, 0));
+                WRITELOCK(stack.back()->cs_utxo);
+                const Coin &entry = stack.back()->_AccessCoin(COutPoint(txid, 0));
                 BOOST_CHECK(coin == entry);
             }
 
@@ -228,8 +228,8 @@ BOOST_AUTO_TEST_CASE(coins_cache_simulation_test)
                 bool have = stack.back()->HaveCoin(it->first);
                 bool isspent = true;
                 {
-                    LOCK(stack.back()->cs_utxo);
-                    const Coin &coin = stack.back()->AccessCoin(it->first);
+                    WRITELOCK(stack.back()->cs_utxo);
+                    const Coin &coin = stack.back()->_AccessCoin(it->first);
                     isspent = coin.IsSpent();
                     BOOST_CHECK(have == !coin.IsSpent());
                     BOOST_CHECK(coin == it->second);
@@ -504,7 +504,10 @@ void CheckAccessCoin(CAmount base_value,
     char expected_flags)
 {
     SingleEntryCacheTest test(base_value, cache_value, cache_flags);
-    test.cache.AccessCoin(OUTPOINT);
+    {
+        WRITELOCK(test.cache.cs_utxo);
+        test.cache._AccessCoin(OUTPOINT);
+    }
     test.cache.SelfTest();
 
     CAmount result_value;

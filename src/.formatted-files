@@ -13,6 +13,8 @@ blockgeneration/miner.cpp
 blockgeneration/miner.h
 blockgeneration/minter.cpp
 blockgeneration/minter.h
+blockstorage/blockstorage.cpp
+blockstorage/blockstorage.h
 bloom.cpp
 bloom.h
 chain/block.cpp
@@ -116,7 +118,6 @@ pubkey.cpp
 pubkey.h
 random.cpp
 random.h
-rest.cpp
 reverselock.h
 rpc/events.h
 rpc/rpcblockchain.cpp
@@ -185,8 +186,6 @@ validationinterface.h
 verifydb.cpp
 verifydb.h
 version.h
-versionbits.cpp
-versionbits.h
 wallet/crypter.cpp
 wallet/crypter.h
 wallet/db.cpp

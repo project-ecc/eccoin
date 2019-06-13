@@ -350,7 +350,6 @@ static const CRPCCommand vRPCCommands[] = {
     {"util", "createmultisig", &createmultisig, true},
     {"util", "validateaddress", &validateaddress, true}, /* uses wallet if enabled */
     {"util", "verifymessage", &verifymessage, true}, {"util", "estimatefee", &estimatefee, true},
-    {"util", "estimatesmartfee", &estimatesmartfee, true},
 
     /* Not shown in help */
     {"hidden", "invalidateblock", &invalidateblock, true}, {"hidden", "reconsiderblock", &reconsiderblock, true},

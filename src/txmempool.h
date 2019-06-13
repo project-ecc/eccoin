@@ -694,12 +694,6 @@ public:
     bool lookup(const uint256 &hash, CTransaction &result) const;
     bool _lookup(const uint256 &hash, CTransaction &result) const;
 
-    /** Estimate fee rate needed to get into the next nBlocks
-     *  If no answer can be given at nBlocks, return an estimate
-     *  at the lowest number of blocks where one can be given
-     */
-    CFeeRate estimateSmartFee(int nBlocks, int *answerFoundAtBlocks = NULL) const;
-
     /** Estimate fee rate needed to get into the next nBlocks */
     CFeeRate estimateFee(int nBlocks) const;
 

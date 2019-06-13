@@ -558,34 +558,6 @@ CFeeRate CBlockPolicyEstimator::estimateFee(int confTarget)
     return CFeeRate(median);
 }
 
-CFeeRate CBlockPolicyEstimator::estimateSmartFee(int confTarget, int *answerFoundAtTarget, const CTxMemPool &pool)
-{
-    if (answerFoundAtTarget)
-        *answerFoundAtTarget = confTarget;
-    // Return failure if trying to analyze a target we're not tracking
-    if (confTarget <= 0 || (unsigned int)confTarget > feeStats.GetMaxConfirms())
-        return CFeeRate(0);
-
-    double median = -1;
-    while (median < 0 && (unsigned int)confTarget <= feeStats.GetMaxConfirms())
-    {
-        median = feeStats.EstimateMedianVal(confTarget++, SUFFICIENT_FEETXS, MIN_SUCCESS_PCT, true, nBestSeenHeight);
-    }
-
-    if (answerFoundAtTarget)
-        *answerFoundAtTarget = confTarget - 1;
-
-    // If mempool is limiting txs , return at least the min fee from the mempool
-    CAmount minPoolFee = pool.GetMinFee(gArgs.GetArg("-maxmempool", DEFAULT_MAX_MEMPOOL_SIZE) * 1000000).GetFeePerK();
-    if (minPoolFee > 0 && minPoolFee > median)
-        return CFeeRate(minPoolFee);
-
-    if (median < 0)
-        return CFeeRate(0);
-
-    return CFeeRate(median);
-}
-
 void CBlockPolicyEstimator::Write(CAutoFile &fileout)
 {
     fileout << nBestSeenHeight;

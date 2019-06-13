@@ -73,7 +73,7 @@ static const unsigned int MAX_SUBVERSION_LENGTH = 256;
 /** The maximum number of peer connections to maintain. */
 static const unsigned int DEFAULT_MAX_PEER_CONNECTIONS = 125;
 /** Maximum number of automatic outgoing nodes */
-static const int MAX_OUTBOUND_CONNECTIONS = DEFAULT_MAX_PEER_CONNECTIONS * 3 / 5;
+static const int MAX_OUTBOUND_CONNECTIONS = 75;
 /** Maximum number of addnode outgoing nodes */
 static const int MAX_ADDNODE_CONNECTIONS = 16;
 /** -listen default */
@@ -317,7 +317,6 @@ public:
 
     CNode(NodeId id,
         ServiceFlags nLocalServicesIn,
-        int nMyStartingHeightIn,
         SOCKET hSocketIn,
         const CAddress &addrIn,
         uint64_t nKeyedNetGroupIn,
@@ -332,7 +331,6 @@ private:
 
     // Services offered to this peer
     const ServiceFlags nLocalServices;
-    const int nMyStartingHeight;
     int nSendVersion;
     // Used only by SocketHandler thread.
     std::list<CNetMessage> vRecvMsg;
@@ -345,7 +343,6 @@ private:
 
 public:
     NodeId GetId() const { return id; }
-    int GetMyStartingHeight() const { return nMyStartingHeight; }
     int GetRefCount()
     {
         assert(nRefCount >= 0);

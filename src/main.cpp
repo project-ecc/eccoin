@@ -22,6 +22,7 @@
 
 #include "args.h"
 #include "arith_uint256.h"
+#include "blockstorage/blockstorage.h"
 #include "chain/chain.h"
 #include "chain/checkpoints.h"
 #include "checkqueue.h"
@@ -55,7 +56,6 @@
 #include "util/utilmoneystr.h"
 #include "util/utilstrencodings.h"
 #include "validationinterface.h"
-#include "versionbits.h"
 
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/foreach.hpp>
@@ -66,12 +66,6 @@
 #include <random>
 #include <random>
 #include <sstream>
-
-/**
- * Global state
- */
-
-CCriticalSection cs_main;
 
 
 int64_t nTimeBestReceived = 0;
@@ -94,11 +88,8 @@ CFeeRate minRelayTxFee = CFeeRate(DEFAULT_MIN_RELAY_TX_FEE);
 
 CTxMemPool mempool(::minRelayTxFee);
 
-
-std::map<uint256, COrphanTx> mapOrphanTransactions GUARDED_BY(cs_main);
-;
-std::map<uint256, std::set<uint256> > mapOrphanTransactionsByPrev GUARDED_BY(cs_main);
-;
+std::map<uint256, COrphanTx> mapOrphanTransactions GUARDED_BY(cs_orphans);
+std::map<uint256, std::set<uint256> > mapOrphanTransactionsByPrev GUARDED_BY(cs_orphans);
 
 
 /**
@@ -124,9 +115,6 @@ CBlockIndex *pindexBestInvalid;
  * missing the data for the block.
  */
 std::set<CBlockIndex *, CBlockIndexWorkComparator> setBlockIndexCandidates;
-
-/** Number of nodes with fSyncStarted. */
-int nSyncStarted = 0;
 
 /** All pairs A->B, where A (or one of its ancestors) misses transactions, but B has transactions.
  * Pruned nodes may have entries where B is missing data.
@@ -443,11 +431,10 @@ unsigned int GetP2SHSigOpCount(const CTransaction &tx, const CCoinsViewCache &in
     unsigned int nSigOps = 0;
     for (unsigned int i = 0; i < tx.vin.size(); i++)
     {
-        const CTxOut &prevout = inputs.AccessCoin(tx.vin[i].prevout).out;
-        if (prevout.scriptPubKey.IsPayToScriptHash())
-        {
-            nSigOps += prevout.scriptPubKey.GetSigOpCount(tx.vin[i].scriptSig);
-        }
+        CoinAccessor coin(inputs, tx.vin[i].prevout);
+        assert(!coin->IsSpent());
+        if (coin && coin->out.scriptPubKey.IsPayToScriptHash())
+            nSigOps += coin->out.scriptPubKey.GetSigOpCount(tx.vin[i].scriptSig);
     }
     return nSigOps;
 }
@@ -622,8 +609,8 @@ bool AcceptToMemoryPoolWorker(CTxMemPool &pool,
         bool fSpendsCoinbase = false;
         for (auto const &txin : tx.vin)
         {
-            const Coin coin = view.AccessCoin(txin.prevout);
-            if (coin.IsCoinBase())
+            CoinAccessor coin(view, txin.prevout);
+            if (coin->IsCoinBase())
             {
                 fSpendsCoinbase = true;
                 break;
@@ -822,6 +809,7 @@ bool AcceptToMemoryPool(CTxMemPool &pool,
     bool fRejectAbsurdFee)
 {
     std::vector<COutPoint> vCoinsToUncache;
+    LOCK(cs_main);
     bool res = AcceptToMemoryPoolWorker(
         pool, state, tx, fLimitFree, pfMissingInputs, fOverrideMempoolLimit, fRejectAbsurdFee, vCoinsToUncache);
     if (pfMissingInputs && !res && !*pfMissingInputs)
@@ -838,95 +826,6 @@ bool AcceptToMemoryPool(CTxMemPool &pool,
 //
 // CBlock and CBlockIndex
 //
-
-bool WriteBlockToDisk(const CBlock &block, CDiskBlockPos &pos, const CMessageHeader::MessageMagic &messageStart)
-{
-    // Open history file to append
-    CAutoFile fileout(OpenBlockFile(pos), SER_DISK, CLIENT_VERSION);
-    if (fileout.IsNull())
-        return error("WriteBlockToDisk: OpenBlockFile failed");
-
-    // Write index header
-    unsigned int nSize = GetSerializeSize(fileout, block);
-    fileout << FLATDATA(messageStart) << nSize;
-
-    // Write block
-    long fileOutPos = ftell(fileout.Get());
-    if (fileOutPos < 0)
-        return error("WriteBlockToDisk: ftell failed");
-    pos.nPos = (unsigned int)fileOutPos;
-    fileout << block;
-
-    return true;
-}
-
-bool ReadBlockFromDisk(CBlock &block, const CDiskBlockPos &pos, const Consensus::Params &consensusParams)
-{
-    block.SetNull();
-
-    // Open history file to read
-    CAutoFile filein(OpenBlockFile(pos, true), SER_DISK, CLIENT_VERSION);
-    if (filein.IsNull())
-        return error("ReadBlockFromDisk: OpenBlockFile failed for %s", pos.ToString());
-
-    // Read block
-    try
-    {
-        filein >> block;
-    }
-    catch (const std::exception &e)
-    {
-        return error("%s: Deserialize or I/O error - %s at %s", __func__, e.what(), pos.ToString());
-    }
-
-    // Check the header
-    if (block.IsProofOfWork())
-    {
-        if (!CheckProofOfWork(block.GetHash(), block.nBits, consensusParams))
-            return error("ReadBlockFromDisk: Errors in block header at %s", pos.ToString());
-    }
-    return true;
-}
-
-bool ReadBlockFromDisk(CBlock &block, const CBlockIndex *pindex, const Consensus::Params &consensusParams)
-{
-    if (!pindex)
-    {
-        return false;
-    }
-    if (!ReadBlockFromDisk(block, pindex->GetBlockPos(), consensusParams))
-    {
-        return false;
-    }
-    if (block.GetHash() != pindex->GetBlockHash())
-    {
-        return error("ReadBlockFromDisk(CBlock&, CBlockIndex*): GetHash() doesn't match index for %s at %s",
-            pindex->ToString(), pindex->GetBlockPos().ToString());
-    }
-    return true;
-}
-
-void UpdateCoins(const CTransaction &tx, CValidationState &state, CCoinsViewCache &inputs, CTxUndo &txundo, int nHeight)
-{
-    // mark inputs spent
-    if (!tx.IsCoinBase())
-    {
-        txundo.vprevout.reserve(tx.vin.size());
-        for (auto const &txin : tx.vin)
-        {
-            txundo.vprevout.emplace_back();
-            inputs.SpendCoin(txin.prevout, &txundo.vprevout.back());
-        }
-    }
-    // add outputs
-    AddCoins(inputs, tx, nHeight);
-}
-
-void UpdateCoins(const CTransaction &tx, CValidationState &state, CCoinsViewCache &inputs, int nHeight)
-{
-    CTxUndo txundo;
-    UpdateCoins(tx, state, inputs, txundo, nHeight);
-}
 
 bool CScriptCheck::operator()()
 {
@@ -960,7 +859,8 @@ bool CheckTxInputs(const CTransaction &tx, CValidationState &state, const CCoins
     for (uint64_t i = 0; i < tx.vin.size(); i++)
     {
         const COutPoint &prevout = tx.vin[i].prevout;
-        const Coin &coin = inputs.AccessCoin(prevout);
+        Coin coin;
+        inputs.GetCoin(prevout, coin); // Make a copy so I don't hold the utxo lock
         assert(!coin.IsSpent());
 
         // If prev is coinbase or coinstake, check that it's matured
@@ -1045,16 +945,16 @@ bool CheckInputs(const CTransaction &tx,
             for (unsigned int i = 0; i < tx.vin.size(); i++)
             {
                 const COutPoint &prevout = tx.vin[i].prevout;
-                const Coin &coin = inputs.AccessCoin(prevout);
-                assert(!coin.IsSpent());
+                CoinAccessor coin(inputs, prevout);
+                assert(!coin->IsSpent());
 
                 // We very carefully only pass in things to CScriptCheck which
                 // are clearly committed. This provides
                 // a sanity check that our caching is not introducing consensus
                 // failures through additional data in, eg, the coins being
                 // spent being checked as a part of CScriptCheck.
-                const CScript &scriptPubKey = coin.out.scriptPubKey;
-                const CAmount amount = coin.out.nValue;
+                const CScript &scriptPubKey = coin->out.scriptPubKey;
+                const CAmount amount = coin->out.nValue;
 
                 // Verify signature
                 CScriptCheck check(scriptPubKey, amount, tx, i, flags, cacheStore);
@@ -1140,29 +1040,6 @@ void static FlushBlockFile(bool fFinalize = false)
     }
 }
 
-// Protected by cs_main
-VersionBitsCache versionbitscache;
-
-int32_t ComputeBlockVersion(const CBlockIndex *pindexPrev, const Consensus::Params &params)
-{
-    LOCK(cs_main);
-    int32_t nVersion = VERSIONBITS_TOP_BITS;
-
-    for (int i = 0; i < (int)Consensus::MAX_VERSION_BITS_DEPLOYMENTS; i++)
-    {
-        ThresholdState state = VersionBitsState(pindexPrev, params, (Consensus::DeploymentPos)i, versionbitscache);
-        if (state == THRESHOLD_LOCKED_IN || state == THRESHOLD_STARTED)
-        {
-            nVersion |= VersionBitsMask(params, (Consensus::DeploymentPos)i);
-        }
-    }
-
-    return nVersion;
-}
-
-// Protected by cs_main
-ThresholdConditionCache warningcache[VERSIONBITS_NUM_BITS];
-
 /**
  * Update the on-disk chain state.
  * The caches and indexes are flushed depending on the mode we're called with
@@ -1171,97 +1048,110 @@ ThresholdConditionCache warningcache[VERSIONBITS_NUM_BITS];
  */
 bool FlushStateToDisk(CValidationState &state, FlushStateMode mode)
 {
-    LOCK2(cs_main, cs_LastBlockFile);
     static int64_t nLastWrite = 0;
     static int64_t nLastFlush = 0;
     static int64_t nLastSetChain = 0;
-    try
+    int64_t nNow = GetTimeMicros();
+    // Avoid writing/flushing immediately after startup.
+    if (nLastWrite == 0)
     {
-        int64_t nNow = GetTimeMicros();
-        // Avoid writing/flushing immediately after startup.
-        if (nLastWrite == 0)
-        {
-            nLastWrite = nNow;
-        }
-        if (nLastFlush == 0)
-        {
-            nLastFlush = nNow;
-        }
-        if (nLastSetChain == 0)
-        {
-            nLastSetChain = nNow;
-        }
-        size_t cacheSize = pnetMan->getChainActive()->pcoinsTip->DynamicMemoryUsage();
-        // The cache is large and close to the limit, but we have time now (not in the middle of a block processing).
-        bool fCacheLarge = mode == FLUSH_STATE_PERIODIC && cacheSize * (10.0 / 9) > nCoinCacheUsage;
-        // The cache is over the limit, we have to write now.
-        bool fCacheCritical = mode == FLUSH_STATE_IF_NEEDED && cacheSize > nCoinCacheUsage;
-        // It's been a while since we wrote the block index to disk. Do this frequently, so we don't need to redownload
-        // after a crash.
-        bool fPeriodicWrite =
-            mode == FLUSH_STATE_PERIODIC && nNow > nLastWrite + (int64_t)DATABASE_WRITE_INTERVAL * 1000000;
-        // It's been very long since we flushed the cache. Do this infrequently, to optimize cache usage.
-        bool fPeriodicFlush =
-            mode == FLUSH_STATE_PERIODIC && nNow > nLastFlush + (int64_t)DATABASE_FLUSH_INTERVAL * 1000000;
-        // Combine all conditions that result in a full cache flush.
-        bool fDoFullFlush = (mode == FLUSH_STATE_ALWAYS) || fCacheLarge || fCacheCritical || fPeriodicFlush;
-        // Write blocks and block index to disk.
-        if (fDoFullFlush || fPeriodicWrite)
-        {
-            // Depend on nMinDiskSpace to ensure we can write block index
-            if (!CheckDiskSpace(0))
-                return state.Error("out of disk space");
-            // First make sure all block and undo data is flushed to disk.
-            FlushBlockFile();
-            // Then update all block file information (which may refer to block and undo files).
-            {
-                std::vector<std::pair<int, const CBlockFileInfo *> > vFiles;
-                vFiles.reserve(setDirtyFileInfo.size());
-                for (std::set<int>::iterator it = setDirtyFileInfo.begin(); it != setDirtyFileInfo.end();)
-                {
-                    vFiles.push_back(std::make_pair(*it, &vinfoBlockFile[*it]));
-                    setDirtyFileInfo.erase(it++);
-                }
-                std::vector<const CBlockIndex *> vBlocks;
-                vBlocks.reserve(setDirtyBlockIndex.size());
-                for (std::set<CBlockIndex *>::iterator it = setDirtyBlockIndex.begin(); it != setDirtyBlockIndex.end();)
-                {
-                    vBlocks.push_back(*it);
-                    setDirtyBlockIndex.erase(it++);
-                }
-                if (!pnetMan->getChainActive()->pblocktree->WriteBatchSync(vFiles, nLastBlockFile, vBlocks))
-                {
-                    return AbortNode(state, "Files to write to block index database");
-                }
-            }
-            nLastWrite = nNow;
-        }
-        // Flush best chain related state. This can only be done if the blocks / block index write was also done.
-        if (fDoFullFlush)
-        {
-            // Typical CCoins structures on disk are around 128 bytes in size.
-            // Pushing a new one to the database can cause it to be written
-            // twice (once in the log, and once in the tables). This is already
-            // an overestimation, as most will delete an existing entry or
-            // overwrite one. Still, use a conservative safety factor of 2.
-            if (!CheckDiskSpace(128 * 2 * 2 * pnetMan->getChainActive()->pcoinsTip->GetCacheSize()))
-                return state.Error("out of disk space");
-            // Flush the chainstate (which may refer to block index entries).
-            if (!pnetMan->getChainActive()->pcoinsTip->Flush())
-                return AbortNode(state, "Failed to write to coin database");
-            nLastFlush = nNow;
-        }
-        if (fDoFullFlush || ((mode == FLUSH_STATE_ALWAYS || mode == FLUSH_STATE_PERIODIC) &&
-                                nNow > nLastSetChain + (int64_t)DATABASE_WRITE_INTERVAL * 1000000))
-        {
-            // Update best block in wallet (so we can detect restored wallets).
-            GetMainSignals().SetBestChain(pnetMan->getChainActive()->chainActive.GetLocator());
-            nLastSetChain = nNow;
-        }
+        nLastWrite = nNow;
     }
-    catch (const std::runtime_error &e)
+    if (nLastFlush == 0)
     {
-        return AbortNode(state, std::string("System error while flushing: ") + e.what());
+        nLastFlush = nNow;
+    }
+    if (nLastSetChain == 0)
+    {
+        nLastSetChain = nNow;
+    }
+    size_t cacheSize = pnetMan->getChainActive()->pcoinsTip->DynamicMemoryUsage();
+    static int64_t nSizeAfterLastFlush = 0;
+    // The cache is close to the limit. Try to flush and trim.
+    bool fCacheCritical = ((mode == FLUSH_STATE_IF_NEEDED) && (cacheSize > nCoinCacheUsage * 0.995)) ||
+                          (cacheSize - nSizeAfterLastFlush > (int64_t)nMaxCacheIncreaseSinceLastFlush);
+    // It's been a while since we wrote the block index to disk. Do this frequently, so we don't need to redownload
+    // after a crash.
+    bool fPeriodicWrite =
+        mode == FLUSH_STATE_PERIODIC && nNow > nLastWrite + (int64_t)DATABASE_WRITE_INTERVAL * 1000000;
+    // It's been very long since we flushed the cache. Do this infrequently, to optimize cache usage.
+    bool fPeriodicFlush =
+        mode == FLUSH_STATE_PERIODIC && nNow > nLastFlush + (int64_t)DATABASE_FLUSH_INTERVAL * 1000000;
+    // Combine all conditions that result in a full cache flush.
+    bool fDoFullFlush = (mode == FLUSH_STATE_ALWAYS) || fCacheCritical || fPeriodicFlush;
+    // Write blocks and block index to disk.
+    if (fDoFullFlush || fPeriodicWrite)
+    {
+        // Depend on nMinDiskSpace to ensure we can write block index
+        if (!CheckDiskSpace(0))
+        {
+            return state.Error("out of disk space");
+        }
+        FlushBlockFile();
+        // Then update all block file information (which may refer to block and undo files).
+        {
+            std::vector<std::pair<int, const CBlockFileInfo *> > vFiles;
+            vFiles.reserve(setDirtyFileInfo.size());
+            for (std::set<int>::iterator it = setDirtyFileInfo.begin(); it != setDirtyFileInfo.end();)
+            {
+                vFiles.push_back(std::make_pair(*it, &vinfoBlockFile[*it]));
+                setDirtyFileInfo.erase(it++);
+            }
+            std::vector<const CBlockIndex *> vBlocks;
+            vBlocks.reserve(setDirtyBlockIndex.size());
+            for (std::set<CBlockIndex *>::iterator it = setDirtyBlockIndex.begin(); it != setDirtyBlockIndex.end();)
+            {
+                vBlocks.push_back(*it);
+                setDirtyBlockIndex.erase(it++);
+            }
+            if (!pnetMan->getChainActive()->pblocktree->WriteBatchSync(vFiles, nLastBlockFile, vBlocks))
+            {
+                return AbortNode(state, "Files to write to block index database");
+            }
+        }
+        nLastWrite = nNow;
+    }
+    // Flush best chain related state. This can only be done if the blocks / block index write was also done.
+    if (fDoFullFlush)
+    {
+        // Typical Coin structures on disk are around 48 bytes in size.
+        // Pushing a new one to the database can cause it to be written
+        // twice (once in the log, and once in the tables). This is already
+        // an overestimation, as most will delete an existing entry or
+        // overwrite one. Still, use a conservative safety factor of 2.
+        if (!CheckDiskSpace(48 * 2 * 2 * pnetMan->getChainActive()->pcoinsTip->GetCacheSize()))
+        {
+            return state.Error("out of disk space");
+        }
+        // Flush the chainstate (which may refer to block index entries).
+        if (!pnetMan->getChainActive()->pcoinsTip->Flush())
+        {
+            return AbortNode(state, "Failed to write to coin database");
+        }
+        nLastFlush = nNow;
+        // Trim, but never trim more than nMaxCacheIncreaseSinceLastFlush
+        size_t nTrimSize = nCoinCacheUsage * .90;
+        if (nCoinCacheUsage - nMaxCacheIncreaseSinceLastFlush > nTrimSize)
+        {
+            nTrimSize = nCoinCacheUsage - nMaxCacheIncreaseSinceLastFlush;
+        }
+        pnetMan->getChainActive()->pcoinsTip->Trim(nTrimSize);
+        nSizeAfterLastFlush = pnetMan->getChainActive()->pcoinsTip->DynamicMemoryUsage();
+    }
+    if (fDoFullFlush || ((mode == FLUSH_STATE_ALWAYS || mode == FLUSH_STATE_PERIODIC) &&
+                            nNow > nLastSetChain + (int64_t)DATABASE_WRITE_INTERVAL * 1000000))
+    {
+        // Update best block in wallet (so we can detect restored wallets).
+        GetMainSignals().SetBestChain(pnetMan->getChainActive()->chainActive.GetLocator());
+        nLastSetChain = nNow;
+    }
+
+    // As a safeguard, periodically check and correct any drift in the value of cachedCoinsUsage.  While a
+    // correction should never be needed, resetting the value allows the node to continue operating, and only
+    // an error is reported if the new and old values do not match.
+    if (fPeriodicFlush)
+    {
+        pnetMan->getChainActive()->pcoinsTip->ResetCachedCoinUsage();
     }
     return true;
 }
@@ -1275,6 +1165,10 @@ void FlushStateToDisk()
 /** Delete all entries in setBlockIndexCandidates that are worse than the current tip. */
 void PruneBlockIndexCandidates()
 {
+    AssertLockHeld(cs_main);
+    if (setBlockIndexCandidates.empty())
+        return; // nothing to prune
+
     // Note that we can't delete the current block itself, as we may need to return to it later in case a
     // reorganization to a better block fails.
     std::set<CBlockIndex *, CBlockIndexWorkComparator>::iterator it = setBlockIndexCandidates.begin();
@@ -1283,15 +1177,12 @@ void PruneBlockIndexCandidates()
     {
         setBlockIndexCandidates.erase(it++);
     }
-    // Either the current tip or a successor of it we're working towards is left in setBlockIndexCandidates.
-    assert(!setBlockIndexCandidates.empty());
 }
 
 
 bool InvalidateBlock(CValidationState &state, const Consensus::Params &consensusParams, CBlockIndex *pindex)
 {
-    AssertLockHeld(cs_main);
-
+    WRITELOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
     // Mark the block itself as invalid.
     pindex->nStatus |= BLOCK_FAILED_VALID;
     setDirtyBlockIndex.insert(pindex);
@@ -1316,20 +1207,15 @@ bool InvalidateBlock(CValidationState &state, const Consensus::Params &consensus
     LimitMempoolSize(mempool, gArgs.GetArg("-maxmempool", DEFAULT_MAX_MEMPOOL_SIZE) * 1000000,
         gArgs.GetArg("-mempoolexpiry", DEFAULT_MEMPOOL_EXPIRY) * 60 * 60);
 
-    // The resulting new best tip may not be in setBlockIndexCandidates anymore, so
-    // add it again.
+    BlockMap::iterator it = pnetMan->getChainActive()->mapBlockIndex.begin();
+    while (it != pnetMan->getChainActive()->mapBlockIndex.end())
     {
-        READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
-        BlockMap::iterator it = pnetMan->getChainActive()->mapBlockIndex.begin();
-        while (it != pnetMan->getChainActive()->mapBlockIndex.end())
+        if (it->second->IsValid(BLOCK_VALID_TRANSACTIONS) && it->second->nChainTx &&
+            !setBlockIndexCandidates.value_comp()(it->second, pnetMan->getChainActive()->chainActive.Tip()))
         {
-            if (it->second->IsValid(BLOCK_VALID_TRANSACTIONS) && it->second->nChainTx &&
-                !setBlockIndexCandidates.value_comp()(it->second, pnetMan->getChainActive()->chainActive.Tip()))
-            {
-                setBlockIndexCandidates.insert(it->second);
-            }
-            it++;
+            setBlockIndexCandidates.insert(it->second);
         }
+        it++;
     }
 
     InvalidChainFound(pindex);
@@ -1340,11 +1226,8 @@ bool InvalidateBlock(CValidationState &state, const Consensus::Params &consensus
 
 bool ReconsiderBlock(CValidationState &state, CBlockIndex *pindex)
 {
-    AssertLockHeld(cs_main);
-
     int nHeight = pindex->nHeight;
-
-    READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+    WRITELOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
     // Remove the invalidity flag from this block
     if (!pindex->IsValid())
     {
@@ -1361,7 +1244,6 @@ bool ReconsiderBlock(CValidationState &state, CBlockIndex *pindex)
             pindexBestInvalid = NULL;
         }
     }
-
     // Remove the invalidity flag from all descendants.
     BlockMap::iterator it = pnetMan->getChainActive()->mapBlockIndex.begin();
     while (it != pnetMan->getChainActive()->mapBlockIndex.end())
@@ -1679,8 +1561,12 @@ bool ContextualCheckBlock(const CBlock &block, CValidationState &state, CBlockIn
     int nLockTimeFlags = 0;
     nLockTimeFlags |= LOCKTIME_MEDIAN_TIME_PAST;
 
-    int64_t nLockTimeCutoff =
-        (nLockTimeFlags & LOCKTIME_MEDIAN_TIME_PAST) ? pindexPrev->GetMedianTimePast() : block.GetBlockTime();
+    int64_t nLockTimeCutoff;
+    if (pindexPrev == nullptr)
+        nLockTimeCutoff = block.GetBlockTime();
+    else
+        nLockTimeCutoff =
+            (nLockTimeFlags & LOCKTIME_MEDIAN_TIME_PAST) ? pindexPrev->GetMedianTimePast() : block.GetBlockTime();
 
     // Check that all transactions are finalized
     for (auto const &tx : block.vtx)
@@ -1752,40 +1638,6 @@ bool CheckDiskSpace(uint64_t nAdditionalBytes)
     return true;
 }
 
-FILE *OpenDiskFile(const CDiskBlockPos &pos, const char *prefix, bool fReadOnly)
-{
-    if (pos.IsNull())
-        return NULL;
-    fs::path path = GetBlockPosFilename(pos, prefix);
-    fs::create_directories(path.parent_path());
-    FILE *file = fopen(path.string().c_str(), fReadOnly ? "rb" : "rb+");
-    if (!file && !fReadOnly)
-        file = fopen(path.string().c_str(), "wb+");
-    if (!file)
-    {
-        LogPrintf("Unable to open file %s\n", path.string());
-        return NULL;
-    }
-    if (pos.nPos)
-    {
-        if (fseek(file, pos.nPos, SEEK_SET))
-        {
-            LogPrintf("Unable to seek to position %u of %s\n", pos.nPos, path.string());
-            fclose(file);
-            return NULL;
-        }
-    }
-    return file;
-}
-
-FILE *OpenBlockFile(const CDiskBlockPos &pos, bool fReadOnly) { return OpenDiskFile(pos, "blk", fReadOnly); }
-FILE *OpenUndoFile(const CDiskBlockPos &pos, bool fReadOnly) { return OpenDiskFile(pos, "rev", fReadOnly); }
-fs::path GetBlockPosFilename(const CDiskBlockPos &pos, const char *prefix)
-{
-    return GetDataDir() / "blocks" / strprintf("%s%05u.dat", prefix, pos.nFile);
-}
-
-
 //////////////////////////////////////////////////////////////////////////////
 //
 // CAlert
@@ -1835,24 +1687,6 @@ std::string CBlockFileInfo::ToString() const
     return strprintf("CBlockFileInfo(blocks=%u, size=%u, heights=%u...%u, time=%s...%s)", nBlocks, nSize, nHeightFirst,
         nHeightLast, DateTimeStrFormat("%Y-%m-%d", nTimeFirst), DateTimeStrFormat("%Y-%m-%d", nTimeLast));
 }
-
-ThresholdState VersionBitsTipState(const Consensus::Params &params, Consensus::DeploymentPos pos)
-{
-    LOCK(cs_main);
-    return VersionBitsState(pnetMan->getChainActive()->chainActive.Tip(), params, pos, versionbitscache);
-}
-
-class CMainCleanup
-{
-public:
-    CMainCleanup() {}
-    ~CMainCleanup()
-    {
-        // orphan transactions
-        mapOrphanTransactions.clear();
-        mapOrphanTransactionsByPrev.clear();
-    }
-} instance_of_cmaincleanup;
 
 // ppcoin: find last block index up to pindex
 const CBlockIndex *GetLastBlockIndex(const CBlockIndex *pindex, bool fProofOfStake)

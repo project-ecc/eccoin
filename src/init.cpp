@@ -23,6 +23,7 @@
 #include "amount.h"
 #include "args.h"
 #include "blockgeneration/blockgeneration.h"
+#include "blockstorage/blockstorage.h"
 #include "chain/chain.h"
 #include "chain/checkpoints.h"
 #include "compat/sanity.h"
@@ -85,7 +86,6 @@ std::unique_ptr<PeerLogicValidation> peerLogic;
 
 bool fFeeEstimatesInitialized = false;
 static const bool DEFAULT_PROXYRANDOMIZE = true;
-static const bool DEFAULT_REST_ENABLE = false;
 static const bool DEFAULT_DISABLE_SAFEMODE = false;
 static const bool DEFAULT_STOPAFTERBLOCKIMPORT = false;
 
@@ -184,12 +184,11 @@ void Interrupt(thread_group &threadGroup)
     InterruptHTTPServer();
     InterruptHTTPRPC();
     InterruptRPC();
-    InterruptREST();
     InterruptTorControl();
     InterruptScriptCheck();
 }
 
-void Shutdown()
+void Shutdown(thread_group &threadGroup)
 {
     LogPrintf("%s: In progress...\n", __func__);
     static CCriticalSection cs_Shutdown;
@@ -198,6 +197,7 @@ void Shutdown()
     {
         return;
     }
+    threadGroup.join_all();
 
     /// Note: Shutdown() must be able to handle cases in which AppInit2() failed part of the way,
     /// for example if the data directory was found to be locked.
@@ -206,8 +206,17 @@ void Shutdown()
     RenameThread("bitcoin-shutoff");
     mempool.AddTransactionsUpdated(1);
 
+    {
+        LOCK(cs_main);
+        if (pnetMan->getChainActive()->pcoinsTip != nullptr)
+        {
+            // Flush state and clear cache completely to release as much memory as possible before continuing.
+            FlushStateToDisk();
+            pnetMan->getChainActive()->pcoinsTip->Clear();
+        }
+    }
+
     StopHTTPRPC();
-    StopREST();
     StopRPC();
     StopHTTPServer();
 
@@ -242,24 +251,18 @@ void Shutdown()
 
     {
         LOCK(cs_main);
-        if (pnetMan)
+        if (pnetMan->getChainActive()->pcoinsTip != nullptr)
         {
-            if (pnetMan->getChainActive()->pcoinsTip != nullptr)
-            {
-                FlushStateToDisk();
-            }
-            pnetMan->getChainActive()->pcoinsTip.reset();
-            pnetMan->getChainActive()->pcoinsTip = nullptr;
+            FlushStateToDisk();
         }
+        pnetMan->getChainActive()->pcoinsTip.reset();
+        pnetMan->getChainActive()->pcoinsTip = nullptr;
         pcoinscatcher.reset();
         pcoinscatcher = nullptr;
         pcoinsdbview.reset();
         pcoinsdbview = nullptr;
-        if (pnetMan)
-        {
-            pnetMan->getChainActive()->pblocktree.reset();
-            pnetMan->getChainActive()->pblocktree = nullptr;
-        }
+        pnetMan->getChainActive()->pblocktree.reset();
+        pnetMan->getChainActive()->pblocktree = nullptr;
     }
 
     if (pwalletMain)
@@ -612,7 +615,6 @@ std::string HelpMessage()
 
     strUsage += HelpMessageGroup(("RPC server options:"));
     strUsage += HelpMessageOpt("-server", ("Accept command line and JSON-RPC commands"));
-    strUsage += HelpMessageOpt("-rest", strprintf(("Accept public REST requests (default: %u)"), DEFAULT_REST_ENABLE));
     strUsage += HelpMessageOpt(
         "-rpcbind=<addr>", ("Bind to given address to listen for JSON-RPC connections. Use [host]:port notation for "
                             "IPv6. This option can be specified multiple times (default: bind to all interfaces)"));
@@ -699,10 +701,14 @@ void ThreadImport(std::vector<fs::path> vImportFiles)
         {
             CDiskBlockPos pos(nFile, 0);
             if (!fs::exists(GetBlockPosFilename(pos, "blk")))
+            {
                 break; // No block files left to reindex
+            }
             FILE *file = OpenBlockFile(pos, true);
             if (!file)
+            {
                 break; // This error is logged in OpenBlockFile
+            }
             LogPrintf("Reindexing block file blk%05u.dat...\n", (unsigned int)nFile);
             pnetMan->getChainActive()->LoadExternalBlockFile(chainparams, file, &pos);
             nFile++;
@@ -782,8 +788,6 @@ bool AppInitServers(thread_group &threadGroup)
     if (!StartRPC())
         return false;
     if (!StartHTTPRPC())
-        return false;
-    if (gArgs.GetBoolArg("-rest", DEFAULT_REST_ENABLE) && !StartREST())
         return false;
     if (!StartHTTPServer())
         return false;
@@ -970,18 +974,16 @@ bool AppInit2(thread_group &threadGroup)
     // Trim requested connection counts, to fit into system limitations
     initMaxConnections =
         std::max(std::min(initMaxConnections, (int)(FD_SETSIZE - nBind - MIN_CORE_FILEDESCRIPTORS)), 0);
-    initFD = RaiseFileDescriptorLimit(initMaxConnections + MIN_CORE_FILEDESCRIPTORS);
-    if (initFD < MIN_CORE_FILEDESCRIPTORS)
+    int nFD = RaiseFileDescriptorLimit(initMaxConnections + MIN_CORE_FILEDESCRIPTORS);
+    if (nFD < MIN_CORE_FILEDESCRIPTORS)
     {
-        return InitError(("Not enough file descriptors available."));
+        return InitError("Not enough file descriptors available.");
     }
-    initMaxConnections = std::min(initFD - MIN_CORE_FILEDESCRIPTORS, initMaxConnections);
+    initMaxConnections = std::min(nFD - MIN_CORE_FILEDESCRIPTORS, initMaxConnections);
 
     if (initMaxConnections < nUserMaxConnections)
     {
-        LogPrintf("Reducing -maxconnections from %d to %d, because of system limitations.", nUserMaxConnections,
-            initMaxConnections);
-        InitWarning(strprintf(("Reducing -maxconnections from %d to %d, because of system limitations."),
+        InitWarning(strprintf("Reducing -maxconnections from %d to %d, because of system limitations.",
             nUserMaxConnections, initMaxConnections));
     }
 
@@ -1446,7 +1448,6 @@ bool AppInit2(thread_group &threadGroup)
     LogPrintf("* Using %.1fMiB for chain state database\n", nCoinDBCache * (1.0 / 1024 / 1024));
     LogPrintf("* Using %.1fMiB for in-memory UTXO set\n", nCoinCacheUsage * (1.0 / 1024 / 1024));
 
-    LOCK(cs_main);
     bool fLoaded = false;
     while (!fLoaded)
     {
@@ -1506,21 +1507,6 @@ bool AppInit2(thread_group &threadGroup)
                 {
                     strLoadError = ("Error initializing block database");
                     break;
-                }
-
-                /// check for services folder, if does not exist. make it
-                fs::path servicesFolder = (GetDataDir() / "services");
-                if (fs::exists(servicesFolder))
-                {
-                    if (!fs::is_directory(servicesFolder))
-                    {
-                        LogPrintf("services exists but is not a folder, check your eccoin data files \n");
-                        assert(false);
-                    }
-                }
-                else
-                {
-                    fs::create_directory(servicesFolder);
                 }
 
                 // verify the blocks
@@ -1669,7 +1655,7 @@ bool AppInit2(thread_group &threadGroup)
     // ********************************************************* Step 12: finished
 
     SetRPCWarmupFinished();
-    LogPrintf("Done loading");
+    LogPrintf("Done loading\n");
 
 
     if (pwalletMain)

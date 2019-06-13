@@ -437,19 +437,19 @@ void EccMiner(CWallet *pwallet)
     unsigned int nExtraNonce = 0;
     while (true)
     {
-        if (shutdown_threads.load())
+        if (shutdown_threads.load() || shutdown_miner_threads.load())
             return;
         if (!g_connman)
         {
             MilliSleep(1000);
-            if (shutdown_threads.load())
+            if (shutdown_threads.load() || shutdown_miner_threads.load())
                 return;
         }
         while (g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL) < DEFAULT_MIN_BLOCK_GEN_PEERS ||
                pnetMan->getChainActive()->IsInitialBlockDownload() || pwallet->IsLocked())
         {
             MilliSleep(1000);
-            if (shutdown_threads.load())
+            if (shutdown_threads.load() || shutdown_miner_threads.load())
                 return;
         }
         //
@@ -537,7 +537,7 @@ void EccMiner(CWallet *pwallet)
                 }
             }
             // Check for stop or if block needs to be rebuilt
-            if (shutdown_threads.load())
+            if (shutdown_threads.load() || shutdown_miner_threads.load())
                 return;
             if (g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL))
                 break;

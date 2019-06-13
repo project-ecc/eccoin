@@ -20,6 +20,8 @@
 
 
 #include "verifydb.h"
+
+#include "blockstorage/blockstorage.h"
 #include "init.h"
 #include "main.h"
 #include "processblock.h"
@@ -58,9 +60,12 @@ bool CVerifyDB::VerifyDB(const CNetworkTemplate &chainparams, CCoinsView *coinsv
             break;
         CBlock block;
         // check level 0: read from disk
-        if (!ReadBlockFromDisk(block, pindex, chainparams.GetConsensus()))
-            return error("VerifyDB(): *** ReadBlockFromDisk failed at %d, hash=%s", pindex->nHeight,
-                pindex->GetBlockHash().ToString());
+        {
+            LOCK(cs_blockstorage);
+            if (!ReadBlockFromDisk(block, pindex, chainparams.GetConsensus()))
+                return error("VerifyDB(): *** ReadBlockFromDisk failed at %d, hash=%s", pindex->nHeight,
+                    pindex->GetBlockHash().ToString());
+        }
         // check level 1: verify block validity
         if (nCheckLevel >= 1 && !CheckBlock(block, state))
             return error(
@@ -82,12 +87,14 @@ bool CVerifyDB::VerifyDB(const CNetworkTemplate &chainparams, CCoinsView *coinsv
             (coins.DynamicMemoryUsage() + pnetMan->getChainActive()->pcoinsTip->DynamicMemoryUsage()) <=
                 nCoinCacheUsage)
         {
-            bool fClean = true;
-            if (!DisconnectBlock(block, state, pindex, coins, &fClean))
+            DisconnectResult res = DisconnectBlock(block, pindex, coins);
+            if (res == DISCONNECT_FAILED)
+            {
                 return error("VerifyDB(): *** irrecoverable inconsistency in block data at %d, hash=%s",
                     pindex->nHeight, pindex->GetBlockHash().ToString());
+            }
             pindexState = pindex->pprev;
-            if (!fClean)
+            if (res == DISCONNECT_UNCLEAN)
             {
                 nGoodTransactions = 0;
                 pindexFailure = pindex;
@@ -118,9 +125,12 @@ bool CVerifyDB::VerifyDB(const CNetworkTemplate &chainparams, CCoinsView *coinsv
             }
             pindex = pnetMan->getChainActive()->chainActive.Next(pindex);
             CBlock block;
-            if (!ReadBlockFromDisk(block, pindex, chainparams.GetConsensus()))
-                return error("VerifyDB(): *** ReadBlockFromDisk failed at %d, hash=%s", pindex->nHeight,
-                    pindex->GetBlockHash().ToString());
+            {
+                LOCK(cs_blockstorage);
+                if (!ReadBlockFromDisk(block, pindex, chainparams.GetConsensus()))
+                    return error("VerifyDB(): *** ReadBlockFromDisk failed at %d, hash=%s", pindex->nHeight,
+                        pindex->GetBlockHash().ToString());
+            }
             if (!ConnectBlock(block, state, pindex, coins))
                 return error("VerifyDB(): *** found unconnectable block at %d, hash=%s", pindex->nHeight,
                     pindex->GetBlockHash().ToString());
