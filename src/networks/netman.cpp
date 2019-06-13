@@ -116,6 +116,7 @@ void CNetworkManager::ConstructLegacyNetworkTemplate()
     legacyTemplate->vSeeds.push_back(CDNSSeedData("ECC-Seed1", "eccserver1.ddns.net", true));
     legacyTemplate->vSeeds.push_back(CDNSSeedData("ECC-Seed2", "eccnode.altj.com", true));
     legacyTemplate->vSeeds.push_back(CDNSSeedData("ECC-Seed3", "5.189.131.197", true));
+    legacyTemplate->vSeeds.push_back(CDNSSeedData("ECC-Seed4", "185.21.216.160", true));
 
     legacyTemplate->base58Prefixes[CNetworkTemplate::PUBKEY_ADDRESS] = std::vector<unsigned char>(1, 33);
     legacyTemplate->base58Prefixes[CNetworkTemplate::SCRIPT_ADDRESS] = std::vector<unsigned char>(1, 8);
