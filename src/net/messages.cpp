@@ -304,7 +304,7 @@ bool CanDirectFetch(const Consensus::Params &consensusParams) EXCLUSIVE_LOCKS_RE
     {
         targetSpacing = 150;
     }
-    return pnetMan->getChainActive()->chainActive.Tip()->GetBlockTime() > GetAdjustedTime() - targetSpacing * 20;
+    return pnetMan->getChainActive()->chainActive.Tip()->GetBlockTime() > GetAdjustedTime() - (targetSpacing * 20);
 }
 
 void RelayTransaction(const CTransaction &tx, CConnman &connman)
@@ -843,8 +843,8 @@ void static ProcessGetData(CNode *pfrom, CConnman &connman, const Consensus::Par
                     LOCK(cs_blockstorage);
                     if (!ReadBlockFromDisk(block, pindex, consensusParams))
                     {
-                        LogPrintf("cannot load block from disk");
-                        assert(false);
+                        LogPrint("net", "cannot load block from disk, no response");
+                        return;
                     }
                 }
                 if (inv.type == MSG_BLOCK)
@@ -1401,13 +1401,13 @@ bool static ProcessMessage(CNode *pfrom,
                 break;
             }
             pfrom->PushInventory(CInv(MSG_BLOCK, pindex->GetBlockHash()));
+            pfrom->hashContinue = pindex->GetBlockHash();
             if (--nLimit <= 0)
             {
                 // When this block is requested, we'll send an inv that'll
                 // trigger the peer to getblocks the next batch of inventory.
                 LogPrint(
                     "net", "  getblocks stopping at limit %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString());
-                pfrom->hashContinue = pindex->GetBlockHash();
                 break;
             }
         }
@@ -1423,7 +1423,7 @@ bool static ProcessMessage(CNode *pfrom,
 
         if (pnetMan->getChainActive()->IsInitialBlockDownload() && !pfrom->fWhitelisted)
         {
-            LogPrintf("Ignoring getheaders from peer=%d because node is in initial block download\n", pfrom->id);
+            LogPrintf("Ignoring getheaders from peer=%d because our node is in initial block download\n", pfrom->id);
             return true;
         }
 
@@ -1735,17 +1735,17 @@ bool static ProcessMessage(CNode *pfrom,
             {
                 if (_pindex->nStatus & BLOCK_FAILED_MASK)
                 {
-                    return error("invalid header received");
+                    return error("duplicate headers received");
                 }
                 return true;
             }
         }
 
-        CBlockIndex *pindexLast = NULL;
+        CBlockIndex *pindexLast = nullptr;
         for (const CBlockHeader &header : headers)
         {
             CValidationState state;
-            if (pindexLast != NULL && header.hashPrevBlock != pindexLast->GetBlockHash())
+            if (pindexLast != nullptr && header.hashPrevBlock != pindexLast->GetBlockHash())
             {
                 Misbehaving(pfrom->GetId(), 20, "disconnected-header");
                 return error("non-continuous headers sequence");
@@ -1828,13 +1828,10 @@ bool static ProcessMessage(CNode *pfrom,
                     LogPrint(
                         "net", "Requesting block %s from  peer=%d\n", pindex->GetBlockHash().ToString(), pfrom->id);
                 }
-                if (vGetData.size() > 1)
+                if (vGetData.size() > 0)
                 {
                     LogPrint("net", "Downloading blocks toward %s (%d) via headers direct fetch\n",
                         pindexLast->GetBlockHash().ToString(), pindexLast->nHeight);
-                }
-                if (vGetData.size() > 0)
-                {
                     connman.PushMessage(pfrom, NetMsgType::GETDATA, vGetData);
                 }
             }
@@ -2407,7 +2404,7 @@ bool SendMessages(CNode *pto, CConnman &connman)
     // become unconfirmed and spams other nodes.
     if (!fReindex && !fImporting && !pnetMan->getChainActive()->IsInitialBlockDownload())
     {
-        GetMainSignals().Broadcast(nTimeBestReceived, &connman);
+        GetMainSignals().Broadcast(nTimeBestReceived.load(), &connman);
     }
 
     //

@@ -264,7 +264,7 @@ enum FlushStateMode
 };
 bool FlushStateToDisk(CValidationState &state, FlushStateMode mode);
 extern int nPreferredDownload;
-extern int64_t nTimeBestReceived;
+extern std::atomic<int64_t> nTimeBestReceived;
 extern int nPeersWithValidatedDownloads;
 
 /** Flush all state, indexes and buffers to disk. */

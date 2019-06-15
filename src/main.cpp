@@ -68,7 +68,7 @@
 #include <sstream>
 
 
-int64_t nTimeBestReceived = 0;
+std::atomic<int64_t> nTimeBestReceived(0);
 
 
 CWaitableCriticalSection csBestBlock;
