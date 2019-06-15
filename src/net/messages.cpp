@@ -503,7 +503,10 @@ void UpdatePreferredDownload(CNode *node)
     nPreferredDownload -= state->fPreferredDownload;
 
     // Whether this node should be marked as a preferred download node.
-    state->fPreferredDownload = (!node->fInbound || node->fWhitelisted) && !node->fOneShot && !node->fClient;
+    // we allow downloads from inbound nodes; this may have been limited in the past to stop attackers from connecting
+    // and offering a bad chain. However, we are connecting to multiple nodes and so can choose the most work
+    // chain on that basis.
+    state->fPreferredDownload = !node->fOneShot && !node->fClient;
 
     nPreferredDownload += state->fPreferredDownload;
 }
