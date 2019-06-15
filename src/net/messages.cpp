@@ -1171,15 +1171,11 @@ bool static ProcessMessage(CNode *pfrom,
             CNodeStateAccessor state(nodestateman, pfrom->GetId());
             state->fCurrentlyConnected = true;
         }
-
-        if (pfrom->nVersion >= SENDHEADERS_VERSION)
-        {
-            // Tell our peer we prefer to receive headers rather than inv's
-            // We send this to non-NODE NETWORK peers as well, because even
-            // non-NODE NETWORK peers can announce blocks (such as pruning
-            // nodes)
-            connman.PushMessage(pfrom, NetMsgType::SENDHEADERS);
-        }
+        // Tell our peer we prefer to receive headers rather than inv's
+        // We send this to non-NODE NETWORK peers as well, because even
+        // non-NODE NETWORK peers can announce blocks (such as pruning
+        // nodes)
+        connman.PushMessage(pfrom, NetMsgType::SENDHEADERS);
         pfrom->fSuccessfullyConnected = true;
     }
 
