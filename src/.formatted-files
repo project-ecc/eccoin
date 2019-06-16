@@ -85,6 +85,8 @@ net/addrdb.cpp
 net/addrdb.h
 net/addrman.cpp
 net/addrman.h
+net/datapacket.cpp
+net/datapacket.h
 net/messages.cpp
 net/messages.h
 net/net.cpp
