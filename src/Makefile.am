@@ -95,6 +95,7 @@ BITCOIN_CORE_H = \
   net/addrdb.h \
   net/addrman.h \
   net/aodv.h \
+  net/datapacket.h \
   net/messages.h \
   net/net.h \
   net/netaddress.h \
@@ -178,82 +179,104 @@ libbitcoin_server_a_SOURCES = \
   globals.cpp \
   sync.cpp \
   sync_rsm.cpp \
-  net/addrdb.cpp \
-  net/addrman.cpp \
+  amount.cpp \
+  args.cpp \
+  arith_uint256.cpp \
+  base58.cpp \
   blockgeneration/blockgeneration.cpp \
   blockgeneration/miner.cpp \
   blockgeneration/minter.cpp \
   blockstorage/blockstorage.cpp \
   bloom.cpp \
+  chain/block.cpp \
+  chain/blockindex.cpp \
   chain/chain.cpp \
+  chain/chainman.cpp \
   chain/checkpoints.cpp \
+  chain/tx.cpp \
+  clientversion.cpp \
+  consensus/merkle.cpp \
+  coins.cpp \
+  compat/glibc_sanity.cpp \
+  compat/glibcxx_sanity.cpp \
+  compat/strnlen.cpp \
+  compressor.cpp \
+  core_read.cpp \
+  core_write.cpp \
+  crypto/aes.cpp \
+  crypto/aes.h \
+  crypto/chacha20.cpp \
+  crypto/chacha20.h \
+  crypto/common.h \
+  crypto/hash.cpp \
+  crypto/hmac_sha256.cpp \
+  crypto/hmac_sha256.h \
+  crypto/hmac_sha512.cpp \
+  crypto/hmac_sha512.h \
+  crypto/pbkdf2.cpp \
+  crypto/ripemd160.cpp \
+  crypto/ripemd160.h \
+  crypto/scrypt.cpp \
+  crypto/sha1.cpp \
+  crypto/sha1.h \
+  crypto/sha256.cpp \
+  crypto/sha256.h \
+  crypto/sha512.cpp \
+  crypto/sha512.h \
+  dbwrapper.cpp \
+  fs.cpp \
   httprpc.cpp \
   httpserver.cpp \
   init.cpp \
-  dbwrapper.cpp \
-  fs.cpp \
   kernel.cpp \
+  key.cpp \
+  keystore.cpp \
   main.cpp \
   merkleblock.cpp \
+  net/addrdb.cpp \
+  net/addrman.cpp \
+  net/aodv.cpp \
+  net/datapacket.cpp \
+  net/messages.cpp \
   net/net.cpp \
   net/netaddress.cpp \
-  net/aodv.cpp \
+  net/netbase.cpp \
+  networks/netman.cpp \
+  net/nodestate.cpp \
+  net/protocol.cpp \
   policy/fees.cpp \
   policy/policy.cpp \
   pow.cpp \
+  processblock.cpp \
+  processheader.cpp \
+  processtx.cpp \
+  pubkey.cpp \
+  random.cpp \
+  rpc/rpcaodv.cpp \
   rpc/rpcblockchain.cpp \
+  rpc/rpcclient.cpp \
+  rpc/rpcdump.cpp \
   rpc/rpcmining.cpp \
   rpc/rpcmisc.cpp \
   rpc/rpcnet.cpp \
+  rpc/rpcprotocol.cpp \
   rpc/rpcrawtransaction.cpp \
   rpc/rpcserver.cpp \
+  rpc/rpcwallet.cpp \
+  script/interpreter.cpp \
+  script/script.cpp \
+  script/script_error.cpp \
   script/sigcache.cpp \
+  script/sign.cpp \
+  script/standard.cpp \
+  script/stakescript.cpp \
+  support/cleanse.cpp \
+  support/pagelocker.cpp \
   timedata.cpp \
   torcontrol.cpp \
   txdb.cpp \
   txmempool.cpp \
   validationinterface.cpp \
-  amount.cpp \
-  arith_uint256.cpp \
-  base58.cpp \
-  chain/chainman.cpp \
-  coins.cpp \
-  compressor.cpp \
-  consensus/merkle.cpp \
-  core_read.cpp \
-  core_write.cpp \
-  crypto/hash.cpp \
-  key.cpp \
-  keystore.cpp \
-  net/netbase.cpp \
-  chain/block.cpp \
-  chain/blockindex.cpp \
-  processblock.cpp \
-  processheader.cpp \
-  processtx.cpp \
-  chain/tx.cpp \
-  net/nodestate.cpp \
-  net/protocol.cpp \
-  pubkey.cpp \
-  crypto/pbkdf2.cpp \
-  script/interpreter.cpp \
-  script/script.cpp \
-  script/script_error.cpp \
-  script/sign.cpp \
-  script/standard.cpp \
-  script/stakescript.cpp \
-  args.cpp \
-  support/pagelocker.cpp \
-  chain/chainman.cpp \
-  clientversion.cpp \
-  compat/glibc_sanity.cpp \
-  compat/glibcxx_sanity.cpp \
-  compat/strnlen.cpp \
-  networks/netman.cpp \
-  net/messages.cpp \
-  random.cpp \
-  rpc/rpcprotocol.cpp \
-  support/cleanse.cpp \
   uint256.cpp \
   util/logger.cpp \
   util/util.cpp \
@@ -261,33 +284,11 @@ libbitcoin_server_a_SOURCES = \
   util/utilstrencodings.cpp \
   util/utiltime.cpp \
   verifydb.cpp \
-  crypto/aes.cpp \
-  crypto/aes.h \
-  crypto/chacha20.cpp \
-  crypto/chacha20.h \
-  crypto/common.h \
-  crypto/hmac_sha256.cpp \
-  crypto/hmac_sha256.h \
-  crypto/hmac_sha512.cpp \
-  crypto/hmac_sha512.h \
-  crypto/ripemd160.cpp \
-  crypto/ripemd160.h \
-  crypto/sha1.cpp \
-  crypto/sha1.h \
-  crypto/sha256.cpp \
-  crypto/sha256.h \
-  crypto/sha512.cpp \
-  crypto/sha512.h \
-  crypto/scrypt.cpp \
   wallet/crypter.cpp \
   wallet/db.cpp \
-  rpc/rpcaodv.cpp \
-  rpc/rpcdump.cpp \
-  rpc/rpcwallet.cpp \
   wallet/wallet.cpp \
   wallet/wallet_ismine.cpp \
   wallet/walletdb.cpp \
-  rpc/rpcclient.cpp \
   $(BITCOIN_CORE_H)
 
 if ENABLE_ZMQ
