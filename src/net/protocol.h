@@ -124,12 +124,6 @@ extern const char *GETDATA;
  */
 extern const char *MERKLEBLOCK;
 /**
- * The getblocks message requests an inv message that provides block header
- * hashes starting from a particular point in the block chain.
- * @see https://bitcoin.org/en/developer-reference#getblocks
- */
-extern const char *GETBLOCKS;
-/**
  * The getheaders message requests a headers message that provides block
  * headers starting from a particular point in the block chain.
  * @since protocol version 31800.
@@ -159,13 +153,6 @@ extern const char *BLOCK;
  * @see https://bitcoin.org/en/developer-reference#getaddr
  */
 extern const char *GETADDR;
-/**
- * The mempool message requests the TXIDs of transactions that the receiving
- * node has verified as valid but which have not yet appeared in a block.
- * @since protocol version 60002.
- * @see https://bitcoin.org/en/developer-reference#mempool
- */
-extern const char *MEMPOOL;
 /**
  * The ping message is sent periodically to help confirm that the receiving
  * peer is still connected.

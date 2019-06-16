@@ -36,13 +36,11 @@ const char *ADDR = "addr";
 const char *INV = "inv";
 const char *GETDATA = "getdata";
 const char *MERKLEBLOCK = "merkleblock";
-const char *GETBLOCKS = "getblocks";
 const char *GETHEADERS = "getheaders";
 const char *TX = "tx";
 const char *HEADERS = "headers";
 const char *BLOCK = "block";
 const char *GETADDR = "getaddr";
-const char *MEMPOOL = "mempool";
 const char *PING = "ping";
 const char *PONG = "pong";
 const char *ALERT = "alert";
@@ -64,10 +62,10 @@ static const char *ppszTypeName[] = {
  * messages above and in protocol.h.
  */
 const static std::string allNetMessageTypes[] = {NetMsgType::VERSION, NetMsgType::VERACK, NetMsgType::ADDR,
-    NetMsgType::INV, NetMsgType::GETDATA, NetMsgType::MERKLEBLOCK, NetMsgType::GETBLOCKS, NetMsgType::GETHEADERS,
-    NetMsgType::TX, NetMsgType::HEADERS, NetMsgType::BLOCK, NetMsgType::GETADDR, NetMsgType::MEMPOOL, NetMsgType::PING,
-    NetMsgType::PONG, NetMsgType::ALERT, NetMsgType::NOTFOUND, NetMsgType::FILTERLOAD, NetMsgType::FILTERADD,
-    NetMsgType::FILTERCLEAR, NetMsgType::REJECT, NetMsgType::SENDHEADERS};
+    NetMsgType::INV, NetMsgType::GETDATA, NetMsgType::MERKLEBLOCK, NetMsgType::GETHEADERS, NetMsgType::TX,
+    NetMsgType::HEADERS, NetMsgType::BLOCK, NetMsgType::GETADDR, NetMsgType::PING, NetMsgType::PONG, NetMsgType::ALERT,
+    NetMsgType::NOTFOUND, NetMsgType::FILTERLOAD, NetMsgType::FILTERADD, NetMsgType::FILTERCLEAR, NetMsgType::REJECT,
+    NetMsgType::SENDHEADERS};
 const static std::vector<std::string> allNetMessageTypesVec(allNetMessageTypes,
     allNetMessageTypes + ARRAYLEN(allNetMessageTypes));
 

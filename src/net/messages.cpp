@@ -889,7 +889,7 @@ void static ProcessGetData(CNode *pfrom, CConnman &connman, const Consensus::Par
 
                 // Trigger the peer node to send a getblocks request for the
                 // next batch of inventory.
-                if (inv.hash == pfrom->hashContinue)
+                if (inv.hash == uint256())
                 {
                     // Bypass PushInventory, this must send even if
                     // redundant, and we want it right after the last block
@@ -897,7 +897,6 @@ void static ProcessGetData(CNode *pfrom, CConnman &connman, const Consensus::Par
                     std::vector<CInv> vInv;
                     vInv.push_back(CInv(MSG_BLOCK, pnetMan->getChainActive()->chainActive.Tip()->GetBlockHash()));
                     connman.PushMessage(pfrom, NetMsgType::INV, vInv);
-                    pfrom->hashContinue.SetNull();
                 }
             }
         }
@@ -1370,47 +1369,6 @@ bool static ProcessMessage(CNode *pfrom,
 
         pfrom->vRecvGetData.insert(pfrom->vRecvGetData.end(), vInv.begin(), vInv.end());
         ProcessGetData(pfrom, connman, chainparams.GetConsensus());
-    }
-
-
-    else if (strCommand == NetMsgType::GETBLOCKS)
-    {
-        CBlockLocator locator;
-        uint256 hashStop;
-        vRecv >> locator >> hashStop;
-
-        LOCK(cs_main);
-
-        // Find the last block the caller has in the main chain
-        const CBlockIndex *pindex =
-            pnetMan->getChainActive()->FindForkInGlobalIndex(pnetMan->getChainActive()->chainActive, locator);
-
-        // Send the rest of the chain
-        if (pindex)
-        {
-            pindex = pnetMan->getChainActive()->chainActive.Next(pindex);
-        }
-        int nLimit = 500;
-        LogPrintf("getblocks %d to %s limit %d from peer=%d\n", (pindex ? pindex->nHeight : -1),
-            hashStop.IsNull() ? "end" : hashStop.ToString(), nLimit, pfrom->id);
-        for (; pindex; pindex = pnetMan->getChainActive()->chainActive.Next(pindex))
-        {
-            if (pindex->GetBlockHash() == hashStop)
-            {
-                LogPrintf("  getblocks stopping at %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString());
-                break;
-            }
-            pfrom->PushInventory(CInv(MSG_BLOCK, pindex->GetBlockHash()));
-            pfrom->hashContinue = pindex->GetBlockHash();
-            if (--nLimit <= 0)
-            {
-                // When this block is requested, we'll send an inv that'll
-                // trigger the peer to getblocks the next batch of inventory.
-                LogPrint(
-                    "net", "  getblocks stopping at limit %d %s\n", pindex->nHeight, pindex->GetBlockHash().ToString());
-                break;
-            }
-        }
     }
 
     else if (strCommand == NetMsgType::GETHEADERS)
@@ -1911,37 +1869,6 @@ bool static ProcessMessage(CNode *pfrom,
         for (const CAddress &addr : vAddr)
         {
             pfrom->PushAddress(addr, insecure_rand);
-        }
-    }
-
-
-    else if (strCommand == NetMsgType::MEMPOOL)
-    {
-        std::vector<uint256> vtxid;
-        mempool.queryHashes(vtxid);
-        std::vector<CInv> vInv;
-        BOOST_FOREACH (uint256 &hash, vtxid)
-        {
-            CInv inv(MSG_TX, hash);
-            if (pfrom->pfilter)
-            {
-                CTxMemPoolEntry txe;
-                bool fInMemPool = mempool.lookup(hash, txe);
-                if (!fInMemPool)
-                    continue; // another thread removed since queryHashes, maybe...
-                if (!pfrom->pfilter->IsRelevantAndUpdate(txe.GetTx()))
-                    continue;
-            }
-            vInv.push_back(inv);
-            if (vInv.size() == MAX_INV_SZ)
-            {
-                connman.PushMessage(pfrom, NetMsgType::INV, vInv);
-                vInv.clear();
-            }
-        }
-        if (vInv.size() > 0)
-        {
-            connman.PushMessage(pfrom, NetMsgType::INV, vInv);
         }
     }
 

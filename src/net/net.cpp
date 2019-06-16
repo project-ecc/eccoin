@@ -2912,7 +2912,6 @@ CNode::CNode(NodeId idIn,
     nRefCount = 0;
     nSendSize = 0;
     nSendOffset = 0;
-    hashContinue = uint256();
     nStartingHeight = -1;
     filterInventoryKnown.reset();
     fSendMempool = false;
