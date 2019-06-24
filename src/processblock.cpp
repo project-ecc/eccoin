@@ -662,7 +662,7 @@ void CheckBlockIndex(const Consensus::Params &consensusParams)
     }
 
     LOCK(cs_main);
-    READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+    RECURSIVEREADLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
 
     // During a reindex, we read the genesis block and call CheckBlockIndex before ActivateBestChain,
     // so we have the genesis block in mapBlockIndex but no active chain.  (A few of the tests when

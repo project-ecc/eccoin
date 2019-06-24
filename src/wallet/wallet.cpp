@@ -686,7 +686,7 @@ bool CWallet::AddToWallet(const CWalletTx &wtxIn, bool fFromLoadWallet, CWalletD
             wtx.nTimeSmart = wtx.nTimeReceived;
             if (!wtxIn.hashUnset())
             {
-                READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+                RECURSIVEREADLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
                 if (pnetMan->getChainActive()->mapBlockIndex.count(wtxIn.hashBlock))
                 {
                     int64_t latestNow = wtx.nTimeReceived;
@@ -902,7 +902,7 @@ void CWallet::MarkConflicted(const uint256 &hashBlock, const uint256 &hashTx)
     CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(hashBlock);
     if (pindex)
     {
-        READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+        RECURSIVEREADLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
         if (pnetMan->getChainActive()->chainActive.Contains(pindex))
         {
             conflictconfirms = -(pnetMan->getChainActive()->chainActive.Height() - pindex->nHeight + 1);
@@ -3091,7 +3091,7 @@ int CMerkleTx::SetMerkleBranch(const CBlock &block)
     }
 
     // Is the tx in a block that's in the main chain
-    READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+    RECURSIVEREADLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
     const CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(hashBlock);
     if (!pindex || !pnetMan->getChainActive()->chainActive.Contains(pindex))
     {
@@ -3109,7 +3109,7 @@ int CMerkleTx::GetDepthInMainChain(const CBlockIndex *&pindexRet) const
     // Find the block it claims to be in
     CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(hashBlock);
     {
-        READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+        RECURSIVEREADLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
         if (!pindex || !pnetMan->getChainActive()->chainActive.Contains(pindex))
         {
             return 0;

@@ -37,7 +37,7 @@ typedef std::unordered_map<uint256, CBlockIndex *, BlockHasher> BlockMap;
 class CChainManager
 {
 public:
-    CSharedCriticalSection cs_mapBlockIndex;
+    CRecursiveSharedCriticalSection cs_mapBlockIndex;
 
     /** map containing all block indexs ever seen for this chain */
     BlockMap mapBlockIndex GUARDED_BY(cs_mapBlockIndex);
@@ -73,7 +73,7 @@ public:
 
     void operator=(const CChainManager &oldMan)
     {
-        WRITELOCK(cs_mapBlockIndex);
+        RECURSIVEWRITELOCK(cs_mapBlockIndex);
         mapBlockIndex = oldMan.mapBlockIndex;
         chainActive = oldMan.chainActive;
         pindexBestHeader = oldMan.pindexBestHeader;

@@ -809,7 +809,7 @@ static std::set<CBlockIndex *, CompareBlocksByHeight> GetChainTips()
     std::set<CBlockIndex *> setOrphans;
     std::set<CBlockIndex *> setPrevs;
 
-    READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+    RECURSIVEREADLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
     for (const std::pair<const uint256, CBlockIndex *> &item : pnetMan->getChainActive()->mapBlockIndex)
     {
         if (!pnetMan->getChainActive()->chainActive.Contains(item.second))

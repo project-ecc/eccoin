@@ -755,7 +755,7 @@ bool AlreadyHave(const CInv &inv) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
                pcoinsTip->HaveCoinInCache(COutPoint(inv.hash, 0)) || pcoinsTip->HaveCoinInCache(COutPoint(inv.hash, 1));
     }
     case MSG_BLOCK:
-        READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+        RECURSIVEREADLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
         return pnetMan->getChainActive()->mapBlockIndex.count(inv.hash);
     }
     // Don't know what it is, just say we already got one

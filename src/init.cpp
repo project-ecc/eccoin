@@ -1493,7 +1493,7 @@ bool AppInit2(thread_group &threadGroup)
                 // If the loaded chain has a wrong genesis, bail out immediately
                 // (we're likely using a testnet datadir, or the other way around).
                 {
-                    READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+                    RECURSIVEREADLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
                     if (!pnetMan->getChainActive()->mapBlockIndex.empty() &&
                         pnetMan->getChainActive()->mapBlockIndex.count(chainparams.GetConsensus().hashGenesisBlock) ==
                             0)

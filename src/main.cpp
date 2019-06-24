@@ -1182,7 +1182,7 @@ void PruneBlockIndexCandidates()
 
 bool InvalidateBlock(CValidationState &state, const Consensus::Params &consensusParams, CBlockIndex *pindex)
 {
-    WRITELOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+    RECURSIVEWRITELOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
     // Mark the block itself as invalid.
     pindex->nStatus |= BLOCK_FAILED_VALID;
     setDirtyBlockIndex.insert(pindex);
@@ -1227,7 +1227,7 @@ bool InvalidateBlock(CValidationState &state, const Consensus::Params &consensus
 bool ReconsiderBlock(CValidationState &state, CBlockIndex *pindex)
 {
     int nHeight = pindex->nHeight;
-    WRITELOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+    RECURSIVEWRITELOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
     // Remove the invalidity flag from this block
     if (!pindex->IsValid())
     {

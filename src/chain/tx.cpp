@@ -396,7 +396,7 @@ bool GetTransaction(const uint256 &hash,
         CoinAccessor coin(*(pcoinsTip), hash);
         if (!coin->IsSpent())
         {
-            READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+            RECURSIVEREADLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
             pindexSlow = pnetMan->getChainActive()->chainActive[coin->nHeight];
         }
     }
