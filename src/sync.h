@@ -504,8 +504,9 @@ typedef CMutexLock<CRecursiveSharedCriticalSection> CRecursiveWriteBlock;
 
 #define RECURSIVEREADLOCK(cs) CRecursiveReadBlock UNIQUIFY(readblock)(cs, #cs, __FILE__, __LINE__)
 #define RECURSIVEWRITELOCK(cs) CRecursiveWriteBlock UNIQUIFY(writeblock)(cs, #cs, __FILE__, __LINE__)
-#define RECURSIVEREADLOCK2(cs1, cs2) \
-    CRecursiveReadBlock UNIQUIFY(readblock1)(cs1, #cs1, __FILE__, __LINE__), UNIQUIFY(readblock2)(cs2, #cs2, __FILE__, __LINE__)
+#define RECURSIVEREADLOCK2(cs1, cs2)                                         \
+    CRecursiveReadBlock UNIQUIFY(readblock1)(cs1, #cs1, __FILE__, __LINE__), \
+        UNIQUIFY(readblock2)(cs2, #cs2, __FILE__, __LINE__)
 #define TRY_READ_LOCK_RECURSIVE(cs, name) CRecursiveReadBlock name(cs, #cs, __FILE__, __LINE__, true)
 
 typedef CMutexReadLock<CSharedCriticalSection> CReadBlock;

@@ -392,7 +392,7 @@ void DeleteLock(void *cs)
 }
 
 #ifdef DEBUG_LOCKORDER
-CRecursiveSharedCriticalSection::CRecursiveSharedCriticalSection() : name(nullptr){}
+CRecursiveSharedCriticalSection::CRecursiveSharedCriticalSection() : name(nullptr) {}
 CRecursiveSharedCriticalSection::CRecursiveSharedCriticalSection(const char *n) : name(n)
 {
 // print the address of named critical sections so they can be found in the mutrace output
