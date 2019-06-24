@@ -191,8 +191,7 @@ void FinalizeNode(NodeId nodeid, bool &fUpdateConnectionTime)
     }
 }
 
-// TODO might require cs_main
-bool GetNodeStateStats(NodeId nodeid, CNodeStateStats &stats)
+bool GetNodeStateStats(NodeId nodeid, CNodeStateStats &stats) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
 {
     CNodeStateAccessor state(nodestateman, nodeid);
     if (state.IsNull())
@@ -247,10 +246,8 @@ static void Misbehaving(CNode *node, int howmuch, const std::string &reason)
     Misbehaving(node->GetId(), howmuch, reason);
 }
 
-
-// Requires cs_main.
 // Returns a bool indicating whether we requested this block.
-bool MarkBlockAsReceived(const uint256 &hash)
+bool MarkBlockAsReceived(const uint256 &hash) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
 {
     std::map<uint256, std::pair<NodeId, std::list<QueuedBlock>::iterator> >::iterator itInFlight =
         mapBlocksInFlight.find(hash);
@@ -300,8 +297,7 @@ const CBlockIndex *LastCommonAncestor(const CBlockIndex *pa, const CBlockIndex *
     return pa;
 }
 
-// Requires cs_main
-bool CanDirectFetch(const Consensus::Params &consensusParams)
+bool CanDirectFetch(const Consensus::Params &consensusParams) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
 {
     int64_t targetSpacing = consensusParams.nTargetSpacing;
     if (pnetMan->getChainActive()->chainActive.Tip()->GetMedianTimePast() > SERVICE_UPGRADE_HARDFORK)
@@ -454,11 +450,10 @@ unsigned int LimitOrphanTxSize(unsigned int nMaxOrphans) EXCLUSIVE_LOCKS_REQUIRE
     return nEvicted;
 }
 
-// Requires cs_main.
 void MarkBlockAsInFlight(NodeId nodeid,
     const uint256 &hash,
     const Consensus::Params &consensusParams,
-    const CBlockIndex *pindex = nullptr)
+    const CBlockIndex *pindex = nullptr) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
 {
     CNodeStateAccessor state(nodestateman, nodeid);
     assert(state.IsNull() == false);
@@ -620,8 +615,7 @@ void FindNextBlocksToDownload(NodeId nodeid,
     }
 }
 
-// Requires cs_main
-bool PeerHasHeader(CNodeState *state, const CBlockIndex *pindex)
+bool PeerHasHeader(CNodeState *state, const CBlockIndex *pindex) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
 {
     if (state->pindexBestKnownBlock && pindex == state->pindexBestKnownBlock->GetAncestor(pindex->nHeight))
     {
@@ -758,11 +752,10 @@ bool AlreadyHave(const CInv &inv) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
         LOCK(cs_orphans);
         return recentRejects->contains(inv.hash) || mempool.exists(inv.hash) || mapOrphanTransactions.count(inv.hash) ||
                // Best effort: only try output 0 and 1
-               pnetMan->getChainActive()->pcoinsTip->HaveCoinInCache(COutPoint(inv.hash, 0)) ||
-               pnetMan->getChainActive()->pcoinsTip->HaveCoinInCache(COutPoint(inv.hash, 1));
+               pcoinsTip->HaveCoinInCache(COutPoint(inv.hash, 0)) || pcoinsTip->HaveCoinInCache(COutPoint(inv.hash, 1));
     }
     case MSG_BLOCK:
-        READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+        RECURSIVEREADLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
         return pnetMan->getChainActive()->mapBlockIndex.count(inv.hash);
     }
     // Don't know what it is, just say we already got one
@@ -1516,7 +1509,7 @@ bool static ProcessMessage(CNode *pfrom,
 
         if (!AlreadyHave(inv) && AcceptToMemoryPool(mempool, state, ptx, true, &fMissingInputs))
         {
-            mempool.check(pnetMan->getChainActive()->pcoinsTip.get());
+            mempool.check(pcoinsTip.get());
             RelayTransaction(tx, connman);
             for (size_t i = 0; i < tx.vout.size(); i++)
             {
@@ -1595,7 +1588,7 @@ bool static ProcessMessage(CNode *pfrom,
                             recentRejects->insert(orphanId);
                         }
                     }
-                    mempool.check(pnetMan->getChainActive()->pcoinsTip.get());
+                    mempool.check(pcoinsTip.get());
                 }
             }
 

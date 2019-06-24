@@ -265,7 +265,7 @@ UniValue gettxoutproof(const UniValue &params, bool fHelp)
     uint256 hashBlock;
     if (params.size() > 1)
     {
-        READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+        RECURSIVEREADLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
         hashBlock = uint256S(params[1].get_str());
         if (!pnetMan->getChainActive()->mapBlockIndex.count(hashBlock))
             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
@@ -274,7 +274,7 @@ UniValue gettxoutproof(const UniValue &params, bool fHelp)
     else
     {
         LOCK(cs_main);
-        CoinAccessor coin(*pnetMan->getChainActive()->pcoinsTip, oneTxid);
+        CoinAccessor coin(*pcoinsTip, oneTxid);
         if (coin && !coin->IsSpent() && coin->nHeight > 0 &&
             coin->nHeight <= pnetMan->getChainActive()->chainActive.Height())
         {
@@ -288,7 +288,7 @@ UniValue gettxoutproof(const UniValue &params, bool fHelp)
         if (!GetTransaction(oneTxid, tx, pnetMan->getActivePaymentNetwork()->GetConsensus(), hashBlock, false) ||
             hashBlock.IsNull())
             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Transaction not yet in block");
-        READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+        RECURSIVEREADLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
         if (!pnetMan->getChainActive()->mapBlockIndex.count(hashBlock))
             throw JSONRPCError(RPC_INTERNAL_ERROR, "Transaction index corrupt");
         pblockindex = pnetMan->getChainActive()->mapBlockIndex[hashBlock];
@@ -685,7 +685,7 @@ UniValue signrawtransaction(const UniValue &params, bool fHelp)
     CCoinsViewCache view(&viewDummy);
     {
         READLOCK(mempool.cs);
-        CCoinsViewCache &viewChain = *pnetMan->getChainActive()->pcoinsTip;
+        CCoinsViewCache &viewChain = *pcoinsTip;
         CCoinsViewMemPool viewMempool(&viewChain, mempool);
         view.SetBackend(viewMempool); // temporarily switch cache backend to db+mempool view
 
@@ -883,7 +883,7 @@ UniValue sendrawtransaction(const UniValue &params, bool fHelp)
     if (params.size() > 1)
         fOverrideFees = params[1].get_bool();
 
-    CCoinsViewCache &view = *pnetMan->getChainActive()->pcoinsTip;
+    CCoinsViewCache &view = *pcoinsTip;
     bool fHaveChain = false;
     for (size_t o = 0; !fHaveChain && o < tx->vout.size(); o++)
     {

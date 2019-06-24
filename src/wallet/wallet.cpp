@@ -686,7 +686,7 @@ bool CWallet::AddToWallet(const CWalletTx &wtxIn, bool fFromLoadWallet, CWalletD
             wtx.nTimeSmart = wtx.nTimeReceived;
             if (!wtxIn.hashUnset())
             {
-                READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+                RECURSIVEREADLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
                 if (pnetMan->getChainActive()->mapBlockIndex.count(wtxIn.hashBlock))
                 {
                     int64_t latestNow = wtx.nTimeReceived;
@@ -835,7 +835,7 @@ bool CWallet::AddToWalletIfInvolvingMe(const CTransactionRef &ptx, const CBlock 
 
 bool CWallet::AbandonTransaction(const uint256 &hashTx)
 {
-    LOCK2(cs_main, cs_wallet);
+    LOCK(cs_wallet);
 
     // Do not flush the wallet here for performance reasons
     CWalletDB walletdb(strWalletFile, "r+", false);
@@ -897,12 +897,12 @@ bool CWallet::AbandonTransaction(const uint256 &hashTx)
 
 void CWallet::MarkConflicted(const uint256 &hashBlock, const uint256 &hashTx)
 {
-    LOCK2(cs_main, cs_wallet);
-
+    LOCK(cs_wallet);
     int conflictconfirms = 0;
     CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(hashBlock);
     if (pindex)
     {
+        RECURSIVEREADLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
         if (pnetMan->getChainActive()->chainActive.Contains(pindex))
         {
             conflictconfirms = -(pnetMan->getChainActive()->chainActive.Height() - pindex->nHeight + 1);
@@ -962,7 +962,7 @@ void CWallet::MarkConflicted(const uint256 &hashBlock, const uint256 &hashTx)
 
 void CWallet::SyncTransaction(const CTransactionRef &ptx, const CBlock *pblock, int txIdx)
 {
-    LOCK2(cs_main, cs_wallet);
+    LOCK(cs_wallet);
 
     if (!AddToWalletIfInvolvingMe(ptx, pblock, true))
     {
@@ -1246,7 +1246,7 @@ int CWallet::ScanForWalletTransactions(CBlockIndex *pindexStart, bool fUpdate)
     CBlockIndex *pindex = pindexStart;
     int nEndHeight = pnetMan->getChainActive()->chainActive.Tip()->nHeight;
     {
-        LOCK2(cs_main, cs_wallet);
+        LOCK(cs_wallet);
 
         // no need to read and scan block, if block was created before
         // our wallet birthday (as adjusted for block time variability)
@@ -1292,7 +1292,7 @@ void CWallet::ReacceptWalletTransactions()
     std::map<int64_t, CWalletTx *> mapSorted;
 
     {
-        LOCK2(cs_main, cs_wallet);
+        LOCK(cs_wallet);
         // Sort pending wallet transactions based on their initial wallet insertion order
         for (auto const &item : mapWallet)
         {
@@ -1635,7 +1635,7 @@ CAmount CWallet::GetBalance() const
 {
     CAmount nTotal = 0;
     {
-        LOCK2(cs_main, cs_wallet);
+        LOCK(cs_wallet);
         for (std::map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it)
         {
             const CWalletTx *pcoin = &(*it).second;
@@ -1651,7 +1651,7 @@ CAmount CWallet::GetUnconfirmedBalance() const
 {
     CAmount nTotal = 0;
     {
-        LOCK2(cs_main, cs_wallet);
+        LOCK(cs_wallet);
         for (std::map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it)
         {
             const CWalletTx *pcoin = &(*it).second;
@@ -1666,7 +1666,7 @@ CAmount CWallet::GetImmatureBalance() const
 {
     CAmount nTotal = 0;
     {
-        LOCK2(cs_main, cs_wallet);
+        LOCK(cs_wallet);
         for (std::map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it)
         {
             const CWalletTx *pcoin = &(*it).second;
@@ -1680,7 +1680,7 @@ CAmount CWallet::GetWatchOnlyBalance() const
 {
     CAmount nTotal = 0;
     {
-        LOCK2(cs_main, cs_wallet);
+        LOCK(cs_wallet);
         for (std::map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it)
         {
             const CWalletTx *pcoin = &(*it).second;
@@ -1696,7 +1696,7 @@ CAmount CWallet::GetUnconfirmedWatchOnlyBalance() const
 {
     CAmount nTotal = 0;
     {
-        LOCK2(cs_main, cs_wallet);
+        LOCK(cs_wallet);
         for (std::map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it)
         {
             const CWalletTx *pcoin = &(*it).second;
@@ -1711,7 +1711,7 @@ CAmount CWallet::GetImmatureWatchOnlyBalance() const
 {
     CAmount nTotal = 0;
     {
-        LOCK2(cs_main, cs_wallet);
+        LOCK(cs_wallet);
         for (std::map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it)
         {
             const CWalletTx *pcoin = &(*it).second;
@@ -1729,7 +1729,7 @@ void CWallet::AvailableCoins(std::vector<COutput> &vCoins,
     vCoins.clear();
 
     {
-        LOCK2(cs_main, cs_wallet);
+        LOCK(cs_wallet);
         for (std::map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it)
         {
             const uint256 &wtxid = it->first;
@@ -2893,7 +2893,7 @@ void CWallet::GetAllReserveKeys(std::set<CKeyID> &setAddress) const
 
     CWalletDB walletdb(strWalletFile);
 
-    LOCK2(cs_main, cs_wallet);
+    LOCK(cs_wallet);
     for (auto const &id : setKeyPool)
     {
         CKeyPool keypool;
@@ -3072,8 +3072,6 @@ CWalletKey::CWalletKey(int64_t nExpires)
 
 int CMerkleTx::SetMerkleBranch(const CBlock &block)
 {
-    AssertLockHeld(cs_main);
-
     // Update the tx's hashBlock
     hashBlock = block.GetHash();
 
@@ -3093,6 +3091,7 @@ int CMerkleTx::SetMerkleBranch(const CBlock &block)
     }
 
     // Is the tx in a block that's in the main chain
+    RECURSIVEREADLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
     const CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(hashBlock);
     if (!pindex || !pnetMan->getChainActive()->chainActive.Contains(pindex))
     {
@@ -3107,13 +3106,14 @@ int CMerkleTx::GetDepthInMainChain(const CBlockIndex *&pindexRet) const
     {
         return 0;
     }
-    AssertLockHeld(cs_main);
     // Find the block it claims to be in
     CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(hashBlock);
-    LOCK(cs_main); // for chainActive
-    if (!pindex || !pnetMan->getChainActive()->chainActive.Contains(pindex))
     {
-        return 0;
+        RECURSIVEREADLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+        if (!pindex || !pnetMan->getChainActive()->chainActive.Contains(pindex))
+        {
+            return 0;
+        }
     }
     pindexRet = pindex;
     return ((nIndex == -1) ? (-1) : 1) * (pnetMan->getChainActive()->chainActive.Height() - pindex->nHeight + 1);
@@ -3308,7 +3308,7 @@ bool CWallet::CreateCoinStake(const CKeyStore &keystore,
         CDiskTxPos txindex;
         {
             LOCK2(cs_main, cs_wallet);
-            if (!pnetMan->getChainActive()->pblocktree->ReadTxIndex(pcoin.first->tx->GetHash(), txindex))
+            if (!pblocktree->ReadTxIndex(pcoin.first->tx->GetHash(), txindex))
                 continue;
         }
 

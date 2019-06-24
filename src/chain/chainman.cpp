@@ -34,7 +34,7 @@
 
 CBlockIndex *CChainManager::LookupBlockIndex(const uint256 &hash)
 {
-    READLOCK(cs_mapBlockIndex);
+    RECURSIVEREADLOCK(cs_mapBlockIndex);
     BlockMap::iterator mi = mapBlockIndex.find(hash);
     if (mi == mapBlockIndex.end())
         return nullptr;
@@ -44,7 +44,7 @@ CBlockIndex *CChainManager::LookupBlockIndex(const uint256 &hash)
 
 CBlockIndex *CChainManager::AddToBlockIndex(const CBlockHeader &block)
 {
-    WRITELOCK(cs_mapBlockIndex);
+    RECURSIVEWRITELOCK(cs_mapBlockIndex);
     // Check for duplicate
     uint256 hash = block.GetHash();
     BlockMap::iterator it = mapBlockIndex.find(hash);
@@ -79,7 +79,7 @@ CBlockIndex *CChainManager::AddToBlockIndex(const CBlockHeader &block)
 
 CBlockIndex *CChainManager::FindForkInGlobalIndex(const CChain &chain, const CBlockLocator &locator)
 {
-    READLOCK(cs_mapBlockIndex);
+    RECURSIVEREADLOCK(cs_mapBlockIndex);
     // Find the first block the caller has in the main chain
     for (auto const &hash : locator.vHave)
     {
@@ -96,7 +96,7 @@ CBlockIndex *CChainManager::FindForkInGlobalIndex(const CChain &chain, const CBl
 
 bool CChainManager::IsInitialBlockDownload()
 {
-    READLOCK(cs_mapBlockIndex);
+    RECURSIVEREADLOCK(cs_mapBlockIndex);
     const CNetworkTemplate &chainParams = pnetMan->getActivePaymentNetwork();
     if (fImporting || fReindex)
         return true;
@@ -116,7 +116,7 @@ CBlockIndex *CChainManager::InsertBlockIndex(uint256 hash)
 {
     if (hash.IsNull())
         return NULL;
-    WRITELOCK(cs_mapBlockIndex);
+    RECURSIVEWRITELOCK(cs_mapBlockIndex);
 
     // Return existing
     BlockMap::iterator mi = mapBlockIndex.find(hash);
@@ -207,7 +207,7 @@ bool CChainManager::LoadBlockIndexDB()
     }
 
     LOCK(cs_main);
-    WRITELOCK(cs_mapBlockIndex);
+    RECURSIVEWRITELOCK(cs_mapBlockIndex);
 
     LogPrintf("LoadBlockIndexGuts %15dms\n", GetTimeMillis() - nStart);
 
@@ -487,7 +487,7 @@ void CChainManager::UnloadBlockIndex()
     recentRejects.reset(nullptr);
 
     {
-        WRITELOCK(cs_mapBlockIndex);
+        RECURSIVEWRITELOCK(cs_mapBlockIndex);
         for (auto &entry : mapBlockIndex)
         {
             delete entry.second;

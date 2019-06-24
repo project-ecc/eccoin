@@ -22,6 +22,7 @@
 #define BITCOIN_UNDO_H
 
 #include "chain/tx.h"
+#include "coins.h"
 #include "compressor.h"
 #include "serialize.h"
 

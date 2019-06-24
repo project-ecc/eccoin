@@ -250,7 +250,7 @@ uint64_t CTransaction::GetCoinAge(uint64_t nCoinAge, bool byValue) const
     for (const CTxIn &txin : vin)
     {
         CDiskTxPos txindex;
-        if (!pnetMan->getChainActive()->pblocktree->ReadTxIndex(txin.prevout.hash, txindex))
+        if (!pblocktree->ReadTxIndex(txin.prevout.hash, txindex))
             continue; // previous transaction not in main chain
 
         // Read block header
@@ -306,7 +306,7 @@ bool CTransaction::GetCoinAge(uint64_t &nCoinAge) const
     for (const CTxIn &txin : vin)
     {
         CDiskTxPos txindex;
-        if (!pnetMan->getChainActive()->pblocktree->ReadTxIndex(txin.prevout.hash, txindex))
+        if (!pblocktree->ReadTxIndex(txin.prevout.hash, txindex))
             continue; // previous transaction not in main chain
 
         // Read block header
@@ -360,41 +360,43 @@ bool GetTransaction(const uint256 &hash,
 {
     CBlockIndex *pindexSlow = nullptr;
 
-    LOCK(cs_main);
-
     if (mempool.lookup(hash, txOut))
     {
         return true;
     }
 
     CDiskTxPos postx;
-    if (pnetMan->getChainActive()->pblocktree->ReadTxIndex(hash, postx))
     {
-        CAutoFile file(OpenBlockFile(postx, true), SER_DISK, CLIENT_VERSION);
-        if (file.IsNull())
-            return error("%s: OpenBlockFile failed", __func__);
-        CBlockHeader header;
-        try
+        LOCK(cs_main);
+        if (pblocktree->ReadTxIndex(hash, postx))
         {
-            file >> header;
-            fseek(file.Get(), postx.nTxOffset, SEEK_CUR);
-            file >> txOut;
+            CAutoFile file(OpenBlockFile(postx, true), SER_DISK, CLIENT_VERSION);
+            if (file.IsNull())
+                return error("%s: OpenBlockFile failed", __func__);
+            CBlockHeader header;
+            try
+            {
+                file >> header;
+                fseek(file.Get(), postx.nTxOffset, SEEK_CUR);
+                file >> txOut;
+            }
+            catch (const std::exception &e)
+            {
+                return error("%s: Deserialize or I/O error - %s", __func__, e.what());
+            }
+            hashBlock = header.GetHash();
+            if (txOut.GetHash() != hash)
+                return error("%s: txid mismatch", __func__);
+            return true;
         }
-        catch (const std::exception &e)
-        {
-            return error("%s: Deserialize or I/O error - %s", __func__, e.what());
-        }
-        hashBlock = header.GetHash();
-        if (txOut.GetHash() != hash)
-            return error("%s: txid mismatch", __func__);
-        return true;
     }
 
     if (fAllowSlow) // use coin database to locate block that contains transaction, and scan it
     {
-        CoinAccessor coin(*(pnetMan->getChainActive()->pcoinsTip), hash);
+        CoinAccessor coin(*(pcoinsTip), hash);
         if (!coin->IsSpent())
         {
+            RECURSIVEREADLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
             pindexSlow = pnetMan->getChainActive()->chainActive[coin->nHeight];
         }
     }

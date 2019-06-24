@@ -611,7 +611,7 @@ UniValue gettxout(const UniValue &params, bool fHelp)
     if (fMempool)
     {
         READLOCK(mempool.cs);
-        CCoinsViewMemPool view(pnetMan->getChainActive()->pcoinsTip.get(), mempool);
+        CCoinsViewMemPool view(pcoinsTip.get(), mempool);
         if (!view.GetCoin(out, coin) || mempool.isSpent(out))
         {
             return NullUniValue;
@@ -619,14 +619,13 @@ UniValue gettxout(const UniValue &params, bool fHelp)
     }
     else
     {
-        if (!pnetMan->getChainActive()->pcoinsTip->GetCoin(out, coin))
+        if (!pcoinsTip->GetCoin(out, coin))
         {
             return NullUniValue;
         }
     }
 
-    CBlockIndex *pindex =
-        pnetMan->getChainActive()->LookupBlockIndex(pnetMan->getChainActive()->pcoinsTip->GetBestBlock());
+    CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(pcoinsTip->GetBestBlock());
     ret.push_back(Pair("bestblock", pindex->GetBlockHash().GetHex()));
     if ((unsigned int)coin.nHeight == MEMPOOL_HEIGHT)
         ret.push_back(Pair("confirmations", 0));
@@ -665,8 +664,7 @@ UniValue verifychain(const UniValue &params, bool fHelp)
     if (params.size() > 1)
         nCheckDepth = params[1].get_int();
 
-    return CVerifyDB().VerifyDB(
-        pnetMan->getActivePaymentNetwork(), pnetMan->getChainActive()->pcoinsTip.get(), nCheckLevel, nCheckDepth);
+    return CVerifyDB().VerifyDB(pnetMan->getActivePaymentNetwork(), pcoinsTip.get(), nCheckLevel, nCheckDepth);
 }
 
 /** Implementation of IsSuperMajority with better feedback */
@@ -811,7 +809,7 @@ static std::set<CBlockIndex *, CompareBlocksByHeight> GetChainTips()
     std::set<CBlockIndex *> setOrphans;
     std::set<CBlockIndex *> setPrevs;
 
-    READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+    RECURSIVEREADLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
     for (const std::pair<const uint256, CBlockIndex *> &item : pnetMan->getChainActive()->mapBlockIndex)
     {
         if (!pnetMan->getChainActive()->chainActive.Contains(item.second))
@@ -973,14 +971,11 @@ UniValue invalidateblock(const UniValue &params, bool fHelp)
     uint256 hash(uint256S(strHash));
     CValidationState state;
 
-    {
-        CBlockIndex *pblockindex = pnetMan->getChainActive()->LookupBlockIndex(hash);
-        if (!pblockindex)
-            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
+    CBlockIndex *pblockindex = pnetMan->getChainActive()->LookupBlockIndex(hash);
+    if (!pblockindex)
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
 
-        LOCK(cs_main);
-        InvalidateBlock(state, pnetMan->getActivePaymentNetwork()->GetConsensus(), pblockindex);
-    }
+    InvalidateBlock(state, pnetMan->getActivePaymentNetwork()->GetConsensus(), pblockindex);
 
     if (state.IsValid())
     {

@@ -299,7 +299,7 @@ bool CheckProofOfStake(int nHeight, const CTransaction &tx, uint256 &hashProofOf
     }
 
     CDiskTxPos txindex;
-    pnetMan->getChainActive()->pblocktree->ReadTxIndex(txPrev.GetHash(), txindex);
+    pblocktree->ReadTxIndex(txPrev.GetHash(), txindex);
     if (nHeight < 1505775)
     {
         if (!CheckStakeKernelHash(

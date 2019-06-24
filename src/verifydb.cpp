@@ -31,9 +31,8 @@ CVerifyDB::CVerifyDB() {}
 CVerifyDB::~CVerifyDB() {}
 bool CVerifyDB::VerifyDB(const CNetworkTemplate &chainparams, CCoinsView *coinsview, int nCheckLevel, int nCheckDepth)
 {
-    LOCK(cs_main);
-    if (pnetMan->getChainActive()->chainActive.Tip() == NULL ||
-        pnetMan->getChainActive()->chainActive.Tip()->pprev == NULL)
+    if (pnetMan->getChainActive()->chainActive.Tip() == nullptr ||
+        pnetMan->getChainActive()->chainActive.Tip()->pprev == nullptr)
         return true;
 
     // Verify blocks in the best chain
@@ -45,9 +44,10 @@ bool CVerifyDB::VerifyDB(const CNetworkTemplate &chainparams, CCoinsView *coinsv
     LogPrintf("Verifying last %i blocks at level %i\n", nCheckDepth, nCheckLevel);
     CCoinsViewCache coins(coinsview);
     CBlockIndex *pindexState = pnetMan->getChainActive()->chainActive.Tip();
-    CBlockIndex *pindexFailure = NULL;
+    CBlockIndex *pindexFailure = nullptr;
     int nGoodTransactions = 0;
     CValidationState state;
+    LOCK(cs_main);
     for (CBlockIndex *pindex = pnetMan->getChainActive()->chainActive.Tip(); pindex && pindex->pprev;
          pindex = pindex->pprev)
     {
@@ -84,8 +84,7 @@ bool CVerifyDB::VerifyDB(const CNetworkTemplate &chainparams, CCoinsView *coinsv
         }
         // check level 3: check for inconsistencies during memory-only disconnect of tip blocks
         if (nCheckLevel >= 3 && pindex == pindexState &&
-            (coins.DynamicMemoryUsage() + pnetMan->getChainActive()->pcoinsTip->DynamicMemoryUsage()) <=
-                nCoinCacheUsage)
+            (coins.DynamicMemoryUsage() + pcoinsTip->DynamicMemoryUsage()) <= nCoinCacheUsage)
         {
             DisconnectResult res = DisconnectBlock(block, pindex, coins);
             if (res == DISCONNECT_FAILED)

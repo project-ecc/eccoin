@@ -160,6 +160,11 @@ extern bool fCheckpointsEnabled;
 extern size_t nCoinCacheUsage;
 extern CFeeRate minRelayTxFee;
 
+/** Global variable that points to the active CCoinsView */
+extern std::unique_ptr<CCoinsViewCache> pcoinsTip GUARDED_BY(cs_main);
+/** Global variable that points to the active block tree */
+extern std::unique_ptr<CBlockTreeDB> pblocktree GUARDED_BY(cs_main);
+
 struct COrphanTx
 {
     CTransaction tx;
@@ -430,7 +435,7 @@ bool ContextualCheckBlock(const CBlock &block, CValidationState &state, CBlockIn
 /* Calculate the amount of disk space the block & undo files currently use */
 uint64_t CalculateCurrentUsage();
 
-extern std::set<CBlockIndex *, CBlockIndexWorkComparator> setBlockIndexCandidates;
+extern std::set<CBlockIndex *, CBlockIndexWorkComparator> setBlockIndexCandidates GUARDED_BY(cs_main);
 
 class CBlockFileInfo
 {

@@ -80,7 +80,7 @@ void WalletTxToJSON(const CWalletTx &wtx, UniValue &entry)
     }
     if (confirms > 0)
     {
-        READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+        RECURSIVEREADLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
         entry.push_back(Pair("blockhash", wtx.hashBlock.GetHex()));
         entry.push_back(Pair("blockindex", wtx.nIndex));
         entry.push_back(Pair("blocktime", pnetMan->getChainActive()->mapBlockIndex[wtx.hashBlock]->GetBlockTime()));
