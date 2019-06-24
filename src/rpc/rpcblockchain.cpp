@@ -971,14 +971,11 @@ UniValue invalidateblock(const UniValue &params, bool fHelp)
     uint256 hash(uint256S(strHash));
     CValidationState state;
 
-    {
-        CBlockIndex *pblockindex = pnetMan->getChainActive()->LookupBlockIndex(hash);
-        if (!pblockindex)
-            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
+    CBlockIndex *pblockindex = pnetMan->getChainActive()->LookupBlockIndex(hash);
+    if (!pblockindex)
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
 
-        LOCK(cs_main);
-        InvalidateBlock(state, pnetMan->getActivePaymentNetwork()->GetConsensus(), pblockindex);
-    }
+    InvalidateBlock(state, pnetMan->getActivePaymentNetwork()->GetConsensus(), pblockindex);
 
     if (state.IsValid())
     {
