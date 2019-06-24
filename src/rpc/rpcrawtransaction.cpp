@@ -274,7 +274,7 @@ UniValue gettxoutproof(const UniValue &params, bool fHelp)
     else
     {
         LOCK(cs_main);
-        CoinAccessor coin(*pnetMan->getChainActive()->pcoinsTip, oneTxid);
+        CoinAccessor coin(*pcoinsTip, oneTxid);
         if (coin && !coin->IsSpent() && coin->nHeight > 0 &&
             coin->nHeight <= pnetMan->getChainActive()->chainActive.Height())
         {
@@ -685,7 +685,7 @@ UniValue signrawtransaction(const UniValue &params, bool fHelp)
     CCoinsViewCache view(&viewDummy);
     {
         READLOCK(mempool.cs);
-        CCoinsViewCache &viewChain = *pnetMan->getChainActive()->pcoinsTip;
+        CCoinsViewCache &viewChain = *pcoinsTip;
         CCoinsViewMemPool viewMempool(&viewChain, mempool);
         view.SetBackend(viewMempool); // temporarily switch cache backend to db+mempool view
 
@@ -883,7 +883,7 @@ UniValue sendrawtransaction(const UniValue &params, bool fHelp)
     if (params.size() > 1)
         fOverrideFees = params[1].get_bool();
 
-    CCoinsViewCache &view = *pnetMan->getChainActive()->pcoinsTip;
+    CCoinsViewCache &view = *pcoinsTip;
     bool fHaveChain = false;
     for (size_t o = 0; !fHaveChain && o < tx->vout.size(); o++)
     {

@@ -171,7 +171,7 @@ bool ProcessNewBlock(CValidationState &state,
         }
 
         // Store to disk
-        CBlockIndex *pindex = NULL;
+        CBlockIndex *pindex = nullptr;
         bool ret = AcceptBlock(pblock, state, chainparams, &pindex, fRequested, dbp);
         CheckBlockIndex(chainparams.GetConsensus());
         if (!ret)
@@ -207,8 +207,7 @@ void UpdateTip(CBlockIndex *pindexNew)
         log(pnetMan->getChainActive()->chainActive.Tip()->nChainWork.getdouble()) / log(2.0),
         (unsigned long)(pnetMan->getChainActive()->chainActive.Tip()->nChainTx),
         DateTimeStrFormat("%Y-%m-%d %H:%M:%S", pnetMan->getChainActive()->chainActive.Tip()->GetBlockTime()),
-        pnetMan->getChainActive()->pcoinsTip->DynamicMemoryUsage() * (1.0 / (1 << 20)),
-        pnetMan->getChainActive()->pcoinsTip->GetCacheSize());
+        pcoinsTip->DynamicMemoryUsage() * (1.0 / (1 << 20)), pcoinsTip->GetCacheSize());
 
     cvBlockChange.notify_all();
 }
@@ -230,7 +229,7 @@ bool DisconnectTip(CValidationState &state, const Consensus::Params &consensusPa
     // Apply the block atomically to the chain state.
     int64_t nStart = GetTimeMicros();
     {
-        CCoinsViewCache view(pnetMan->getChainActive()->pcoinsTip.get());
+        CCoinsViewCache view(pcoinsTip.get());
         if (DisconnectBlock(block, pindexDelete, view) != DISCONNECT_OK)
         {
             return error("DisconnectTip(): DisconnectBlock %s failed", pindexDelete->GetBlockHash().ToString());
@@ -315,7 +314,7 @@ bool ConnectTip(CValidationState &state,
     LogPrint(
         "bench", "  - Load block from disk: %.2fms [%.2fs]\n", (nTime2 - nTime1) * 0.001, nTimeReadFromDisk * 0.000001);
     {
-        CCoinsViewCache view(pnetMan->getChainActive()->pcoinsTip.get());
+        CCoinsViewCache view(pcoinsTip.get());
         bool rv = ConnectBlock(*pblock, state, pindexNew, view);
         if (!rv)
         {
@@ -587,12 +586,12 @@ bool ActivateBestChainStep(CValidationState &state,
 
     if (fBlocksDisconnected)
     {
-        mempool.removeForReorg(pnetMan->getChainActive()->pcoinsTip.get(),
-            pnetMan->getChainActive()->chainActive.Tip()->nHeight + 1, STANDARD_LOCKTIME_VERIFY_FLAGS);
+        mempool.removeForReorg(
+            pcoinsTip.get(), pnetMan->getChainActive()->chainActive.Tip()->nHeight + 1, STANDARD_LOCKTIME_VERIFY_FLAGS);
         LimitMempoolSize(mempool, gArgs.GetArg("-maxmempool", DEFAULT_MAX_MEMPOOL_SIZE) * 1000000,
             gArgs.GetArg("-mempoolexpiry", DEFAULT_MEMPOOL_EXPIRY) * 60 * 60);
     }
-    mempool.check(pnetMan->getChainActive()->pcoinsTip.get());
+    mempool.check(pcoinsTip.get());
     // Callbacks/notifications for a new best chain.
     if (fInvalidFound)
     {
@@ -1347,7 +1346,7 @@ bool ConnectBlock(const CBlock &block,
         setDirtyBlockIndex.insert(pindex);
     }
 
-    if (!pnetMan->getChainActive()->pblocktree->WriteTxIndex(vPos))
+    if (!pblocktree->WriteTxIndex(vPos))
     {
         return AbortNode(state, "Failed to write transaction index");
     }

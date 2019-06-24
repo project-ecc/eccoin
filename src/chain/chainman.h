@@ -42,17 +42,11 @@ public:
     /** map containing all block indexs ever seen for this chain */
     BlockMap mapBlockIndex GUARDED_BY(cs_mapBlockIndex);
 
-    /** The currently-connected chain of blocks (protected by cs_main). */
+    /** The currently-connected chain of blocks (protected by cs_mapBlockIndex). */
     CChain chainActive;
 
     /** Best header we've seen so far (used for getheaders queries' starting points). */
-    CBlockIndex *pindexBestHeader;
-
-    /** Global variable that points to the active CCoinsView (protected by cs_main) */
-    std::unique_ptr<CCoinsViewCache> pcoinsTip;
-
-    /** Global variable that points to the active block tree (protected by cs_main) */
-    std::unique_ptr<CBlockTreeDB> pblocktree;
+    CBlockIndex *pindexBestHeader GUARDED_BY(cs_mapBlockIndex);
 
 private:
     bool LoadBlockIndexDB();
@@ -62,9 +56,7 @@ public:
     {
         mapBlockIndex.clear();
         chainActive = CChain();
-        pindexBestHeader = NULL;
-        pcoinsTip.reset();
-        pblocktree.reset();
+        pindexBestHeader = nullptr;
     }
 
     ~CChainManager()
@@ -72,11 +64,11 @@ public:
         // block headers
         BlockMap::iterator it1 = mapBlockIndex.begin();
         for (; it1 != mapBlockIndex.end(); it1++)
+        {
             delete (*it1).second;
+        }
         mapBlockIndex.clear();
         delete pindexBestHeader;
-        pcoinsTip.reset();
-        pblocktree.reset();
     }
 
     void operator=(const CChainManager &oldMan)
@@ -85,8 +77,6 @@ public:
         mapBlockIndex = oldMan.mapBlockIndex;
         chainActive = oldMan.chainActive;
         pindexBestHeader = oldMan.pindexBestHeader;
-        pcoinsTip.reset(oldMan.pcoinsTip.get());
-        pblocktree.reset(oldMan.pblocktree.get());
     }
 
     /** Look up the block index entry for a given block hash. returns nullptr if it does not exist */

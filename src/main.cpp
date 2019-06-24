@@ -354,7 +354,7 @@ bool CheckSequenceLocks(const CTransaction &tx, int flags, LockPoints *lp, bool 
     else
     {
         // pcoinsTip contains the UTXO set for chainActive.Tip()
-        CCoinsViewMemPool viewMemPool(pnetMan->getChainActive()->pcoinsTip.get(), mempool);
+        CCoinsViewMemPool viewMemPool(pcoinsTip.get(), mempool);
         std::vector<int> prevheights;
         prevheights.resize(tx.vin.size());
         for (size_t txinIndex = 0; txinIndex < tx.vin.size(); txinIndex++)
@@ -445,7 +445,7 @@ void LimitMempoolSize(CTxMemPool &pool, size_t limit, unsigned long age)
     int expired = pool.Expire(GetTime() - age, vCoinsToUncache);
     for (const COutPoint &txin : vCoinsToUncache)
     {
-        pnetMan->getChainActive()->pcoinsTip->Uncache(txin);
+        pcoinsTip->Uncache(txin);
     }
     if (expired != 0)
         LogPrint("mempool", "Expired %i transactions from the memory pool\n", expired);
@@ -454,7 +454,7 @@ void LimitMempoolSize(CTxMemPool &pool, size_t limit, unsigned long age)
     pool.TrimToSize(limit, &vNoSpendsRemaining);
     for (const COutPoint &removed : vNoSpendsRemaining)
     {
-        pnetMan->getChainActive()->pcoinsTip->Uncache(removed);
+        pcoinsTip->Uncache(removed);
     }
 }
 
@@ -532,7 +532,7 @@ bool AcceptToMemoryPoolWorker(CTxMemPool &pool,
         LockPoints lp;
         {
             WRITELOCK(pool.cs);
-            CCoinsViewMemPool viewMemPool(pnetMan->getChainActive()->pcoinsTip.get(), pool);
+            CCoinsViewMemPool viewMemPool(pcoinsTip.get(), pool);
             view.SetBackend(viewMemPool);
 
             // do all inputs exist?
@@ -550,7 +550,7 @@ bool AcceptToMemoryPoolWorker(CTxMemPool &pool,
                     // We still want to keep orphantx coins in the event the orphantx is finally accepted into the
                     // mempool or shows up in a block that is mined.  Therefore if pfMissingInputs returns true then
                     // any coins in vCoinsToUncache will NOT be uncached.
-                    if (!pnetMan->getChainActive()->pcoinsTip->HaveCoinInCache(txin.prevout))
+                    if (!pcoinsTip->HaveCoinInCache(txin.prevout))
                     {
                         vCoinsToUncache.push_back(txin.prevout);
                     }
@@ -816,7 +816,7 @@ bool AcceptToMemoryPool(CTxMemPool &pool,
     {
         for (const COutPoint &remove : vCoinsToUncache)
         {
-            pnetMan->getChainActive()->pcoinsTip->Uncache(remove);
+            pcoinsTip->Uncache(remove);
         }
     }
     return res;
@@ -1065,7 +1065,7 @@ bool FlushStateToDisk(CValidationState &state, FlushStateMode mode)
     {
         nLastSetChain = nNow;
     }
-    size_t cacheSize = pnetMan->getChainActive()->pcoinsTip->DynamicMemoryUsage();
+    size_t cacheSize = pcoinsTip->DynamicMemoryUsage();
     static int64_t nSizeAfterLastFlush = 0;
     // The cache is close to the limit. Try to flush and trim.
     bool fCacheCritical = ((mode == FLUSH_STATE_IF_NEEDED) && (cacheSize > nCoinCacheUsage * 0.995)) ||
@@ -1104,7 +1104,7 @@ bool FlushStateToDisk(CValidationState &state, FlushStateMode mode)
                 vBlocks.push_back(*it);
                 setDirtyBlockIndex.erase(it++);
             }
-            if (!pnetMan->getChainActive()->pblocktree->WriteBatchSync(vFiles, nLastBlockFile, vBlocks))
+            if (!pblocktree->WriteBatchSync(vFiles, nLastBlockFile, vBlocks))
             {
                 return AbortNode(state, "Files to write to block index database");
             }
@@ -1119,12 +1119,12 @@ bool FlushStateToDisk(CValidationState &state, FlushStateMode mode)
         // twice (once in the log, and once in the tables). This is already
         // an overestimation, as most will delete an existing entry or
         // overwrite one. Still, use a conservative safety factor of 2.
-        if (!CheckDiskSpace(48 * 2 * 2 * pnetMan->getChainActive()->pcoinsTip->GetCacheSize()))
+        if (!CheckDiskSpace(48 * 2 * 2 * pcoinsTip->GetCacheSize()))
         {
             return state.Error("out of disk space");
         }
         // Flush the chainstate (which may refer to block index entries).
-        if (!pnetMan->getChainActive()->pcoinsTip->Flush())
+        if (!pcoinsTip->Flush())
         {
             return AbortNode(state, "Failed to write to coin database");
         }
@@ -1135,8 +1135,8 @@ bool FlushStateToDisk(CValidationState &state, FlushStateMode mode)
         {
             nTrimSize = nCoinCacheUsage - nMaxCacheIncreaseSinceLastFlush;
         }
-        pnetMan->getChainActive()->pcoinsTip->Trim(nTrimSize);
-        nSizeAfterLastFlush = pnetMan->getChainActive()->pcoinsTip->DynamicMemoryUsage();
+        pcoinsTip->Trim(nTrimSize);
+        nSizeAfterLastFlush = pcoinsTip->DynamicMemoryUsage();
     }
     if (fDoFullFlush || ((mode == FLUSH_STATE_ALWAYS || mode == FLUSH_STATE_PERIODIC) &&
                             nNow > nLastSetChain + (int64_t)DATABASE_WRITE_INTERVAL * 1000000))
@@ -1151,7 +1151,7 @@ bool FlushStateToDisk(CValidationState &state, FlushStateMode mode)
     // an error is reported if the new and old values do not match.
     if (fPeriodicFlush)
     {
-        pnetMan->getChainActive()->pcoinsTip->ResetCachedCoinUsage();
+        pcoinsTip->ResetCachedCoinUsage();
     }
     return true;
 }
@@ -1198,8 +1198,8 @@ bool InvalidateBlock(CValidationState &state, const Consensus::Params &consensus
         // unconditionally valid already, so force disconnect away from it.
         if (!DisconnectTip(state, consensusParams))
         {
-            mempool.removeForReorg(pnetMan->getChainActive()->pcoinsTip.get(),
-                pnetMan->getChainActive()->chainActive.Tip()->nHeight + 1, STANDARD_LOCKTIME_VERIFY_FLAGS);
+            mempool.removeForReorg(pcoinsTip.get(), pnetMan->getChainActive()->chainActive.Tip()->nHeight + 1,
+                STANDARD_LOCKTIME_VERIFY_FLAGS);
             return false;
         }
     }
@@ -1219,8 +1219,8 @@ bool InvalidateBlock(CValidationState &state, const Consensus::Params &consensus
     }
 
     InvalidChainFound(pindex);
-    mempool.removeForReorg(pnetMan->getChainActive()->pcoinsTip.get(),
-        pnetMan->getChainActive()->chainActive.Tip()->nHeight + 1, STANDARD_LOCKTIME_VERIFY_FLAGS);
+    mempool.removeForReorg(
+        pcoinsTip.get(), pnetMan->getChainActive()->chainActive.Tip()->nHeight + 1, STANDARD_LOCKTIME_VERIFY_FLAGS);
     return true;
 }
 

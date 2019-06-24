@@ -611,7 +611,7 @@ UniValue gettxout(const UniValue &params, bool fHelp)
     if (fMempool)
     {
         READLOCK(mempool.cs);
-        CCoinsViewMemPool view(pnetMan->getChainActive()->pcoinsTip.get(), mempool);
+        CCoinsViewMemPool view(pcoinsTip.get(), mempool);
         if (!view.GetCoin(out, coin) || mempool.isSpent(out))
         {
             return NullUniValue;
@@ -619,14 +619,13 @@ UniValue gettxout(const UniValue &params, bool fHelp)
     }
     else
     {
-        if (!pnetMan->getChainActive()->pcoinsTip->GetCoin(out, coin))
+        if (!pcoinsTip->GetCoin(out, coin))
         {
             return NullUniValue;
         }
     }
 
-    CBlockIndex *pindex =
-        pnetMan->getChainActive()->LookupBlockIndex(pnetMan->getChainActive()->pcoinsTip->GetBestBlock());
+    CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(pcoinsTip->GetBestBlock());
     ret.push_back(Pair("bestblock", pindex->GetBlockHash().GetHex()));
     if ((unsigned int)coin.nHeight == MEMPOOL_HEIGHT)
         ret.push_back(Pair("confirmations", 0));
@@ -665,8 +664,7 @@ UniValue verifychain(const UniValue &params, bool fHelp)
     if (params.size() > 1)
         nCheckDepth = params[1].get_int();
 
-    return CVerifyDB().VerifyDB(
-        pnetMan->getActivePaymentNetwork(), pnetMan->getChainActive()->pcoinsTip.get(), nCheckLevel, nCheckDepth);
+    return CVerifyDB().VerifyDB(pnetMan->getActivePaymentNetwork(), pcoinsTip.get(), nCheckLevel, nCheckDepth);
 }
 
 /** Implementation of IsSuperMajority with better feedback */

@@ -208,11 +208,11 @@ void Shutdown(thread_group &threadGroup)
 
     {
         LOCK(cs_main);
-        if (pnetMan->getChainActive()->pcoinsTip != nullptr)
+        if (pcoinsTip != nullptr)
         {
             // Flush state and clear cache completely to release as much memory as possible before continuing.
             FlushStateToDisk();
-            pnetMan->getChainActive()->pcoinsTip->Clear();
+            pcoinsTip->Clear();
         }
     }
 
@@ -251,18 +251,18 @@ void Shutdown(thread_group &threadGroup)
 
     {
         LOCK(cs_main);
-        if (pnetMan->getChainActive()->pcoinsTip != nullptr)
+        if (pcoinsTip != nullptr)
         {
             FlushStateToDisk();
         }
-        pnetMan->getChainActive()->pcoinsTip.reset();
-        pnetMan->getChainActive()->pcoinsTip = nullptr;
+        pcoinsTip.reset();
+        pcoinsTip = nullptr;
         pcoinscatcher.reset();
         pcoinscatcher = nullptr;
         pcoinsdbview.reset();
         pcoinsdbview = nullptr;
-        pnetMan->getChainActive()->pblocktree.reset();
-        pnetMan->getChainActive()->pblocktree = nullptr;
+        pblocktree.reset();
+        pblocktree = nullptr;
     }
 
     if (pwalletMain)
@@ -713,7 +713,7 @@ void ThreadImport(std::vector<fs::path> vImportFiles)
             pnetMan->getChainActive()->LoadExternalBlockFile(chainparams, file, &pos);
             nFile++;
         }
-        pnetMan->getChainActive()->pblocktree->WriteReindexing(false);
+        pblocktree->WriteReindexing(false);
         fReindex = false;
         LogPrintf("Reindexing finished\n");
         // To avoid ending up in a situation without genesis block, re-try initializing (no-op if reindexing worked):
@@ -1461,19 +1461,19 @@ bool AppInit2(thread_group &threadGroup)
             try
             {
                 pnetMan->getChainActive()->UnloadBlockIndex();
-                pnetMan->getChainActive()->pcoinsTip.reset();
+                pcoinsTip.reset();
                 pcoinsdbview.reset();
                 pcoinscatcher.reset();
-                pnetMan->getChainActive()->pblocktree.reset();
+                pblocktree.reset();
 
-                pnetMan->getChainActive()->pblocktree.reset(new CBlockTreeDB(nBlockTreeDBCache, false, fReindex));
+                pblocktree.reset(new CBlockTreeDB(nBlockTreeDBCache, false, fReindex));
                 pcoinsdbview.reset(new CCoinsViewDB(nCoinDBCache, false, fReset));
                 pcoinscatcher.reset(new CCoinsViewErrorCatcher(pcoinsdbview.get()));
-                pnetMan->getChainActive()->pcoinsTip.reset(new CCoinsViewCache(pcoinscatcher.get()));
+                pcoinsTip.reset(new CCoinsViewCache(pcoinscatcher.get()));
 
                 if (fReindex)
                 {
-                    pnetMan->getChainActive()->pblocktree->WriteReindexing(true);
+                    pblocktree->WriteReindexing(true);
                 }
                 else
                 {

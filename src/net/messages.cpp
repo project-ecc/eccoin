@@ -758,8 +758,7 @@ bool AlreadyHave(const CInv &inv) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
         LOCK(cs_orphans);
         return recentRejects->contains(inv.hash) || mempool.exists(inv.hash) || mapOrphanTransactions.count(inv.hash) ||
                // Best effort: only try output 0 and 1
-               pnetMan->getChainActive()->pcoinsTip->HaveCoinInCache(COutPoint(inv.hash, 0)) ||
-               pnetMan->getChainActive()->pcoinsTip->HaveCoinInCache(COutPoint(inv.hash, 1));
+               pcoinsTip->HaveCoinInCache(COutPoint(inv.hash, 0)) || pcoinsTip->HaveCoinInCache(COutPoint(inv.hash, 1));
     }
     case MSG_BLOCK:
         READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
@@ -1516,7 +1515,7 @@ bool static ProcessMessage(CNode *pfrom,
 
         if (!AlreadyHave(inv) && AcceptToMemoryPool(mempool, state, ptx, true, &fMissingInputs))
         {
-            mempool.check(pnetMan->getChainActive()->pcoinsTip.get());
+            mempool.check(pcoinsTip.get());
             RelayTransaction(tx, connman);
             for (size_t i = 0; i < tx.vout.size(); i++)
             {
@@ -1595,7 +1594,7 @@ bool static ProcessMessage(CNode *pfrom,
                             recentRejects->insert(orphanId);
                         }
                     }
-                    mempool.check(pnetMan->getChainActive()->pcoinsTip.get());
+                    mempool.check(pcoinsTip.get());
                 }
             }
 
