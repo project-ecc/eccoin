@@ -7,6 +7,7 @@
 #include "fs.h"
 #include "net/protocol.h"
 #include "sync.h"
+#include "undo.h"
 
 extern CCriticalSection cs_blockstorage;
 
@@ -19,10 +20,19 @@ FILE *OpenUndoFile(const CDiskBlockPos &pos, bool fReadOnly = false);
 /** Functions for disk access for blocks */
 bool WriteBlockToDisk(const CBlock &block, CDiskBlockPos &pos, const CMessageHeader::MessageMagic &messageStart)
     EXCLUSIVE_LOCKS_REQUIRED(cs_blockstorage);
+
 bool ReadBlockFromDisk(CBlock &block, const CDiskBlockPos &pos, const Consensus::Params &consensusParams)
     EXCLUSIVE_LOCKS_REQUIRED(cs_blockstorage);
+
 bool ReadBlockFromDisk(CBlock &block, const CBlockIndex *pindex, const Consensus::Params &consensusParams)
     EXCLUSIVE_LOCKS_REQUIRED(cs_blockstorage);
 
+bool UndoWriteToDisk(const CBlockUndo &blockundo,
+    CDiskBlockPos &pos,
+    const uint256 &hashBlock,
+    const CMessageHeader::MessageMagic &messageStart) EXCLUSIVE_LOCKS_REQUIRED(cs_blockstorage);
+
+bool UndoReadFromDisk(CBlockUndo &blockundo, const CDiskBlockPos &pos, const uint256 &hashBlock)
+    EXCLUSIVE_LOCKS_REQUIRED(cs_blockstorage);
 
 #endif

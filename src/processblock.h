@@ -64,7 +64,6 @@ bool ProcessNewBlock(CValidationState &state,
 bool DisconnectTip(CValidationState &state, const Consensus::Params &consensusParams);
 void InvalidChainFound(CBlockIndex *pindexNew);
 void InvalidBlockFound(CBlockIndex *pindex, const CValidationState &state);
-bool UndoReadFromDisk(CBlockUndo &blockundo, const CDiskBlockPos &pos, const uint256 &hashBlock);
 
 /** Run an instance of the script checking thread */
 void ThreadScriptCheck();
