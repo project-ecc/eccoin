@@ -391,4 +391,32 @@ void DeleteLock(void *cs)
     }
 }
 
+#ifdef DEBUG_LOCKORDER
+CRecursiveSharedCriticalSection::CRecursiveSharedCriticalSection() : name(nullptr){}
+CRecursiveSharedCriticalSection::CRecursiveSharedCriticalSection(const char *n) : name(n)
+{
+// print the address of named critical sections so they can be found in the mutrace output
+#ifdef ENABLE_MUTRACE
+    if (name)
+    {
+        LogPrintf("CRecursiveSharedCriticalSection %s at %p\n", name, this);
+        fflush(stdout);
+    }
+#endif
+}
+
+CRecursiveSharedCriticalSection::~CRecursiveSharedCriticalSection()
+{
+#ifdef ENABLE_MUTRACE
+    if (name)
+    {
+        LogPrintf("Destructing CRecursiveSharedCriticalSection %s\n", name);
+        fflush(stdout);
+    }
+#endif
+    DeleteLock((void *)this);
+}
+#endif
+
+
 #endif /* DEBUG_LOCKORDER */
