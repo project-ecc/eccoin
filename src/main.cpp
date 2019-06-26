@@ -109,13 +109,6 @@ const std::string strMessageMagic = "ECC Signed Message:\n";
 
 CBlockIndex *pindexBestInvalid;
 
-/**
- * The set of all CBlockIndex entries with BLOCK_VALID_TRANSACTIONS (for itself and all ancestors) and
- * as good as our current tip or better. Entries may be failed, though, and pruning nodes may be
- * missing the data for the block.
- */
-std::set<CBlockIndex *, CBlockIndexWorkComparator> setBlockIndexCandidates;
-
 /** All pairs A->B, where A (or one of its ancestors) misses transactions, but B has transactions.
  * Pruned nodes may have entries where B is missing data.
  */

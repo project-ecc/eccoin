@@ -435,7 +435,7 @@ bool ContextualCheckBlock(const CBlock &block, CValidationState &state, CBlockIn
 /* Calculate the amount of disk space the block & undo files currently use */
 uint64_t CalculateCurrentUsage();
 
-extern std::set<CBlockIndex *, CBlockIndexWorkComparator> setBlockIndexCandidates;
+extern std::set<CBlockIndex *, CBlockIndexWorkComparator> setBlockIndexCandidates GUARDED_BY(cs_main);
 
 class CBlockFileInfo
 {
