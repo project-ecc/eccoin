@@ -185,8 +185,6 @@ bool IsFinalTx(const CTransaction &tx, int nBlockHeight, int64_t nBlockTime)
 
 bool CheckFinalTx(const CTransaction &tx, int flags)
 {
-    AssertLockHeld(cs_main);
-
     // By convention a negative value for flags indicates that the
     // current network-enforced consensus rules should be used. In
     // a future soft-fork scenario that would mean checking which
@@ -310,7 +308,6 @@ bool SequenceLocks(const CTransaction &tx, int flags, std::vector<int> *prevHeig
 
 bool TestLockPointValidity(const LockPoints *lp)
 {
-    AssertLockHeld(cs_main);
     assert(lp);
     // If there are relative lock times then the maxInputBlock will be set
     // If there are no relative lock times, the LockPoints don't depend on the chain
@@ -318,6 +315,7 @@ bool TestLockPointValidity(const LockPoints *lp)
     {
         // Check whether chainActive is an extension of the block at which the LockPoints
         // calculation was valid.  If not LockPoints are no longer valid
+        RECURSIVEREADLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
         if (!pnetMan->getChainActive()->chainActive.Contains(lp->maxInputBlock))
         {
             return false;
