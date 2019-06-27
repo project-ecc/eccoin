@@ -134,7 +134,7 @@ uint32_t nBlockSequenceId = 1;
  */
 
 /** Number of preferable block download peers. */
-int nPreferredDownload = 0;
+std::atomic<int> nPreferredDownload{0};
 
 /** Dirty block index entries. */
 std::set<CBlockIndex *> setDirtyBlockIndex;

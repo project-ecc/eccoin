@@ -176,7 +176,7 @@ void FinalizeNode(NodeId nodeid, bool &fUpdateConnectionTime)
         EraseOrphansFor(nodeid);
     }
     LOCK(cs_main);
-    nPreferredDownload -= state->fPreferredDownload;
+    nPreferredDownload.fetch_sub(state->fPreferredDownload);
     nPeersWithValidatedDownloads -= (state->nBlocksInFlightValidHeaders != 0);
     assert(nPeersWithValidatedDownloads >= 0);
 
@@ -186,7 +186,7 @@ void FinalizeNode(NodeId nodeid, bool &fUpdateConnectionTime)
     {
         // Do a consistency check after the last peer is removed.
         assert(mapBlocksInFlight.empty());
-        assert(nPreferredDownload == 0);
+        assert(nPreferredDownload.load() == 0);
         assert(nPeersWithValidatedDownloads == 0);
     }
 }
@@ -297,14 +297,14 @@ const CBlockIndex *LastCommonAncestor(const CBlockIndex *pa, const CBlockIndex *
     return pa;
 }
 
-bool CanDirectFetch(const Consensus::Params &consensusParams) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
+bool CanDirectFetch(const Consensus::Params &consensusParams)
 {
     int64_t targetSpacing = consensusParams.nTargetSpacing;
     if (pnetMan->getChainActive()->chainActive.Tip()->GetMedianTimePast() > SERVICE_UPGRADE_HARDFORK)
     {
         targetSpacing = 150;
     }
-    return pnetMan->getChainActive()->chainActive.Tip()->GetBlockTime() > GetAdjustedTime() - (targetSpacing * 20);
+    return pnetMan->getChainActive()->chainActive.Tip()->GetBlockTime() > GetAdjustedTime() - (targetSpacing * 80);
 }
 
 void RelayTransaction(const CTransaction &tx, CConnman &connman)
@@ -500,7 +500,7 @@ void ProcessBlockAvailability(NodeId nodeid)
 void UpdatePreferredDownload(CNode *node)
 {
     CNodeStateAccessor state(nodestateman, node->GetId());
-    nPreferredDownload -= state->fPreferredDownload;
+    nPreferredDownload.fetch_sub(state->fPreferredDownload);
 
     // Whether this node should be marked as a preferred download node.
     // we allow downloads from inbound nodes; this may have been limited in the past to stop attackers from connecting
@@ -508,7 +508,7 @@ void UpdatePreferredDownload(CNode *node)
     // chain on that basis.
     state->fPreferredDownload = !node->fOneShot && !node->fClient;
 
-    nPreferredDownload += state->fPreferredDownload;
+    nPreferredDownload.fetch_add(state->fPreferredDownload);
 }
 
 /** Update pindexLastCommonBlock and add not-in-flight missing successors to vBlocks, until it has
@@ -1745,7 +1745,7 @@ bool static ProcessMessage(CNode *pfrom,
         CNodeStateAccessor nodestate(nodestateman, pfrom->GetId());
         // If this set of headers is valid and ends in a block with at least as
         // much work as our tip, download as much as possible.
-        if (fCanDirectFetch && pindexLast->IsValid(BLOCK_VALID_TREE) &&
+        if (fCanDirectFetch && pindexLast && pindexLast->IsValid(BLOCK_VALID_TREE) &&
             pnetMan->getChainActive()->chainActive.Tip()->nChainWork <= pindexLast->nChainWork)
         {
             std::vector<CBlockIndex *> vToFetch;
@@ -2298,7 +2298,7 @@ bool SendMessages(CNode *pto, CConnman &connman)
 
     // Download if this is a nice peer, or we have no nice peers and this one
     // might do.
-    bool fFetch = nodestate->fPreferredDownload || (nPreferredDownload == 0 && !pto->fClient && !pto->fOneShot);
+    bool fFetch = nodestate->fPreferredDownload || (nPreferredDownload.load() == 0 && !pto->fOneShot);
 
     if (!nodestate->fSyncStarted && !pto->fClient && !fImporting && !fReindex)
     {
