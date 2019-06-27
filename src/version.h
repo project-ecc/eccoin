@@ -26,16 +26,10 @@
  */
 
 
-static const int PROTOCOL_VERSION = 60039;
+static const int PROTOCOL_VERSION = 60040;
 
 // earlier versions not supported as of Feb 2012, and are disconnected
 static const int MIN_PROTO_VERSION = 60037;
-
-// "sendheaders" command and announcing blocks with headers starts with this version
-static const int SENDHEADERS_VERSION = 60035;
-
-//! In this version, 'getheaders' was introduced.
-static const int GETHEADERS_VERSION = 60035;
 
 //! "filter*" commands are disabled without NODE_BLOOM after and including this version
 static const int NO_BLOOM_VERSION = 60034;

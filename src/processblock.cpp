@@ -198,7 +198,7 @@ void UpdateTip(CBlockIndex *pindexNew)
     pnetMan->getChainActive()->chainActive.SetTip(pindexNew);
 
     // New best block
-    nTimeBestReceived = GetTime();
+    nTimeBestReceived.store(GetTime());
     mempool.AddTransactionsUpdated(1);
 
     LogPrintf("%s: new best=%s  height=%d  log2_work=%.8g  tx=%lu  date=%s cache=%.1fMiB(%utx)\n", __func__,
