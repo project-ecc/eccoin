@@ -757,8 +757,9 @@ UniValue getblockchaininfo(const UniValue &params, bool fHelp)
     UniValue obj(UniValue::VOBJ);
     obj.push_back(Pair("chain", pnetMan->getActivePaymentNetwork()->NetworkIDString()));
     obj.push_back(Pair("blocks", (int)pnetMan->getChainActive()->chainActive.Height()));
-    obj.push_back(Pair("headers",
-        pnetMan->getChainActive()->pindexBestHeader ? pnetMan->getChainActive()->pindexBestHeader->nHeight : -1));
+    obj.push_back(Pair("headers", pnetMan->getChainActive()->pindexBestHeader ?
+                                      pnetMan->getChainActive()->pindexBestHeader.load()->nHeight :
+                                      -1));
     obj.push_back(Pair("bestblockhash", pnetMan->getChainActive()->chainActive.Tip()->GetBlockHash().GetHex()));
     obj.push_back(Pair("difficulty", (double)GetDifficulty()));
     obj.push_back(Pair("mediantime", (int64_t)pnetMan->getChainActive()->chainActive.Tip()->GetMedianTimePast()));

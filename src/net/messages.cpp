@@ -802,12 +802,13 @@ void static ProcessGetData(CNode *pfrom, CConnman &connman, const Consensus::Par
                     // more than a month older (both in time, and in best
                     // equivalent proof of work) than the best header chain
                     // we know about.
-                    send = pindex->IsValid(BLOCK_VALID_SCRIPTS) &&
-                           (pnetMan->getChainActive()->pindexBestHeader != nullptr) &&
-                           (pnetMan->getChainActive()->pindexBestHeader->GetBlockTime() - pindex->GetBlockTime() <
-                               nOneMonth) &&
-                           (GetBlockProofEquivalentTime(*pnetMan->getChainActive()->pindexBestHeader, *pindex,
-                                *pnetMan->getChainActive()->pindexBestHeader, consensusParams) < nOneMonth);
+                    send =
+                        pindex->IsValid(BLOCK_VALID_SCRIPTS) &&
+                        (pnetMan->getChainActive()->pindexBestHeader != nullptr) &&
+                        (pnetMan->getChainActive()->pindexBestHeader.load()->GetBlockTime() - pindex->GetBlockTime() <
+                            nOneMonth) &&
+                        (GetBlockProofEquivalentTime(*pnetMan->getChainActive()->pindexBestHeader, *pindex,
+                             *pnetMan->getChainActive()->pindexBestHeader, consensusParams) < nOneMonth);
                     if (!send)
                     {
                         LogPrintf("%s: ignoring request from peer=%i for old block that isn't in the main chain\n",
@@ -822,7 +823,7 @@ void static ProcessGetData(CNode *pfrom, CConnman &connman, const Consensus::Par
             static const int nOneWeek = 7 * 24 * 60 * 60;
             if (send && connman.OutboundTargetReached(true) &&
                 (((pnetMan->getChainActive()->pindexBestHeader != nullptr) &&
-                     (pnetMan->getChainActive()->pindexBestHeader->GetBlockTime() - pindex->GetBlockTime() >
+                     (pnetMan->getChainActive()->pindexBestHeader.load()->GetBlockTime() - pindex->GetBlockTime() >
                          nOneWeek)) ||
                     inv.type == MSG_FILTERED_BLOCK) &&
                 !pfrom->fWhitelisted)
@@ -1321,7 +1322,7 @@ bool static ProcessMessage(CNode *pfrom,
                         MarkBlockAsInFlight(pfrom->GetId(), inv.hash, chainparams.GetConsensus());
                     }
                     LogPrint("net", "getheaders (%d) %s to peer=%d\n",
-                        pnetMan->getChainActive()->pindexBestHeader->nHeight, inv.hash.ToString(), pfrom->id);
+                        pnetMan->getChainActive()->pindexBestHeader.load()->nHeight, inv.hash.ToString(), pfrom->id);
                 }
             }
             else
@@ -2302,7 +2303,8 @@ bool SendMessages(CNode *pto, CConnman &connman)
 
     if (!nodestate->fSyncStarted && !pto->fClient && !fImporting && !fReindex)
     {
-        if (fFetch || pnetMan->getChainActive()->pindexBestHeader->GetBlockTime() > GetAdjustedTime() - 24 * 60 * 60)
+        if (fFetch ||
+            pnetMan->getChainActive()->pindexBestHeader.load()->GetBlockTime() > GetAdjustedTime() - 24 * 60 * 60)
         {
             nodestate->fSyncStarted = true;
             const CBlockIndex *pindexStart = pnetMan->getChainActive()->pindexBestHeader;

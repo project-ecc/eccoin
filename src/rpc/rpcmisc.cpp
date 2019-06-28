@@ -103,7 +103,7 @@ UniValue getinfo(const UniValue &params, bool fHelp)
         obj.push_back(Pair("stake", ValueFromAmount(pwalletMain->GetStake())));
     }
     obj.push_back(Pair("blocks", (int)pnetMan->getChainActive()->chainActive.Height()));
-    obj.push_back(Pair("headers", (int)pnetMan->getChainActive()->pindexBestHeader->nHeight));
+    obj.push_back(Pair("headers", (int)pnetMan->getChainActive()->pindexBestHeader.load()->nHeight));
     obj.push_back(Pair("moneysupply", ValueFromAmount(pnetMan->getChainActive()->chainActive.Tip()->nMoneySupply)));
     obj.push_back(Pair("timeoffset", GetTimeOffset()));
     obj.push_back(Pair("connections", (int)g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL)));
