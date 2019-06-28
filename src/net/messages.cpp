@@ -1676,15 +1676,11 @@ bool static ProcessMessage(CNode *pfrom,
             ReadCompactSize(vRecv); // ignore tx count; assume it is 0.
             ReadCompactSize(vRecv); // ignore empty vchBlockSig
         }
-
-        LOCK(cs_main);
-
         if (nCount == 0)
         {
             // Nothing interesting. Stop asking this peers for more headers.
             return true;
         }
-
         // check if these are duplicate headers
         uint256 hash = headers.front().GetHash();
         CBlockIndex *_pindex = pnetMan->getChainActive()->LookupBlockIndex(hash);
@@ -1699,7 +1695,8 @@ bool static ProcessMessage(CNode *pfrom,
                 return true;
             }
         }
-
+        LOCK(cs_main);
+        RECURSIVEWRITELOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
         CBlockIndex *pindexLast = nullptr;
         for (const CBlockHeader &header : headers)
         {
