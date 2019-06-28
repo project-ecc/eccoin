@@ -928,6 +928,8 @@ bool ConnectBlock(const CBlock &block,
 
     if (pindex->GetBlockHash() != chainparams.GetConsensus().hashGenesisBlock)
     {
+        // need cs_mapBlockIndex to update the index
+        RECURSIVEWRITELOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
         // once updateForPos runs the only flags that should be enabled are the ones that determine if PoS block or not
         // before this runs there should have been no flags set. so it is ok to reset the flags to 0
         pindex->updateForPos(block);
@@ -1574,6 +1576,7 @@ bool ProcessNewBlock(CValidationState &state,
 
     {
         LOCK(cs_main);
+        RECURSIVEWRITELOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
         bool fRequested = MarkBlockAsReceived(pblock->GetHash());
         fRequested |= fForceProcessing;
         if (!checked)
