@@ -18,8 +18,8 @@ class CLogger
 {
 private:
     FILE *fileout;
-    std::mutex *mutexDebugLog;
-    std::list<std::string> *vMsgsBeforeOpenLog;
+    mutable std::mutex mutexDebugLog;
+    std::list<std::string> vMsgsBeforeOpenLog;
 
 public:
     bool fLogTimestamps;
@@ -35,8 +35,6 @@ private:
     CLogger(const CLogger &);
     CLogger &operator=(const CLogger &);
 
-    bool DebugPrintInit();
-
     std::string LogTimestampStr(const std::string &str, bool *fStartedNewLine);
 
     int FileWriteStr(const std::string &str, FILE *fp);
@@ -45,8 +43,7 @@ public:
     CLogger()
     {
         fileout = nullptr;
-        mutexDebugLog = nullptr;
-        vMsgsBeforeOpenLog = nullptr;
+        vMsgsBeforeOpenLog.clear();
 
         fLogTimestamps = DEFAULT_LOGTIMESTAMPS;
         fLogTimeMicros = DEFAULT_LOGTIMEMICROS;
@@ -54,7 +51,6 @@ public:
         fDebug = false;
         fPrintToConsole = false;
         fPrintToDebugLog = true;
-        DebugPrintInit();
     }
     void OpenDebugLog();
 
@@ -66,8 +62,8 @@ public:
 
     void ShrinkDebugFile();
 };
+extern std::unique_ptr<CLogger> g_logger;
 
-extern CLogger* g_logger;
 
 #define LogPrintf(...) LogPrint(NULL, __VA_ARGS__)
 

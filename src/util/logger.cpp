@@ -9,21 +9,8 @@
 
 #include <boost/thread/tss.hpp>
 
-CLogger* g_logger = nullptr;
+std::unique_ptr<CLogger> g_logger;
 volatile bool fReopenDebugLog = false;
-
-bool CLogger::DebugPrintInit()
-{
-    if (mutexDebugLog == nullptr)
-    {
-        mutexDebugLog = new std::mutex();
-    }
-    if (vMsgsBeforeOpenLog == nullptr)
-    {
-        vMsgsBeforeOpenLog = new std::list<std::string>;
-    }
-    return true;
-}
 
 /**
  * fStartedNewLine is a state variable held by the calling context that will
@@ -63,28 +50,20 @@ int CLogger::FileWriteStr(const std::string &str, FILE *fp)
 
 void CLogger::OpenDebugLog()
 {
-    if (!DebugPrintInit())
-    {
-        return;
-    }
-    std::lock_guard<std::mutex> scoped_lock(*mutexDebugLog);
+    std::lock_guard<std::mutex> scoped_lock(mutexDebugLog);
 
     assert(fileout == nullptr);
-    assert(vMsgsBeforeOpenLog);
     fs::path pathDebug = GetDataDir() / "debug.log";
     fileout = fopen(pathDebug.string().c_str(), "a");
     if (fileout)
-        setbuf(fileout, NULL); // unbuffered
+        setbuf(fileout, nullptr); // unbuffered
 
     // dump buffered messages from before we opened the log
-    while (!vMsgsBeforeOpenLog->empty())
+    while (!vMsgsBeforeOpenLog.empty())
     {
-        FileWriteStr(vMsgsBeforeOpenLog->front(), fileout);
-        vMsgsBeforeOpenLog->pop_front();
+        FileWriteStr(vMsgsBeforeOpenLog.front(), fileout);
+        vMsgsBeforeOpenLog.pop_front();
     }
-
-    delete vMsgsBeforeOpenLog;
-    vMsgsBeforeOpenLog = nullptr;
 }
 
 bool CLogger::LogAcceptCategory(const char *category)
@@ -117,6 +96,7 @@ bool CLogger::LogAcceptCategory(const char *category)
 
 int CLogger::LogPrintStr(const std::string &str)
 {
+    std::lock_guard<std::mutex> scoped_lock(mutexDebugLog);
     int ret = 0; // Returns total number of characters written
     static bool fStartedNewLine = true;
 
@@ -130,14 +110,11 @@ int CLogger::LogPrintStr(const std::string &str)
     }
     else if (fPrintToDebugLog)
     {
-        std::lock_guard<std::mutex> scoped_lock(*mutexDebugLog);
-
         // buffer if we haven't opened the log yet
         if (fileout == nullptr)
         {
-            assert(vMsgsBeforeOpenLog);
             ret = strTimestamped.length();
-            vMsgsBeforeOpenLog->push_back(strTimestamped);
+            vMsgsBeforeOpenLog.push_back(strTimestamped);
         }
         else
         {

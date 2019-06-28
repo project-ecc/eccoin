@@ -298,7 +298,7 @@ void Shutdown(thread_group &threadGroup)
     globalVerifyHandle.reset();
     ECC_Stop();
     LogPrintf("%s: done\n", __func__);
-    delete g_logger;
+    g_logger.reset();
     g_logger = nullptr;
 }
 
