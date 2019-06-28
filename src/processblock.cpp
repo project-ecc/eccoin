@@ -31,6 +31,7 @@
 #include "blockstorage/blockstorage.h"
 #include "chain/checkpoints.h"
 #include "checkqueue.h"
+#include "consensus/merkle.h"
 #include "crypto/hash.h"
 #include "init.h"
 #include "kernel.h"
@@ -54,142 +55,6 @@ bool fLargeWorkForkFound = false;
 bool fLargeWorkInvalidChainFound = false;
 CBlockIndex *pindexBestForkTip = nullptr;
 CBlockIndex *pindexBestForkBase = nullptr;
-
-
-/** Store block on disk. If dbp is non-NULL, the file is known to already reside on disk */
-bool AcceptBlock(const CBlock *pblock,
-    CValidationState &state,
-    const CNetworkTemplate &chainparams,
-    CBlockIndex **ppindex,
-    bool fRequested,
-    CDiskBlockPos *dbp)
-{
-    AssertLockHeld(cs_main);
-
-    CBlockIndex *&pindex = *ppindex;
-
-    if (!AcceptBlockHeader(*pblock, state, chainparams, &pindex))
-        return false;
-
-    // Try to process all requested blocks that we don't have, but only
-    // process an unrequested block if it's new and has enough work to
-    // advance our tip, and isn't too many blocks ahead.
-    bool fAlreadyHave = pindex->nStatus & BLOCK_HAVE_DATA;
-    bool fHasMoreWork = (pnetMan->getChainActive()->chainActive.Tip() ?
-                             pindex->nChainWork > pnetMan->getChainActive()->chainActive.Tip()->nChainWork :
-                             true);
-    // Blocks that are too out-of-order needlessly limit the effectiveness of
-    // pruning, because pruning will not delete block files that contain any
-    // blocks which are too close in height to the tip.  Apply this test
-    // regardless of whether pruning is enabled; it should generally be safe to
-    // not process unrequested blocks.
-    bool fTooFarAhead = (pindex->nHeight > int(pnetMan->getChainActive()->chainActive.Height() + MIN_BLOCKS_TO_KEEP));
-
-    // TODO: deal better with return value and error conditions for duplicate
-    // and unrequested blocks.
-    if (fAlreadyHave)
-        return true;
-    if (!fRequested)
-    { // If we didn't ask for it:
-        if (pindex->nTx != 0)
-            return true; // This is a previously-processed block that was pruned
-        if (!fHasMoreWork)
-            return true; // Don't process less-work chains
-        if (fTooFarAhead)
-            return true; // Block height is too high
-    }
-
-    if ((!CheckBlock(*pblock, state)) || !ContextualCheckBlock(*pblock, state, pindex->pprev))
-    {
-        if (state.IsInvalid() && !state.CorruptionPossible())
-        {
-            pindex->nStatus |= BLOCK_FAILED_VALID;
-            setDirtyBlockIndex.insert(pindex);
-        }
-        return false;
-    }
-
-    // Header is valid/has work, merkle tree and segwit merkle tree are
-    // good...RELAY NOW (but if it does not build on our best tip, let the
-    // SendMessages loop relay it)
-    if (!pnetMan->getChainActive()->IsInitialBlockDownload() &&
-        pnetMan->getChainActive()->chainActive.Tip() == pindex->pprev)
-    {
-        GetMainSignals().NewPoWValidBlock(pindex, pblock);
-    }
-
-
-    int nHeight = pindex->nHeight;
-
-    // Write block to history file
-    try
-    {
-        unsigned int nBlockSize = ::GetSerializeSize(*pblock, SER_DISK, CLIENT_VERSION);
-        CDiskBlockPos blockPos;
-        if (dbp != NULL)
-            blockPos = *dbp;
-        if (!FindBlockPos(state, blockPos, nBlockSize + 8, nHeight, (*pblock).GetBlockTime(), dbp != NULL))
-            return error("AcceptBlock(): FindBlockPos failed");
-        if (dbp == NULL)
-            if (!WriteBlockToDisk(*pblock, blockPos, chainparams.MessageStart()))
-                AbortNode(state, "Failed to write block");
-        if (!ReceivedBlockTransactions(*pblock, state, pindex, blockPos))
-            return error("AcceptBlock(): ReceivedBlockTransactions failed");
-    }
-    catch (const std::runtime_error &e)
-    {
-        return AbortNode(state, std::string("System error: ") + e.what());
-    }
-
-    return true;
-}
-
-bool ProcessNewBlock(CValidationState &state,
-    const CNetworkTemplate &chainparams,
-    const CNode *pfrom,
-    const CBlock *pblock,
-    bool fForceProcessing,
-    CDiskBlockPos *dbp)
-{
-    if (!CheckBlockHeader(*pblock, state, true))
-    {
-        // block header is bad
-        // demerit the sender
-        return error("%s: CheckBlockHeader FAILED", __func__);
-    }
-    // Preliminary checks
-    bool checked = CheckBlock(*pblock, state);
-
-    {
-        LOCK(cs_main);
-        bool fRequested = MarkBlockAsReceived(pblock->GetHash());
-        fRequested |= fForceProcessing;
-        if (!checked)
-        {
-            LogPrintf("%s \n", state.GetRejectReason().c_str());
-            return error("%s: CheckBlock FAILED", __func__);
-        }
-
-        // Store to disk
-        CBlockIndex *pindex = nullptr;
-        bool ret = AcceptBlock(pblock, state, chainparams, &pindex, fRequested, dbp);
-        CheckBlockIndex(chainparams.GetConsensus());
-        if (!ret)
-        {
-            return error("%s: AcceptBlock FAILED", __func__);
-        }
-    }
-
-    if (!ActivateBestChain(state, chainparams, pblock))
-    {
-        if (state.IsInvalid() || state.IsError())
-            return error("%s: ActivateBestChain failed", __func__);
-        else
-            return false;
-    }
-
-    return true;
-}
 
 /** Update chainActive and related internal data structures. */
 void UpdateTip(CBlockIndex *pindexNew)
@@ -1073,7 +938,7 @@ bool ConnectBlock(const CBlock &block,
         return false;
 
     // verify that the view's current state corresponds to the previous block
-    uint256 hashPrevBlock = pindex->pprev == NULL ? uint256() : pindex->pprev->GetBlockHash();
+    uint256 hashPrevBlock = pindex->pprev == nullptr ? uint256() : pindex->pprev->GetBlockHash();
     assert(hashPrevBlock == view.GetBestBlock());
 
     // Special case for the genesis block, skipping connection of its transactions
@@ -1127,7 +992,7 @@ bool ConnectBlock(const CBlock &block,
 
     CBlockUndo blockundo;
 
-    CCheckQueueControl<CScriptCheck> control(fScriptChecks && nScriptCheckThreads ? &scriptcheckqueue : NULL);
+    CCheckQueueControl<CScriptCheck> control(fScriptChecks && nScriptCheckThreads ? &scriptcheckqueue : nullptr);
 
     std::vector<int> prevheights;
     CAmount nFees = 0;
@@ -1479,4 +1344,260 @@ DisconnectResult DisconnectBlock(const CBlock &block, const CBlockIndex *pindex,
     view.SetBestBlock(pindex->pprev->GetBlockHash());
 
     return fClean ? DISCONNECT_OK : DISCONNECT_UNCLEAN;
+}
+
+
+/** Store block on disk. If dbp is non-NULL, the file is known to already reside on disk */
+bool AcceptBlock(const CBlock *pblock,
+    CValidationState &state,
+    const CNetworkTemplate &chainparams,
+    CBlockIndex **ppindex,
+    bool fRequested,
+    CDiskBlockPos *dbp)
+{
+    AssertLockHeld(cs_main);
+
+    CBlockIndex *&pindex = *ppindex;
+
+    if (!AcceptBlockHeader(*pblock, state, chainparams, &pindex))
+        return false;
+
+    // Try to process all requested blocks that we don't have, but only
+    // process an unrequested block if it's new and has enough work to
+    // advance our tip, and isn't too many blocks ahead.
+    bool fAlreadyHave = pindex->nStatus & BLOCK_HAVE_DATA;
+    bool fHasMoreWork = (pnetMan->getChainActive()->chainActive.Tip() ?
+                             pindex->nChainWork > pnetMan->getChainActive()->chainActive.Tip()->nChainWork :
+                             true);
+    // Blocks that are too out-of-order needlessly limit the effectiveness of
+    // pruning, because pruning will not delete block files that contain any
+    // blocks which are too close in height to the tip.  Apply this test
+    // regardless of whether pruning is enabled; it should generally be safe to
+    // not process unrequested blocks.
+    bool fTooFarAhead = (pindex->nHeight > int(pnetMan->getChainActive()->chainActive.Height() + MIN_BLOCKS_TO_KEEP));
+
+    // TODO: deal better with return value and error conditions for duplicate
+    // and unrequested blocks.
+    if (fAlreadyHave)
+        return true;
+    if (!fRequested)
+    { // If we didn't ask for it:
+        if (pindex->nTx != 0)
+            return true; // This is a previously-processed block that was pruned
+        if (!fHasMoreWork)
+            return true; // Don't process less-work chains
+        if (fTooFarAhead)
+            return true; // Block height is too high
+    }
+
+    if ((!CheckBlock(*pblock, state)) || !ContextualCheckBlock(*pblock, state, pindex->pprev))
+    {
+        if (state.IsInvalid() && !state.CorruptionPossible())
+        {
+            pindex->nStatus |= BLOCK_FAILED_VALID;
+            setDirtyBlockIndex.insert(pindex);
+        }
+        return false;
+    }
+
+    // Header is valid/has work, merkle tree and segwit merkle tree are
+    // good...RELAY NOW (but if it does not build on our best tip, let the
+    // SendMessages loop relay it)
+    if (!pnetMan->getChainActive()->IsInitialBlockDownload() &&
+        pnetMan->getChainActive()->chainActive.Tip() == pindex->pprev)
+    {
+        GetMainSignals().NewPoWValidBlock(pindex, pblock);
+    }
+
+
+    int nHeight = pindex->nHeight;
+
+    // Write block to history file
+    try
+    {
+        unsigned int nBlockSize = ::GetSerializeSize(*pblock, SER_DISK, CLIENT_VERSION);
+        CDiskBlockPos blockPos;
+        if (dbp != NULL)
+            blockPos = *dbp;
+        if (!FindBlockPos(state, blockPos, nBlockSize + 8, nHeight, (*pblock).GetBlockTime(), dbp != NULL))
+            return error("AcceptBlock(): FindBlockPos failed");
+        if (dbp == NULL)
+        {
+            if (!WriteBlockToDisk(*pblock, blockPos, chainparams.MessageStart()))
+                AbortNode(state, "Failed to write block");
+        }
+        if (!ReceivedBlockTransactions(*pblock, state, pindex, blockPos))
+            return error("AcceptBlock(): ReceivedBlockTransactions failed");
+    }
+    catch (const std::runtime_error &e)
+    {
+        return AbortNode(state, std::string("System error: ") + e.what());
+    }
+
+    return true;
+}
+
+bool CheckBlock(const CBlock &block, CValidationState &state, bool fCheckPOW, bool fCheckMerkleRoot)
+{
+    // These are checks that are independent of context.
+    if (block.fChecked)
+    {
+        return true;
+    }
+
+    if (block.IsProofOfWork() && fCheckPOW &&
+        !CheckProofOfWork(block.GetHash(), block.nBits, pnetMan->getActivePaymentNetwork()->GetConsensus()))
+    {
+        return state.DoS(50, error("CheckBlockHeader(): proof of work failed"), REJECT_INVALID, "high-hash");
+    }
+
+    // Check that the header is valid (particularly PoW).  This is mostly
+    // redundant with the call in AcceptBlockHeader.
+    if (!CheckBlockHeader(block, state))
+    {
+        return error("%s: CheckBlockHeader FAILED", __func__);
+    }
+
+    // Check the merkle root.
+    if (fCheckMerkleRoot)
+    {
+        bool mutated;
+        uint256 hashMerkleRoot2 = BlockMerkleRoot(block, &mutated);
+        if (block.hashMerkleRoot != hashMerkleRoot2)
+        {
+            return state.DoS(
+                100, error("CheckBlock(): hashMerkleRoot mismatch"), REJECT_INVALID, "bad-txnmrklroot", true);
+        }
+
+        // Check for merkle tree malleability (CVE-2012-2459): repeating sequences
+        // of transactions in a block without affecting the merkle root of a block,
+        // while still invalidating it.
+        if (mutated)
+        {
+            return state.DoS(
+                100, error("CheckBlock(): duplicate transaction"), REJECT_INVALID, "bad-txns-duplicate", true);
+        }
+    }
+
+    // All potential-corruption validation must be done before we do any
+    // transaction validation, as otherwise we may mark the header as invalid
+    // because we receive the wrong transactions for it.
+
+    // Size limits
+    if (block.vtx.empty() || block.vtx.size() > MAX_BLOCK_SIZE ||
+        ::GetSerializeSize(block, SER_NETWORK, PROTOCOL_VERSION) > MAX_BLOCK_SIZE)
+    {
+        return state.DoS(100, error("CheckBlock(): size limits failed"), REJECT_INVALID, "bad-blk-length");
+    }
+
+    // First transaction must be coinbase, the rest must not be
+    if (block.vtx.empty() || !block.vtx[0]->IsCoinBase())
+    {
+        return state.DoS(100, error("CheckBlock(): first tx is not coinbase"), REJECT_INVALID, "bad-cb-missing");
+    }
+
+    for (unsigned int i = 1; i < block.vtx.size(); i++)
+    {
+        if (block.vtx[i]->IsCoinBase())
+        {
+            return state.DoS(100, error("CheckBlock(): more than one coinbase"), REJECT_INVALID, "bad-cb-multiple");
+        }
+    }
+
+    // PoS: only the second transaction can be the optional coinstake
+    for (unsigned int i = 2; i < block.vtx.size(); i++)
+    {
+        if (block.vtx[i]->IsCoinStake())
+        {
+            return state.DoS(100, error("CheckBlock() : coinstake in wrong position"));
+        }
+    }
+
+    // PoS: coinbase output should be empty if proof-of-stake block
+    if (block.IsProofOfStake() && (block.vtx[0]->vout.size() != 1 || !block.vtx[0]->vout[0].IsEmpty()))
+    {
+        return state.DoS(0, error("CheckBlock() : coinbase output not empty for proof-of-stake block"));
+    }
+
+    // Check transactions
+    for (auto const &tx : block.vtx)
+    {
+        if (!CheckTransaction(*tx, state))
+        {
+            return state.Invalid(false, state.GetRejectCode(), state.GetRejectReason(),
+                strprintf("Transaction check failed (txid %s) %s", tx->GetId().ToString(), state.GetDebugMessage()));
+        }
+        if (tx->nVersion == 2)
+        {
+        }
+        // PoS: check transaction timestamp
+        if (block.GetBlockTime() < (int64_t)tx->nTime)
+        {
+            return state.DoS(50, error("CheckBlock() : block timestamp earlier than transaction timestamp"));
+        }
+    }
+
+    unsigned int nSigOps = 0;
+    for (auto const &tx : block.vtx)
+    {
+        nSigOps += GetLegacySigOpCount(*tx);
+    }
+    if (nSigOps > MAX_BLOCK_SIGOPS)
+    {
+        return state.DoS(100, error("CheckBlock(): out-of-bounds SigOpCount"), REJECT_INVALID, "bad-blk-sigops");
+    }
+
+    // PoS: check block signature
+    if (!block.CheckBlockSignature())
+    {
+        return state.DoS(100, error("CheckBlock() : bad block signature"), REJECT_INVALID, "bad-block-sig");
+    }
+
+    if (fCheckPOW && fCheckMerkleRoot)
+    {
+        block.fChecked = true;
+    }
+
+    return true;
+}
+
+bool ProcessNewBlock(CValidationState &state,
+    const CNetworkTemplate &chainparams,
+    const CNode *pfrom,
+    const CBlock *pblock,
+    bool fForceProcessing,
+    CDiskBlockPos *dbp)
+{
+    // Preliminary checks
+    bool checked = CheckBlock(*pblock, state); // no lock required
+
+    {
+        LOCK(cs_main);
+        bool fRequested = MarkBlockAsReceived(pblock->GetHash());
+        fRequested |= fForceProcessing;
+        if (!checked)
+        {
+            LogPrintf("%s \n", state.GetRejectReason().c_str());
+            return error("%s: CheckBlock FAILED", __func__);
+        }
+
+        // Store to disk
+        CBlockIndex *pindex = nullptr;
+        bool ret = AcceptBlock(pblock, state, chainparams, &pindex, fRequested, dbp);
+        CheckBlockIndex(chainparams.GetConsensus());
+        if (!ret)
+        {
+            return error("%s: AcceptBlock FAILED", __func__);
+        }
+    }
+
+    if (!ActivateBestChain(state, chainparams, pblock))
+    {
+        if (state.IsInvalid() || state.IsError())
+            return error("%s: ActivateBestChain failed", __func__);
+        else
+            return false;
+    }
+
+    return true;
 }

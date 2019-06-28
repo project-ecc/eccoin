@@ -80,7 +80,7 @@ bool AcceptBlockHeader(const CBlockHeader &block,
 }
 
 
-bool CheckBlockHeader(const CBlockHeader &block, CValidationState &state, bool fCheckPOW)
+bool CheckBlockHeader(const CBlockHeader &block, CValidationState &state)
 {
     // Check timestamp
     if (block.GetBlockTime() > GetAdjustedTime() + 2 * 60 * 60)
