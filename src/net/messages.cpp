@@ -653,7 +653,7 @@ void UpdateBlockAvailability(NodeId nodeid, const uint256 &hash)
     }
 }
 
-static bool SendRejectsAndCheckIfBanned(CNode *pnode, CConnman &connman)
+static bool SendRejectsAndCheckIfBanned(CNode *pnode, CConnman &connman) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
 {
     AssertLockHeld(cs_main);
     CNodeState state = *CNodeStateAccessor(nodestateman, pnode->GetId());
