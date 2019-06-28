@@ -2231,17 +2231,14 @@ bool SendMessages(CNode *pto, CConnman &connman)
         connman.PushMessage(pto, NetMsgType::PING, nonce);
     }
 
-    // Acquire cs_main for IsInitialBlockDownload() and CNodeState()
-    TRY_LOCK(cs_main, lockMain);
-    if (!lockMain)
     {
-        return true;
+        LOCK(cs_main);
+        if (SendRejectsAndCheckIfBanned(pto, connman))
+        {
+            return true;
+        }
     }
 
-    if (SendRejectsAndCheckIfBanned(pto, connman))
-    {
-        return true;
-    }
     CNodeStateAccessor nodestate(nodestateman, pto->GetId());
     if (nodestate.IsNull())
     {
