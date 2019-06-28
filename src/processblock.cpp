@@ -1423,6 +1423,7 @@ bool AcceptBlock(const CBlock *pblock,
             return error("AcceptBlock(): FindBlockPos failed");
         if (dbp == NULL)
         {
+            LOCK(cs_blockstorage);
             if (!WriteBlockToDisk(*pblock, blockPos, chainparams.MessageStart()))
                 AbortNode(state, "Failed to write block");
         }
