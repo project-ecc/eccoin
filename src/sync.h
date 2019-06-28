@@ -261,6 +261,10 @@ void AssertWriteLockHeldInternal(const char *pszName,
     const char *pszFile,
     unsigned int nLine,
     CSharedCriticalSection *cs);
+void AssertRecursiveWriteLockHeldinternal(const char *pszName,
+    const char *pszFile,
+    unsigned int nLine,
+    CRecursiveSharedCriticalSection *cs);
 #else
 void static inline EnterCritical(const char *pszName,
     const char *pszFile,
@@ -270,6 +274,7 @@ void static inline EnterCritical(const char *pszName,
 {
 }
 void static inline LeaveCritical() {}
+void static inline DeleteLock(void *cs) {}
 void static inline AssertLockHeldInternal(const char *pszName, const char *pszFile, unsigned int nLine, void *cs) {}
 void static inline AssertLockNotHeldInternal(const char *pszName, const char *pszFile, unsigned int nLine, void *cs) {}
 void static inline AssertWriteLockHeldInternal(const char *pszName,
@@ -278,11 +283,17 @@ void static inline AssertWriteLockHeldInternal(const char *pszName,
     CSharedCriticalSection *cs)
 {
 }
-static inline void DeleteLock(void *cs) {}
+void static inline AssertRecursiveWriteLockHeldinternal(const char *pszName,
+    const char *pszFile,
+    unsigned int nLine,
+    CRecursiveSharedCriticalSection *cs)
+{
+}
 #endif
 #define AssertLockHeld(cs) AssertLockHeldInternal(#cs, __FILE__, __LINE__, &cs)
 #define AssertLockNotHeld(cs) AssertLockNotHeldInternal(#cs, __FILE__, __LINE__, &cs)
 #define AssertWriteLockHeld(cs) AssertWriteLockHeldInternal(#cs, __FILE__, __LINE__, &cs)
+#define AssertRecursiveWriteLockHeld(cs) AssertRecursiveWriteLockHeldInternal(#cs, __FILE__, __LINE__, &cs)
 
 #ifdef DEBUG_LOCKCONTENTION
 void PrintLockContention(const char *pszName, const char *pszFile, unsigned int nLine);

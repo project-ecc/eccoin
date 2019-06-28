@@ -31,6 +31,7 @@ bool AcceptBlockHeader(const CBlockHeader &block,
     CBlockIndex **ppindex)
 {
     AssertLockHeld(cs_main);
+    AssertRecursiveWriteLockHeld(pnetMan->getChainActive()->cs_mapBlockIndex);
     // Check for duplicate
     uint256 hash = block.GetHash();
     CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(hash);

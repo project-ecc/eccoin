@@ -35,7 +35,7 @@ void PrintLockContention(const char *pszName, const char *pszFile, unsigned int 
 }
 #endif /* DEBUG_LOCKCONTENTION */
 
-#ifdef DEBUG_LOCKORDER
+#ifdef DEBUG_LOCKORDER // this define covers the rest of the file
 //
 // Early deadlock detection.
 // Problem being solved:
@@ -231,9 +231,22 @@ void AssertWriteLockHeldInternal(const char *pszName,
     }
 }
 
+void AssertRecursiveWriteLockHeldinternal(const char *pszName,
+    const char *pszFile,
+    unsigned int nLine,
+    CRecursiveSharedCriticalSection *cs)
+{
+    if (cs->try_lock()) // It would be better to check that this thread has the lock
+    {
+        fprintf(stderr, "Assertion failed: lock %s not held in %s:%i; locks held:\n%s", pszName, pszFile, nLine,
+            LocksHeld().c_str());
+        fflush(stderr);
+        abort();
+    }
+}
+
 // BU normally CCriticalSection is a typedef, but when lockorder debugging is on we need to delete the critical
 // section from the lockorder map
-#ifdef DEBUG_LOCKORDER
 CCriticalSection::CCriticalSection() : name(NULL) {}
 CCriticalSection::CCriticalSection(const char *n) : name(n)
 {
@@ -258,11 +271,9 @@ CCriticalSection::~CCriticalSection()
 #endif
     DeleteLock((void *)this);
 }
-#endif
 
 // BU normally CSharedCriticalSection is a typedef, but when lockorder debugging is on we need to delete the critical
 // section from the lockorder map
-#ifdef DEBUG_LOCKORDER
 CSharedCriticalSection::CSharedCriticalSection() : name(NULL), exclusiveOwner(0) {}
 CSharedCriticalSection::CSharedCriticalSection(const char *n) : name(n), exclusiveOwner(0)
 {
@@ -287,7 +298,6 @@ CSharedCriticalSection::~CSharedCriticalSection()
 #endif
     DeleteLock((void *)this);
 }
-#endif
 
 
 void CSharedCriticalSection::lock_shared()
@@ -391,7 +401,6 @@ void DeleteLock(void *cs)
     }
 }
 
-#ifdef DEBUG_LOCKORDER
 CRecursiveSharedCriticalSection::CRecursiveSharedCriticalSection() : name(nullptr) {}
 CRecursiveSharedCriticalSection::CRecursiveSharedCriticalSection(const char *n) : name(n)
 {
@@ -416,7 +425,6 @@ CRecursiveSharedCriticalSection::~CRecursiveSharedCriticalSection()
 #endif
     DeleteLock((void *)this);
 }
-#endif
 
 
 #endif /* DEBUG_LOCKORDER */
