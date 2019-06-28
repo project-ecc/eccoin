@@ -413,7 +413,9 @@ class SCOPED_LOCKABLE CMutexReadLock
 {
 private:
     boost::shared_lock<Mutex> lock;
+#ifdef DEBUG_LOCKTIME
     uint64_t lockedTime = 0;
+#endif
     const char *name = "unknown-name";
     const char *file = "unknown-file";
     unsigned int line = 0;
