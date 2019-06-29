@@ -158,8 +158,11 @@ bool CChainManager::InitBlockIndex(const CNetworkTemplate &chainparams)
             CValidationState state;
             if (!FindBlockPos(state, blockPos, nBlockSize + 8, 0, block.GetBlockTime()))
                 return error("InitBlockIndex(): FindBlockPos failed");
-            if (!WriteBlockToDisk(block, blockPos, chainparams.MessageStart()))
-                return error("InitBlockIndex(): writing genesis block to disk failed");
+            {
+                LOCK(cs_blockstorage);
+                if (!WriteBlockToDisk(block, blockPos, chainparams.MessageStart()))
+                    return error("InitBlockIndex(): writing genesis block to disk failed");
+            }
             CBlockIndex *pindex = AddToBlockIndex(block);
 
             // ppcoin: compute stake entropy bit for stake modifier
