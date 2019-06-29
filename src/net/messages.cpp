@@ -653,18 +653,9 @@ void UpdateBlockAvailability(NodeId nodeid, const uint256 &hash)
     }
 }
 
-static bool SendRejectsAndCheckIfBanned(CNode *pnode, CConnman &connman) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
+static bool SendRejectsAndCheckIfBanned(CNode *pnode, CConnman &connman)
 {
-    AssertLockHeld(cs_main);
     CNodeState state = *CNodeStateAccessor(nodestateman, pnode->GetId());
-
-    for (const CBlockReject &reject : state.rejects)
-    {
-        connman.PushMessage(pnode, NetMsgType::REJECT, std::string(NetMsgType::BLOCK), reject.chRejectCode,
-            reject.strRejectReason, reject.hashBlock);
-    }
-    state.rejects.clear();
-
     if (state.fShouldBan)
     {
         state.fShouldBan = false;
@@ -2184,8 +2175,6 @@ bool ProcessMessages(CNode *pfrom, CConnman &connman)
     {
         LogPrintf("%s(%s, %u bytes) FAILED peer=%d\n", __func__, SanitizeString(strCommand), nMessageSize, pfrom->id);
     }
-
-    LOCK(cs_main);
     SendRejectsAndCheckIfBanned(pfrom, connman);
 
     return fMoreWork;
@@ -2228,12 +2217,9 @@ bool SendMessages(CNode *pto, CConnman &connman)
         connman.PushMessage(pto, NetMsgType::PING, nonce);
     }
 
+    if (SendRejectsAndCheckIfBanned(pto, connman))
     {
-        LOCK(cs_main);
-        if (SendRejectsAndCheckIfBanned(pto, connman))
-        {
-            return true;
-        }
+        return true;
     }
 
     CNodeStateAccessor nodestate(nodestateman, pto->GetId());
