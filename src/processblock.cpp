@@ -1284,10 +1284,13 @@ DisconnectResult DisconnectBlock(const CBlock &block, const CBlockIndex *pindex,
         error("DisconnectBlock(): no undo data available");
         return DISCONNECT_FAILED;
     }
-    if (!UndoReadFromDisk(blockUndo, pos, pindex->pprev->GetBlockHash()))
     {
-        error("DisconnectBlock(): failure reading undo data");
-        return DISCONNECT_FAILED;
+        LOCK(cs_blockstorage);
+        if (!UndoReadFromDisk(blockUndo, pos, pindex->pprev->GetBlockHash()))
+        {
+            error("DisconnectBlock(): failure reading undo data");
+            return DISCONNECT_FAILED;
+        }
     }
     if (blockUndo.vtxundo.size() + 1 != block.vtx.size())
     {
