@@ -1202,8 +1202,11 @@ bool ConnectBlock(const CBlock &block,
             CDiskBlockPos _pos;
             if (!FindUndoPos(state, pindex->nFile, _pos, ::GetSerializeSize(blockundo, SER_DISK, CLIENT_VERSION) + 40))
                 return error("ConnectBlock(): FindUndoPos failed");
-            if (!UndoWriteToDisk(blockundo, _pos, pindex->pprev->GetBlockHash(), chainparams.MessageStart()))
-                return AbortNode(state, "Failed to write undo data");
+            {
+                LOCK(cs_blockstorage);
+                if (!UndoWriteToDisk(blockundo, _pos, pindex->pprev->GetBlockHash(), chainparams.MessageStart()))
+                    return AbortNode(state, "Failed to write undo data");
+            }
 
             // update nUndoPos in block index
             pindex->nUndoPos = _pos.nPos;
