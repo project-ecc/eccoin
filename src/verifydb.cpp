@@ -77,6 +77,7 @@ bool CVerifyDB::VerifyDB(const CNetworkTemplate &chainparams, CCoinsView *coinsv
             CDiskBlockPos pos = pindex->GetUndoPos();
             if (!pos.IsNull())
             {
+                LOCK(cs_blockstorage);
                 if (!UndoReadFromDisk(undo, pos, pindex->pprev->GetBlockHash()))
                     return error("VerifyDB(): *** found bad undo data at %d, hash=%s\n", pindex->nHeight,
                         pindex->GetBlockHash().ToString());
