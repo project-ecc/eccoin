@@ -137,6 +137,7 @@ void InitializeNode(CNode *pnode, CConnman &connman)
 
 void FinalizeNode(NodeId nodeid, bool &fUpdateConnectionTime)
 {
+    LOCK(cs_main);
     fUpdateConnectionTime = false;
     CNodeStateAccessor state(nodestateman, nodeid);
 
@@ -146,7 +147,6 @@ void FinalizeNode(NodeId nodeid, bool &fUpdateConnectionTime)
     }
 
     {
-        LOCK(cs_main);
         for (const QueuedBlock &entry : state->vBlocksInFlight)
         {
             mapBlocksInFlight.erase(entry.hash);
@@ -175,7 +175,6 @@ void FinalizeNode(NodeId nodeid, bool &fUpdateConnectionTime)
         LOCK(cs_orphans);
         EraseOrphansFor(nodeid);
     }
-    LOCK(cs_main);
     nPreferredDownload.fetch_sub(state->fPreferredDownload);
     nPeersWithValidatedDownloads -= (state->nBlocksInFlightValidHeaders != 0);
     assert(nPeersWithValidatedDownloads >= 0);
