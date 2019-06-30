@@ -80,7 +80,7 @@ void EraseOrphansFor(NodeId peer) EXCLUSIVE_LOCKS_REQUIRED(cs_orphans);
  * Memory used: 1.3 MB
  */
 std::unique_ptr<CRollingBloomFilter> recentRejects;
-std::map<uint256, std::pair<NodeId, std::list<QueuedBlock>::iterator> > mapBlocksInFlight;
+std::map<uint256, std::pair<NodeId, std::list<QueuedBlock>::iterator> > mapBlocksInFlight EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 uint256 hashRecentRejectsChainTip;
 std::map<uint256, std::pair<NodeId, bool> > mapBlockSource;
 CCriticalSection cs_mapRelay;
@@ -246,8 +246,9 @@ static void Misbehaving(CNode *node, int howmuch, const std::string &reason)
 }
 
 // Returns a bool indicating whether we requested this block.
-bool MarkBlockAsReceived(const uint256 &hash) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
+bool MarkBlockAsReceived(const uint256 &hash)
 {
+    LOCK(cs_main);
     std::map<uint256, std::pair<NodeId, std::list<QueuedBlock>::iterator> >::iterator itInFlight =
         mapBlocksInFlight.find(hash);
     if (itInFlight != mapBlocksInFlight.end())
@@ -452,7 +453,7 @@ unsigned int LimitOrphanTxSize(unsigned int nMaxOrphans) EXCLUSIVE_LOCKS_REQUIRE
 void MarkBlockAsInFlight(NodeId nodeid,
     const uint256 &hash,
     const Consensus::Params &consensusParams,
-    const CBlockIndex *pindex = nullptr) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
+    const CBlockIndex *pindex = nullptr)
 {
     CNodeStateAccessor state(nodestateman, nodeid);
     assert(state.IsNull() == false);
@@ -473,7 +474,10 @@ void MarkBlockAsInFlight(NodeId nodeid,
     {
         nPeersWithValidatedDownloads++;
     }
-    mapBlocksInFlight[hash] = std::make_pair(nodeid, it);
+    {
+        LOCK(cs_main);
+        mapBlocksInFlight[hash] = std::make_pair(nodeid, it);
+    }
 }
 
 /** Check whether the last unknown block a peer advertized is not yet known. */
@@ -704,7 +708,8 @@ void PeerLogicValidation::NewPoWValidBlock(const CBlockIndex *pindex, const CBlo
     }
     nHighestFastAnnounce = pindex->nHeight;
     uint256 hashBlock(pblock->GetHash());
-    connman->ForEachNode([this, pindex, &hashBlock](CNode *pnode) {
+    connman->ForEachNode([this, pindex, &hashBlock](CNode *pnode)
+    {
         // TODO: Avoid the repeated-serialization here
         if (pnode->fDisconnect)
         {
@@ -2565,10 +2570,11 @@ bool SendMessages(CNode *pto, CConnman &connman)
         }
     }
 
+    std::vector<CInv> vGetData;
+
     //
     // Message: getdata (blocks)
     //
-    std::vector<CInv> vGetData;
     if (!pto->fClient && (fFetch || !pnetMan->getChainActive()->IsInitialBlockDownload()) &&
         nodestate->nBlocksInFlight < MAX_BLOCKS_IN_TRANSIT_PER_PEER)
     {
