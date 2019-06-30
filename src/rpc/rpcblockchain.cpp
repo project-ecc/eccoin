@@ -289,8 +289,6 @@ UniValue getrawmempool(const UniValue &params, bool fHelp)
             "\nExamples\n" +
             HelpExampleCli("getrawmempool", "true") + HelpExampleRpc("getrawmempool", "true"));
 
-    LOCK(cs_main);
-
     bool fVerbose = false;
     if (params.size() > 0)
         fVerbose = params[0].get_bool();
