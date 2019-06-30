@@ -785,6 +785,7 @@ void static ProcessGetData(CNode *pfrom, CConnman &connman, const Consensus::Par
             CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(inv.hash);
             if (pindex)
             {
+                RECURSIVEREADLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
                 if (pnetMan->getChainActive()->chainActive.Contains(pindex))
                 {
                     send = true;
