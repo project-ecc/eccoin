@@ -445,8 +445,13 @@ void EccMiner(CWallet *pwallet)
             if (shutdown_threads.load() || shutdown_miner_threads.load())
                 return;
         }
-        while (g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL) < DEFAULT_MIN_BLOCK_GEN_PEERS ||
-               pnetMan->getChainActive()->IsInitialBlockDownload() || pwallet->IsLocked())
+        while (pnetMan->getChainActive()->IsInitialBlockDownload() || pwallet->IsLocked())
+        {
+            MilliSleep(1000);
+            if (shutdown_threads.load() || shutdown_miner_threads.load())
+                return;
+        }
+        while (g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL) < DEFAULT_MIN_BLOCK_GEN_PEERS)
         {
             MilliSleep(1000);
             if (shutdown_threads.load() || shutdown_miner_threads.load())
