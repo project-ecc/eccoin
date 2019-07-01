@@ -80,7 +80,8 @@ void EraseOrphansFor(NodeId peer) EXCLUSIVE_LOCKS_REQUIRED(cs_orphans);
  * Memory used: 1.3 MB
  */
 std::unique_ptr<CRollingBloomFilter> recentRejects;
-std::map<uint256, std::pair<NodeId, std::list<QueuedBlock>::iterator> > mapBlocksInFlight EXCLUSIVE_LOCKS_REQUIRED(cs_main);
+std::map<uint256, std::pair<NodeId, std::list<QueuedBlock>::iterator> > mapBlocksInFlight EXCLUSIVE_LOCKS_REQUIRED(
+    cs_main);
 uint256 hashRecentRejectsChainTip;
 std::map<uint256, std::pair<NodeId, bool> > mapBlockSource;
 CCriticalSection cs_mapRelay;
@@ -708,8 +709,7 @@ void PeerLogicValidation::NewPoWValidBlock(const CBlockIndex *pindex, const CBlo
     }
     nHighestFastAnnounce = pindex->nHeight;
     uint256 hashBlock(pblock->GetHash());
-    connman->ForEachNode([this, pindex, &hashBlock](CNode *pnode)
-    {
+    connman->ForEachNode([this, pindex, &hashBlock](CNode *pnode) {
         // TODO: Avoid the repeated-serialization here
         if (pnode->fDisconnect)
         {

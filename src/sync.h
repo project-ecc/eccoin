@@ -244,10 +244,10 @@ public:
 typedef AnnotatedMixin<std::mutex> CWaitableCriticalSection;
 
 /** Just a typedef for boost::condition_variable, can be wrapped later if desired */
-typedef boost::condition_variable CConditionVariable;
+typedef std::condition_variable CConditionVariable;
 
 /** Just a typedef for boost::condition_variable_any, can be wrapped later if desired -- c++11 version missing on win */
-typedef boost::condition_variable_any CCond;
+typedef std::condition_variable_any CCond;
 
 #ifdef DEBUG_LOCKORDER
 void EnterCritical(const char *pszName, const char *pszFile, unsigned int nLine, void *cs, bool fTry = false);
@@ -383,7 +383,7 @@ public:
         if (!pmutexIn)
             return;
 
-        lock = boost::unique_lock<Mutex>(*pmutexIn, boost::defer_lock);
+        lock = std::unique_lock<Mutex>(*pmutexIn, std::defer_lock);
         if (fTry)
             TryEnter(pszName, pszFile, nLine);
         else
