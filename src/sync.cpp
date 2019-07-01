@@ -150,7 +150,7 @@ static void potential_deadlock_detected(const std::pair<void *, void *> &mismatc
 
 static void push_lock(void *c, const CLockLocation &locklocation, bool fTry)
 {
-    if (lockstack.get() == NULL)
+    if (lockstack.get() == nullptr)
         lockstack.reset(new LockStack);
 
     std::lock_guard<std::mutex> lock(lockdata.dd_mutex);

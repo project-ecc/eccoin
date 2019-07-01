@@ -21,6 +21,7 @@
 #include <boost/thread/tss.hpp> // for boost::thread_specific_ptr
 
 #include <mutex>
+#include <shared_mutex>
 
 ////////////////////////////////////////////////
 //                                            //
@@ -240,7 +241,7 @@ public:
 
 
 /** Wrapped boost mutex: supports waiting but not recursive locking */
-typedef AnnotatedMixin<boost::mutex> CWaitableCriticalSection;
+typedef AnnotatedMixin<std::mutex> CWaitableCriticalSection;
 
 /** Just a typedef for boost::condition_variable, can be wrapped later if desired */
 typedef boost::condition_variable CConditionVariable;
@@ -301,12 +302,12 @@ void PrintLockContention(const char *pszName, const char *pszFile, unsigned int 
 
 #define LOCK_WARN_TIME (500ULL * 1000ULL * 1000ULL)
 
-/** Wrapper around boost::unique_lock<Mutex> */
+/** Wrapper around std::unique_lock<Mutex> */
 template <typename Mutex>
 class SCOPED_LOCKABLE CMutexLock
 {
 private:
-    boost::unique_lock<Mutex> lock;
+    std::unique_lock<Mutex> lock;
 // Checking elapsed lock time is very inefficient compared to the lock/unlock operation so we must be able to
 // turn the feature on and off at compile time.
 #ifdef DEBUG_LOCKTIME
@@ -368,7 +369,7 @@ private:
 public:
     CMutexLock(Mutex &mutexIn, const char *pszName, const char *pszFile, unsigned int nLine, bool fTry = false)
         EXCLUSIVE_LOCK_FUNCTION(mutexIn)
-        : lock(mutexIn, boost::defer_lock)
+        : lock(mutexIn, std::defer_lock)
     {
         if (fTry)
             TryEnter(pszName, pszFile, nLine);
@@ -407,12 +408,12 @@ public:
     operator bool() { return lock.owns_lock(); }
 };
 
-/** Wrapper around boost::unique_lock<Mutex> */
+/** Wrapper around std::unique_lock<Mutex> */
 template <typename Mutex>
 class SCOPED_LOCKABLE CMutexReadLock
 {
 private:
-    boost::shared_lock<Mutex> lock;
+    std::shared_lock<Mutex> lock;
 #ifdef DEBUG_LOCKTIME
     uint64_t lockedTime = 0;
 #endif
@@ -472,7 +473,7 @@ private:
 public:
     CMutexReadLock(Mutex &mutexIn, const char *pszName, const char *pszFile, unsigned int nLine, bool fTry = false)
         SHARED_LOCK_FUNCTION(mutexIn)
-        : lock(mutexIn, boost::defer_lock)
+        : lock(mutexIn, std::defer_lock)
     {
         if (fTry)
             TryEnter(pszName, pszFile, nLine);
@@ -524,13 +525,14 @@ typedef CMutexLock<CRecursiveSharedCriticalSection> CRecursiveWriteBlock;
 
 typedef CMutexReadLock<CSharedCriticalSection> CReadBlock;
 typedef CMutexLock<CSharedCriticalSection> CWriteBlock;
-typedef CMutexLock<CCriticalSection> CCriticalBlock;
 
 #define READLOCK(cs) CReadBlock UNIQUIFY(readblock)(cs, #cs, __FILE__, __LINE__)
 #define WRITELOCK(cs) CWriteBlock UNIQUIFY(writeblock)(cs, #cs, __FILE__, __LINE__)
 #define READLOCK2(cs1, cs2) \
     CReadBlock UNIQUIFY(readblock1)(cs1, #cs1, __FILE__, __LINE__), UNIQUIFY(readblock2)(cs2, #cs2, __FILE__, __LINE__)
 #define TRY_READ_LOCK(cs, name) CReadBlock name(cs, #cs, __FILE__, __LINE__, true)
+
+typedef CMutexLock<CCriticalSection> CCriticalBlock;
 
 #define LOCK(cs) CCriticalBlock UNIQUIFY(criticalblock)(cs, #cs, __FILE__, __LINE__)
 #define LOCK2(cs1, cs2)                                                     \
