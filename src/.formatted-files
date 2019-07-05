@@ -159,6 +159,8 @@ support/pagelocker.cpp
 support/pagelocker.h
 sync.cpp
 sync.h
+threaddeadlock.cpp
+threaddeadlock.h
 threadgroup.h
 threadsafety.h
 timedata.cpp
