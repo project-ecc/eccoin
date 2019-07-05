@@ -139,19 +139,7 @@ typedef AnnotatedMixin<boost::shared_mutex> CSharedCriticalSection;
 class CSharedCriticalSection : public AnnotatedMixin<boost::shared_mutex>
 {
 public:
-    class LockInfo
-    {
-    public:
-        const char *file;
-        unsigned int line;
-        LockInfo() : file(""), line(0) {}
-        LockInfo(const char *f, unsigned int l) : file(f), line(l) {}
-    };
-
-    std::mutex setlock;
-    std::map<uint64_t, LockInfo> sharedowners;
     const char *name;
-    uint64_t exclusiveOwner;
     CSharedCriticalSection(const char *name);
     CSharedCriticalSection();
     ~CSharedCriticalSection();

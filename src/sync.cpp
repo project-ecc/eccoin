@@ -101,8 +101,8 @@ CCriticalSection::~CCriticalSection()
 
 // BU normally CSharedCriticalSection is a typedef, but when lockorder debugging is on we need to delete the critical
 // section from the lockorder map
-CSharedCriticalSection::CSharedCriticalSection() : name(NULL), exclusiveOwner(0) {}
-CSharedCriticalSection::CSharedCriticalSection(const char *n) : name(n), exclusiveOwner(0)
+CSharedCriticalSection::CSharedCriticalSection() : name(NULL) {}
+CSharedCriticalSection::CSharedCriticalSection(const char *n) : name(n)
 {
 // print the address of named critical sections so they can be found in the mutrace output
 #ifdef ENABLE_MUTRACE
@@ -129,77 +129,30 @@ CSharedCriticalSection::~CSharedCriticalSection()
 
 void CSharedCriticalSection::lock_shared()
 {
-    uint64_t tid = getTid();
-    // detect recursive locking
-    {
-        std::unique_lock<std::mutex> lock(setlock);
-        assert(exclusiveOwner != tid);
-        auto alreadyLocked = sharedowners.find(tid);
-        if (alreadyLocked != sharedowners.end())
-        {
-            LockInfo li = alreadyLocked->second;
-            LogPrintf("already locked at %s:%d\n", li.file, li.line);
-            assert(alreadyLocked == sharedowners.end());
-        }
-        sharedowners[tid] = LockInfo("", 0);
-    }
     boost::shared_mutex::lock_shared();
 }
 
 void CSharedCriticalSection::unlock_shared()
 {
-    // detect recursive locking
-    uint64_t tid = getTid();
-    {
-        std::unique_lock<std::mutex> lock(setlock);
-        auto alreadyLocked = sharedowners.find(tid);
-        if (alreadyLocked == sharedowners.end())
-        {
-            LockInfo li = alreadyLocked->second;
-            LogPrintf("never locked at %s:%d\n", li.file, li.line);
-            assert(alreadyLocked != sharedowners.end());
-        }
-        sharedowners.erase(tid);
-    }
     boost::shared_mutex::unlock_shared();
 }
 
 bool CSharedCriticalSection::try_lock_shared()
 {
-    // detect recursive locking
-    uint64_t tid = getTid();
-    std::unique_lock<std::mutex> lock(setlock);
-    assert(exclusiveOwner != tid);
-    assert(sharedowners.find(tid) == sharedowners.end());
-
-    bool result = boost::shared_mutex::try_lock_shared();
-    if (result)
-    {
-        sharedowners[tid] = LockInfo("", 0);
-    }
-    return result;
+    return boost::shared_mutex::try_lock_shared();
 }
 void CSharedCriticalSection::lock()
 {
     boost::shared_mutex::lock();
-    exclusiveOwner = getTid();
 }
 void CSharedCriticalSection::unlock()
 {
-    uint64_t tid = getTid();
-    assert(exclusiveOwner == tid);
-    exclusiveOwner = 0;
     boost::shared_mutex::unlock();
 }
 
 bool CSharedCriticalSection::try_lock()
 {
-    bool result = boost::shared_mutex::try_lock();
-    if (result)
-    {
-        exclusiveOwner = getTid();
-    }
-    return result;
+    return boost::shared_mutex::try_lock();
 }
 
 CRecursiveSharedCriticalSection::CRecursiveSharedCriticalSection() : name(nullptr) {}
