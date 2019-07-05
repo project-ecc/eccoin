@@ -197,6 +197,8 @@ void Shutdown(thread_group &threadGroup)
     {
         return;
     }
+    // we should have already interrupted but there is no harm in doing it again
+    threadGroup.interrupt_all();
     threadGroup.join_all();
 
     /// Note: Shutdown() must be able to handle cases in which AppInit2() failed part of the way,
@@ -296,7 +298,7 @@ void Shutdown(thread_group &threadGroup)
     globalVerifyHandle.reset();
     ECC_Stop();
     LogPrintf("%s: done\n", __func__);
-    delete g_logger;
+    g_logger.reset();
     g_logger = nullptr;
 }
 

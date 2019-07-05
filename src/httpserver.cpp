@@ -97,12 +97,12 @@ private:
         WorkQueue &wq;
         ThreadCounter(WorkQueue &w) : wq(w)
         {
-            boost::lock_guard<boost::mutex> lock(wq.cs);
+            std::lock_guard<std::mutex> lock(wq.cs);
             wq.numThreads += 1;
         }
         ~ThreadCounter()
         {
-            boost::lock_guard<boost::mutex> lock(wq.cs);
+            std::lock_guard<std::mutex> lock(wq.cs);
             wq.numThreads -= 1;
             wq.cond.notify_all();
         }
@@ -124,7 +124,7 @@ public:
     /** Enqueue a work item */
     bool Enqueue(WorkItem *item)
     {
-        boost::unique_lock<boost::mutex> lock(cs);
+        std::unique_lock<std::mutex> lock(cs);
         if (queue.size() >= maxDepth)
         {
             return false;
@@ -141,7 +141,7 @@ public:
         {
             WorkItem *i = 0;
             {
-                boost::unique_lock<boost::mutex> lock(cs);
+                std::unique_lock<std::mutex> lock(cs);
                 while (running && queue.empty())
                     cond.wait(lock);
                 if (!running)
@@ -156,14 +156,14 @@ public:
     /** Interrupt and exit loops */
     void Interrupt()
     {
-        boost::unique_lock<boost::mutex> lock(cs);
+        std::unique_lock<std::mutex> lock(cs);
         running = false;
         cond.notify_all();
     }
     /** Wait for worker threads to exit */
     void WaitExit()
     {
-        boost::unique_lock<boost::mutex> lock(cs);
+        std::unique_lock<std::mutex> lock(cs);
         while (numThreads > 0)
             cond.wait(lock);
     }
@@ -171,7 +171,7 @@ public:
     /** Return current depth of queue */
     size_t Depth()
     {
-        boost::unique_lock<boost::mutex> lock(cs);
+        std::unique_lock<std::mutex> lock(cs);
         return queue.size();
     }
 };

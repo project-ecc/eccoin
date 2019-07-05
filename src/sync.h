@@ -21,6 +21,7 @@
 #include <boost/thread/tss.hpp> // for boost::thread_specific_ptr
 
 #include <mutex>
+#include <shared_mutex>
 
 ////////////////////////////////////////////////
 //                                            //
@@ -240,13 +241,13 @@ public:
 
 
 /** Wrapped boost mutex: supports waiting but not recursive locking */
-typedef AnnotatedMixin<boost::mutex> CWaitableCriticalSection;
+typedef AnnotatedMixin<std::mutex> CWaitableCriticalSection;
 
 /** Just a typedef for boost::condition_variable, can be wrapped later if desired */
-typedef boost::condition_variable CConditionVariable;
+typedef std::condition_variable CConditionVariable;
 
 /** Just a typedef for boost::condition_variable_any, can be wrapped later if desired -- c++11 version missing on win */
-typedef boost::condition_variable_any CCond;
+typedef std::condition_variable_any CCond;
 
 #ifdef DEBUG_LOCKORDER
 void EnterCritical(const char *pszName, const char *pszFile, unsigned int nLine, void *cs, bool fTry = false);
@@ -261,6 +262,10 @@ void AssertWriteLockHeldInternal(const char *pszName,
     const char *pszFile,
     unsigned int nLine,
     CSharedCriticalSection *cs);
+void AssertRecursiveWriteLockHeldinternal(const char *pszName,
+    const char *pszFile,
+    unsigned int nLine,
+    CRecursiveSharedCriticalSection *cs);
 #else
 void static inline EnterCritical(const char *pszName,
     const char *pszFile,
@@ -270,6 +275,7 @@ void static inline EnterCritical(const char *pszName,
 {
 }
 void static inline LeaveCritical() {}
+void static inline DeleteLock(void *cs) {}
 void static inline AssertLockHeldInternal(const char *pszName, const char *pszFile, unsigned int nLine, void *cs) {}
 void static inline AssertLockNotHeldInternal(const char *pszName, const char *pszFile, unsigned int nLine, void *cs) {}
 void static inline AssertWriteLockHeldInternal(const char *pszName,
@@ -278,11 +284,17 @@ void static inline AssertWriteLockHeldInternal(const char *pszName,
     CSharedCriticalSection *cs)
 {
 }
-static inline void DeleteLock(void *cs) {}
+void static inline AssertRecursiveWriteLockHeldinternal(const char *pszName,
+    const char *pszFile,
+    unsigned int nLine,
+    CRecursiveSharedCriticalSection *cs)
+{
+}
 #endif
 #define AssertLockHeld(cs) AssertLockHeldInternal(#cs, __FILE__, __LINE__, &cs)
 #define AssertLockNotHeld(cs) AssertLockNotHeldInternal(#cs, __FILE__, __LINE__, &cs)
 #define AssertWriteLockHeld(cs) AssertWriteLockHeldInternal(#cs, __FILE__, __LINE__, &cs)
+#define AssertRecursiveWriteLockHeld(cs) AssertRecursiveWriteLockHeldInternal(#cs, __FILE__, __LINE__, &cs)
 
 #ifdef DEBUG_LOCKCONTENTION
 void PrintLockContention(const char *pszName, const char *pszFile, unsigned int nLine);
@@ -290,12 +302,12 @@ void PrintLockContention(const char *pszName, const char *pszFile, unsigned int 
 
 #define LOCK_WARN_TIME (500ULL * 1000ULL * 1000ULL)
 
-/** Wrapper around boost::unique_lock<Mutex> */
+/** Wrapper around std::unique_lock<Mutex> */
 template <typename Mutex>
 class SCOPED_LOCKABLE CMutexLock
 {
 private:
-    boost::unique_lock<Mutex> lock;
+    std::unique_lock<Mutex> lock;
 // Checking elapsed lock time is very inefficient compared to the lock/unlock operation so we must be able to
 // turn the feature on and off at compile time.
 #ifdef DEBUG_LOCKTIME
@@ -357,7 +369,7 @@ private:
 public:
     CMutexLock(Mutex &mutexIn, const char *pszName, const char *pszFile, unsigned int nLine, bool fTry = false)
         EXCLUSIVE_LOCK_FUNCTION(mutexIn)
-        : lock(mutexIn, boost::defer_lock)
+        : lock(mutexIn, std::defer_lock)
     {
         if (fTry)
             TryEnter(pszName, pszFile, nLine);
@@ -371,7 +383,7 @@ public:
         if (!pmutexIn)
             return;
 
-        lock = boost::unique_lock<Mutex>(*pmutexIn, boost::defer_lock);
+        lock = std::unique_lock<Mutex>(*pmutexIn, std::defer_lock);
         if (fTry)
             TryEnter(pszName, pszFile, nLine);
         else
@@ -396,13 +408,15 @@ public:
     operator bool() { return lock.owns_lock(); }
 };
 
-/** Wrapper around boost::unique_lock<Mutex> */
+/** Wrapper around std::unique_lock<Mutex> */
 template <typename Mutex>
 class SCOPED_LOCKABLE CMutexReadLock
 {
 private:
-    boost::shared_lock<Mutex> lock;
+    std::shared_lock<Mutex> lock;
+#ifdef DEBUG_LOCKTIME
     uint64_t lockedTime = 0;
+#endif
     const char *name = "unknown-name";
     const char *file = "unknown-file";
     unsigned int line = 0;
@@ -459,7 +473,7 @@ private:
 public:
     CMutexReadLock(Mutex &mutexIn, const char *pszName, const char *pszFile, unsigned int nLine, bool fTry = false)
         SHARED_LOCK_FUNCTION(mutexIn)
-        : lock(mutexIn, boost::defer_lock)
+        : lock(mutexIn, std::defer_lock)
     {
         if (fTry)
             TryEnter(pszName, pszFile, nLine);
@@ -511,13 +525,14 @@ typedef CMutexLock<CRecursiveSharedCriticalSection> CRecursiveWriteBlock;
 
 typedef CMutexReadLock<CSharedCriticalSection> CReadBlock;
 typedef CMutexLock<CSharedCriticalSection> CWriteBlock;
-typedef CMutexLock<CCriticalSection> CCriticalBlock;
 
 #define READLOCK(cs) CReadBlock UNIQUIFY(readblock)(cs, #cs, __FILE__, __LINE__)
 #define WRITELOCK(cs) CWriteBlock UNIQUIFY(writeblock)(cs, #cs, __FILE__, __LINE__)
 #define READLOCK2(cs1, cs2) \
     CReadBlock UNIQUIFY(readblock1)(cs1, #cs1, __FILE__, __LINE__), UNIQUIFY(readblock2)(cs2, #cs2, __FILE__, __LINE__)
 #define TRY_READ_LOCK(cs, name) CReadBlock name(cs, #cs, __FILE__, __LINE__, true)
+
+typedef CMutexLock<CCriticalSection> CCriticalBlock;
 
 #define LOCK(cs) CCriticalBlock UNIQUIFY(criticalblock)(cs, #cs, __FILE__, __LINE__)
 #define LOCK2(cs1, cs2)                                                     \

@@ -31,6 +31,7 @@ bool AcceptBlockHeader(const CBlockHeader &block,
     CBlockIndex **ppindex)
 {
     AssertLockHeld(cs_main);
+    // AssertRecursiveWriteLockHeld(pnetMan->getChainActive()->cs_mapBlockIndex);
     // Check for duplicate
     uint256 hash = block.GetHash();
     CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(hash);
@@ -79,7 +80,7 @@ bool AcceptBlockHeader(const CBlockHeader &block,
 }
 
 
-bool CheckBlockHeader(const CBlockHeader &block, CValidationState &state, bool fCheckPOW)
+bool CheckBlockHeader(const CBlockHeader &block, CValidationState &state)
 {
     // Check timestamp
     if (block.GetBlockTime() > GetAdjustedTime() + 2 * 60 * 60)

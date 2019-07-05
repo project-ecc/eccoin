@@ -46,7 +46,7 @@ public:
     CChain chainActive;
 
     /** Best header we've seen so far (used for getheaders queries' starting points). */
-    CBlockIndex *pindexBestHeader GUARDED_BY(cs_mapBlockIndex);
+    std::atomic<CBlockIndex *> pindexBestHeader;
 
 private:
     bool LoadBlockIndexDB();
@@ -68,7 +68,7 @@ public:
             delete (*it1).second;
         }
         mapBlockIndex.clear();
-        delete pindexBestHeader;
+        pindexBestHeader = nullptr;
     }
 
     void operator=(const CChainManager &oldMan)
@@ -76,7 +76,7 @@ public:
         RECURSIVEWRITELOCK(cs_mapBlockIndex);
         mapBlockIndex = oldMan.mapBlockIndex;
         chainActive = oldMan.chainActive;
-        pindexBestHeader = oldMan.pindexBestHeader;
+        pindexBestHeader.store(oldMan.pindexBestHeader.load());
     }
 
     /** Look up the block index entry for a given block hash. returns nullptr if it does not exist */

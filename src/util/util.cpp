@@ -496,7 +496,7 @@ void SetupEnvironment()
     fs::path::imbue(loc);
 
     // create the here and delete it absolutely last
-    g_logger = new CLogger();
+    g_logger = std::unique_ptr<CLogger>(new CLogger());
 }
 
 bool SetupNetworking()

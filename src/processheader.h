@@ -24,7 +24,7 @@
 #include "networks/networktemplate.h"
 #include "validationinterface.h"
 
-bool CheckBlockHeader(const CBlockHeader &block, CValidationState &state, bool fCheckPOW = true);
+bool CheckBlockHeader(const CBlockHeader &block, CValidationState &state);
 bool ContextualCheckBlockHeader(const CBlockHeader &block, CValidationState &state, CBlockIndex *pindexPrev);
 bool AcceptBlockHeader(const CBlockHeader &block,
     CValidationState &state,

@@ -69,7 +69,7 @@ CBlockIndex *CChainManager::AddToBlockIndex(const CBlockHeader &block)
     }
     pindexNew->nChainWork = (pindexNew->pprev ? pindexNew->pprev->nChainWork : 0) + GetBlockProof(*pindexNew);
     pindexNew->RaiseValidity(BLOCK_VALID_TREE);
-    if (pindexBestHeader == NULL || pindexBestHeader->nChainWork < pindexNew->nChainWork)
+    if (pindexBestHeader == NULL || pindexBestHeader.load()->nChainWork < pindexNew->nChainWork)
         pindexBestHeader = pindexNew;
 
     setDirtyBlockIndex.insert(pindexNew);
@@ -105,8 +105,8 @@ bool CChainManager::IsInitialBlockDownload()
     static bool lockIBDState = false;
     if (lockIBDState)
         return false;
-    bool state = (chainActive.Height() < pindexBestHeader->nHeight - 24 * 6 ||
-                  pindexBestHeader->GetBlockTime() < GetTime() - chainParams.MaxTipAge());
+    bool state = (chainActive.Height() < pindexBestHeader.load()->nHeight - 24 * 6 ||
+                  pindexBestHeader.load()->GetBlockTime() < GetTime() - chainParams.MaxTipAge());
     if (!state)
         lockIBDState = true;
     return state;
@@ -158,8 +158,11 @@ bool CChainManager::InitBlockIndex(const CNetworkTemplate &chainparams)
             CValidationState state;
             if (!FindBlockPos(state, blockPos, nBlockSize + 8, 0, block.GetBlockTime()))
                 return error("InitBlockIndex(): FindBlockPos failed");
-            if (!WriteBlockToDisk(block, blockPos, chainparams.MessageStart()))
-                return error("InitBlockIndex(): writing genesis block to disk failed");
+            {
+                LOCK(cs_blockstorage);
+                if (!WriteBlockToDisk(block, blockPos, chainparams.MessageStart()))
+                    return error("InitBlockIndex(): writing genesis block to disk failed");
+            }
             CBlockIndex *pindex = AddToBlockIndex(block);
 
             // ppcoin: compute stake entropy bit for stake modifier

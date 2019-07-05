@@ -41,6 +41,7 @@ FILE *OpenUndoFile(const CDiskBlockPos &pos, bool fReadOnly) { return OpenDiskFi
 bool WriteBlockToDisk(const CBlock &block, CDiskBlockPos &pos, const CMessageHeader::MessageMagic &messageStart)
     EXCLUSIVE_LOCKS_REQUIRED(cs_blockstorage)
 {
+    AssertLockHeld(cs_blockstorage);
     // Open history file to append
     CAutoFile fileout(OpenBlockFile(pos), SER_DISK, CLIENT_VERSION);
     if (fileout.IsNull())
@@ -63,6 +64,7 @@ bool WriteBlockToDisk(const CBlock &block, CDiskBlockPos &pos, const CMessageHea
 bool ReadBlockFromDisk(CBlock &block, const CDiskBlockPos &pos, const Consensus::Params &consensusParams)
     EXCLUSIVE_LOCKS_REQUIRED(cs_blockstorage)
 {
+    AssertLockHeld(cs_blockstorage);
     block.SetNull();
 
     // Open history file to read
@@ -92,6 +94,7 @@ bool ReadBlockFromDisk(CBlock &block, const CDiskBlockPos &pos, const Consensus:
 bool ReadBlockFromDisk(CBlock &block, const CBlockIndex *pindex, const Consensus::Params &consensusParams)
     EXCLUSIVE_LOCKS_REQUIRED(cs_blockstorage)
 {
+    AssertLockHeld(cs_blockstorage);
     if (!pindex)
     {
         return false;
@@ -113,6 +116,7 @@ bool UndoWriteToDisk(const CBlockUndo &blockundo,
     const uint256 &hashBlock,
     const CMessageHeader::MessageMagic &messageStart) EXCLUSIVE_LOCKS_REQUIRED(cs_blockstorage)
 {
+    AssertLockHeld(cs_blockstorage);
     // Open history file to append
     CAutoFile fileout(OpenUndoFile(pos), SER_DISK, CLIENT_VERSION);
     if (fileout.IsNull())
@@ -141,6 +145,7 @@ bool UndoWriteToDisk(const CBlockUndo &blockundo,
 bool UndoReadFromDisk(CBlockUndo &blockundo, const CDiskBlockPos &pos, const uint256 &hashBlock)
     EXCLUSIVE_LOCKS_REQUIRED(cs_blockstorage)
 {
+    AssertLockHeld(cs_blockstorage);
     // Open history file to read
     CAutoFile filein(OpenUndoFile(pos, true), SER_DISK, CLIENT_VERSION);
     if (filein.IsNull())

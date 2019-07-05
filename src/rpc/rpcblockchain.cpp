@@ -167,7 +167,6 @@ UniValue getblockcount(const UniValue &params, bool fHelp)
                                  "\nExamples:\n" +
                                  HelpExampleCli("getblockcount", "") + HelpExampleRpc("getblockcount", ""));
 
-    LOCK(cs_main);
     return pnetMan->getChainActive()->chainActive.Height();
 }
 
@@ -181,7 +180,6 @@ UniValue getbestblockhash(const UniValue &params, bool fHelp)
                                  "\nExamples\n" +
                                  HelpExampleCli("getbestblockhash", "") + HelpExampleRpc("getbestblockhash", ""));
 
-    LOCK(cs_main);
     return pnetMan->getChainActive()->chainActive.Tip()->GetBlockHash().GetHex();
 }
 
@@ -196,7 +194,6 @@ UniValue getdifficulty(const UniValue &params, bool fHelp)
             "\nExamples:\n" +
             HelpExampleCli("getdifficulty", "") + HelpExampleRpc("getdifficulty", ""));
 
-    LOCK(cs_main);
     return GetDifficulty();
 }
 
@@ -292,8 +289,6 @@ UniValue getrawmempool(const UniValue &params, bool fHelp)
             "\nExamples\n" +
             HelpExampleCli("getrawmempool", "true") + HelpExampleRpc("getrawmempool", "true"));
 
-    LOCK(cs_main);
-
     bool fVerbose = false;
     if (params.size() > 0)
         fVerbose = params[0].get_bool();
@@ -313,12 +308,11 @@ UniValue getblockhash(const UniValue &params, bool fHelp)
                                  "\nExamples:\n" +
                                  HelpExampleCli("getblockhash", "1000") + HelpExampleRpc("getblockhash", "1000"));
 
-    LOCK(cs_main);
-
     int nHeight = params[0].get_int();
     if (nHeight < 0 || nHeight > pnetMan->getChainActive()->chainActive.Height())
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Block height out of range");
 
+    RECURSIVEREADLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
     CBlockIndex *pblockindex = pnetMan->getChainActive()->chainActive[nHeight];
     return pblockindex->GetBlockHash().GetHex();
 }
@@ -357,8 +351,6 @@ UniValue getblockheader(const UniValue &params, bool fHelp)
             "\nExamples:\n" +
             HelpExampleCli("getblockheader", "\"00000000c937983704a73af28acdec37b049d214adbda81d7e2a3dd146f6ed09\"") +
             HelpExampleRpc("getblockheader", "\"00000000c937983704a73af28acdec37b049d214adbda81d7e2a3dd146f6ed09\""));
-
-    LOCK(cs_main);
 
     std::string strHash = params[0].get_str();
     uint256 hash(uint256S(strHash));
@@ -429,12 +421,10 @@ UniValue getblock(const UniValue &params, bool fHelp)
     CBlockIndex *pblockindex;
     if (params.size() > 1)
         fVerbose = params[1].get_bool();
-    {
-        LOCK(cs_main);
-        pblockindex = pnetMan->getChainActive()->LookupBlockIndex(hash);
-        if (!pblockindex)
-            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
-    }
+
+    pblockindex = pnetMan->getChainActive()->LookupBlockIndex(hash);
+    if (!pblockindex)
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
 
     CBlock block;
     {
@@ -483,9 +473,7 @@ static bool GetUTXOStats(CCoinsView *view, CCoinsStats &stats)
 
     CHashWriter ss(SER_GETHASH, PROTOCOL_VERSION);
     stats.hashBlock = pcursor->GetBestBlock();
-    {
-        stats.nHeight = pnetMan->getChainActive()->LookupBlockIndex(stats.hashBlock)->nHeight;
-    }
+    stats.nHeight = pnetMan->getChainActive()->LookupBlockIndex(stats.hashBlock)->nHeight;
     ss << stats.hashBlock;
     uint256 prevkey;
     std::map<uint32_t, Coin> outputs;
@@ -752,13 +740,12 @@ UniValue getblockchaininfo(const UniValue &params, bool fHelp)
             "\nExamples:\n" +
             HelpExampleCli("getblockchaininfo", "") + HelpExampleRpc("getblockchaininfo", ""));
 
-    LOCK(cs_main);
-
     UniValue obj(UniValue::VOBJ);
     obj.push_back(Pair("chain", pnetMan->getActivePaymentNetwork()->NetworkIDString()));
     obj.push_back(Pair("blocks", (int)pnetMan->getChainActive()->chainActive.Height()));
-    obj.push_back(Pair("headers",
-        pnetMan->getChainActive()->pindexBestHeader ? pnetMan->getChainActive()->pindexBestHeader->nHeight : -1));
+    obj.push_back(Pair("headers", pnetMan->getChainActive()->pindexBestHeader ?
+                                      pnetMan->getChainActive()->pindexBestHeader.load()->nHeight :
+                                      -1));
     obj.push_back(Pair("bestblockhash", pnetMan->getChainActive()->chainActive.Tip()->GetBlockHash().GetHex()));
     obj.push_back(Pair("difficulty", (double)GetDifficulty()));
     obj.push_back(Pair("mediantime", (int64_t)pnetMan->getChainActive()->chainActive.Tip()->GetMedianTimePast()));
@@ -865,8 +852,6 @@ UniValue getchaintips(const UniValue &params, bool fHelp)
             "5.  \"active\"                This is the tip of the active main chain, which is certainly valid\n"
             "\nExamples:\n" +
             HelpExampleCli("getchaintips", "") + HelpExampleRpc("getchaintips", ""));
-
-    LOCK(cs_main);
 
     std::set<CBlockIndex *, CompareBlocksByHeight> setTips;
     setTips = GetChainTips();

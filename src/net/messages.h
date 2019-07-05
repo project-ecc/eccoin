@@ -73,14 +73,6 @@ struct CNodeStateStats
     std::vector<int> vHeightInFlight;
 };
 
-
-struct CBlockReject
-{
-    unsigned char chRejectCode;
-    std::string strRejectReason;
-    uint256 hashBlock;
-};
-
 /** Blocks that are in flight, and that are in the queue to be downloaded. Protected by cs_main. */
 struct QueuedBlock
 {

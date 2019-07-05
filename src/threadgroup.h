@@ -44,11 +44,7 @@ public:
     ~thread_group()
     {
         interrupt_all();
-        for (auto &t : threads)
-        {
-            if (t.joinable())
-                t.detach();
-        }
+        join_all();
     }
 };
 
