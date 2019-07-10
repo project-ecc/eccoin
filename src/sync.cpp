@@ -37,13 +37,18 @@ void PrintLockContention(const char *pszName, const char *pszFile, unsigned int 
 
 #ifdef DEBUG_LOCKORDER // this define covers the rest of the file
 
-void EnterCritical(const char *pszName, const char *pszFile, unsigned int nLine, void *cs, LockType type, bool isExclusive, bool fTry)
+void EnterCritical(const char *pszName,
+    const char *pszFile,
+    unsigned int nLine,
+    void *cs,
+    LockType type,
+    bool isExclusive,
+    bool fTry)
 {
     push_lock(cs, CLockLocation(pszName, pszFile, nLine, fTry, isExclusive), type, isExclusive, fTry);
 }
 
-void LeaveCritical() { remove_lock_critical_exit(); }
-
+void LeaveCritical(void *cs) { remove_lock_critical_exit(cs); }
 void AssertWriteLockHeldInternal(const char *pszName,
     const char *pszFile,
     unsigned int nLine,
@@ -127,34 +132,12 @@ CSharedCriticalSection::~CSharedCriticalSection()
 }
 
 
-void CSharedCriticalSection::lock_shared()
-{
-    boost::shared_mutex::lock_shared();
-}
-
-void CSharedCriticalSection::unlock_shared()
-{
-    boost::shared_mutex::unlock_shared();
-}
-
-bool CSharedCriticalSection::try_lock_shared()
-{
-    return boost::shared_mutex::try_lock_shared();
-}
-void CSharedCriticalSection::lock()
-{
-    boost::shared_mutex::lock();
-}
-void CSharedCriticalSection::unlock()
-{
-    boost::shared_mutex::unlock();
-}
-
-bool CSharedCriticalSection::try_lock()
-{
-    return boost::shared_mutex::try_lock();
-}
-
+void CSharedCriticalSection::lock_shared() { boost::shared_mutex::lock_shared(); }
+void CSharedCriticalSection::unlock_shared() { boost::shared_mutex::unlock_shared(); }
+bool CSharedCriticalSection::try_lock_shared() { return boost::shared_mutex::try_lock_shared(); }
+void CSharedCriticalSection::lock() { boost::shared_mutex::lock(); }
+void CSharedCriticalSection::unlock() { boost::shared_mutex::unlock(); }
+bool CSharedCriticalSection::try_lock() { return boost::shared_mutex::try_lock(); }
 CRecursiveSharedCriticalSection::CRecursiveSharedCriticalSection() : name(nullptr) {}
 CRecursiveSharedCriticalSection::CRecursiveSharedCriticalSection(const char *n) : name(n)
 {

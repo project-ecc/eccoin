@@ -12,9 +12,15 @@
 
 #include "util/utilstrencodings.h"
 
-#ifdef DEBUG_LOCKORDER // covers the entire file
-#include <unistd.h> // for syscall definition
+enum LockType
+{
+    RECURSIVE, // CCriticalSection
+    SHARED, // CSharedCriticalSection
+    RECRUSIVESHARED, // CRecursiveSharedCriticalSection
+};
+
 #include <sys/syscall.h>
+#include <unistd.h> // for syscall definition
 
 #ifdef __linux__
 inline uint64_t getTid(void)
@@ -31,12 +37,7 @@ inline uint64_t getTid(void)
 }
 #endif
 
-enum LockType
-{
-    RECURSIVE, // CCriticalSection
-    SHARED, // CSharedCriticalSection
-    RECRUSIVESHARED, // CRecursiveSharedCriticalSection
-};
+#ifdef DEBUG_LOCKORDER // covers the entire file
 
 struct CLockLocation
 {
@@ -53,7 +54,7 @@ struct CLockLocation
     std::string ToString() const
     {
         return mutexName + "  " + sourceFile + ":" + itostr(sourceLine) + (fTry ? " (TRY)" : "") +
-            (fExclusive ? " (EXCLUSIVE)" : "");
+               (fExclusive ? " (EXCLUSIVE)" : "");
     }
 
     bool GetTry() const { return fTry; }
@@ -71,9 +72,16 @@ private:
 
 void push_lock(void *c, const CLockLocation &locklocation, LockType type, bool isExclusive, bool fTry);
 void DeleteLock(void *cs);
-void remove_lock_critical_exit();
+void _remove_lock_critical_exit(void *cs);
+void remove_lock_critical_exit(void *cs);
 std::string LocksHeld();
+void SetWaitingToHeld(void *c, const uint64_t &tid, bool isExclusive);
+bool HasAnyOwners(void *c);
 
-#endif // DEBUG_LOCKORDER
+#else // NOT DEBUG_LOCKORDER
+
+static inline void SetWaitingToHeld(void *c, const uint64_t &tid, bool isExclusive) {}
+
+#endif // END DEBUG_LOCKORDER
 
 #endif

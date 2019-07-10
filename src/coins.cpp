@@ -541,7 +541,7 @@ CoinAccessor::~CoinAccessor()
 {
     coin = nullptr;
     cache->cs_utxo.unlock_shared();
-    LeaveCritical();
+    LeaveCritical(&cache->cs_utxo);
 }
 
 
@@ -560,7 +560,7 @@ CoinModifier::~CoinModifier()
 {
     coin = nullptr;
     cache->cs_utxo.unlock();
-    LeaveCritical();
+    LeaveCritical(&cache->cs_utxo);
 }
 
 void AddCoins(CCoinsViewCache &cache, const CTransaction &tx, int nHeight)
