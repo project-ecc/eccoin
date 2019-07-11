@@ -1275,11 +1275,10 @@ void CConnman::ThreadSocketHandler()
                 // handled without blocking here.
 
                 bool select_recv = !pnode->fPauseRecv;
-                bool select_send;
-                {
-                    LOCK(pnode->cs_vSend);
-                    select_send = !pnode->vSendMsg.empty();
-                }
+                bool select_send = false;
+                LOCK(pnode->cs_vSend);
+                select_send = !pnode->vSendMsg.empty();
+
 
                 LOCK(pnode->cs_hSocket);
                 if (pnode->hSocket == INVALID_SOCKET)
