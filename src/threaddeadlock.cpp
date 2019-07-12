@@ -60,15 +60,53 @@ struct LockData
 void potential_deadlock_detected(LockStackEntry now, LockStack &deadlocks, std::set<uint64_t> &threads)
 {
     LogPrintf("POTENTIAL DEADLOCK DETECTED\n");
-    LogPrintf("This occurred while trying to lock: %s\n", now.second.ToString().c_str());
-    LogPrintf("The locks involved are:\n");
+    LogPrintf("This occurred while trying to lock: %s ", now.second.ToString().c_str());
+    LogPrintf("which has:\n");
+
+    auto rlw = lockdata.readlockswaiting.find(now.first);
+    if (rlw != lockdata.readlockswaiting.end())
+    {
+        for (auto &entry : rlw->second)
+        {
+            LogPrintf("Read Lock Waiting for thread with id %" PRIu64 "\n", entry);
+        }
+    }
+
+    auto wlw = lockdata.writelockswaiting.find(now.first);
+    if (wlw != lockdata.writelockswaiting.end())
+    {
+        for (auto &entry : wlw->second)
+        {
+            LogPrintf("Write Lock Waiting for thread with id %" PRIu64 "\n", entry);
+        }
+    }
+
+    auto rlh = lockdata.readlocksheld.find(now.first);
+    if (rlh != lockdata.readlocksheld.end())
+    {
+        for (auto &entry : rlh->second)
+        {
+            LogPrintf("Read Lock Held for thread with id %" PRIu64 "\n", entry);
+        }
+    }
+
+    auto wlh = lockdata.writelocksheld.find(now.first);
+    if (wlh != lockdata.writelocksheld.end())
+    {
+        for (auto &entry : wlh->second)
+        {
+            LogPrintf("Write Lock Held for thread with id %" PRIu64 "\n", entry);
+        }
+    }
+
+    LogPrintf("\nThe locks involved are:\n");
     for (auto &lock : deadlocks)
     {
         LogPrintf(" %s\n", lock.second.ToString().c_str());
     }
     for (auto &thread : threads)
     {
-        LogPrintf("Thread with tid %" PRIu64 " was involved. It held locks:\n", thread);
+        LogPrintf("\nThread with tid %" PRIu64 " was involved. It held locks:\n", thread);
         auto iterheld = lockdata.locksheldbythread.find(thread);
         if (iterheld != lockdata.locksheldbythread.end())
         {
@@ -432,7 +470,7 @@ void push_lock(void *c, const CLockLocation &locklocation, LockType type, bool i
         // a try lock will either get it, or it wont. so just add it.
         // if we dont get the lock this will be undone in destructor
         AddNewLock(now, tid);
-        //AddNewWaitingLock(c, tid, isExclusive);
+        // AddNewWaitingLock(c, tid, isExclusive);
         return;
     }
     // first check lock specific issues
@@ -534,13 +572,13 @@ void push_lock(void *c, const CLockLocation &locklocation, LockType type, bool i
 
 void DeleteLock(void *cs)
 {
+    // remove all instances of the critical section from lockdata
+    std::lock_guard<std::mutex> lock(lockdata.dd_mutex);
     if (!lockdata.available)
     {
         // lockdata was already deleted
         return;
     }
-    // remove all instances of the critical section from lockdata
-    std::lock_guard<std::mutex> lock(lockdata.dd_mutex);
     if (lockdata.readlockswaiting.count(cs))
         lockdata.readlockswaiting.erase(cs);
     if (lockdata.writelockswaiting.count(cs))
@@ -565,7 +603,14 @@ void DeleteLock(void *cs)
 
 void _remove_lock_critical_exit(void *cs)
 {
+    if (!lockdata.available)
+    {
+        // lockdata was already deleted
+        return;
+    }
     uint64_t tid = getTid();
+    bool isExclusive = false;
+    bool fTry = false;
     auto it = lockdata.locksheldbythread.find(tid);
     if (it == lockdata.locksheldbythread.end())
     {
@@ -578,7 +623,68 @@ void _remove_lock_critical_exit(void *cs)
             LogPrintf("got %s but was not expecting it\n", it->second.back().second.ToString().c_str());
             throw std::logic_error("unlock order inconsistant with lock order");
         }
+        isExclusive = it->second.back().second.GetExclusive();
+        fTry = it->second.back().second.GetTry();
         it->second.pop_back();
+    }
+    // remove from the other maps
+    if (isExclusive)
+    {
+        if (fTry)
+        {
+            auto iter = lockdata.writelockswaiting.find(cs);
+            if (iter != lockdata.writelockswaiting.end())
+            {
+                if (iter->second.empty())
+                    return;
+                if (iter->second.count(tid) != 0)
+                {
+                    iter->second.erase(tid);
+                }
+            }
+        }
+        else
+        {
+            auto iter = lockdata.writelocksheld.find(cs);
+            if (iter != lockdata.writelocksheld.end())
+            {
+                if (iter->second.empty())
+                    return;
+                if (iter->second.count(tid) != 0)
+                {
+                    iter->second.erase(tid);
+                }
+            }
+        }
+    }
+    else // !isExclusive
+    {
+        if (fTry)
+        {
+            auto iter = lockdata.readlockswaiting.find(cs);
+            if (iter != lockdata.readlockswaiting.end())
+            {
+                if (iter->second.empty())
+                    return;
+                if (iter->second.count(tid) != 0)
+                {
+                    iter->second.erase(tid);
+                }
+            }
+        }
+        else
+        {
+            auto iter = lockdata.readlocksheld.find(cs);
+            if (iter != lockdata.readlocksheld.end())
+            {
+                if (iter->second.empty())
+                    return;
+                if (iter->second.count(tid) != 0)
+                {
+                    iter->second.erase(tid);
+                }
+            }
+        }
     }
 }
 

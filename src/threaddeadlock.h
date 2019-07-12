@@ -54,7 +54,7 @@ struct CLockLocation
     std::string ToString() const
     {
         return mutexName + "  " + sourceFile + ":" + itostr(sourceLine) + (fTry ? " (TRY)" : "") +
-               (fExclusive ? " (EXCLUSIVE)" : "");
+               (fExclusive ? " (EXCLUSIVE)" : "") + (fWaiting ? " (WAITING)" : "");
     }
 
     bool GetTry() const { return fTry; }

@@ -12,13 +12,13 @@ CNodeState *CNodesStateManager::_GetNodeState(const NodeId id)
 
 void CNodesStateManager::InitializeNodeState(const CNode *pnode)
 {
-    LOCK(cs);
+    LOCK(cs_main);
     mapNodeState.emplace_hint(mapNodeState.end(), std::piecewise_construct, std::forward_as_tuple(pnode->GetId()),
         std::forward_as_tuple(pnode->addr, pnode->GetAddrName()));
 }
 
 void CNodesStateManager::RemoveNodeState(const NodeId id)
 {
-    LOCK(cs);
+    LOCK(cs_main);
     mapNodeState.erase(id);
 }
