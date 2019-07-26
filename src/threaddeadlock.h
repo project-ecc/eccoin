@@ -19,7 +19,9 @@ enum LockType
     RECRUSIVESHARED, // CRecursiveSharedCriticalSection
 };
 
+#ifdef DEBUG_LOCKORDER
 #include <sys/syscall.h>
+#endif
 #include <unistd.h> // for syscall definition
 
 #ifdef __linux__
