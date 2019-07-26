@@ -159,6 +159,8 @@ support/pagelocker.cpp
 support/pagelocker.h
 sync.cpp
 sync.h
+threaddeadlock.cpp
+threaddeadlock.h
 threadgroup.h
 threadsafety.h
 timedata.cpp
@@ -216,6 +218,12 @@ test/coins_tests.cpp
 test/compress_tests.cpp
 test/crypto_tests.cpp
 test/dbwrapper_tests.cpp
+test/deadlock_tests/test1-4.cpp
+test/deadlock_tests/test5.cpp
+test/deadlock_tests/test6.cpp
+test/deadlock_tests/test7.cpp
+test/deadlock_tests/test8.cpp
+test/deadlock_tests/suite.h
 test/DoS_tests.cpp
 test/exploit_tests.cpp
 test/getarg_tests.cpp

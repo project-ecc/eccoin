@@ -50,10 +50,10 @@ int CLogger::FileWriteStr(const std::string &str, FILE *fp)
 
 void CLogger::OpenDebugLog()
 {
-    std::lock_guard<std::mutex> scoped_lock(mutexDebugLog);
-
-    assert(fileout == nullptr);
     fs::path pathDebug = GetDataDir() / "debug.log";
+
+    std::lock_guard<std::mutex> scoped_lock(mutexDebugLog);
+    assert(fileout == nullptr);
     fileout = fopen(pathDebug.string().c_str(), "a");
     if (fileout)
         setbuf(fileout, nullptr); // unbuffered
