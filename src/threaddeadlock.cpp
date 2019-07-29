@@ -343,7 +343,7 @@ bool HasAnyOwners(void *c)
     return false;
 }
 
-void AddNewLock(LockStackEntry &newEntry, const uint64_t &tid)
+void AddNewLock(LockStackEntry newEntry, const uint64_t &tid)
 {
     auto it = lockdata.locksheldbythread.find(tid);
     if (it == lockdata.locksheldbythread.end())
@@ -390,8 +390,9 @@ void AddNewWaitingLock(void *c, const uint64_t &tid, bool &isExclusive)
     }
 }
 
-void SetWaitingToHeld(void *c, const uint64_t &tid, bool isExclusive)
+void SetWaitingToHeld(void *c, bool isExclusive)
 {
+	const uint64_t tid = getTid();
     if (isExclusive)
     {
         auto it = lockdata.writelockswaiting.find(c);

@@ -9,6 +9,8 @@
 #define ECCOIN_THREAD_DEADLOCK_H
 
 #include <string>
+#include <boost/thread.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include "util/utilstrencodings.h"
 
@@ -21,9 +23,7 @@ enum LockType
 
 #ifdef DEBUG_LOCKORDER
 #include <sys/syscall.h>
-#endif
 #include <unistd.h> // for syscall definition
-
 #ifdef __linux__
 inline uint64_t getTid(void)
 {
@@ -38,8 +38,6 @@ inline uint64_t getTid(void)
     return tid;
 }
 #endif
-
-#ifdef DEBUG_LOCKORDER // covers the entire file
 
 struct CLockLocation
 {
@@ -77,12 +75,12 @@ void DeleteLock(void *cs);
 void _remove_lock_critical_exit(void *cs);
 void remove_lock_critical_exit(void *cs);
 std::string LocksHeld();
-void SetWaitingToHeld(void *c, const uint64_t &tid, bool isExclusive);
+void SetWaitingToHeld(void *c, bool isExclusive);
 bool HasAnyOwners(void *c);
 
 #else // NOT DEBUG_LOCKORDER
 
-static inline void SetWaitingToHeld(void *c, const uint64_t &tid, bool isExclusive) {}
+static inline void SetWaitingToHeld(void *c, bool isExclusive) {}
 
 #endif // END DEBUG_LOCKORDER
 

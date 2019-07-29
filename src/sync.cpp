@@ -1,22 +1,10 @@
-/*
- * This file is part of the Eccoin project
- * Copyright (c) 2009-2010 Satoshi Nakamoto
- * Copyright (c) 2009-2016 The Bitcoin Core developers
- * Copyright (c) 2014-2018 The Eccoin developers
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2015 The Bitcoin Core developers
+// Copyright (c) 2015-2018 The Bitcoin Unlimited developers
+// Copyright (c) 2019 Greg Griffith
+// Copyright (c) 2019 The Eccoin developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "sync.h"
 
@@ -48,7 +36,11 @@ void EnterCritical(const char *pszName,
     push_lock(cs, CLockLocation(pszName, pszFile, nLine, fTry, isExclusive), type, isExclusive, fTry);
 }
 
-void LeaveCritical(void *cs) { remove_lock_critical_exit(cs); }
+void LeaveCritical(void *cs)
+{
+    remove_lock_critical_exit(cs);
+}
+
 void AssertWriteLockHeldInternal(const char *pszName,
     const char *pszFile,
     unsigned int nLine,
@@ -131,14 +123,6 @@ CSharedCriticalSection::~CSharedCriticalSection()
     DeleteLock((void *)this);
 }
 
-
-void CSharedCriticalSection::lock_shared() { boost::shared_mutex::lock_shared(); }
-void CSharedCriticalSection::unlock_shared() { boost::shared_mutex::unlock_shared(); }
-bool CSharedCriticalSection::try_lock_shared() { return boost::shared_mutex::try_lock_shared(); }
-void CSharedCriticalSection::lock() { boost::shared_mutex::lock(); }
-void CSharedCriticalSection::unlock() { boost::shared_mutex::unlock(); }
-bool CSharedCriticalSection::try_lock() { return boost::shared_mutex::try_lock(); }
-CRecursiveSharedCriticalSection::CRecursiveSharedCriticalSection() : name(nullptr) {}
 CRecursiveSharedCriticalSection::CRecursiveSharedCriticalSection(const char *n) : name(n)
 {
 // print the address of named critical sections so they can be found in the mutrace output
@@ -162,6 +146,8 @@ CRecursiveSharedCriticalSection::~CRecursiveSharedCriticalSection()
 #endif
     DeleteLock((void *)this);
 }
+
+
 
 
 #endif /* DEBUG_LOCKORDER */

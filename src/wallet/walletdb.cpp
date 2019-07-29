@@ -35,6 +35,8 @@
 #include <boost/filesystem.hpp>
 #include <boost/scoped_ptr.hpp>
 
+extern CCriticalSection cs_main;
+
 //
 // CWalletDB
 //
@@ -730,6 +732,7 @@ void ThreadFlushWalletDB(const std::string &strFile)
 
         if (nLastFlushed != nWalletDBUpdated && GetTime() - nLastWalletUpdate >= 2)
         {
+	    LOCK(cs_main);
             TRY_LOCK(bitdb.cs_db, lockDb);
             if (lockDb)
             {

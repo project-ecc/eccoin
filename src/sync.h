@@ -1,6 +1,8 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2015 The Bitcoin Core developers
 // Copyright (c) 2015-2018 The Bitcoin Unlimited developers
+// Copyright (c) 2019 Greg Griffith
+// Copyright (c) 2019 The Eccoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -24,38 +26,6 @@
 #include <mutex>
 #include <shared_mutex>
 
-////////////////////////////////////////////////
-//                                            //
-// THE SIMPLE DEFINITION, EXCLUDING DEBUG CODE //
-//                                            //
-////////////////////////////////////////////////
-
-/*
-CCriticalSection mutex;
-    boost::recursive_mutex mutex;
-
-LOCK(mutex);
-    boost::unique_lock<boost::recursive_mutex> criticalblock(mutex);
-
-LOCK2(mutex1, mutex2);
-    boost::unique_lock<boost::recursive_mutex> criticalblock1(mutex1);
-    boost::unique_lock<boost::recursive_mutex> criticalblock2(mutex2);
-
-TRY_LOCK(mutex, name);
-    boost::unique_lock<boost::recursive_mutex> name(mutex, boost::try_to_lock_t);
-
-ENTER_CRITICAL_SECTION(mutex); // no RAII
-    mutex.lock();
-
-LEAVE_CRITICAL_SECTION(mutex); // no RAII
-    mutex.unlock();
- */
-
-///////////////////////////////
-//                           //
-// THE ACTUAL IMPLEMENTATION //
-//                           //
-///////////////////////////////
 
 /**
  * Template mixin that adds -Wthread-safety locking
@@ -73,7 +43,6 @@ public:
 
 /**
  * Wrapped boost mutex: supports recursive locking, but no waiting
- * TODO: We should move away from using the recursive lock by default.
  */
 #ifndef DEBUG_LOCKORDER
 typedef AnnotatedMixin<boost::recursive_mutex> CCriticalSection;
@@ -141,14 +110,15 @@ class CSharedCriticalSection : public AnnotatedMixin<boost::shared_mutex>
 public:
     const char *name;
     CSharedCriticalSection(const char *name);
-    CSharedCriticalSection();
+    CRecursiveSharedCriticalSection() : name(nullptr) {}
     ~CSharedCriticalSection();
-    void lock_shared();
-    bool try_lock_shared();
-    void unlock_shared();
-    void lock();
-    void unlock();
-    bool try_lock();
+    void lock_shared() { boost::shared_mutex::lock_shared(); }
+    void unlock_shared() { boost::shared_mutex::unlock_shared(); }
+    bool try_lock_shared() { return boost::shared_mutex::try_lock_shared(); }
+    void lock() { boost::shared_mutex::lock(); }
+    void unlock() { boost::shared_mutex::unlock(); }
+    bool try_lock() { return boost::shared_mutex::try_lock(); }
+    
 };
 #define SCRITSEC(zzname) CSharedCriticalSection zzname(#zzname)
 #endif
@@ -308,7 +278,7 @@ private:
             PrintLockContention(pszName, pszFile, nLine);
 #endif
             lock.lock();
-            SetWaitingToHeld((void *)(lock.mutex()), getTid(), true);
+            SetWaitingToHeld((void *)(lock.mutex()), true);
 #ifdef DEBUG_LOCKCONTENTION
         }
 #endif
@@ -343,7 +313,7 @@ private:
         bool owned = lock.owns_lock();
         if (owned)
         {
-            SetWaitingToHeld((void *)(lock.mutex()), getTid(), false);
+            SetWaitingToHeld((void *)(lock.mutex()), false);
         }
         return owned;
     }
@@ -427,7 +397,7 @@ private:
             PrintLockContention(pszName, pszFile, nLine);
 #endif
             lock.lock();
-            SetWaitingToHeld((void *)(lock.mutex()), getTid(), false);
+            SetWaitingToHeld((void *)(lock.mutex()), false);
 #ifdef DEBUG_LOCKCONTENTION
         }
 #endif
@@ -461,7 +431,7 @@ private:
         bool owned = lock.owns_lock();
         if (owned)
         {
-            SetWaitingToHeld((void *)(lock.mutex()), getTid(), false);
+            SetWaitingToHeld((void *)(lock.mutex()), false);
         }
         return owned;
     }
@@ -570,7 +540,7 @@ private:
 public:
     CSemaphore(int init) : value(init) {}
     void wait()
-    {
+    {   
         boost::unique_lock<boost::mutex> lock(mutex);
         while (value < 1)
         {
