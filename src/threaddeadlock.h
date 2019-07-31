@@ -8,9 +8,9 @@
 #ifndef ECCOIN_THREAD_DEADLOCK_H
 #define ECCOIN_THREAD_DEADLOCK_H
 
-#include <string>
-#include <boost/thread.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/thread.hpp>
+#include <string>
 
 #include "util/utilstrencodings.h"
 

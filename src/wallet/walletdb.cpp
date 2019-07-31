@@ -732,7 +732,7 @@ void ThreadFlushWalletDB(const std::string &strFile)
 
         if (nLastFlushed != nWalletDBUpdated && GetTime() - nLastWalletUpdate >= 2)
         {
-	    LOCK(cs_main);
+            LOCK(cs_main);
             TRY_LOCK(bitdb.cs_db, lockDb);
             if (lockDb)
             {

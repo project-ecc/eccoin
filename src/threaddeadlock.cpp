@@ -392,7 +392,7 @@ void AddNewWaitingLock(void *c, const uint64_t &tid, bool &isExclusive)
 
 void SetWaitingToHeld(void *c, bool isExclusive)
 {
-	const uint64_t tid = getTid();
+    const uint64_t tid = getTid();
     if (isExclusive)
     {
         auto it = lockdata.writelockswaiting.find(c);

@@ -109,8 +109,8 @@ class CSharedCriticalSection : public AnnotatedMixin<boost::shared_mutex>
 {
 public:
     const char *name;
+    CSharedCriticalSection();
     CSharedCriticalSection(const char *name);
-    CRecursiveSharedCriticalSection() : name(nullptr) {}
     ~CSharedCriticalSection();
     void lock_shared() { boost::shared_mutex::lock_shared(); }
     void unlock_shared() { boost::shared_mutex::unlock_shared(); }
@@ -118,7 +118,6 @@ public:
     void lock() { boost::shared_mutex::lock(); }
     void unlock() { boost::shared_mutex::unlock(); }
     bool try_lock() { return boost::shared_mutex::try_lock(); }
-
 };
 #define SCRITSEC(zzname) CSharedCriticalSection zzname(#zzname)
 #endif
@@ -346,7 +345,8 @@ public:
             uint64_t doneTime = GetStopwatch();
             if (doneTime - lockedTime > LOCK_WARN_TIME)
             {
-                LogPrint("lock", "Lock %s at %s:%d remained locked for %d ms\n", name, file, line, doneTime - lockedTime);
+                LogPrint(
+                    "lock", "Lock %s at %s:%d remained locked for %d ms\n", name, file, line, doneTime - lockedTime);
             }
 #endif
         }
@@ -454,7 +454,8 @@ public:
             int64_t doneTime = GetStopwatch();
             if (doneTime - lockedTime > LOCK_WARN_TIME)
             {
-                LogPrint("lock", "Lock %s at %s:%d remained locked for %d ms\n", name, file, line, doneTime - lockedTime);
+                LogPrint(
+                    "lock", "Lock %s at %s:%d remained locked for %d ms\n", name, file, line, doneTime - lockedTime);
             }
 #endif
         }

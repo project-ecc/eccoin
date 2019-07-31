@@ -28,11 +28,7 @@ void EnterCritical(const char *pszName,
     push_lock(cs, CLockLocation(pszName, pszFile, nLine, fTry, isExclusive), type, isExclusive, fTry);
 }
 
-void LeaveCritical(void *cs)
-{
-    remove_lock_critical_exit(cs);
-}
-
+void LeaveCritical(void *cs) { remove_lock_critical_exit(cs); }
 void AssertWriteLockHeldInternal(const char *pszName,
     const char *pszFile,
     unsigned int nLine,
@@ -115,6 +111,7 @@ CSharedCriticalSection::~CSharedCriticalSection()
     DeleteLock((void *)this);
 }
 
+CRecursiveSharedCriticalSection::CRecursiveSharedCriticalSection() : name(NULL) {}
 CRecursiveSharedCriticalSection::CRecursiveSharedCriticalSection(const char *n) : name(n)
 {
 // print the address of named critical sections so they can be found in the mutrace output
@@ -138,8 +135,6 @@ CRecursiveSharedCriticalSection::~CRecursiveSharedCriticalSection()
 #endif
     DeleteLock((void *)this);
 }
-
-
 
 
 #endif /* DEBUG_LOCKORDER */
