@@ -118,7 +118,7 @@ public:
     void lock() { boost::shared_mutex::lock(); }
     void unlock() { boost::shared_mutex::unlock(); }
     bool try_lock() { return boost::shared_mutex::try_lock(); }
-    
+
 };
 #define SCRITSEC(zzname) CSharedCriticalSection zzname(#zzname)
 #endif
@@ -242,10 +242,6 @@ void static inline AssertRecursiveWriteLockHeldinternal(const char *pszName,
 #define AssertWriteLockHeld(cs) AssertWriteLockHeldInternal(#cs, __FILE__, __LINE__, &cs)
 #define AssertRecursiveWriteLockHeld(cs) AssertRecursiveWriteLockHeldInternal(#cs, __FILE__, __LINE__, &cs)
 
-#ifdef DEBUG_LOCKCONTENTION
-void PrintLockContention(const char *pszName, const char *pszFile, unsigned int nLine);
-#endif
-
 #define LOCK_WARN_TIME (500ULL * 1000ULL * 1000ULL)
 
 /** Wrapper around std::unique_lock<Mutex> */
@@ -272,17 +268,8 @@ private:
         file = pszFile;
         line = nLine;
         EnterCritical(pszName, pszFile, nLine, (void *)(lock.mutex()), type, true, false);
-#ifdef DEBUG_LOCKCONTENTION
-        if (!lock.try_lock())
-        {
-            PrintLockContention(pszName, pszFile, nLine);
-#endif
-            lock.lock();
-            SetWaitingToHeld((void *)(lock.mutex()), true);
-#ifdef DEBUG_LOCKCONTENTION
-        }
-#endif
-
+        lock.lock();
+        SetWaitingToHeld((void *)(lock.mutex()), true);
 #ifdef DEBUG_LOCKTIME
         lockedTime = GetStopwatch();
         if (lockedTime - startWait > LOCK_WARN_TIME)
@@ -390,18 +377,8 @@ private:
         file = pszFile;
         line = nLine;
         EnterCritical(pszName, pszFile, nLine, (void *)(lock.mutex()), type, false, false);
-// LOG(LCK,"try ReadLock %p %s by %d\n", lock.mutex(), name ? name : "", boost::this_thread::get_id());
-#ifdef DEBUG_LOCKCONTENTION
-        if (!lock.try_lock())
-        {
-            PrintLockContention(pszName, pszFile, nLine);
-#endif
-            lock.lock();
-            SetWaitingToHeld((void *)(lock.mutex()), false);
-#ifdef DEBUG_LOCKCONTENTION
-        }
-#endif
-// LOG(LCK,"ReadLock %p %s taken by %d\n", lock.mutex(), name ? name : "", boost::this_thread::get_id());
+        lock.lock();
+        SetWaitingToHeld((void *)(lock.mutex()), false);
 #ifdef DEBUG_LOCKTIME
         lockedTime = GetStopwatch();
         if (lockedTime - startWait > LOCK_WARN_TIME)
@@ -540,7 +517,7 @@ private:
 public:
     CSemaphore(int init) : value(init) {}
     void wait()
-    {   
+    {
         boost::unique_lock<boost::mutex> lock(mutex);
         while (value < 1)
         {

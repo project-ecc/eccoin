@@ -15,14 +15,6 @@
 #include <stdio.h>
 #include <thread>
 
-#ifdef DEBUG_LOCKCONTENTION
-void PrintLockContention(const char *pszName, const char *pszFile, unsigned int nLine)
-{
-    LogPrintf("LOCKCONTENTION: %s\n", pszName);
-    LogPrintf("Locker: %s:%d\n", pszFile, nLine);
-}
-#endif /* DEBUG_LOCKCONTENTION */
-
 #ifdef DEBUG_LOCKORDER // this define covers the rest of the file
 
 void EnterCritical(const char *pszName,
