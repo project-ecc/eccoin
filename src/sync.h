@@ -274,7 +274,7 @@ private:
         lockedTime = GetStopwatch();
         if (lockedTime - startWait > LOCK_WARN_TIME)
         {
-            LOG(LCK, "Lock %s at %s:%d waited for %d ms\n", pszName, pszFile, nLine, (lockedTime - startWait));
+            LogPrint("lock", "Lock %s at %s:%d waited for %d ms\n", pszName, pszFile, nLine, (lockedTime - startWait));
         }
 #endif
     }
@@ -346,7 +346,7 @@ public:
             uint64_t doneTime = GetStopwatch();
             if (doneTime - lockedTime > LOCK_WARN_TIME)
             {
-                LOG(LCK, "Lock %s at %s:%d remained locked for %d ms\n", name, file, line, doneTime - lockedTime);
+                LogPrint("lock", "Lock %s at %s:%d remained locked for %d ms\n", name, file, line, doneTime - lockedTime);
             }
 #endif
         }
@@ -383,7 +383,7 @@ private:
         lockedTime = GetStopwatch();
         if (lockedTime - startWait > LOCK_WARN_TIME)
         {
-            LOG(LCK, "Lock %s at %s:%d waited for %d ms\n", pszName, pszFile, nLine, (lockedTime - startWait));
+            LogPrint("lock", "Lock %s at %s:%d waited for %d ms\n", pszName, pszFile, nLine, (lockedTime - startWait));
         }
 #endif
     }
@@ -454,7 +454,7 @@ public:
             int64_t doneTime = GetStopwatch();
             if (doneTime - lockedTime > LOCK_WARN_TIME)
             {
-                LOG(LCK, "Lock %s at %s:%d remained locked for %d ms\n", name, file, line, doneTime - lockedTime);
+                LogPrint("lock", "Lock %s at %s:%d remained locked for %d ms\n", name, file, line, doneTime - lockedTime);
             }
 #endif
         }
