@@ -58,7 +58,7 @@ protected:
     virtual void ResendWalletTransactions(int64_t nBestBlockTime, CConnman *connman) {}
     virtual void BlockChecked(const CBlock &, const CValidationState &) {}
     virtual void GetScriptForMining(boost::shared_ptr<CReserveScript> &){};
-    virtual void NewPoWValidBlock(const CBlockIndex *pindex, const CBlock *block) {}
+    virtual void NewPoWValidBlock(CBlockIndex *pindex, const CBlock *block) {}
     friend void ::RegisterValidationInterface(CValidationInterface *);
     friend void ::UnregisterValidationInterface(CValidationInterface *);
     friend void ::UnregisterAllValidationInterfaces();
@@ -85,7 +85,7 @@ struct CMainSignals
      * has been received and connected to the headers tree, though not validated
      * yet.
      */
-    boost::signals2::signal<void(const CBlockIndex *, const CBlock *)> NewPoWValidBlock;
+    boost::signals2::signal<void(CBlockIndex *, const CBlock *)> NewPoWValidBlock;
 };
 
 CMainSignals &GetMainSignals();

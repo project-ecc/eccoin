@@ -62,7 +62,7 @@ private:
 
 public:
     PeerLogicValidation(CConnman *connmanIn);
-    void NewPoWValidBlock(const CBlockIndex *pindex, const CBlock *pblock) override;
+    void NewPoWValidBlock(CBlockIndex *pindex, const CBlock *pblock) override;
 };
 
 struct CNodeStateStats
