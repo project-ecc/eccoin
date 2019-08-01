@@ -1608,6 +1608,5 @@ bool ProcessNewBlock(CValidationState &state,
         else
             return false;
     }
-
     return true;
 }

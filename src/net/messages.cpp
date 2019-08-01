@@ -1363,9 +1363,11 @@ bool static ProcessMessage(CNode *pfrom,
         {
             LogPrintf("received getdata for: %s peer=%d\n", vInv[0].ToString(), pfrom->id);
         }
-
-        pfrom->vRecvGetData.insert(pfrom->vRecvGetData.end(), vInv.begin(), vInv.end());
-        ProcessGetData(pfrom, connman, chainparams.GetConsensus());
+        {
+            LOCK(pfrom->csRecvGetData);
+            pfrom->vRecvGetData.insert(pfrom->vRecvGetData.end(), vInv.begin(), vInv.end());
+            ProcessGetData(pfrom, connman, chainparams.GetConsensus());
+        }
     }
 
     else if (strCommand == NetMsgType::GETHEADERS)
@@ -2058,20 +2060,17 @@ bool ProcessMessages(CNode *pfrom, CConnman &connman)
     //
     bool fMoreWork = false;
 
-    if (!pfrom->vRecvGetData.empty())
     {
-        ProcessGetData(pfrom, connman, pnetMan->getActivePaymentNetwork()->GetConsensus());
+        TRY_LOCK(pfrom->csRecvGetData, locked);
+        if (locked && !pfrom->vRecvGetData.empty())
+        {
+            ProcessGetData(pfrom, connman, pnetMan->getActivePaymentNetwork()->GetConsensus());
+        }
     }
 
     if (pfrom->fDisconnect)
     {
         return false;
-    }
-
-    // this maintains the order of responses
-    if (!pfrom->vRecvGetData.empty())
-    {
-        return true;
     }
 
     // Don't bother if send buffer is too full to respond anyway
@@ -2134,6 +2133,7 @@ bool ProcessMessages(CNode *pfrom, CConnman &connman)
     try
     {
         fRet = ProcessMessage(pfrom, strCommand, vRecv, msg.nTime, connman);
+        LOCK(pfrom->csRecvGetData);
         if (!pfrom->vRecvGetData.empty())
         {
             fMoreWork = true;

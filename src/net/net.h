@@ -214,6 +214,7 @@ public:
 
     CCriticalSection cs_sendProcessing;
 
+    CCriticalSection csRecvGetData;
     std::deque<CInv> vRecvGetData;
     uint64_t nRecvBytes;
     std::atomic<int> nRecvVersion;
