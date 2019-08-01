@@ -1,8 +1,6 @@
 #include "messages.h"
 #include "net.h"
 
-extern CCriticalSection cs_main;
-
 /**
  * Maintain validation-specific state about nodes, protected by cs_main, instead
  * by CNode's own locks. This simplifies asynchronous operation, where
@@ -84,7 +82,7 @@ struct CNodeState
 class CNodesStateManager
 {
 protected:
-    // CCriticalSection cs;
+    CCriticalSection cs;
     std::map<NodeId, CNodeState> mapNodeState;
     friend class CNodeStateAccessor;
 
@@ -100,16 +98,14 @@ public:
     /** Clear the entire nodestate map */
     void Clear()
     {
-        // LOCK(cs);
-        LOCK(cs_main);
+        LOCK(cs);
         mapNodeState.clear();
     }
 
     /** Is mapNodestate empty */
     bool Empty()
     {
-        // LOCK(cs);
-        LOCK(cs_main);
+        LOCK(cs);
         return mapNodeState.empty();
     }
 };
@@ -123,8 +119,7 @@ public:
     CNodeStateAccessor(CCriticalSection *_cs, CNodeState *_obj) : cs(_cs), obj(_obj) { cs->lock(); }
     CNodeStateAccessor(CNodesStateManager &ns, const NodeId id)
     {
-        // cs = &ns.cs;
-        cs = &cs_main;
+        cs = &ns.cs;
         cs->lock();
         obj = ns._GetNodeState(id);
     }
