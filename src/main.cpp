@@ -1558,7 +1558,7 @@ const CBlockIndex *GetLastBlockIndex(const CBlockIndex *pindex, bool fProofOfSta
 
 unsigned int GetNextTargetRequired(const CBlockIndex *pindexLast, bool fProofOfStake)
 {
-    READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+    RECURSIVEREADLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
     arith_uint256 bnTargetLimit = UintToArith256(pnetMan->getActivePaymentNetwork()->GetConsensus().powLimit);
 
     if (fProofOfStake)
