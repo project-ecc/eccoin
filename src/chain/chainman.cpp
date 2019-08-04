@@ -94,6 +94,8 @@ CBlockIndex *CChainManager::FindForkInGlobalIndex(const CChain &chain, const CBl
     return chain.Genesis();
 }
 
+static std::atomic<bool> lockIBDState{false};
+
 bool CChainManager::IsInitialBlockDownload()
 {
     const CNetworkTemplate &chainParams = pnetMan->getActivePaymentNetwork();
@@ -101,7 +103,6 @@ bool CChainManager::IsInitialBlockDownload()
         return true;
     if (fCheckpointsEnabled && chainActive.Height() < Checkpoints::GetTotalBlocksEstimate(chainParams.Checkpoints()))
         return true;
-    static bool lockIBDState = false;
     if (lockIBDState)
         return false;
     bool state = (chainActive.Height() < pindexBestHeader.load()->nHeight - 24 * 6 ||
