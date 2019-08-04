@@ -1147,10 +1147,12 @@ bool ConnectBlock(const CBlock &block,
     LogPrint("bench", "    - Verify %u txins: %.2fms (%.3fms/txin) [%.2fs]\n", nInputs - 1, 0.001 * (nTime4 - nTime2),
         nInputs <= 1 ? 0 : 0.001 * (nTime4 - nTime2) / (nInputs - 1), nTimeVerify * 0.000001);
 
-
-    // ppcoin: track money supply and mint amount info
-    pindex->nMint = nValueOut - nValueIn + nFees;
-    pindex->nMoneySupply = (pindex->pprev ? pindex->pprev->nMoneySupply : 0) + nValueOut - nValueIn;
+    {
+        RECURSIVEWRITELOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+        // ppcoin: track money supply and mint amount info
+        pindex->nMint = nValueOut - nValueIn + nFees;
+        pindex->nMoneySupply = (pindex->pprev ? pindex->pprev->nMoneySupply : 0) + nValueOut - nValueIn;
+    }
 
 
     /// put the following checks in this function due to lack of pindex when checkblock is called
@@ -1172,8 +1174,12 @@ bool ConnectBlock(const CBlock &block,
     {
         return error("ConnectBlock() : SetStakeEntropyBit() failed");
     }
-    // ppcoin: record proof-of-stake hash value
-    pindex->hashProofOfStake = hashProofOfStake;
+
+    {
+        RECURSIVEWRITELOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+        // ppcoin: record proof-of-stake hash value
+        pindex->hashProofOfStake = hashProofOfStake;
+    }
 
     // ppcoin: compute stake modifier
     uint256 nStakeModifier;
@@ -1190,7 +1196,10 @@ bool ConnectBlock(const CBlock &block,
             return state.DoS(100, error("ConnectBlock() : ComputeNextStakeModifier() failed"), REJECT_INVALID,
                 "bad-stakemodifier-pow");
     }
-    pindex->SetStakeModifier(nStakeModifier);
+    {
+        RECURSIVEWRITELOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+        pindex->SetStakeModifier(nStakeModifier);
+    }
     if (fJustCheck)
         return true;
 

@@ -151,6 +151,7 @@ bool CChainManager::InitBlockIndex(const CNetworkTemplate &chainparams)
     {
         try
         {
+            RECURSIVEWRITELOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
             CBlock block = chainparams.GenesisBlock();
             // Start new block file
             unsigned int nBlockSize = ::GetSerializeSize(block, SER_DISK, CLIENT_VERSION);
