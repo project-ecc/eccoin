@@ -18,7 +18,7 @@
 
 BOOST_FIXTURE_TEST_SUITE(test6, EmptySuite)
 
- #ifdef DEBUG_LOCKORDER // this ifdef covers the rest of the file
+#ifdef DEBUG_LOCKORDER // this ifdef covers the rest of the file
 
 CSharedCriticalSection mutexA;
 CSharedCriticalSection mutexB;
@@ -49,10 +49,7 @@ BOOST_AUTO_TEST_CASE(TEST_6)
 
 #else
 
-BOOST_AUTO_TEST_CASE(EMPTY_TEST_6)
-{
-
-}
+BOOST_AUTO_TEST_CASE(EMPTY_TEST_6) {}
 
 #endif
 

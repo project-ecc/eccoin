@@ -29,7 +29,6 @@ void EnterCritical(const char *pszName,
 }
 
 void LeaveCritical(void *cs) { remove_lock_critical_exit(cs); }
-
 void AssertLockHeldInternal(const char *pszName, const char *pszFile, unsigned int nLine, void *cs)
 {
     std::lock_guard<std::mutex> lock(lockdata.dd_mutex);

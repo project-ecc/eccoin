@@ -2122,7 +2122,7 @@ bool ProcessMessages(CNode *pfrom, CConnman &connman)
     const uint256 &hash = msg.GetMessageHash();
 
 
-    #if 0 // Do not waste my CPU calculating a checksum provided by an untrusted node
+#if 0 // Do not waste my CPU calculating a checksum provided by an untrusted node
           // TCP already has one that is sufficient for network errors.  The checksum does not increase security since
           // an attacker can always provide a bad message with a good checksum.
           // This code is removed by comment so it is clear that it is a deliberate omission.
@@ -2133,7 +2133,7 @@ bool ProcessMessages(CNode *pfrom, CConnman &connman)
                   HexStr(hdr.pchChecksum, hdr.pchChecksum + CMessageHeader::CHECKSUM_SIZE));
               return fMoreWork;
           }
-    #endif
+#endif
 
     // Process message
     bool fRet = false;
@@ -2442,7 +2442,8 @@ bool SendMessages(CNode *pto, CConnman &connman)
                     if (!PeerHasHeader(state, pindex))
                     {
                         pto->PushInventory(CInv(MSG_BLOCK, hashToAnnounce));
-                        LogPrint("net", "%s: sending inv peer=%d hash=%s\n", __func__, pto->id, hashToAnnounce.ToString());
+                        LogPrint(
+                            "net", "%s: sending inv peer=%d hash=%s\n", __func__, pto->id, hashToAnnounce.ToString());
                     }
                 }
             }
@@ -2456,8 +2457,8 @@ bool SendMessages(CNode *pto, CConnman &connman)
             }
             else
             {
-                LogPrint("net", "%s: sending header %s to peer=%d\n", __func__,
-                    vHeaders.front().GetHash().ToString(), pto->id);
+                LogPrint("net", "%s: sending header %s to peer=%d\n", __func__, vHeaders.front().GetHash().ToString(),
+                    pto->id);
             }
             connman.PushMessage(pto, NetMsgType::HEADERS, vHeaders);
             CNodeStateAccessor(nodestateman, pto->GetId())->pindexBestHeaderSent = pBestIndex;
@@ -2572,8 +2573,7 @@ bool SendMessages(CNode *pto, CConnman &connman)
             targetSpacing = 150;
         }
         const QueuedBlock &queuedBlock = state->vBlocksInFlight.front();
-        int nOtherPeersWithValidatedDownloads =
-            nPeersWithValidatedDownloads - (state->nBlocksInFlightValidHeaders > 0);
+        int nOtherPeersWithValidatedDownloads = nPeersWithValidatedDownloads - (state->nBlocksInFlightValidHeaders > 0);
         if (nNow > state->nDownloadingSince +
                        targetSpacing * (BLOCK_DOWNLOAD_TIMEOUT_BASE +
                                            BLOCK_DOWNLOAD_TIMEOUT_PER_PEER * nOtherPeersWithValidatedDownloads))

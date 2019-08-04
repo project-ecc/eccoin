@@ -17,7 +17,7 @@
 
 BOOST_FIXTURE_TEST_SUITE(self_deadlock_tests, EmptySuite)
 
- #ifdef DEBUG_LOCKORDER // this ifdef covers the rest of the file
+#ifdef DEBUG_LOCKORDER // this ifdef covers the rest of the file
 
 BOOST_AUTO_TEST_CASE(TEST_1_SM)
 {
@@ -56,10 +56,7 @@ BOOST_AUTO_TEST_CASE(TEST_4)
 
 #else
 
-BOOST_AUTO_TEST_CASE(EMPTY_TEST_1_4)
-{
-
-}
+BOOST_AUTO_TEST_CASE(EMPTY_TEST_1_4) {}
 
 #endif
 
