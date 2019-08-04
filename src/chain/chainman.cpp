@@ -96,7 +96,6 @@ CBlockIndex *CChainManager::FindForkInGlobalIndex(const CChain &chain, const CBl
 
 bool CChainManager::IsInitialBlockDownload()
 {
-    RECURSIVEREADLOCK(cs_mapBlockIndex);
     const CNetworkTemplate &chainParams = pnetMan->getActivePaymentNetwork();
     if (fImporting || fReindex)
         return true;
