@@ -46,10 +46,10 @@ static const int CONTINUE_EXECUTION = -1;
 
 using namespace RPCServer;
 
-bool fRPCRunning = false;
-bool fRPCInWarmup = true;
-std::string rpcWarmupStatus("RPC server started");
-CCriticalSection cs_rpcWarmup;
+extern bool fRPCRunning;
+extern bool fRPCInWarmup;
+extern std::string rpcWarmupStatus;
+extern CCriticalSection cs_rpcWarmup;
 /* Timer-creating functions */
 std::vector<RPCTimerInterface *> timerInterfaces;
 /* Map of name to timer.

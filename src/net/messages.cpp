@@ -84,7 +84,7 @@ std::map<uint256, std::pair<NodeId, std::list<QueuedBlock>::iterator> > mapBlock
     cs_main);
 uint256 hashRecentRejectsChainTip;
 std::map<uint256, std::pair<NodeId, bool> > mapBlockSource;
-CCriticalSection cs_mapRelay;
+extern CCriticalSection cs_mapRelay;
 std::map<uint256, CTransaction> mapRelay;
 std::deque<std::pair<int64_t, std::map<uint256, CTransaction>::iterator> > vRelayExpiration;
 

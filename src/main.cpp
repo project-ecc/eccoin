@@ -114,15 +114,10 @@ CBlockIndex *pindexBestInvalid;
  */
 std::multimap<CBlockIndex *, CBlockIndex *> mapBlocksUnlinked;
 
-CCriticalSection cs_LastBlockFile;
+extern CCriticalSection cs_nBlockSequenceId;
+extern CCriticalSection cs_LastBlockFile;
 std::vector<CBlockFileInfo> vinfoBlockFile;
 int nLastBlockFile = 0;
-
-/**
- * Every received block is assigned a unique and increasing identifier, so we
- * know which one to give priority in case of a fork.
- */
-CCriticalSection cs_nBlockSequenceId;
 
 /** Blocks loaded from disk are assigned id 0, so start the counter at 1. */
 uint32_t nBlockSequenceId = 1;
@@ -1563,6 +1558,7 @@ const CBlockIndex *GetLastBlockIndex(const CBlockIndex *pindex, bool fProofOfSta
 
 unsigned int GetNextTargetRequired(const CBlockIndex *pindexLast, bool fProofOfStake)
 {
+    READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
     arith_uint256 bnTargetLimit = UintToArith256(pnetMan->getActivePaymentNetwork()->GetConsensus().powLimit);
 
     if (fProofOfStake)

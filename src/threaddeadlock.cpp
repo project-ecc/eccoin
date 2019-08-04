@@ -21,42 +21,6 @@
 
 #ifdef DEBUG_LOCKORDER // covers the entire file
 
-// pair ( cs : lock location )
-typedef std::pair<void *, CLockLocation> LockStackEntry;
-typedef std::vector<LockStackEntry> LockStack;
-
-// cs : set of thread ids
-typedef std::map<void *, std::set<uint64_t> > ReadLocksHeld;
-// cs : set of thread ids
-typedef std::map<void *, std::set<uint64_t> > WriteLocksHeld;
-
-// cs : set of thread ids
-typedef std::map<void *, std::set<uint64_t> > ReadLocksWaiting;
-// cs : set of thread ids
-typedef std::map<void *, std::set<uint64_t> > WriteLocksWaiting;
-
-// thread id : vector of locks held (both shared and exclusive, waiting and held)
-typedef std::map<uint64_t, LockStack> LocksHeldByThread;
-
-
-struct LockData
-{
-    // Very ugly hack: as the global constructs and destructors run single
-    // threaded, we use this boolean to know whether LockData still exists,
-    // as DeleteLock can get called by global CCriticalSection destructors
-    // after LockData disappears.
-    bool available;
-    LockData() : available(true) {}
-    ~LockData() { available = false; }
-    ReadLocksWaiting readlockswaiting;
-    WriteLocksWaiting writelockswaiting;
-
-    ReadLocksHeld readlocksheld;
-    WriteLocksHeld writelocksheld;
-    LocksHeldByThread locksheldbythread;
-    std::mutex dd_mutex;
-} static lockdata;
-
 void potential_deadlock_detected(LockStackEntry now, LockStack &deadlocks, std::set<uint64_t> &threads)
 {
     LogPrintf("POTENTIAL DEADLOCK DETECTED\n");
