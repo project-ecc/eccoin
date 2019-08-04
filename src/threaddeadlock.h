@@ -116,6 +116,7 @@ void remove_lock_critical_exit(void *cs);
 std::string LocksHeld();
 void SetWaitingToHeld(void *c, bool isExclusive);
 bool HasAnyOwners(void *c);
+std::string _LocksHeld();
 
 #else // NOT DEBUG_LOCKORDER
 
