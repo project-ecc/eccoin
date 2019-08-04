@@ -356,6 +356,8 @@ void AddNewWaitingLock(void *c, const uint64_t &tid, bool &isExclusive)
 
 void SetWaitingToHeld(void *c, bool isExclusive)
 {
+    std::lock_guard<std::mutex> lock(lockdata.dd_mutex);
+
     const uint64_t tid = getTid();
     if (isExclusive)
     {
