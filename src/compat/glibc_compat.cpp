@@ -1,3 +1,4 @@
+// This file is part of the Eccoin project
 // Copyright (c) 2009-2014 The Bitcoin Core developers
 // Copyright (c) 2015-2018 The Bitcoin Unlimited developers
 // Distributed under the MIT software license, see the accompanying
