@@ -219,9 +219,9 @@ void CArgsManager::ForceSetArg(const std::string &strArg, const std::string &str
     mapMultiArgs[strArg].push_back(strValue);
 }
 
-static fs::path pathCached;
-static fs::path pathCachedNetSpecific;
-static CCriticalSection csPathCached;
+extern fs::path pathCached;
+extern fs::path pathCachedNetSpecific;
+extern CCriticalSection csPathCached;
 
 fs::path CArgsManager::GetConfigFile()
 {

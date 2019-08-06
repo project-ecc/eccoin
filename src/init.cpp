@@ -78,11 +78,7 @@
 static CZMQNotificationInterface *pzmqNotificationInterface = nullptr;
 #endif
 
-CWallet *pwalletMain = nullptr;
-CNetworkManager *pnetMan = nullptr;
-
-std::unique_ptr<CConnman> g_connman;
-std::unique_ptr<PeerLogicValidation> peerLogic;
+extern std::unique_ptr<PeerLogicValidation> peerLogic;
 
 bool fFeeEstimatesInitialized = false;
 static const bool DEFAULT_PROXYRANDOMIZE = true;

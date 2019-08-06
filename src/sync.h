@@ -1,6 +1,8 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2015 The Bitcoin Core developers
 // Copyright (c) 2015-2018 The Bitcoin Unlimited developers
+// Copyright (c) 2019 Greg Griffith
+// Copyright (c) 2019 The Eccoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -24,38 +26,6 @@
 #include <mutex>
 #include <shared_mutex>
 
-////////////////////////////////////////////////
-//                                            //
-// THE SIMPLE DEFINITION, EXCLUDING DEBUG CODE //
-//                                            //
-////////////////////////////////////////////////
-
-/*
-CCriticalSection mutex;
-    boost::recursive_mutex mutex;
-
-LOCK(mutex);
-    boost::unique_lock<boost::recursive_mutex> criticalblock(mutex);
-
-LOCK2(mutex1, mutex2);
-    boost::unique_lock<boost::recursive_mutex> criticalblock1(mutex1);
-    boost::unique_lock<boost::recursive_mutex> criticalblock2(mutex2);
-
-TRY_LOCK(mutex, name);
-    boost::unique_lock<boost::recursive_mutex> name(mutex, boost::try_to_lock_t);
-
-ENTER_CRITICAL_SECTION(mutex); // no RAII
-    mutex.lock();
-
-LEAVE_CRITICAL_SECTION(mutex); // no RAII
-    mutex.unlock();
- */
-
-///////////////////////////////
-//                           //
-// THE ACTUAL IMPLEMENTATION //
-//                           //
-///////////////////////////////
 
 /**
  * Template mixin that adds -Wthread-safety locking
@@ -73,7 +43,6 @@ public:
 
 /**
  * Wrapped boost mutex: supports recursive locking, but no waiting
- * TODO: We should move away from using the recursive lock by default.
  */
 #ifndef DEBUG_LOCKORDER
 typedef AnnotatedMixin<boost::recursive_mutex> CCriticalSection;
@@ -140,15 +109,15 @@ class CSharedCriticalSection : public AnnotatedMixin<boost::shared_mutex>
 {
 public:
     const char *name;
-    CSharedCriticalSection(const char *name);
     CSharedCriticalSection();
+    CSharedCriticalSection(const char *name);
     ~CSharedCriticalSection();
-    void lock_shared();
-    bool try_lock_shared();
-    void unlock_shared();
-    void lock();
-    void unlock();
-    bool try_lock();
+    void lock_shared() { boost::shared_mutex::lock_shared(); }
+    void unlock_shared() { boost::shared_mutex::unlock_shared(); }
+    bool try_lock_shared() { return boost::shared_mutex::try_lock_shared(); }
+    void lock() { boost::shared_mutex::lock(); }
+    void unlock() { boost::shared_mutex::unlock(); }
+    bool try_lock() { return boost::shared_mutex::try_lock(); }
 };
 #define SCRITSEC(zzname) CSharedCriticalSection zzname(#zzname)
 #endif
@@ -197,17 +166,6 @@ public:
     }
     ~CDeferredSharedLocker() { unlock(); }
 };
-
-// This class unlocks a shared lock for the duration of its life
-class CSharedUnlocker
-{
-    CSharedCriticalSection &cs;
-
-public:
-    CSharedUnlocker(CSharedCriticalSection &c) : cs(c) { cs.unlock_shared(); }
-    ~CSharedUnlocker() { cs.lock_shared(); }
-};
-
 
 /** Wrapped boost mutex: supports waiting but not recursive locking */
 typedef AnnotatedMixin<std::mutex> CWaitableCriticalSection;
@@ -272,10 +230,6 @@ void static inline AssertRecursiveWriteLockHeldinternal(const char *pszName,
 #define AssertWriteLockHeld(cs) AssertWriteLockHeldInternal(#cs, __FILE__, __LINE__, &cs)
 #define AssertRecursiveWriteLockHeld(cs) AssertRecursiveWriteLockHeldInternal(#cs, __FILE__, __LINE__, &cs)
 
-#ifdef DEBUG_LOCKCONTENTION
-void PrintLockContention(const char *pszName, const char *pszFile, unsigned int nLine);
-#endif
-
 #define LOCK_WARN_TIME (500ULL * 1000ULL * 1000ULL)
 
 /** Wrapper around std::unique_lock<Mutex> */
@@ -302,22 +256,13 @@ private:
         file = pszFile;
         line = nLine;
         EnterCritical(pszName, pszFile, nLine, (void *)(lock.mutex()), type, true, false);
-#ifdef DEBUG_LOCKCONTENTION
-        if (!lock.try_lock())
-        {
-            PrintLockContention(pszName, pszFile, nLine);
-#endif
-            lock.lock();
-            SetWaitingToHeld((void *)(lock.mutex()), getTid(), true);
-#ifdef DEBUG_LOCKCONTENTION
-        }
-#endif
-
+        lock.lock();
+        SetWaitingToHeld((void *)(lock.mutex()), true);
 #ifdef DEBUG_LOCKTIME
         lockedTime = GetStopwatch();
         if (lockedTime - startWait > LOCK_WARN_TIME)
         {
-            LOG(LCK, "Lock %s at %s:%d waited for %d ms\n", pszName, pszFile, nLine, (lockedTime - startWait));
+            LogPrint("lock", "Lock %s at %s:%d waited for %d ms\n", pszName, pszFile, nLine, (lockedTime - startWait));
         }
 #endif
     }
@@ -343,7 +288,7 @@ private:
         bool owned = lock.owns_lock();
         if (owned)
         {
-            SetWaitingToHeld((void *)(lock.mutex()), getTid(), false);
+            SetWaitingToHeld((void *)(lock.mutex()), false);
         }
         return owned;
     }
@@ -389,7 +334,8 @@ public:
             uint64_t doneTime = GetStopwatch();
             if (doneTime - lockedTime > LOCK_WARN_TIME)
             {
-                LOG(LCK, "Lock %s at %s:%d remained locked for %d ms\n", name, file, line, doneTime - lockedTime);
+                LogPrint(
+                    "lock", "Lock %s at %s:%d remained locked for %d ms\n", name, file, line, doneTime - lockedTime);
             }
 #endif
         }
@@ -420,23 +366,13 @@ private:
         file = pszFile;
         line = nLine;
         EnterCritical(pszName, pszFile, nLine, (void *)(lock.mutex()), type, false, false);
-// LOG(LCK,"try ReadLock %p %s by %d\n", lock.mutex(), name ? name : "", boost::this_thread::get_id());
-#ifdef DEBUG_LOCKCONTENTION
-        if (!lock.try_lock())
-        {
-            PrintLockContention(pszName, pszFile, nLine);
-#endif
-            lock.lock();
-            SetWaitingToHeld((void *)(lock.mutex()), getTid(), false);
-#ifdef DEBUG_LOCKCONTENTION
-        }
-#endif
-// LOG(LCK,"ReadLock %p %s taken by %d\n", lock.mutex(), name ? name : "", boost::this_thread::get_id());
+        lock.lock();
+        SetWaitingToHeld((void *)(lock.mutex()), false);
 #ifdef DEBUG_LOCKTIME
         lockedTime = GetStopwatch();
         if (lockedTime - startWait > LOCK_WARN_TIME)
         {
-            LOG(LCK, "Lock %s at %s:%d waited for %d ms\n", pszName, pszFile, nLine, (lockedTime - startWait));
+            LogPrint("lock", "Lock %s at %s:%d waited for %d ms\n", pszName, pszFile, nLine, (lockedTime - startWait));
         }
 #endif
     }
@@ -461,7 +397,7 @@ private:
         bool owned = lock.owns_lock();
         if (owned)
         {
-            SetWaitingToHeld((void *)(lock.mutex()), getTid(), false);
+            SetWaitingToHeld((void *)(lock.mutex()), false);
         }
         return owned;
     }
@@ -507,7 +443,8 @@ public:
             int64_t doneTime = GetStopwatch();
             if (doneTime - lockedTime > LOCK_WARN_TIME)
             {
-                LOG(LCK, "Lock %s at %s:%d remained locked for %d ms\n", name, file, line, doneTime - lockedTime);
+                LogPrint(
+                    "lock", "Lock %s at %s:%d remained locked for %d ms\n", name, file, line, doneTime - lockedTime);
             }
 #endif
         }

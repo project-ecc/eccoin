@@ -39,8 +39,8 @@
 
 #include <univalue.h>
 
-int64_t nWalletUnlockTime;
-static CCriticalSection cs_nWalletUnlockTime;
+extern int64_t nWalletUnlockTime;
+extern CCriticalSection cs_nWalletUnlockTime;
 
 std::string HelpRequiringPassphrase()
 {

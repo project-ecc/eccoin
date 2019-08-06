@@ -1,22 +1,10 @@
-/*
- * This file is part of the Eccoin project
- * Copyright (c) 2009-2010 Satoshi Nakamoto
- * Copyright (c) 2009-2016 The Bitcoin Core developers
- * Copyright (c) 2014-2018 The Eccoin developers
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2015 The Bitcoin Core developers
+// Copyright (c) 2015-2018 The Bitcoin Unlimited developers
+// Copyright (c) 2019 Greg Griffith
+// Copyright (c) 2019 The Eccoin developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "sync.h"
 
@@ -26,14 +14,6 @@
 
 #include <stdio.h>
 #include <thread>
-
-#ifdef DEBUG_LOCKCONTENTION
-void PrintLockContention(const char *pszName, const char *pszFile, unsigned int nLine)
-{
-    LogPrintf("LOCKCONTENTION: %s\n", pszName);
-    LogPrintf("Locker: %s:%d\n", pszFile, nLine);
-}
-#endif /* DEBUG_LOCKCONTENTION */
 
 #ifdef DEBUG_LOCKORDER // this define covers the rest of the file
 
@@ -49,6 +29,51 @@ void EnterCritical(const char *pszName,
 }
 
 void LeaveCritical(void *cs) { remove_lock_critical_exit(cs); }
+void AssertLockHeldInternal(const char *pszName, const char *pszFile, unsigned int nLine, void *cs)
+{
+    std::lock_guard<std::mutex> lock(lockdata.dd_mutex);
+    uint64_t tid = getTid();
+    auto self_iter = lockdata.locksheldbythread.find(tid);
+    if (self_iter == lockdata.locksheldbythread.end())
+    {
+        return;
+    }
+    if (self_iter->second.empty())
+    {
+        return;
+    }
+    for (auto &entry : self_iter->second)
+    {
+        if (entry.first == cs)
+        {
+            // found the lock so return
+            return;
+        }
+    }
+    fprintf(stderr, "Assertion failed: lock %s not held in %s:%i; locks held:\n%s", pszName, pszFile, nLine,
+        _LocksHeld().c_str());
+    abort();
+}
+
+void AssertLockNotHeldInternal(const char *pszName, const char *pszFile, unsigned int nLine, void *cs)
+{
+    std::lock_guard<std::mutex> lock(lockdata.dd_mutex);
+    uint64_t tid = getTid();
+    auto self_iter = lockdata.locksheldbythread.find(tid);
+    if (self_iter != lockdata.locksheldbythread.end() && self_iter->second.empty() == false)
+    {
+        for (auto &entry : self_iter->second)
+        {
+            if (entry.first == cs)
+            {
+                fprintf(stderr, "Assertion failed: lock %s held in %s:%i; locks held:\n%s", pszName, pszFile, nLine,
+                    _LocksHeld().c_str());
+                abort();
+            }
+        }
+    }
+}
+
 void AssertWriteLockHeldInternal(const char *pszName,
     const char *pszFile,
     unsigned int nLine,
@@ -131,14 +156,7 @@ CSharedCriticalSection::~CSharedCriticalSection()
     DeleteLock((void *)this);
 }
 
-
-void CSharedCriticalSection::lock_shared() { boost::shared_mutex::lock_shared(); }
-void CSharedCriticalSection::unlock_shared() { boost::shared_mutex::unlock_shared(); }
-bool CSharedCriticalSection::try_lock_shared() { return boost::shared_mutex::try_lock_shared(); }
-void CSharedCriticalSection::lock() { boost::shared_mutex::lock(); }
-void CSharedCriticalSection::unlock() { boost::shared_mutex::unlock(); }
-bool CSharedCriticalSection::try_lock() { return boost::shared_mutex::try_lock(); }
-CRecursiveSharedCriticalSection::CRecursiveSharedCriticalSection() : name(nullptr) {}
+CRecursiveSharedCriticalSection::CRecursiveSharedCriticalSection() : name(NULL) {}
 CRecursiveSharedCriticalSection::CRecursiveSharedCriticalSection(const char *n) : name(n)
 {
 // print the address of named critical sections so they can be found in the mutrace output

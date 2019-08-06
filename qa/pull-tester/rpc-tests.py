@@ -197,7 +197,7 @@ testScripts = [ RpcTest(t) for t in [
     'txpropagate',
     'verifydb',
     'wallet',
-    'walletbackup',
+    Disabled('walletbackup', "TIMEOUT"), # issue with restarting nodes mid test
     'zapwallettxes',
     #
     Disabled('mempool_limit', "FAILS"),

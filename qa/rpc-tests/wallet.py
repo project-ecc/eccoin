@@ -186,7 +186,7 @@ class WalletTest (BitcoinTestFramework):
         sync_mempools(self.nodes)
 
         self.nodes.append(start_node(3, self.options.tmpdir, ['-usehd=0']))
-        connect_nodes_bi(self.nodes, 0, 3)
+        interconnect_nodes(self.nodes)
         sync_blocks(self.nodes)
 
         relayed = self.nodes[0].resendwallettransactions()

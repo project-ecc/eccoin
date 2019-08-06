@@ -86,8 +86,8 @@ static const uint64_t RANDOMIZER_ID_LOCALHOSTNONCE = 0xd93e69e2bbfa5735ULL;
 bool fDiscover = true;
 bool fListen = true;
 bool fRelayTxes = true;
-CCriticalSection cs_mapLocalHost;
-std::map<CNetAddr, LocalServiceInfo> mapLocalHost;
+extern CCriticalSection cs_mapLocalHost;
+extern std::map<CNetAddr, LocalServiceInfo> mapLocalHost;
 static bool vfLimited[NET_MAX] = {};
 
 limitedmap<uint256, int64_t> mapAlreadyAskedFor(MAX_INV_SZ);
@@ -95,8 +95,8 @@ limitedmap<uint256, int64_t> mapAlreadyAskedFor(MAX_INV_SZ);
 std::string strSubVersion;
 
 // Connection Slot mitigation - used to determine how many connection attempts over time
-CCriticalSection cs_mapInboundConnectionTracker;
-std::map<CNetAddr, ConnectionHistory> mapInboundConnectionTracker;
+extern CCriticalSection cs_mapInboundConnectionTracker;
+extern std::map<CNetAddr, ConnectionHistory> mapInboundConnectionTracker;
 
 // Signals for message handling
 static CNodeSignals g_signals;

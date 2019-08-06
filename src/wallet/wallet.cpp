@@ -2096,6 +2096,7 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient> &vecSend,
     if (fWalletUnlockStakingOnly)
     {
         LogPrintf("CreateTransaction() :  Error: Wallet unlocked for staking only, unable to create transaction.\n");
+        return false;
     }
     CAmount nValue = 0;
     unsigned int nSubtractFeeFromAmount = 0;

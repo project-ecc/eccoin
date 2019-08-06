@@ -94,15 +94,15 @@ CBlockIndex *CChainManager::FindForkInGlobalIndex(const CChain &chain, const CBl
     return chain.Genesis();
 }
 
+static std::atomic<bool> lockIBDState{false};
+
 bool CChainManager::IsInitialBlockDownload()
 {
-    RECURSIVEREADLOCK(cs_mapBlockIndex);
     const CNetworkTemplate &chainParams = pnetMan->getActivePaymentNetwork();
     if (fImporting || fReindex)
         return true;
     if (fCheckpointsEnabled && chainActive.Height() < Checkpoints::GetTotalBlocksEstimate(chainParams.Checkpoints()))
         return true;
-    static bool lockIBDState = false;
     if (lockIBDState)
         return false;
     bool state = (chainActive.Height() < pindexBestHeader.load()->nHeight - 24 * 6 ||
@@ -151,6 +151,7 @@ bool CChainManager::InitBlockIndex(const CNetworkTemplate &chainparams)
     {
         try
         {
+            RECURSIVEWRITELOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
             CBlock block = chainparams.GenesisBlock();
             // Start new block file
             unsigned int nBlockSize = ::GetSerializeSize(block, SER_DISK, CLIENT_VERSION);

@@ -8,6 +8,9 @@
 #ifndef ECCOIN_THREAD_DEADLOCK_H
 #define ECCOIN_THREAD_DEADLOCK_H
 
+#include <boost/lexical_cast.hpp>
+#include <boost/thread.hpp>
+#include <mutex>
 #include <string>
 
 #include "util/utilstrencodings.h"
@@ -19,9 +22,9 @@ enum LockType
     RECRUSIVESHARED, // CRecursiveSharedCriticalSection
 };
 
+#ifdef DEBUG_LOCKORDER
 #include <sys/syscall.h>
 #include <unistd.h> // for syscall definition
-
 #ifdef __linux__
 inline uint64_t getTid(void)
 {
@@ -36,8 +39,6 @@ inline uint64_t getTid(void)
     return tid;
 }
 #endif
-
-#ifdef DEBUG_LOCKORDER // covers the entire file
 
 struct CLockLocation
 {
@@ -70,17 +71,56 @@ private:
     bool fWaiting; // determines if lock is held or is waiting to be held
 };
 
+// pair ( cs : lock location )
+typedef std::pair<void *, CLockLocation> LockStackEntry;
+typedef std::vector<LockStackEntry> LockStack;
+
+// cs : set of thread ids
+typedef std::map<void *, std::set<uint64_t> > ReadLocksHeld;
+// cs : set of thread ids
+typedef std::map<void *, std::set<uint64_t> > WriteLocksHeld;
+
+// cs : set of thread ids
+typedef std::map<void *, std::set<uint64_t> > ReadLocksWaiting;
+// cs : set of thread ids
+typedef std::map<void *, std::set<uint64_t> > WriteLocksWaiting;
+
+// thread id : vector of locks held (both shared and exclusive, waiting and held)
+typedef std::map<uint64_t, LockStack> LocksHeldByThread;
+
+
+struct LockData
+{
+    // Very ugly hack: as the global constructs and destructors run single
+    // threaded, we use this boolean to know whether LockData still exists,
+    // as DeleteLock can get called by global CCriticalSection destructors
+    // after LockData disappears.
+    bool available;
+    LockData() : available(true) {}
+    ~LockData() { available = false; }
+    ReadLocksWaiting readlockswaiting;
+    WriteLocksWaiting writelockswaiting;
+
+    ReadLocksHeld readlocksheld;
+    WriteLocksHeld writelocksheld;
+    LocksHeldByThread locksheldbythread;
+    std::mutex dd_mutex;
+};
+
+extern LockData lockdata;
+
 void push_lock(void *c, const CLockLocation &locklocation, LockType type, bool isExclusive, bool fTry);
 void DeleteLock(void *cs);
 void _remove_lock_critical_exit(void *cs);
 void remove_lock_critical_exit(void *cs);
 std::string LocksHeld();
-void SetWaitingToHeld(void *c, const uint64_t &tid, bool isExclusive);
+void SetWaitingToHeld(void *c, bool isExclusive);
 bool HasAnyOwners(void *c);
+std::string _LocksHeld();
 
 #else // NOT DEBUG_LOCKORDER
 
-static inline void SetWaitingToHeld(void *c, const uint64_t &tid, bool isExclusive) {}
+static inline void SetWaitingToHeld(void *c, bool isExclusive) {}
 
 #endif // END DEBUG_LOCKORDER
 
