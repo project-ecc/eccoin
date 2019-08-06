@@ -36,9 +36,13 @@ class ListTransactionsTest(BitcoinTestFramework):
         self.sync_all()
 
     def run_test(self):
-        self.nodes[0].generate(100)
+        for i in range (4):
+            self.nodes[0].generate(25)
+            self.sync_all()
         self.sync_all()
-        self.nodes[1].generate(100)
+        for i in range (4):
+            self.nodes[1].generate(25)
+            self.sync_all()
         self.sync_all()
         # Simple send, 0 to 1:
         txid = self.nodes[0].sendtoaddress(self.nodes[1].getnewaddress(), 0.1)
