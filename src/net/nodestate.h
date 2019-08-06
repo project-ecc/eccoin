@@ -1,3 +1,12 @@
+// This file is part of the Eccoin project
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2016 The Bitcoin Core developers
+// Copyright (c) 2014-2016 The Bitcoin Unlimited developers
+// Copyright (c) 2014-2018 The Eccoin developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
+
 #include "messages.h"
 #include "net.h"
 
@@ -10,7 +19,7 @@
 struct CNodeState
 {
     //! The peer's address
-    const CService address;
+    CService address;
     //! Whether we have a fully established connection.
     bool fCurrentlyConnected;
     //! Accumulated misbehaviour score for this peer.
@@ -19,18 +28,15 @@ struct CNodeState
     //! whitelisted).
     bool fShouldBan;
     //! String name of this peer (debugging/logging purposes).
-    const std::string name;
-    //! List of asynchronously-determined block rejections to notify this peer
-    //! about.
-    std::vector<CBlockReject> rejects;
+    std::string name;
     //! The best known block we know this peer has announced.
-    const CBlockIndex *pindexBestKnownBlock;
+    CBlockIndex *pindexBestKnownBlock;
     //! The hash of the last unknown block this peer has announced.
     uint256 hashLastUnknownBlock;
     //! The last full block we both have.
-    const CBlockIndex *pindexLastCommonBlock;
+    CBlockIndex *pindexLastCommonBlock;
     //! The best header we have sent our peer.
-    const CBlockIndex *pindexBestHeaderSent;
+    CBlockIndex *pindexBestHeaderSent;
     //! Length of current-streak of unconnecting headers announcements
     int nUnconnectingHeaders;
     //! Whether we've started headers synchronization with this peer.

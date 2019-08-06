@@ -1,22 +1,9 @@
-/*
- * This file is part of the Eccoin project
- * Copyright (c) 2009-2010 Satoshi Nakamoto
- * Copyright (c) 2009-2016 The Bitcoin Core developers
- * Copyright (c) 2014-2018 The Eccoin developers
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// This file is part of the Eccoin project
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2016 The Bitcoin Core developers
+// Copyright (c) 2014-2018 The Eccoin developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "chain/tx.h"
 
@@ -250,7 +237,7 @@ uint64_t CTransaction::GetCoinAge(uint64_t nCoinAge, bool byValue) const
     for (const CTxIn &txin : vin)
     {
         CDiskTxPos txindex;
-        if (!pnetMan->getChainActive()->pblocktree->ReadTxIndex(txin.prevout.hash, txindex))
+        if (!pblocktree->ReadTxIndex(txin.prevout.hash, txindex))
             continue; // previous transaction not in main chain
 
         // Read block header
@@ -306,7 +293,7 @@ bool CTransaction::GetCoinAge(uint64_t &nCoinAge) const
     for (const CTxIn &txin : vin)
     {
         CDiskTxPos txindex;
-        if (!pnetMan->getChainActive()->pblocktree->ReadTxIndex(txin.prevout.hash, txindex))
+        if (!pblocktree->ReadTxIndex(txin.prevout.hash, txindex))
             continue; // previous transaction not in main chain
 
         // Read block header
@@ -360,41 +347,43 @@ bool GetTransaction(const uint256 &hash,
 {
     CBlockIndex *pindexSlow = nullptr;
 
-    LOCK(cs_main);
-
     if (mempool.lookup(hash, txOut))
     {
         return true;
     }
 
     CDiskTxPos postx;
-    if (pnetMan->getChainActive()->pblocktree->ReadTxIndex(hash, postx))
     {
-        CAutoFile file(OpenBlockFile(postx, true), SER_DISK, CLIENT_VERSION);
-        if (file.IsNull())
-            return error("%s: OpenBlockFile failed", __func__);
-        CBlockHeader header;
-        try
+        LOCK(cs_main);
+        if (pblocktree->ReadTxIndex(hash, postx))
         {
-            file >> header;
-            fseek(file.Get(), postx.nTxOffset, SEEK_CUR);
-            file >> txOut;
+            CAutoFile file(OpenBlockFile(postx, true), SER_DISK, CLIENT_VERSION);
+            if (file.IsNull())
+                return error("%s: OpenBlockFile failed", __func__);
+            CBlockHeader header;
+            try
+            {
+                file >> header;
+                fseek(file.Get(), postx.nTxOffset, SEEK_CUR);
+                file >> txOut;
+            }
+            catch (const std::exception &e)
+            {
+                return error("%s: Deserialize or I/O error - %s", __func__, e.what());
+            }
+            hashBlock = header.GetHash();
+            if (txOut.GetHash() != hash)
+                return error("%s: txid mismatch", __func__);
+            return true;
         }
-        catch (const std::exception &e)
-        {
-            return error("%s: Deserialize or I/O error - %s", __func__, e.what());
-        }
-        hashBlock = header.GetHash();
-        if (txOut.GetHash() != hash)
-            return error("%s: txid mismatch", __func__);
-        return true;
     }
 
     if (fAllowSlow) // use coin database to locate block that contains transaction, and scan it
     {
-        CoinAccessor coin(*(pnetMan->getChainActive()->pcoinsTip), hash);
+        CoinAccessor coin(*(pcoinsTip), hash);
         if (!coin->IsSpent())
         {
+            RECURSIVEREADLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
             pindexSlow = pnetMan->getChainActive()->chainActive[coin->nHeight];
         }
     }

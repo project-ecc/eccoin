@@ -1,22 +1,9 @@
-/*
- * This file is part of the Eccoin project
- * Copyright (c) 2009-2010 Satoshi Nakamoto
- * Copyright (c) 2009-2016 The Bitcoin Core developers
- * Copyright (c) 2014-2018 The Eccoin developers
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// This file is part of the Eccoin project
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2016 The Bitcoin Core developers
+// Copyright (c) 2014-2018 The Eccoin developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "base58.h"
 #include "blockstorage/blockstorage.h"
@@ -265,7 +252,7 @@ UniValue gettxoutproof(const UniValue &params, bool fHelp)
     uint256 hashBlock;
     if (params.size() > 1)
     {
-        READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+        RECURSIVEREADLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
         hashBlock = uint256S(params[1].get_str());
         if (!pnetMan->getChainActive()->mapBlockIndex.count(hashBlock))
             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
@@ -274,7 +261,7 @@ UniValue gettxoutproof(const UniValue &params, bool fHelp)
     else
     {
         LOCK(cs_main);
-        CoinAccessor coin(*pnetMan->getChainActive()->pcoinsTip, oneTxid);
+        CoinAccessor coin(*pcoinsTip, oneTxid);
         if (coin && !coin->IsSpent() && coin->nHeight > 0 &&
             coin->nHeight <= pnetMan->getChainActive()->chainActive.Height())
         {
@@ -288,7 +275,7 @@ UniValue gettxoutproof(const UniValue &params, bool fHelp)
         if (!GetTransaction(oneTxid, tx, pnetMan->getActivePaymentNetwork()->GetConsensus(), hashBlock, false) ||
             hashBlock.IsNull())
             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Transaction not yet in block");
-        READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+        RECURSIVEREADLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
         if (!pnetMan->getChainActive()->mapBlockIndex.count(hashBlock))
             throw JSONRPCError(RPC_INTERNAL_ERROR, "Transaction index corrupt");
         pblockindex = pnetMan->getChainActive()->mapBlockIndex[hashBlock];
@@ -685,7 +672,7 @@ UniValue signrawtransaction(const UniValue &params, bool fHelp)
     CCoinsViewCache view(&viewDummy);
     {
         READLOCK(mempool.cs);
-        CCoinsViewCache &viewChain = *pnetMan->getChainActive()->pcoinsTip;
+        CCoinsViewCache &viewChain = *pcoinsTip;
         CCoinsViewMemPool viewMempool(&viewChain, mempool);
         view.SetBackend(viewMempool); // temporarily switch cache backend to db+mempool view
 
@@ -883,7 +870,7 @@ UniValue sendrawtransaction(const UniValue &params, bool fHelp)
     if (params.size() > 1)
         fOverrideFees = params[1].get_bool();
 
-    CCoinsViewCache &view = *pnetMan->getChainActive()->pcoinsTip;
+    CCoinsViewCache &view = *pcoinsTip;
     bool fHaveChain = false;
     for (size_t o = 0; !fHaveChain && o < tx->vout.size(); o++)
     {

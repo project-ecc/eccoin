@@ -1,22 +1,10 @@
-/*
- * This file is part of the Eccoin project
- * Copyright (c) 2009-2010 Satoshi Nakamoto
- * Copyright (c) 2009-2016 The Bitcoin Core developers
- * Copyright (c) 2014-2018 The Eccoin developers
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// This file is part of the Eccoin project
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2016 The Bitcoin Core developers
+// Copyright (c) 2014-2018 The Eccoin developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 
 #include "net/protocol.h"
 
@@ -36,13 +24,11 @@ const char *ADDR = "addr";
 const char *INV = "inv";
 const char *GETDATA = "getdata";
 const char *MERKLEBLOCK = "merkleblock";
-const char *GETBLOCKS = "getblocks";
 const char *GETHEADERS = "getheaders";
 const char *TX = "tx";
 const char *HEADERS = "headers";
 const char *BLOCK = "block";
 const char *GETADDR = "getaddr";
-const char *MEMPOOL = "mempool";
 const char *PING = "ping";
 const char *PONG = "pong";
 const char *ALERT = "alert";
@@ -64,10 +50,10 @@ static const char *ppszTypeName[] = {
  * messages above and in protocol.h.
  */
 const static std::string allNetMessageTypes[] = {NetMsgType::VERSION, NetMsgType::VERACK, NetMsgType::ADDR,
-    NetMsgType::INV, NetMsgType::GETDATA, NetMsgType::MERKLEBLOCK, NetMsgType::GETBLOCKS, NetMsgType::GETHEADERS,
-    NetMsgType::TX, NetMsgType::HEADERS, NetMsgType::BLOCK, NetMsgType::GETADDR, NetMsgType::MEMPOOL, NetMsgType::PING,
-    NetMsgType::PONG, NetMsgType::ALERT, NetMsgType::NOTFOUND, NetMsgType::FILTERLOAD, NetMsgType::FILTERADD,
-    NetMsgType::FILTERCLEAR, NetMsgType::REJECT, NetMsgType::SENDHEADERS};
+    NetMsgType::INV, NetMsgType::GETDATA, NetMsgType::MERKLEBLOCK, NetMsgType::GETHEADERS, NetMsgType::TX,
+    NetMsgType::HEADERS, NetMsgType::BLOCK, NetMsgType::GETADDR, NetMsgType::PING, NetMsgType::PONG, NetMsgType::ALERT,
+    NetMsgType::NOTFOUND, NetMsgType::FILTERLOAD, NetMsgType::FILTERADD, NetMsgType::FILTERCLEAR, NetMsgType::REJECT,
+    NetMsgType::SENDHEADERS};
 const static std::vector<std::string> allNetMessageTypesVec(allNetMessageTypes,
     allNetMessageTypes + ARRAYLEN(allNetMessageTypes));
 

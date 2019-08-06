@@ -1,21 +1,8 @@
-/*
- * This file is part of the Eccoin project
- * Copyright (c) 2015-2017 The Bitcoin Core developers
- * Copyright (c) 2017-2018 The Eccoin developers
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// This file is part of the Eccoin project
+// Copyright (c) 2015-2017 The Bitcoin Core developers
+// Copyright (c) 2017-2018 The Eccoin developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "compat.h"
 
@@ -97,12 +84,12 @@ private:
         WorkQueue &wq;
         ThreadCounter(WorkQueue &w) : wq(w)
         {
-            boost::lock_guard<boost::mutex> lock(wq.cs);
+            std::lock_guard<std::mutex> lock(wq.cs);
             wq.numThreads += 1;
         }
         ~ThreadCounter()
         {
-            boost::lock_guard<boost::mutex> lock(wq.cs);
+            std::lock_guard<std::mutex> lock(wq.cs);
             wq.numThreads -= 1;
             wq.cond.notify_all();
         }
@@ -124,7 +111,7 @@ public:
     /** Enqueue a work item */
     bool Enqueue(WorkItem *item)
     {
-        boost::unique_lock<boost::mutex> lock(cs);
+        std::unique_lock<std::mutex> lock(cs);
         if (queue.size() >= maxDepth)
         {
             return false;
@@ -141,7 +128,7 @@ public:
         {
             WorkItem *i = 0;
             {
-                boost::unique_lock<boost::mutex> lock(cs);
+                std::unique_lock<std::mutex> lock(cs);
                 while (running && queue.empty())
                     cond.wait(lock);
                 if (!running)
@@ -156,14 +143,14 @@ public:
     /** Interrupt and exit loops */
     void Interrupt()
     {
-        boost::unique_lock<boost::mutex> lock(cs);
+        std::unique_lock<std::mutex> lock(cs);
         running = false;
         cond.notify_all();
     }
     /** Wait for worker threads to exit */
     void WaitExit()
     {
-        boost::unique_lock<boost::mutex> lock(cs);
+        std::unique_lock<std::mutex> lock(cs);
         while (numThreads > 0)
             cond.wait(lock);
     }
@@ -171,7 +158,7 @@ public:
     /** Return current depth of queue */
     size_t Depth()
     {
-        boost::unique_lock<boost::mutex> lock(cs);
+        std::unique_lock<std::mutex> lock(cs);
         return queue.size();
     }
 };

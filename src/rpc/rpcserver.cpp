@@ -1,22 +1,9 @@
-/*
- * This file is part of the Eccoin project
- * Copyright (c) 2009-2010 Satoshi Nakamoto
- * Copyright (c) 2009-2016 The Bitcoin Core developers
- * Copyright (c) 2014-2018 The Eccoin developers
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// This file is part of the Eccoin project
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2016 The Bitcoin Core developers
+// Copyright (c) 2014-2018 The Eccoin developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "rpcserver.h"
 
@@ -46,10 +33,10 @@ static const int CONTINUE_EXECUTION = -1;
 
 using namespace RPCServer;
 
-bool fRPCRunning = false;
-bool fRPCInWarmup = true;
-std::string rpcWarmupStatus("RPC server started");
-CCriticalSection cs_rpcWarmup;
+extern bool fRPCRunning;
+extern bool fRPCInWarmup;
+extern std::string rpcWarmupStatus;
+extern CCriticalSection cs_rpcWarmup;
 /* Timer-creating functions */
 std::vector<RPCTimerInterface *> timerInterfaces;
 /* Map of name to timer.
@@ -71,7 +58,6 @@ static struct CRPCSignals
     boost::signals2::signal<void()> Started;
     boost::signals2::signal<void()> Stopped;
     boost::signals2::signal<void(const CRPCCommand &)> PreCommand;
-    boost::signals2::signal<void(const CRPCCommand &)> PostCommand;
 } g_rpcSignals;
 
 void RPCServer::OnStarted(boost::function<void()> slot) { g_rpcSignals.Started.connect(slot); }
@@ -79,11 +65,6 @@ void RPCServer::OnStopped(boost::function<void()> slot) { g_rpcSignals.Stopped.c
 void RPCServer::OnPreCommand(boost::function<void(const CRPCCommand &)> slot)
 {
     g_rpcSignals.PreCommand.connect(boost::bind(slot, _1));
-}
-
-void RPCServer::OnPostCommand(boost::function<void(const CRPCCommand &)> slot)
-{
-    g_rpcSignals.PostCommand.connect(boost::bind(slot, _1));
 }
 
 void RPCTypeCheck(const UniValue &params, const std::list<UniValue::VType> &typesExpected, bool fAllowNull)
@@ -532,8 +513,6 @@ UniValue CRPCTable::execute(const std::string &strMethod, const UniValue &params
     {
         throw JSONRPCError(RPC_MISC_ERROR, e.what());
     }
-
-    g_rpcSignals.PostCommand(*pcmd);
 }
 
 std::string HelpExampleCli(const std::string &methodname, const std::string &args)

@@ -1,22 +1,9 @@
-/*
- * This file is part of the Eccoin project
- * Copyright (c) 2009-2010 Satoshi Nakamoto
- * Copyright (c) 2009-2016 The Bitcoin Core developers
- * Copyright (c) 2014-2018 The Eccoin developers
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// This file is part of the Eccoin project
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2016 The Bitcoin Core developers
+// Copyright (c) 2014-2018 The Eccoin developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "init.h"
 
@@ -78,11 +65,7 @@
 static CZMQNotificationInterface *pzmqNotificationInterface = nullptr;
 #endif
 
-CWallet *pwalletMain = nullptr;
-CNetworkManager *pnetMan = nullptr;
-
-std::unique_ptr<CConnman> g_connman;
-std::unique_ptr<PeerLogicValidation> peerLogic;
+extern std::unique_ptr<PeerLogicValidation> peerLogic;
 
 bool fFeeEstimatesInitialized = false;
 static const bool DEFAULT_PROXYRANDOMIZE = true;
@@ -197,6 +180,8 @@ void Shutdown(thread_group &threadGroup)
     {
         return;
     }
+    // we should have already interrupted but there is no harm in doing it again
+    threadGroup.interrupt_all();
     threadGroup.join_all();
 
     /// Note: Shutdown() must be able to handle cases in which AppInit2() failed part of the way,
@@ -208,11 +193,11 @@ void Shutdown(thread_group &threadGroup)
 
     {
         LOCK(cs_main);
-        if (pnetMan->getChainActive()->pcoinsTip != nullptr)
+        if (pcoinsTip != nullptr)
         {
             // Flush state and clear cache completely to release as much memory as possible before continuing.
             FlushStateToDisk();
-            pnetMan->getChainActive()->pcoinsTip->Clear();
+            pcoinsTip->Clear();
         }
     }
 
@@ -251,18 +236,18 @@ void Shutdown(thread_group &threadGroup)
 
     {
         LOCK(cs_main);
-        if (pnetMan->getChainActive()->pcoinsTip != nullptr)
+        if (pcoinsTip != nullptr)
         {
             FlushStateToDisk();
         }
-        pnetMan->getChainActive()->pcoinsTip.reset();
-        pnetMan->getChainActive()->pcoinsTip = nullptr;
+        pcoinsTip.reset();
+        pcoinsTip = nullptr;
         pcoinscatcher.reset();
         pcoinscatcher = nullptr;
         pcoinsdbview.reset();
         pcoinsdbview = nullptr;
-        pnetMan->getChainActive()->pblocktree.reset();
-        pnetMan->getChainActive()->pblocktree = nullptr;
+        pblocktree.reset();
+        pblocktree = nullptr;
     }
 
     if (pwalletMain)
@@ -296,7 +281,7 @@ void Shutdown(thread_group &threadGroup)
     globalVerifyHandle.reset();
     ECC_Stop();
     LogPrintf("%s: done\n", __func__);
-    delete g_logger;
+    g_logger.reset();
     g_logger = nullptr;
 }
 
@@ -713,7 +698,7 @@ void ThreadImport(std::vector<fs::path> vImportFiles)
             pnetMan->getChainActive()->LoadExternalBlockFile(chainparams, file, &pos);
             nFile++;
         }
-        pnetMan->getChainActive()->pblocktree->WriteReindexing(false);
+        pblocktree->WriteReindexing(false);
         fReindex = false;
         LogPrintf("Reindexing finished\n");
         // To avoid ending up in a situation without genesis block, re-try initializing (no-op if reindexing worked):
@@ -1461,19 +1446,19 @@ bool AppInit2(thread_group &threadGroup)
             try
             {
                 pnetMan->getChainActive()->UnloadBlockIndex();
-                pnetMan->getChainActive()->pcoinsTip.reset();
+                pcoinsTip.reset();
                 pcoinsdbview.reset();
                 pcoinscatcher.reset();
-                pnetMan->getChainActive()->pblocktree.reset();
+                pblocktree.reset();
 
-                pnetMan->getChainActive()->pblocktree.reset(new CBlockTreeDB(nBlockTreeDBCache, false, fReindex));
+                pblocktree.reset(new CBlockTreeDB(nBlockTreeDBCache, false, fReindex));
                 pcoinsdbview.reset(new CCoinsViewDB(nCoinDBCache, false, fReset));
                 pcoinscatcher.reset(new CCoinsViewErrorCatcher(pcoinsdbview.get()));
-                pnetMan->getChainActive()->pcoinsTip.reset(new CCoinsViewCache(pcoinscatcher.get()));
+                pcoinsTip.reset(new CCoinsViewCache(pcoinscatcher.get()));
 
                 if (fReindex)
                 {
-                    pnetMan->getChainActive()->pblocktree->WriteReindexing(true);
+                    pblocktree->WriteReindexing(true);
                 }
                 else
                 {
@@ -1493,7 +1478,7 @@ bool AppInit2(thread_group &threadGroup)
                 // If the loaded chain has a wrong genesis, bail out immediately
                 // (we're likely using a testnet datadir, or the other way around).
                 {
-                    READLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+                    RECURSIVEREADLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
                     if (!pnetMan->getChainActive()->mapBlockIndex.empty() &&
                         pnetMan->getChainActive()->mapBlockIndex.count(chainparams.GetConsensus().hashGenesisBlock) ==
                             0)

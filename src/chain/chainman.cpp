@@ -1,20 +1,7 @@
-/*
- * This file is part of the Eccoin project
- * Copyright (c) 2017-2018 Greg Griffith
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// This file is part of the Eccoin project
+// Copyright (c) 2017-2018 Greg Griffith
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "chainman.h"
 
@@ -34,7 +21,7 @@
 
 CBlockIndex *CChainManager::LookupBlockIndex(const uint256 &hash)
 {
-    READLOCK(cs_mapBlockIndex);
+    RECURSIVEREADLOCK(cs_mapBlockIndex);
     BlockMap::iterator mi = mapBlockIndex.find(hash);
     if (mi == mapBlockIndex.end())
         return nullptr;
@@ -44,7 +31,7 @@ CBlockIndex *CChainManager::LookupBlockIndex(const uint256 &hash)
 
 CBlockIndex *CChainManager::AddToBlockIndex(const CBlockHeader &block)
 {
-    WRITELOCK(cs_mapBlockIndex);
+    RECURSIVEWRITELOCK(cs_mapBlockIndex);
     // Check for duplicate
     uint256 hash = block.GetHash();
     BlockMap::iterator it = mapBlockIndex.find(hash);
@@ -69,7 +56,7 @@ CBlockIndex *CChainManager::AddToBlockIndex(const CBlockHeader &block)
     }
     pindexNew->nChainWork = (pindexNew->pprev ? pindexNew->pprev->nChainWork : 0) + GetBlockProof(*pindexNew);
     pindexNew->RaiseValidity(BLOCK_VALID_TREE);
-    if (pindexBestHeader == NULL || pindexBestHeader->nChainWork < pindexNew->nChainWork)
+    if (pindexBestHeader == NULL || pindexBestHeader.load()->nChainWork < pindexNew->nChainWork)
         pindexBestHeader = pindexNew;
 
     setDirtyBlockIndex.insert(pindexNew);
@@ -79,7 +66,7 @@ CBlockIndex *CChainManager::AddToBlockIndex(const CBlockHeader &block)
 
 CBlockIndex *CChainManager::FindForkInGlobalIndex(const CChain &chain, const CBlockLocator &locator)
 {
-    READLOCK(cs_mapBlockIndex);
+    RECURSIVEREADLOCK(cs_mapBlockIndex);
     // Find the first block the caller has in the main chain
     for (auto const &hash : locator.vHave)
     {
@@ -94,19 +81,19 @@ CBlockIndex *CChainManager::FindForkInGlobalIndex(const CChain &chain, const CBl
     return chain.Genesis();
 }
 
+static std::atomic<bool> lockIBDState{false};
+
 bool CChainManager::IsInitialBlockDownload()
 {
-    READLOCK(cs_mapBlockIndex);
     const CNetworkTemplate &chainParams = pnetMan->getActivePaymentNetwork();
     if (fImporting || fReindex)
         return true;
     if (fCheckpointsEnabled && chainActive.Height() < Checkpoints::GetTotalBlocksEstimate(chainParams.Checkpoints()))
         return true;
-    static bool lockIBDState = false;
     if (lockIBDState)
         return false;
-    bool state = (chainActive.Height() < pindexBestHeader->nHeight - 24 * 6 ||
-                  pindexBestHeader->GetBlockTime() < GetTime() - chainParams.MaxTipAge());
+    bool state = (chainActive.Height() < pindexBestHeader.load()->nHeight - 24 * 6 ||
+                  pindexBestHeader.load()->GetBlockTime() < GetTime() - chainParams.MaxTipAge());
     if (!state)
         lockIBDState = true;
     return state;
@@ -116,7 +103,7 @@ CBlockIndex *CChainManager::InsertBlockIndex(uint256 hash)
 {
     if (hash.IsNull())
         return NULL;
-    WRITELOCK(cs_mapBlockIndex);
+    RECURSIVEWRITELOCK(cs_mapBlockIndex);
 
     // Return existing
     BlockMap::iterator mi = mapBlockIndex.find(hash);
@@ -151,6 +138,7 @@ bool CChainManager::InitBlockIndex(const CNetworkTemplate &chainparams)
     {
         try
         {
+            RECURSIVEWRITELOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
             CBlock block = chainparams.GenesisBlock();
             // Start new block file
             unsigned int nBlockSize = ::GetSerializeSize(block, SER_DISK, CLIENT_VERSION);
@@ -158,8 +146,11 @@ bool CChainManager::InitBlockIndex(const CNetworkTemplate &chainparams)
             CValidationState state;
             if (!FindBlockPos(state, blockPos, nBlockSize + 8, 0, block.GetBlockTime()))
                 return error("InitBlockIndex(): FindBlockPos failed");
-            if (!WriteBlockToDisk(block, blockPos, chainparams.MessageStart()))
-                return error("InitBlockIndex(): writing genesis block to disk failed");
+            {
+                LOCK(cs_blockstorage);
+                if (!WriteBlockToDisk(block, blockPos, chainparams.MessageStart()))
+                    return error("InitBlockIndex(): writing genesis block to disk failed");
+            }
             CBlockIndex *pindex = AddToBlockIndex(block);
 
             // ppcoin: compute stake entropy bit for stake modifier
@@ -207,7 +198,7 @@ bool CChainManager::LoadBlockIndexDB()
     }
 
     LOCK(cs_main);
-    WRITELOCK(cs_mapBlockIndex);
+    RECURSIVEWRITELOCK(cs_mapBlockIndex);
 
     LogPrintf("LoadBlockIndexGuts %15dms\n", GetTimeMillis() - nStart);
 
@@ -487,7 +478,7 @@ void CChainManager::UnloadBlockIndex()
     recentRejects.reset(nullptr);
 
     {
-        WRITELOCK(cs_mapBlockIndex);
+        RECURSIVEWRITELOCK(cs_mapBlockIndex);
         for (auto &entry : mapBlockIndex)
         {
             delete entry.second;

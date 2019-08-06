@@ -1,22 +1,9 @@
-/*
- * This file is part of the Eccoin project
- * Copyright (c) 2009-2010 Satoshi Nakamoto
- * Copyright (c) 2009-2016 The Bitcoin Core developers
- * Copyright (c) 2014-2018 The Eccoin developers
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// This file is part of the Eccoin project
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2016 The Bitcoin Core developers
+// Copyright (c) 2014-2018 The Eccoin developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #ifndef BITCOIN_MAIN_H
 #define BITCOIN_MAIN_H
@@ -160,6 +147,11 @@ extern bool fCheckpointsEnabled;
 extern size_t nCoinCacheUsage;
 extern CFeeRate minRelayTxFee;
 
+/** Global variable that points to the active CCoinsView */
+extern std::unique_ptr<CCoinsViewCache> pcoinsTip GUARDED_BY(cs_main);
+/** Global variable that points to the active block tree */
+extern std::unique_ptr<CBlockTreeDB> pblocktree GUARDED_BY(cs_main);
+
 struct COrphanTx
 {
     CTransaction tx;
@@ -258,8 +250,8 @@ enum FlushStateMode
     FLUSH_STATE_ALWAYS
 };
 bool FlushStateToDisk(CValidationState &state, FlushStateMode mode);
-extern int nPreferredDownload;
-extern int64_t nTimeBestReceived;
+extern std::atomic<int> nPreferredDownload;
+extern std::atomic<int64_t> nTimeBestReceived;
 extern int nPeersWithValidatedDownloads;
 
 /** Flush all state, indexes and buffers to disk. */
@@ -430,7 +422,7 @@ bool ContextualCheckBlock(const CBlock &block, CValidationState &state, CBlockIn
 /* Calculate the amount of disk space the block & undo files currently use */
 uint64_t CalculateCurrentUsage();
 
-extern std::set<CBlockIndex *, CBlockIndexWorkComparator> setBlockIndexCandidates;
+extern std::set<CBlockIndex *, CBlockIndexWorkComparator> setBlockIndexCandidates GUARDED_BY(cs_main);
 
 class CBlockFileInfo
 {

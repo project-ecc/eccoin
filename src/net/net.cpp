@@ -1,22 +1,10 @@
-/*
- * This file is part of the Eccoin project
- * Copyright (c) 2009-2010 Satoshi Nakamoto
- * Copyright (c) 2009-2016 The Bitcoin Core developers
- * Copyright (c) 2014-2018 The Eccoin developers
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// This file is part of the Eccoin project
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2016 The Bitcoin Core developers
+// Copyright (c) 2014-2018 The Eccoin developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 
 #include "net/net.h"
 
@@ -86,8 +74,8 @@ static const uint64_t RANDOMIZER_ID_LOCALHOSTNONCE = 0xd93e69e2bbfa5735ULL;
 bool fDiscover = true;
 bool fListen = true;
 bool fRelayTxes = true;
-CCriticalSection cs_mapLocalHost;
-std::map<CNetAddr, LocalServiceInfo> mapLocalHost;
+extern CCriticalSection cs_mapLocalHost;
+extern std::map<CNetAddr, LocalServiceInfo> mapLocalHost;
 static bool vfLimited[NET_MAX] = {};
 
 limitedmap<uint256, int64_t> mapAlreadyAskedFor(MAX_INV_SZ);
@@ -95,8 +83,8 @@ limitedmap<uint256, int64_t> mapAlreadyAskedFor(MAX_INV_SZ);
 std::string strSubVersion;
 
 // Connection Slot mitigation - used to determine how many connection attempts over time
-CCriticalSection cs_mapInboundConnectionTracker;
-std::map<CNetAddr, ConnectionHistory> mapInboundConnectionTracker;
+extern CCriticalSection cs_mapInboundConnectionTracker;
+extern std::map<CNetAddr, ConnectionHistory> mapInboundConnectionTracker;
 
 // Signals for message handling
 static CNodeSignals g_signals;
@@ -1275,11 +1263,10 @@ void CConnman::ThreadSocketHandler()
                 // handled without blocking here.
 
                 bool select_recv = !pnode->fPauseRecv;
-                bool select_send;
-                {
-                    LOCK(pnode->cs_vSend);
-                    select_send = !pnode->vSendMsg.empty();
-                }
+                bool select_send = false;
+                LOCK(pnode->cs_vSend);
+                select_send = !pnode->vSendMsg.empty();
+
 
                 LOCK(pnode->cs_hSocket);
                 if (pnode->hSocket == INVALID_SOCKET)
@@ -2912,7 +2899,6 @@ CNode::CNode(NodeId idIn,
     nRefCount = 0;
     nSendSize = 0;
     nSendOffset = 0;
-    hashContinue = uint256();
     nStartingHeight = -1;
     filterInventoryKnown.reset();
     fSendMempool = false;

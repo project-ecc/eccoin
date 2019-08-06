@@ -1,22 +1,9 @@
-/*
- * This file is part of the Eccoin project
- * Copyright (c) 2009-2010 Satoshi Nakamoto
- * Copyright (c) 2009-2016 The Bitcoin Core developers
- * Copyright (c) 2014-2018 The Eccoin developers
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// This file is part of the Eccoin project
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2016 The Bitcoin Core developers
+// Copyright (c) 2014-2018 The Eccoin developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "util/util.h"
 #include "args.h"
@@ -118,19 +105,22 @@ bool fDaemon = false;
 bool fServer = false;
 std::string strMiscWarning;
 
+// None of this is needed with OpenSSL 1.1.0
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 /** Init OpenSSL library multithreading support */
-static CCriticalSection **ppmutexOpenSSL;
+static std::mutex **ppmutexOpenSSL;
 void locking_callback(int mode, int i, const char *file, int line) NO_THREAD_SAFETY_ANALYSIS
 {
     if (mode & CRYPTO_LOCK)
     {
-        ENTER_CRITICAL_SECTION(*ppmutexOpenSSL[i]);
+        (*ppmutexOpenSSL[i]).lock();
     }
     else
     {
-        LEAVE_CRITICAL_SECTION(*ppmutexOpenSSL[i]);
+        (*ppmutexOpenSSL[i]).unlock();
     }
 }
+#endif
 
 // Init
 class CInit
@@ -138,10 +128,11 @@ class CInit
 public:
     CInit()
     {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
         // Init OpenSSL library multithreading support
-        ppmutexOpenSSL = (CCriticalSection **)OPENSSL_malloc(CRYPTO_num_locks() * sizeof(CCriticalSection *));
+        ppmutexOpenSSL = (std::mutex **)OPENSSL_malloc(CRYPTO_num_locks() * sizeof(std::mutex *));
         for (int i = 0; i < CRYPTO_num_locks(); i++)
-            ppmutexOpenSSL[i] = new CCriticalSection();
+            ppmutexOpenSSL[i] = new std::mutex();
         CRYPTO_set_locking_callback(locking_callback);
 
         // OpenSSL can optionally load a config file which lists optional loadable modules and engines.
@@ -150,6 +141,9 @@ public:
         // or corrupt. Explicitly tell OpenSSL not to try to load the file. The result for our libs will be
         // that the config appears to have been loaded and there are no modules/engines available.
         OPENSSL_no_config();
+#else
+        OPENSSL_init_crypto(OPENSSL_INIT_ADD_ALL_CIPHERS | OPENSSL_INIT_ADD_ALL_DIGESTS, nullptr);
+#endif
 
 #ifdef WIN32
         // Seed OpenSSL PRNG with current contents of the screen
@@ -161,15 +155,25 @@ public:
     }
     ~CInit()
     {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
         // Securely erase the memory used by the PRNG
         RAND_cleanup();
         // Shutdown OpenSSL library multithreading support
-        CRYPTO_set_locking_callback(NULL);
+        CRYPTO_set_locking_callback(nullptr);
         for (int i = 0; i < CRYPTO_num_locks(); i++)
             delete ppmutexOpenSSL[i];
         OPENSSL_free(ppmutexOpenSSL);
+#else
+        // Adding this on the side of caution, perhaps unnecessary according to OpenSSL 1.1 docs:
+        // "Deinitialises OpenSSL (both libcrypto and libssl). All resources allocated by OpenSSL are freed.
+        // Typically there should be no need to call this function directly as it is initiated automatically on
+        // application exit. This is done via the standard C library atexit() function."
+        // https://www.openssl.org/docs/man1.1.1/man3/OPENSSL_cleanup.html
+        OPENSSL_cleanup();
+#endif
     }
 } instance_of_cinit;
+
 
 static const int screenWidth = 79;
 static const int optIndent = 2;
@@ -213,13 +217,13 @@ fs::path GetDefaultDataDir()
 
 static fs::path pathCached;
 static fs::path pathCachedNetSpecific;
-static CCriticalSection csPathCached;
+static std::mutex csPathCached;
 
 const fs::path &GetDataDir(bool fNetSpecific)
 {
     namespace fs = boost::filesystem;
 
-    LOCK(csPathCached);
+    std::lock_guard<std::mutex> lock(csPathCached);
 
     fs::path &path = fNetSpecific ? pathCachedNetSpecific : pathCached;
 
@@ -496,7 +500,7 @@ void SetupEnvironment()
     fs::path::imbue(loc);
 
     // create the here and delete it absolutely last
-    g_logger = new CLogger();
+    g_logger = std::unique_ptr<CLogger>(new CLogger());
 }
 
 bool SetupNetworking()

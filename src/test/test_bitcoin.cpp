@@ -56,9 +56,9 @@ TestingSetup::TestingSetup(const std::string &chainName) : BasicTestingSetup(cha
     ClearDatadirCache();
     pathTemp = GetTempPathTest() / strprintf("test_bitcoin_%lu_%i", (unsigned long)GetTime(), (int)(GetRand(100000)));
     fs::create_directories(pathTemp);
-    pnetMan->getChainActive()->pblocktree.reset(new CBlockTreeDB(1 << 20, true));
+    pblocktree.reset(new CBlockTreeDB(1 << 20, true));
     pcoinsdbview = new CCoinsViewDB(1 << 23, true);
-    pnetMan->getChainActive()->pcoinsTip.reset(new CCoinsViewCache(pcoinsdbview));
+    pcoinsTip.reset(new CCoinsViewCache(pcoinsdbview));
     bool worked = pnetMan->getChainActive()->InitBlockIndex(chainparams);
     assert(worked);
     RegisterNodeSignals(GetNodeSignals());
@@ -70,9 +70,9 @@ TestingSetup::~TestingSetup()
     threadGroup.interrupt_all();
     threadGroup.join_all();
     pnetMan->getChainActive()->UnloadBlockIndex();
-    pnetMan->getChainActive()->pcoinsTip.reset();
+    pcoinsTip.reset();
     pcoinsdbview = nullptr;
-    pnetMan->getChainActive()->pblocktree.reset();
+    pblocktree.reset();
     g_connman.reset();
     fs::remove_all(pathTemp);
 }

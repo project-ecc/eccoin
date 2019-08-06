@@ -1,22 +1,9 @@
-/*
- * This file is part of the Eccoin project
- * Copyright (c) 2009-2010 Satoshi Nakamoto
- * Copyright (c) 2009-2016 The Bitcoin Core developers
- * Copyright (c) 2014-2018 The Eccoin developers
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// This file is part of the Eccoin project
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2016 The Bitcoin Core developers
+// Copyright (c) 2014-2018 The Eccoin developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "coins.h"
 
@@ -509,7 +496,7 @@ static const size_t nMaxOutputsPerBlock =
 
 CoinAccessor::CoinAccessor(const CCoinsViewCache &view, const uint256 &txid) : cache(&view), lock(cache->csCacheInsert)
 {
-    EnterCritical("CCoinsViewCache.cs_utxo", __FILE__, __LINE__, (void *)(&cache->cs_utxo));
+    EnterCritical("CCoinsViewCache.cs_utxo", __FILE__, __LINE__, (void *)(&cache->cs_utxo), LockType::SHARED, false);
     cache->cs_utxo.lock_shared();
     COutPoint iter(txid, 0);
     coin = &emptyCoin;
@@ -528,7 +515,7 @@ CoinAccessor::CoinAccessor(const CCoinsViewCache &view, const uint256 &txid) : c
 CoinAccessor::CoinAccessor(const CCoinsViewCache &cacheObj, const COutPoint &output)
     : cache(&cacheObj), lock(cache->csCacheInsert)
 {
-    EnterCritical("CCoinsViewCache.cs_utxo", __FILE__, __LINE__, (void *)(&cache->cs_utxo));
+    EnterCritical("CCoinsViewCache.cs_utxo", __FILE__, __LINE__, (void *)(&cache->cs_utxo), LockType::SHARED, false);
     cache->cs_utxo.lock_shared();
     it = cache->FetchCoin(output, &lock);
     if (it != cache->cacheCoins.end())
@@ -541,13 +528,13 @@ CoinAccessor::~CoinAccessor()
 {
     coin = nullptr;
     cache->cs_utxo.unlock_shared();
-    LeaveCritical();
+    LeaveCritical(&cache->cs_utxo);
 }
 
 
 CoinModifier::CoinModifier(const CCoinsViewCache &cacheObj, const COutPoint &output) : cache(&cacheObj)
 {
-    EnterCritical("CCoinsViewCache.cs_utxo", __FILE__, __LINE__, (void *)(&cache->cs_utxo));
+    EnterCritical("CCoinsViewCache.cs_utxo", __FILE__, __LINE__, (void *)(&cache->cs_utxo), LockType::SHARED, true);
     cache->cs_utxo.lock();
     it = cache->FetchCoin(output, nullptr);
     if (it != cache->cacheCoins.end())
@@ -560,7 +547,7 @@ CoinModifier::~CoinModifier()
 {
     coin = nullptr;
     cache->cs_utxo.unlock();
-    LeaveCritical();
+    LeaveCritical(&cache->cs_utxo);
 }
 
 void AddCoins(CCoinsViewCache &cache, const CTransaction &tx, int nHeight)
