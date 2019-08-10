@@ -3,11 +3,11 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include "consensus/tx_verify.h"
 #include "consensus/validation.h"
 #include "crypto/hash.h"
 #include "data/sighash.json.h"
 #include "main.h" // For CheckTransaction
-#include "processtx.h"
 #include "random.h"
 #include "script/interpreter.h"
 #include "script/script.h"

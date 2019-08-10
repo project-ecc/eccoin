@@ -76,6 +76,7 @@ BITCOIN_CORE_H = \
   consensus/consensus.h \
   consensus/merkle.h \
   consensus/params.h \
+  consensus/tx_verify.h \
   consensus/validation.h \
   core_io.h \
   core_memusage.h \
@@ -112,7 +113,6 @@ BITCOIN_CORE_H = \
   crypto/pbkdf2.h \
   processblock.h \
   processheader.h \
-  processtx.h \
   pubkey.h \
   random.h \
   reverselock.h \
@@ -218,6 +218,7 @@ libbitcoin_server_a_SOURCES = \
   coins.cpp \
   compressor.cpp \
   consensus/merkle.cpp \
+  consensus/tx_verify.cpp \
   core_read.cpp \
   core_write.cpp \
   crypto/hash.cpp \
@@ -228,7 +229,6 @@ libbitcoin_server_a_SOURCES = \
   chain/blockindex.cpp \
   processblock.cpp \
   processheader.cpp \
-  processtx.cpp \
   chain/tx.cpp \
   net/nodestate.cpp \
   net/protocol.cpp \

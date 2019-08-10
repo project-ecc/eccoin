@@ -8,13 +8,13 @@
 #include "test/test_bitcoin.h"
 
 #include "clientversion.h"
+#include "consensus/tx_verify.h"
 #include "consensus/validation.h"
 #include "core_io.h"
 #include "key.h"
 #include "keystore.h"
 #include "main.h" // For CheckTransaction
 #include "policy/policy.h"
-#include "processtx.h"
 #include "script/interpreter.h"
 #include "script/script.h"
 #include "script/script_error.h"

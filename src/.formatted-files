@@ -51,6 +51,8 @@ consensus/consensus.h
 consensus/merkle.cpp
 consensus/merkle.h
 consensus/params.h
+consensus/tx_verify.cpp
+consensus/tx_verify.h
 consensus/validation.h
 core_io.h
 core_memusage.h
@@ -112,8 +114,6 @@ processblock.cpp
 processblock.h
 processheader.cpp
 processheader.h
-processtx.cpp
-processtx.h
 pubkey.cpp
 pubkey.h
 random.cpp

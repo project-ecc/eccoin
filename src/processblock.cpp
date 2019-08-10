@@ -19,6 +19,7 @@
 #include "chain/checkpoints.h"
 #include "checkqueue.h"
 #include "consensus/merkle.h"
+#include "consensus/tx_verify.h"
 #include "crypto/hash.h"
 #include "init.h"
 #include "kernel.h"
@@ -30,7 +31,6 @@
 #include "policy/policy.h"
 #include "processblock.h"
 #include "processheader.h"
-#include "processtx.h"
 #include "txmempool.h"
 
 #include "undo.h"
