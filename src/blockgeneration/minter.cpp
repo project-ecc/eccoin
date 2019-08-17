@@ -9,6 +9,7 @@
 
 #include "args.h"
 #include "blockgeneration.h"
+#include "consensus/tx_verify.h"
 #include "init.h"
 #include "processblock.h"
 #include "txmempool.h"

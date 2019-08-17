@@ -9,9 +9,9 @@
 
 #include "args.h"
 #include "base58.h"
+#include "consensus/tx_verify.h" // For CheckTransaction
 #include "consensus/validation.h"
 #include "net/protocol.h"
-#include "processtx.h" // For CheckTransaction
 #include "serialize.h"
 #include "sync.h"
 #include "util/util.h"
