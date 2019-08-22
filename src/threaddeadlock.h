@@ -18,9 +18,15 @@
 
 enum LockType
 {
-    RECURSIVE, // CCriticalSection
-    SHARED, // CSharedCriticalSection
-    RECRUSIVESHARED, // CRecursiveSharedCriticalSection
+    RECURSIVE_MUTEX, // CCriticalSection
+    SHARED_MUTEX, // CSharedCriticalSection
+    RECURSIVE_SHARED_MUTEX, // CRecursiveSharedCriticalSection
+};
+
+enum OwnershipType
+{
+    SHARED,
+    EXCLUSIVE
 };
 
 #ifdef DEBUG_LOCKORDER
@@ -43,7 +49,7 @@ inline uint64_t getTid(void)
 
 struct CLockLocation
 {
-    CLockLocation(const char *pszName, const char *pszFile, int nLine, bool fTryIn, bool fExclusiveIn)
+    CLockLocation(const char *pszName, const char *pszFile, int nLine, bool fTryIn, OwnershipType fExclusiveIn)
     {
         mutexName = pszName;
         sourceFile = pszFile;
@@ -60,7 +66,7 @@ struct CLockLocation
     }
 
     bool GetTry() const { return fTry; }
-    bool GetExclusive() const { return fExclusive; }
+    OwnershipType GetExclusive() const { return fExclusive; }
     bool GetWaiting() const { return fWaiting; }
     void ChangeWaitingToHeld() { fWaiting = false; }
 private:
@@ -68,7 +74,7 @@ private:
     std::string mutexName;
     std::string sourceFile;
     int sourceLine;
-    bool fExclusive; // signifies Exclusive Ownership, this is always true for a CCriticalSection
+    OwnershipType fExclusive; // signifies Exclusive Ownership, this is always true for a CCriticalSection
     bool fWaiting; // determines if lock is held or is waiting to be held
 };
 
@@ -110,18 +116,18 @@ struct LockData
 
 extern LockData lockdata;
 
-void push_lock(void *c, const CLockLocation &locklocation, LockType type, bool isExclusive, bool fTry);
+void push_lock(void *c, const CLockLocation &locklocation, LockType type, OwnershipType isExclusive, bool fTry);
 void DeleteLock(void *cs);
 void _remove_lock_critical_exit(void *cs);
 void remove_lock_critical_exit(void *cs);
 std::string LocksHeld();
-void SetWaitingToHeld(void *c, bool isExclusive);
+void SetWaitingToHeld(void *c, OwnershipType isExclusive);
 bool HasAnyOwners(void *c);
 std::string _LocksHeld();
 
 #else // NOT DEBUG_LOCKORDER
 
-static inline void SetWaitingToHeld(void *c, bool isExclusive) {}
+static inline void SetWaitingToHeld(void *c, OwnershipType isExclusive) {}
 
 #endif // END DEBUG_LOCKORDER
 

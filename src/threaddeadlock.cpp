@@ -324,9 +324,9 @@ void AddNewLock(LockStackEntry newEntry, const uint64_t &tid)
     }
 }
 
-void AddNewWaitingLock(void *c, const uint64_t &tid, bool &isExclusive)
+void AddNewWaitingLock(void *c, const uint64_t &tid, OwnershipType &isExclusive)
 {
-    if (isExclusive)
+    if (isExclusive == OwnershipType::EXCLUSIVE)
     {
         auto it = lockdata.writelockswaiting.find(c);
         if (it == lockdata.writelockswaiting.end())
@@ -356,12 +356,12 @@ void AddNewWaitingLock(void *c, const uint64_t &tid, bool &isExclusive)
     }
 }
 
-void SetWaitingToHeld(void *c, bool isExclusive)
+void SetWaitingToHeld(void *c, OwnershipType isExclusive)
 {
     std::lock_guard<std::mutex> lock(lockdata.dd_mutex);
 
     const uint64_t tid = getTid();
-    if (isExclusive)
+    if (isExclusive == OwnershipType::EXCLUSIVE)
     {
         auto it = lockdata.writelockswaiting.find(c);
         if (it == lockdata.writelockswaiting.end())
@@ -425,7 +425,7 @@ void SetWaitingToHeld(void *c, bool isExclusive)
 // c = the cs
 // isExclusive = is the current lock exclusive, for a recursive mutex (CCriticalSection) this value should always be
 // true
-void push_lock(void *c, const CLockLocation &locklocation, LockType type, bool isExclusive, bool fTry)
+void push_lock(void *c, const CLockLocation &locklocation, LockType type, OwnershipType isExclusive, bool fTry)
 {
     std::lock_guard<std::mutex> lock(lockdata.dd_mutex);
 
@@ -443,7 +443,7 @@ void push_lock(void *c, const CLockLocation &locklocation, LockType type, bool i
         return;
     }
     // first check lock specific issues
-    if (type == LockType::SHARED)
+    if (type == LockType::SHARED_MUTEX)
     {
     TEST_1_SM:
     TEST_2:
@@ -467,11 +467,11 @@ void push_lock(void *c, const CLockLocation &locklocation, LockType type, bool i
             }
         }
     }
-    else if (type == LockType::RECRUSIVESHARED)
+    else if (type == LockType::RECURSIVE_SHARED_MUTEX)
     {
     TEST_1_RSM:
         // we cannot lock exclusive if we already hold shared, check for this scenario
-        if (isExclusive)
+        if (isExclusive == OwnershipType::EXCLUSIVE)
         {
             auto it = lockdata.locksheldbythread.find(tid);
             if (it == lockdata.locksheldbythread.end() || it->second.empty())
@@ -496,7 +496,7 @@ void push_lock(void *c, const CLockLocation &locklocation, LockType type, bool i
             // intentionally left blank
         }
     }
-    else if (type == LockType::RECURSIVE)
+    else if (type == LockType::RECURSIVE_MUTEX)
     {
         // this lock can not deadlock itself
         // intentionally left blank
@@ -507,7 +507,7 @@ void push_lock(void *c, const CLockLocation &locklocation, LockType type, bool i
     AddNewWaitingLock(c, tid, isExclusive);
 
     // if we have exclusive lock(s) and we arent requesting an exclusive lock...
-    if (!isExclusive)
+    if (isExclusive != OwnershipType::EXCLUSIVE)
     {
     TEST_5:
     TEST_8:
@@ -523,7 +523,7 @@ void push_lock(void *c, const CLockLocation &locklocation, LockType type, bool i
         }
     }
     // if we have exclusive lock(s) and we are requesting another exclusive lock
-    if (isExclusive)
+    if (isExclusive == OwnershipType::EXCLUSIVE)
     {
     TEST_6:
     TEST_7:
@@ -578,26 +578,21 @@ void _remove_lock_critical_exit(void *cs)
         return;
     }
     uint64_t tid = getTid();
-    bool isExclusive = false;
-    bool fTry = false;
     auto it = lockdata.locksheldbythread.find(tid);
     if (it == lockdata.locksheldbythread.end())
     {
         throw std::logic_error("unlocking non-existant lock");
     }
-    else
+    if (it->second.back().first != cs)
     {
-        if (it->second.back().first != cs)
-        {
-            LogPrintf("got %s but was not expecting it\n", it->second.back().second.ToString().c_str());
-            throw std::logic_error("unlock order inconsistant with lock order");
-        }
-        isExclusive = it->second.back().second.GetExclusive();
-        fTry = it->second.back().second.GetTry();
-        it->second.pop_back();
+        LogPrintf("got %s but was not expecting it\n", it->second.back().second.ToString().c_str());
+        throw std::logic_error("unlock order inconsistant with lock order");
     }
+    OwnershipType isExclusive = it->second.back().second.GetExclusive();
+    bool fTry = it->second.back().second.GetTry();
+    it->second.pop_back();
     // remove from the other maps
-    if (isExclusive)
+    if (isExclusive == OwnershipType::EXCLUSIVE)
     {
         if (fTry)
         {
