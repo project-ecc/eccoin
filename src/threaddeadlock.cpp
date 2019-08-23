@@ -499,10 +499,23 @@ void _remove_lock_critical_exit(void *cs)
         LogPrintf("got %s but was not expecting it\n", it->second.back().second.ToString().c_str());
         throw std::logic_error("unlock order inconsistant with lock order");
     }
+    LockType type = it->second.back().second.GetLockType();
     OwnershipType isExclusive = it->second.back().second.GetExclusive();
     bool fTry = it->second.back().second.GetTry();
     // assuming we unlock in the reverse order of locks, we can simply pop back
     it->second.pop_back();
+    // if we have no more locks on this critical section...
+    if (type != LockType::SHARED_MUTEX)
+    {
+        for (auto entry : it->second)
+        {
+            if(entry.first == cs)
+            {
+                // we have another lock on this critical section
+                return;
+            }
+        }
+    }
     // remove from the other maps
     if (isExclusive == OwnershipType::EXCLUSIVE)
     {
