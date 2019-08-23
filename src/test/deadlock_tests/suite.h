@@ -4,8 +4,6 @@
 
 #include "sync.h"
 
-#include "test/test_bitcoin.h"
-
 struct EmptySuite
 {
     EmptySuite() {}
