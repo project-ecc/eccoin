@@ -315,6 +315,10 @@ void SetWaitingToHeld(void *c, OwnershipType isExclusive)
         {
             it->second.erase(tid);
         }
+        else
+        {
+            DbgAssert(!"Missing write lock waiting", );
+        }
         auto iter = lockdata.writelocksheld.find(c);
         if (iter == lockdata.writelocksheld.end())
         {
@@ -333,6 +337,10 @@ void SetWaitingToHeld(void *c, OwnershipType isExclusive)
         if (it != lockdata.readlockswaiting.end())
         {
             it->second.erase(tid);
+        }
+        else
+        {
+            DbgAssert(!"Missing read lock waiting", );
         }
         auto iter = lockdata.readlocksheld.find(c);
         if (iter == lockdata.readlocksheld.end())
