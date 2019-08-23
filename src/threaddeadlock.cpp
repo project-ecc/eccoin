@@ -423,7 +423,33 @@ void push_lock(void *c, const CLockLocation &locklocation, LockType type, Owners
     }
 
     // Begin general deadlock checks for all lock types
+    bool lockingRecursively = false;
+    // if lock not shared mutex, check if we are doing a recursive lock
+    if (locktype != LockType::SHARED_MUTEX)
+    {
+        auto it = lockdata.locksheldbythread.find(tid);
+        if (it != lockdata.locksheldbythread.end())
+        {
+            // check if we have locked this lock before
+            for (auto &entry : it->second)
+            {
+                // if we have locked this lock before...
+                if (entry.first == c)
+                {
+                    // then we are locking recursively
+                    lockingRecursively = true;
+                    break;
+                }
+            }
+        }
+    }
     AddNewLock(now, tid);
+    if (lockingRecursively == true)
+    {
+        // we can skip the deadlock detection checks because it is a recursive lock
+        // and self deadlocks were checked earlier
+        return;
+    }
     AddNewWaitingLock(c, tid, isExclusive);
 
     // if we have exclusive lock(s) and we arent requesting an exclusive lock...
@@ -509,7 +535,7 @@ void _remove_lock_critical_exit(void *cs)
     {
         for (auto entry : it->second)
         {
-            if(entry.first == cs)
+            if (entry.first == cs)
             {
                 // we have another lock on this critical section
                 return;
