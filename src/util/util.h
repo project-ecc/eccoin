@@ -16,6 +16,7 @@
 #include "fs.h"
 #include "tinyformat.h"
 #include "util/utiltime.h"
+#include "util/logger.h"
 
 #include <atomic>
 #include <exception>
@@ -33,6 +34,27 @@
 /// UNIQUIFY is a macro that appends the current file's line number to the passed prefix, creating a symbol
 // that is unique in this file.
 #define UNIQUIFY(pfx) UNIQUE1(pfx, __LINE__)
+
+#ifdef DEBUG_ASSERTION
+/// If DEBUG_ASSERTION is enabled this asserts when the predicate is false.
+//  If DEBUG_ASSERTION is disabled and the predicate is false, it executes the execInRelease statements.
+//  Typically, the programmer will error out -- return false, raise an exception, etc in the execInRelease code.
+//  DO NOT USE break or continue inside the DbgAssert!
+#define DbgAssert(pred, execInRelease) assert(pred)
+#else
+#define DbgStringify(x) #x
+#define DbgStringifyIntLiteral(x) DbgStringify(x)
+#define DbgAssert(pred, execInRelease)                                                                        \
+    do                                                                                                        \
+    {                                                                                                         \
+        if (!(pred))                                                                                          \
+        {                                                                                                     \
+            g_logger->LogPrintStr(std::string(                                                                \
+                __FILE__ "(" DbgStringifyIntLiteral(__LINE__) "): Debug Assertion failed: \"" #pred "\"\n")); \
+            execInRelease;                                                                                    \
+        }                                                                                                     \
+    } while (0)
+#endif
 
 extern bool fDaemon;
 extern bool fServer;
