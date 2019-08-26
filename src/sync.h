@@ -182,8 +182,8 @@ void EnterCritical(const char *pszName,
     const char *pszFile,
     unsigned int nLine,
     void *cs,
-    LockType type,
-    OwnershipType isExclusive,
+    LockType locktype,
+    OwnershipType ownership,
     bool fTry = false);
 void LeaveCritical(void *cs);
 std::string LocksHeld();
@@ -204,8 +204,8 @@ void static inline EnterCritical(const char *pszName,
     const char *pszFile,
     unsigned int nLine,
     void *cs,
-    LockType type,
-    OwnershipType isExclusive,
+    LockType locktype,
+    OwnershipType ownership,
     bool fTry = false)
 {
 }

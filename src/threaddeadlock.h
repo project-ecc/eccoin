@@ -60,7 +60,7 @@ struct CLockLocation
         sourceFile = pszFile;
         sourceLine = nLine;
         fTry = fTryIn;
-        fExclusive = fExclusiveIn;
+        eOwnership = eOwnershipIn;
         eLockType = eLockTypeIn;
         fWaiting = true;
     }
@@ -68,11 +68,11 @@ struct CLockLocation
     std::string ToString() const
     {
         return mutexName + "  " + sourceFile + ":" + itostr(sourceLine) + (fTry ? " (TRY)" : "") +
-               (fExclusive ? " (EXCLUSIVE)" : "") + (fWaiting ? " (WAITING)" : "");
+               (eOwnership == OwnershipType::EXCLUSIVE ? " (EXCLUSIVE)" : "") + (fWaiting ? " (WAITING)" : "");
     }
 
     bool GetTry() const { return fTry; }
-    OwnershipType GetExclusive() const { return fExclusive; }
+    OwnershipType GetOwnershipType() const { return eOwnership; }
     bool GetWaiting() const { return fWaiting; }
     void ChangeWaitingToHeld() { fWaiting = false; }
     LockType GetLockType() const { return eLockType; }
@@ -81,7 +81,7 @@ private:
     std::string mutexName;
     std::string sourceFile;
     int sourceLine;
-    OwnershipType fExclusive; // signifies Exclusive Ownership, this is always true for a CCriticalSection
+    OwnershipType eOwnership; // signifies Exclusive Ownership, this is always true for a CCriticalSection
     LockType eLockType;
     bool fWaiting; // determines if lock is held or is waiting to be held
 };

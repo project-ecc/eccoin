@@ -22,8 +22,8 @@ void EnterCritical(const char *pszName,
     const char *pszFile,
     unsigned int nLine,
     void *cs,
-    LockType type,
-    OwnershipType isExclusive,
+    LockType locktype,
+    OwnershipType ownership,
     bool fTry)
 {
     push_lock(cs, CLockLocation(pszName, pszFile, nLine, fTry, ownership, locktype), locktype, ownership, fTry);

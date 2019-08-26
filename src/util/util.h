@@ -15,8 +15,8 @@
 #include "compat.h"
 #include "fs.h"
 #include "tinyformat.h"
-#include "util/utiltime.h"
 #include "util/logger.h"
+#include "util/utiltime.h"
 
 #include <atomic>
 #include <exception>
