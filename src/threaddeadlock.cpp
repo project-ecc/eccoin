@@ -87,7 +87,7 @@ void potential_deadlock_detected(LockStackEntry now, LockStack &deadlocks, std::
     throw std::logic_error("potential deadlock detected");
 }
 
-static bool ReadRecursiveCheck(const uint64_t &tid,
+static bool RecursiveCheck(const uint64_t &tid,
     const void *c,
     uint64_t lastTid,
     void *lastLock,
@@ -100,115 +100,15 @@ static bool ReadRecursiveCheck(const uint64_t &tid,
         // we are back where we started, infinite loop means there is a deadlock
         return true;
     }
-    // first check if we currently have any exclusive ownerships
-    bool haveExclusives = false;
-    size_t selfOtherLockCount = 0;
+    // first check if we currently have any other ownerships
     auto self_iter = lockdata.locksheldbythread.find(lastTid);
     if (self_iter != lockdata.locksheldbythread.end())
     {
-        selfOtherLockCount = self_iter->second.size();
-        for (auto &lockStackLock : self_iter->second)
+        if (self_iter->second.size() == 0)
         {
-            if (lockStackLock.second.GetExclusive() == true)
-            {
-                haveExclusives = true;
-                break;
-            }
-        }
-    }
-    // we cant deadlock if we dont own any other mutexs
-    if (selfOtherLockCount == 0)
-    {
-        return false;
-    }
-    // at this point we have at least 1 lock for a mutex somewhere
-
-    // if we do not have any exclusive locks and we arent requesting an exclusive lock...
-    if (!haveExclusives)
-    {
-        // then we cant block
-        return false;
-    }
-
-    // check if a thread has an ownership of c
-    auto writeiter = lockdata.writelocksheld.find(lastLock);
-
-    // NOTE: be careful when adjusting these booleans, the order of the checks is important
-    bool writeIsEnd = ((writeiter == lockdata.writelocksheld.end()) || writeiter->second.empty());
-    if (writeIsEnd)
-    {
-        // no exclusive owners, no deadlock possible
-        return false;
-    }
-
-    // we have other locks, so check if we have any in common with the holder(s) of the write lock
-    for (auto &threadId : writeiter->second)
-    {
-        if (threadId == lastTid)
-        {
-            continue;
-        }
-        auto other_iter = lockdata.locksheldbythread.find(threadId);
-        // we dont need to check empty here, other thread has at least 1 lock otherwise we wouldnt be checking it
-        if (other_iter->second.size() == 1)
-        {
-            // it does not have any locks aside from known exclusive, no deadlock possible
-            // we can just wait until that exclusive lock is released
+            // we cant deadlock if we dont own any other mutexs
             return false;
         }
-        // if the other thread has 1+ other locks aside from the known exclusive, check them for matches with our own
-        // locks
-        for (auto &lock : other_iter->second)
-        {
-            // if they have a lock that is on a lock that we have exclusive ownership for
-            if (HasAnyOwners(lock.first))
-            {
-                // and their lock is waiting...
-                if (lock.second.GetWaiting() == true)
-                {
-                    deadlocks.push_back(lock);
-                    threads.emplace(other_iter->first);
-                    if (other_iter->first == tid && lock.first == c)
-                    {
-                        // we are back where we started and there is a deadlock
-                        return true;
-                    }
-                    if (ReadRecursiveCheck(tid, c, other_iter->first, lock.first, false, deadlocks, threads))
-                    {
-                        return true;
-                    }
-                }
-                // no deadlock, other lock is not waiting, we simply have to wait until they release that lock
-            }
-        }
-    }
-    return false;
-}
-
-static bool WriteRecursiveCheck(const uint64_t &tid,
-    const void *c,
-    uint64_t lastTid,
-    void *lastLock,
-    bool firstRun,
-    LockStack &deadlocks,
-    std::set<uint64_t> &threads)
-{
-    if (!firstRun && c == lastLock && tid == lastTid)
-    {
-        // we are back where we started, infinite loop means there is a deadlock
-        return true;
-    }
-    // first check if we currently have any exclusive ownerships
-    size_t selfOtherLockCount = 0;
-    auto self_iter = lockdata.locksheldbythread.find(lastTid);
-    if (self_iter != lockdata.locksheldbythread.end() && self_iter->second.empty() == false)
-    {
-        selfOtherLockCount = self_iter->second.size();
-    }
-    // we cant deadlock if we dont own any other mutexs
-    if (selfOtherLockCount == 0)
-    {
-        return false;
     }
     // at this point we have at least 1 lock for a mutex somewhere
 
@@ -238,6 +138,7 @@ static bool WriteRecursiveCheck(const uint64_t &tid,
     {
         if (threadId == lastTid)
         {
+            // this continue fixes an infinite looping problem
             continue;
         }
         auto other_iter = lockdata.locksheldbythread.find(threadId);
@@ -265,7 +166,7 @@ static bool WriteRecursiveCheck(const uint64_t &tid,
                         // we are back where we started and there is a deadlock
                         return true;
                     }
-                    if (WriteRecursiveCheck(tid, c, other_iter->first, lock.first, false, deadlocks, threads))
+                    if (RecursiveCheck(tid, c, other_iter->first, lock.first, false, deadlocks, threads))
                     {
                         return true;
                     }
@@ -324,9 +225,41 @@ void AddNewLock(LockStackEntry newEntry, const uint64_t &tid)
     }
 }
 
-void AddNewWaitingLock(void *c, const uint64_t &tid, bool &isExclusive)
+void AddNewHeldLock(void *c, const uint64_t &tid, OwnershipType ownership)
 {
-    if (isExclusive)
+    if (ownership == OwnershipType::EXCLUSIVE)
+    {
+        auto it = lockdata.writelocksheld.find(c);
+        if (it == lockdata.writelocksheld.end())
+        {
+            std::set<uint64_t> holders;
+            holders.emplace(tid);
+            lockdata.writelocksheld.emplace(c, holders);
+        }
+        else
+        {
+            it->second.emplace(tid);
+        }
+    }
+    else //  !isExclusive
+    {
+        auto it = lockdata.readlocksheld.find(c);
+        if (it == lockdata.readlocksheld.end())
+        {
+            std::set<uint64_t> holders;
+            holders.emplace(tid);
+            lockdata.readlocksheld.emplace(c, holders);
+        }
+        else
+        {
+            it->second.emplace(tid);
+        }
+    }
+}
+
+void AddNewWaitingLock(void *c, const uint64_t &tid, OwnershipType &isExclusive)
+{
+    if (isExclusive == OwnershipType::EXCLUSIVE)
     {
         auto it = lockdata.writelockswaiting.find(c);
         if (it == lockdata.writelockswaiting.end())
@@ -356,58 +289,13 @@ void AddNewWaitingLock(void *c, const uint64_t &tid, bool &isExclusive)
     }
 }
 
-void SetWaitingToHeld(void *c, bool isExclusive)
+void SetWaitingToHeld(void *c, OwnershipType isExclusive)
 {
     std::lock_guard<std::mutex> lock(lockdata.dd_mutex);
 
     const uint64_t tid = getTid();
-    if (isExclusive)
-    {
-        auto it = lockdata.writelockswaiting.find(c);
-        if (it == lockdata.writelockswaiting.end())
-        {
-            return;
-        }
-        else
-        {
-            it->second.erase(tid);
-            auto iter = lockdata.writelocksheld.find(c);
-            if (iter == lockdata.writelocksheld.end())
-            {
-                std::set<uint64_t> holders;
-                holders.emplace(tid);
-                lockdata.writelocksheld.emplace(c, holders);
-            }
-            else
-            {
-                iter->second.emplace(tid);
-            }
-        }
-    }
-    else //  !isExclusive
-    {
-        auto it = lockdata.readlockswaiting.find(c);
-        if (it == lockdata.readlockswaiting.end())
-        {
-            return;
-        }
-        else
-        {
-            it->second.erase(tid);
-            auto iter = lockdata.readlocksheld.find(c);
-            if (iter == lockdata.readlocksheld.end())
-            {
-                std::set<uint64_t> holders;
-                holders.emplace(tid);
-                lockdata.readlocksheld.emplace(c, holders);
-            }
-            else
-            {
-                iter->second.emplace(tid);
-            }
-        }
-    }
-
+    // we do this first so changes are still made for trylocks which dont have
+    // a waiting lock to be edited
     auto itheld = lockdata.locksheldbythread.find(tid);
     if (itheld != lockdata.locksheldbythread.end())
     {
@@ -420,42 +308,85 @@ void SetWaitingToHeld(void *c, bool isExclusive)
             }
         }
     }
+
+    if (isExclusive == OwnershipType::EXCLUSIVE)
+    {
+        auto it = lockdata.writelockswaiting.find(c);
+        if (it != lockdata.writelockswaiting.end())
+        {
+            it->second.erase(tid);
+        }
+        else
+        {
+            DbgAssert(!"Missing write lock waiting", );
+        }
+        auto iter = lockdata.writelocksheld.find(c);
+        if (iter == lockdata.writelocksheld.end())
+        {
+            std::set<uint64_t> holders;
+            holders.emplace(tid);
+            lockdata.writelocksheld.emplace(c, holders);
+        }
+        else
+        {
+            iter->second.emplace(tid);
+        }
+    }
+    else //  !isExclusive
+    {
+        auto it = lockdata.readlockswaiting.find(c);
+        if (it != lockdata.readlockswaiting.end())
+        {
+            it->second.erase(tid);
+        }
+        else
+        {
+            DbgAssert(!"Missing read lock waiting", );
+        }
+        auto iter = lockdata.readlocksheld.find(c);
+        if (iter == lockdata.readlocksheld.end())
+        {
+            std::set<uint64_t> holders;
+            holders.emplace(tid);
+            lockdata.readlocksheld.emplace(c, holders);
+        }
+        else
+        {
+            iter->second.emplace(tid);
+        }
+    }
 }
 
 // c = the cs
 // isExclusive = is the current lock exclusive, for a recursive mutex (CCriticalSection) this value should always be
 // true
-void push_lock(void *c, const CLockLocation &locklocation, LockType type, bool isExclusive, bool fTry)
+void push_lock(void *c, const CLockLocation &locklocation, LockType locktype, OwnershipType ownership, bool fTry)
 {
     std::lock_guard<std::mutex> lock(lockdata.dd_mutex);
 
     LockStackEntry now = std::make_pair(c, locklocation);
+    if (fTry)
+    {
+        // try locks can not be waiting
+        now.second.ChangeWaitingToHeld();
+    }
     // tid of the originating request
     const uint64_t tid = getTid();
     // If this is a blocking lock operation, we want to make sure that the locking order between 2 mutexes is consistent
     // across the program
     if (fTry)
     {
-        // a try lock will either get it, or it wont. so just add it.
-        // if we dont get the lock this will be undone in destructor
         AddNewLock(now, tid);
-        // AddNewWaitingLock(c, tid, isExclusive);
+        // we need to add a held lock
+        AddNewHeldLock(c, tid, ownership);
         return;
     }
     // first check lock specific issues
-    if (type == LockType::SHARED)
+    if (locktype == LockType::SHARED_MUTEX)
     {
-    TEST_1_SM:
-    TEST_2:
-    TEST_3:
-    TEST_4:
         // shared mutexs cant recursively lock at all, check if we already have a lock on the mutex
         auto it = lockdata.locksheldbythread.find(tid);
-        if (it == lockdata.locksheldbythread.end() || it->second.empty())
-        {
-            // intentionally left blank
-        }
-        else
+        if (it != lockdata.locksheldbythread.end() && !it->second.empty())
         {
             for (auto &lockStackLock : it->second)
             {
@@ -467,73 +398,70 @@ void push_lock(void *c, const CLockLocation &locklocation, LockType type, bool i
             }
         }
     }
-    else if (type == LockType::RECRUSIVESHARED)
+    else if (locktype == LockType::RECURSIVE_SHARED_MUTEX)
     {
-    TEST_1_RSM:
         // we cannot lock exclusive if we already hold shared, check for this scenario
-        if (isExclusive)
+        if (ownership == OwnershipType::EXCLUSIVE)
         {
             auto it = lockdata.locksheldbythread.find(tid);
-            if (it == lockdata.locksheldbythread.end() || it->second.empty())
-            {
-                // intentionally left blank
-            }
-            else
+            if (it != lockdata.locksheldbythread.end() && !it->second.empty())
             {
                 for (auto &lockStackLock : it->second)
                 {
                     // if we have a lock and it isnt exclusive and we are attempting to get exclusive
                     // then we will deadlock ourself
-                    if (lockStackLock.first == c && lockStackLock.second.GetExclusive() == false)
+                    if (lockStackLock.first == c && lockStackLock.second.GetOwnershipType() == OwnershipType::SHARED)
                     {
                         self_deadlock_detected(now, lockStackLock);
                     }
                 }
             }
         }
-        else
-        {
-            // intentionally left blank
-        }
     }
-    else if (type == LockType::RECURSIVE)
+    else if (locktype == LockType::RECURSIVE_MUTEX)
     {
         // this lock can not deadlock itself
         // intentionally left blank
     }
+    else
+    {
+        DbgAssert(!"unsupported lock type", return );
+    }
 
     // Begin general deadlock checks for all lock types
-    AddNewLock(now, tid);
-    AddNewWaitingLock(c, tid, isExclusive);
-
-    // if we have exclusive lock(s) and we arent requesting an exclusive lock...
-    if (!isExclusive)
+    bool lockingRecursively = false;
+    // if lock not shared mutex, check if we are doing a recursive lock
+    if (locktype != LockType::SHARED_MUTEX)
     {
-    TEST_5:
-    TEST_8:
-        std::vector<LockStackEntry> deadlocks;
-        std::set<uint64_t> threads;
-        // then we can only deadlock if we are locking a thread that is currently held in exclusive state by someone
-        // else
-        if (ReadRecursiveCheck(tid, c, tid, c, true, deadlocks, threads))
+        auto it = lockdata.locksheldbythread.find(tid);
+        if (it != lockdata.locksheldbythread.end())
         {
-            // we have a deadlock where we are requesting shared ownership on a mutex that is exclusively owned by
-            // another thread which has either a shared or exlcusive request on a mutex we have exclusive ownership over
-            potential_deadlock_detected(now, deadlocks, threads);
+            // check if we have locked this lock before
+            for (auto &entry : it->second)
+            {
+                // if we have locked this lock before...
+                if (entry.first == c)
+                {
+                    // then we are locking recursively
+                    lockingRecursively = true;
+                    break;
+                }
+            }
         }
     }
-    // if we have exclusive lock(s) and we are requesting another exclusive lock
-    if (isExclusive)
+    AddNewLock(now, tid);
+    if (lockingRecursively == true)
     {
-    TEST_6:
-    TEST_7:
-    TEST_9:
-        std::vector<LockStackEntry> deadlocks;
-        std::set<uint64_t> threads;
-        if (WriteRecursiveCheck(tid, c, tid, c, true, deadlocks, threads))
-        {
-            potential_deadlock_detected(now, deadlocks, threads);
-        }
+        // we can skip the deadlock detection checks because it is a recursive lock
+        // and self deadlocks were checked earlier
+        return;
+    }
+    AddNewWaitingLock(c, tid, ownership);
+    std::vector<LockStackEntry> deadlocks;
+    std::set<uint64_t> threads;
+    if (RecursiveCheck(tid, c, tid, c, true, deadlocks, threads))
+    {
+        potential_deadlock_detected(now, deadlocks, threads);
     }
 }
 
@@ -548,14 +476,10 @@ void DeleteLock(void *cs)
         // lockdata was already deleted
         return;
     }
-    if (lockdata.readlockswaiting.count(cs))
-        lockdata.readlockswaiting.erase(cs);
-    if (lockdata.writelockswaiting.count(cs))
-        lockdata.writelockswaiting.erase(cs);
-    if (lockdata.readlocksheld.count(cs))
-        lockdata.readlocksheld.erase(cs);
-    if (lockdata.writelocksheld.count(cs))
-        lockdata.writelocksheld.erase(cs);
+    lockdata.readlockswaiting.erase(cs);
+    lockdata.writelockswaiting.erase(cs);
+    lockdata.readlocksheld.erase(cs);
+    lockdata.writelocksheld.erase(cs);
     for (auto &iter : lockdata.locksheldbythread)
     {
         LockStack newStack;
@@ -578,80 +502,56 @@ void _remove_lock_critical_exit(void *cs)
         return;
     }
     uint64_t tid = getTid();
-    bool isExclusive = false;
-    bool fTry = false;
     auto it = lockdata.locksheldbythread.find(tid);
     if (it == lockdata.locksheldbythread.end())
     {
         throw std::logic_error("unlocking non-existant lock");
     }
-    else
+    if (it->second.back().first != cs)
     {
-        if (it->second.back().first != cs)
-        {
-            LogPrintf("got %s but was not expecting it\n", it->second.back().second.ToString().c_str());
-            throw std::logic_error("unlock order inconsistant with lock order");
-        }
-        isExclusive = it->second.back().second.GetExclusive();
-        fTry = it->second.back().second.GetTry();
-        it->second.pop_back();
+        LogPrintf("got %s but was not expecting it\n", it->second.back().second.ToString().c_str());
+        throw std::logic_error("unlock order inconsistant with lock order");
     }
-    // remove from the other maps
-    if (isExclusive)
+    LockType type = it->second.back().second.GetLockType();
+    OwnershipType ownership = it->second.back().second.GetOwnershipType();
+    // assuming we unlock in the reverse order of locks, we can simply pop back
+    it->second.pop_back();
+    // if we have no more locks on this critical section...
+    if (type != LockType::SHARED_MUTEX)
     {
-        if (fTry)
+        for (auto entry : it->second)
         {
-            auto iter = lockdata.writelockswaiting.find(cs);
-            if (iter != lockdata.writelockswaiting.end())
+            if (entry.first == cs)
             {
-                if (iter->second.empty())
-                    return;
-                if (iter->second.count(tid) != 0)
-                {
-                    iter->second.erase(tid);
-                }
+                // we have another lock on this critical section
+                return;
             }
         }
-        else
+    }
+    // remove from the other maps
+    if (ownership == OwnershipType::EXCLUSIVE)
+    {
+        auto iter = lockdata.writelocksheld.find(cs);
+        if (iter != lockdata.writelocksheld.end())
         {
-            auto iter = lockdata.writelocksheld.find(cs);
-            if (iter != lockdata.writelocksheld.end())
+            if (iter->second.empty())
+                return;
+            if (iter->second.count(tid) != 0)
             {
-                if (iter->second.empty())
-                    return;
-                if (iter->second.count(tid) != 0)
-                {
-                    iter->second.erase(tid);
-                }
+                iter->second.erase(tid);
             }
         }
     }
     else // !isExclusive
     {
-        if (fTry)
+        auto iter = lockdata.readlocksheld.find(cs);
+        if (iter != lockdata.readlocksheld.end())
         {
-            auto iter = lockdata.readlockswaiting.find(cs);
-            if (iter != lockdata.readlockswaiting.end())
+            if (iter->second.empty())
+                return;
+            if (iter->second.count(tid) != 0)
             {
-                if (iter->second.empty())
-                    return;
-                if (iter->second.count(tid) != 0)
-                {
-                    iter->second.erase(tid);
-                }
-            }
-        }
-        else
-        {
-            auto iter = lockdata.readlocksheld.find(cs);
-            if (iter != lockdata.readlocksheld.end())
-            {
-                if (iter->second.empty())
-                    return;
-                if (iter->second.count(tid) != 0)
-                {
-                    iter->second.erase(tid);
-                }
+                iter->second.erase(tid);
             }
         }
     }
@@ -659,7 +559,6 @@ void _remove_lock_critical_exit(void *cs)
 
 void remove_lock_critical_exit(void *cs)
 {
-    // assuming we unlock in the reverse order of locks, we can simply pop back
     std::lock_guard<std::mutex> lock(lockdata.dd_mutex);
     _remove_lock_critical_exit(cs);
 }
