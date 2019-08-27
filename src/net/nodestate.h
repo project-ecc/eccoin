@@ -125,11 +125,16 @@ class CNodeStateAccessor
     CNodeState *obj;
 
 public:
-    CNodeStateAccessor(CCriticalSection *_cs, CNodeState *_obj) : cs(_cs), obj(_obj) { cs->lock(); }
+    CNodeStateAccessor(CCriticalSection *_cs, CNodeState *_obj) : cs(_cs), obj(_obj)
+    {
+        EnterCritical("CNodeStateAccessor.cs", __FILE__, __LINE__, (void *)(&cs), LockType::RECURSIVE_MUTEX,
+            OwnershipType::EXCLUSIVE);
+    }
     CNodeStateAccessor(CNodesStateManager &ns, const NodeId id)
     {
         cs = &ns.cs;
-        cs->lock();
+        EnterCritical("CNodeStateAccessor.cs", __FILE__, __LINE__, (void *)(&cs), LockType::RECURSIVE_MUTEX,
+            OwnershipType::EXCLUSIVE);
         obj = ns._GetNodeState(id);
     }
 
@@ -142,7 +147,7 @@ public:
     ~CNodeStateAccessor()
     {
         obj = nullptr;
-        cs->unlock();
+        LeaveCritical(&cs);
     }
 };
 
