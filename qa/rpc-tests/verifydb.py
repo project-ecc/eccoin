@@ -51,56 +51,50 @@ class VerifyDbTest (BitcoinTestFramework):
         # get to 100 blocks
         for i in range (68):
             self.nodes[1].generate(1)
-            j = randint(1, 5)
-            for k in range(j):
-                self.nodes[1].sendtoaddress(self.nodes[0].getnewaddress(), 1)
-            if i % 10 == 0:
+            if i % 15 == 0:
+                j = randint(1, 5)
+                for k in range(j):
+                    self.nodes[1].sendtoaddress(self.nodes[0].getnewaddress(), 1)
                 self.sync_all()
         self.sync_all()
 
         #get to 500 blocks
         for i in range (100):
             self.nodes[0].generate(1)
-            j = randint(1, 5)
-            for k in range(j):
-                self.nodes[0].sendtoaddress(self.nodes[1].getnewaddress(), 1)
-            if i % 50 == 0:
+            if i % 15 == 0:
+                j = randint(1, 5)
+                for k in range(j):
+                    self.nodes[0].sendtoaddress(self.nodes[1].getnewaddress(), 1)
                 self.sync_all()
         self.sync_all()
 
         for i in range (100):
             self.nodes[1].generate(1)
-            j = randint(1, 5)
-            for k in range(j):
-                self.nodes[1].sendtoaddress(self.nodes[0].getnewaddress(), 1)
-            if i % 50 == 0:
+            if i % 25 == 0:
                 self.sync_all()
         self.sync_all()
 
         for i in range (100):
             self.nodes[0].generate(1)
-            j = randint(1, 5)
-            for k in range(j):
-                self.nodes[0].sendtoaddress(self.nodes[1].getnewaddress(), 1)
-            if i % 50 == 0:
+            if i % 25 == 0:
                 self.sync_all()
         self.sync_all()
 
         for i in range (100):
             self.nodes[1].generate(1)
-            j = randint(1, 5)
-            for k in range(j):
-                self.nodes[1].sendtoaddress(self.nodes[0].getnewaddress(), 1)
-            if i % 50 == 0:
+            if i % 25 == 0:
+                j = randint(1, 5)
+                for k in range(j):
+                    self.nodes[1].sendtoaddress(self.nodes[0].getnewaddress(), 1)
                 self.sync_all()
         self.sync_all()
         #pos blocks
         for i in range (100):
             self.nodes[1].generatepos(1)
-            j = randint(1, 5)
-            for k in range(j):
-                self.nodes[1].sendtoaddress(self.nodes[0].getnewaddress(), 1)
-            if i % 10 == 0:
+            if i % 25 == 0:
+                j = randint(1, 5)
+                for k in range(j):
+                    self.nodes[1].sendtoaddress(self.nodes[0].getnewaddress(), 1)
                 self.sync_all()
         self.sync_all()
 
@@ -111,10 +105,7 @@ class VerifyDbTest (BitcoinTestFramework):
         # start the nodes again with high db checks
         self.node_args = [['-checklevel=4', '-checkblocks=0'], ['-checklevel=4', '-checkblocks=0']]
         self.nodes = start_nodes(2, self.options.tmpdir, self.node_args)
-
-        #generate more blocks
-        self.nodes[0].generate(500)
-
+        
         #stop the nodes
         stop_nodes(self.nodes)
         wait_bitcoinds()
