@@ -182,7 +182,7 @@ testScripts = [ RpcTest(t) for t in [
     'multi_rpc',
     # 'fundrawtransaction', ???
     'reindex',
-    'getchaintips',
+    Disabled('getchaintips', "issue with syncpoints getting stuck"),
     'httpbasics',
     'keypool',
     'listtransactions',
