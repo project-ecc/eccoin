@@ -47,9 +47,6 @@ BOOST_AUTO_TEST_CASE(TestBlock)
     if (read_block("testblock.dat", testblock))
     {
         CValidationState state;
-
-        uint64_t blockSize = ::GetSerializeSize(testblock, SER_NETWORK, PROTOCOL_VERSION); // 53298 B for test.dat
-
         BOOST_CHECK_MESSAGE(CheckBlock(testblock, state, false, false), "Basic CheckBlock failed");
         BOOST_CHECK_MESSAGE(CheckBlock(testblock, state, false, false), "Basic CheckBlock failed");
     }
