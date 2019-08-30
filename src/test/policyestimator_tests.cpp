@@ -21,7 +21,6 @@ BOOST_AUTO_TEST_CASE(BlockPolicyEstimates)
     CAmount basefee(2000);
     double basepri = 1e6;
     CAmount deltaFee(100);
-    double deltaPri = 5e5;
     std::vector<CAmount> feeV[2];
     std::vector<double> priV[2];
 

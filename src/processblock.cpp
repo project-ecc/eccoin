@@ -79,7 +79,6 @@ bool DisconnectTip(CValidationState &state, const Consensus::Params &consensusPa
             return AbortNode(state, "Failed to read block");
     }
     // Apply the block atomically to the chain state.
-    int64_t nStart = GetTimeMicros();
     {
         CCoinsViewCache view(pcoinsTip.get());
         if (DisconnectBlock(block, pindexDelete, view) != DISCONNECT_OK)
@@ -861,13 +860,6 @@ void ThreadScriptCheck()
 }
 
 void InterruptScriptCheck() { scriptcheckqueue.Stop(); }
-static int64_t nTimeCheck = 0;
-static int64_t nTimeForks = 0;
-static int64_t nTimeVerify = 0;
-static int64_t nTimeConnect = 0;
-static int64_t nTimeIndex = 0;
-static int64_t nTimeCallbacks = 0;
-
 bool ConnectBlock(const CBlock &block,
     CValidationState &state,
     CBlockIndex *pindex,
@@ -876,8 +868,6 @@ bool ConnectBlock(const CBlock &block,
 {
     const CNetworkTemplate &chainparams = pnetMan->getActivePaymentNetwork();
     AssertLockHeld(cs_main);
-
-    int64_t nTimeStart = GetTimeMicros();
 
     if (pindex->GetBlockHash() != chainparams.GetConsensus().hashGenesisBlock)
     {

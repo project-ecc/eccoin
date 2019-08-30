@@ -2107,20 +2107,20 @@ bool ProcessMessages(CNode *pfrom, CConnman &connman)
 
     // Checksum
     CDataStream &vRecv = msg.vRecv;
+
+#if 0 
     const uint256 &hash = msg.GetMessageHash();
-
-
-#if 0 // Do not waste my CPU calculating a checksum provided by an untrusted node
-          // TCP already has one that is sufficient for network errors.  The checksum does not increase security since
-          // an attacker can always provide a bad message with a good checksum.
-          // This code is removed by comment so it is clear that it is a deliberate omission.
-          if (memcmp(hash.begin(), hdr.pchChecksum, CMessageHeader::CHECKSUM_SIZE) != 0)
-          {
-              LogPrintf("%s(%s, %u bytes): CHECKSUM ERROR expected %s was %s\n", __func__, SanitizeString(strCommand),
-                  nMessageSize, HexStr(hash.begin(), hash.begin() + CMessageHeader::CHECKSUM_SIZE),
-                  HexStr(hdr.pchChecksum, hdr.pchChecksum + CMessageHeader::CHECKSUM_SIZE));
-              return fMoreWork;
-          }
+    // Do not waste my CPU calculating a checksum provided by an untrusted node
+    // TCP already has one that is sufficient for network errors.  The checksum does not increase security since
+    // an attacker can always provide a bad message with a good checksum.
+    // This code is removed by comment so it is clear that it is a deliberate omission.
+    if (memcmp(hash.begin(), hdr.pchChecksum, CMessageHeader::CHECKSUM_SIZE) != 0)
+    {
+        LogPrintf("%s(%s, %u bytes): CHECKSUM ERROR expected %s was %s\n", __func__, SanitizeString(strCommand),
+            nMessageSize, HexStr(hash.begin(), hash.begin() + CMessageHeader::CHECKSUM_SIZE),
+            HexStr(hdr.pchChecksum, hdr.pchChecksum + CMessageHeader::CHECKSUM_SIZE));
+        return fMoreWork;
+    }
 #endif
 
     // Process message
