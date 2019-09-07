@@ -52,6 +52,7 @@ BITCOIN_CORE_H = \
   args.h \
   arith_uint256.h \
   base58.h \
+  beta.h \
   blockgeneration/blockgeneration.h \
   blockgeneration/compare.h \
   blockgeneration/miner.h \
@@ -95,6 +96,7 @@ BITCOIN_CORE_H = \
   merkleblock.h \
   net/addrdb.h \
   net/addrman.h \
+  net/aodv.h \
   net/messages.h \
   net/net.h \
   net/netaddress.h \
@@ -177,6 +179,7 @@ libbitcoin_server_a_SOURCES = \
   globals.cpp \
   threaddeadlock.cpp \
   sync.cpp \
+  beta.cpp \
   net/addrdb.cpp \
   net/addrman.cpp \
   blockgeneration/blockgeneration.cpp \
@@ -196,6 +199,7 @@ libbitcoin_server_a_SOURCES = \
   merkleblock.cpp \
   net/net.cpp \
   net/netaddress.cpp \
+  net/aodv.cpp \
   policy/fees.cpp \
   policy/policy.cpp \
   pow.cpp \
@@ -279,6 +283,7 @@ libbitcoin_server_a_SOURCES = \
   crypto/scrypt.cpp \
   wallet/crypter.cpp \
   wallet/db.cpp \
+  rpc/rpcaodv.cpp \
   rpc/rpcdump.cpp \
   rpc/rpcwallet.cpp \
   wallet/wallet.cpp \

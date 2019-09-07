@@ -8,7 +8,9 @@
 
 #include "net/messages.h"
 
+#include "aodv.h"
 #include "args.h"
+#include "beta.h"
 #include "blockstorage/blockstorage.h"
 #include "chain/chain.h"
 #include "chain/tx.h"
@@ -1158,11 +1160,18 @@ bool static ProcessMessage(CNode *pfrom,
             CNodeStateAccessor state(nodestateman, pfrom->GetId());
             state->fCurrentlyConnected = true;
         }
+
         // Tell our peer we prefer to receive headers rather than inv's
         // We send this to non-NODE NETWORK peers as well, because even
         // non-NODE NETWORK peers can announce blocks (such as pruning
         // nodes)
         connman.PushMessage(pfrom, NetMsgType::SENDHEADERS);
+
+        if (pfrom->nVersion >= NETWORK_SERVICE_PROTOCOL_VERSION && IsBetaEnabled())
+        {
+            connman.PushMessage(pfrom, NetMsgType::NSVERSION, NETWORK_SERVICE_VERSION);
+        }
+
         pfrom->fSuccessfullyConnected = true;
     }
 
@@ -1180,6 +1189,31 @@ bool static ProcessMessage(CNode *pfrom,
             mapInboundConnectionTracker[ipAddress].nLastEvictionTime = GetTime();
         }
         return false;
+    }
+    else if (strCommand == NetMsgType::NSVERSION)
+    {
+        if (IsBetaEnabled())
+        {
+            uint64_t netservice = 0;
+            vRecv >> netservice;
+            pfrom->nNetworkServiceVersion = netservice;
+            if (netservice >= MIN_AODV_VERSION)
+            {
+                connman.PushMessage(pfrom, NetMsgType::NSVERACK, g_connman->GetRoutingKey());
+            }
+        }
+    }
+
+    else if (strCommand == NetMsgType::NSVERACK)
+    {
+        if (IsBetaEnabled())
+        {
+            CPubKey peerPubKey;
+            vRecv >> peerPubKey;
+            pfrom->routing_id = peerPubKey;
+            g_aodvtable.AddPeerKeyId(peerPubKey, pfrom->GetId(), true);
+            g_aodvtable.AddPeerKeyId(peerPubKey, pfrom->GetId(), true);
+        }
     }
 
     else if (strCommand == NetMsgType::ADDR)
@@ -2026,6 +2060,70 @@ bool static ProcessMessage(CNode *pfrom,
         }
     }
 
+    else if (strCommand == NetMsgType::RREQ)
+    {
+        if (!IsBetaEnabled())
+        {
+            return true;
+        }
+        /**
+         * A peer has requested a route to a specific id. we need to:
+         * keep track of who sent the request, make sure it was unique,
+         * check our routing table to see if we know of it, if we do respond with a RREP,
+         * otherwise forward this request to our peers except the one that sent it.
+         *
+         * if we have the node we will respond with our preffered privacy settings.
+         */
+        uint64_t nonce = 0;
+        CPubKey searchKey;
+        vRecv >> nonce;
+        vRecv >> searchKey;
+        bool peerKnown = g_aodvtable.HaveKeyEntry(searchKey) || connman.GetRoutingKey() == searchKey;
+        if (peerKnown)
+        {
+            connman.PushMessage(pfrom, NetMsgType::RREP, nonce, searchKey, peerKnown);
+        }
+        else
+        {
+            RequestRouteToPeer(connman, pfrom->routing_id, nonce, searchKey);
+            RecordRequestOrigin(nonce, pfrom->routing_id);
+        }
+    }
+
+    else if (strCommand == NetMsgType::RREP)
+    {
+        if (!IsBetaEnabled())
+        {
+            return true;
+        }
+        uint64_t nonce = 0;
+        CPubKey searchKey;
+        bool found;
+        vRecv >> nonce;
+        vRecv >> searchKey;
+        vRecv >> found;
+        /**
+         * we got a response from someone who knows of or has what we are looking for.
+         * if they allow direct connections try to form one with them to reduce network load.
+         * if they dont, try to establish a more or less direct route to the general area of peers
+         * to proceed with an application specific conversation
+         */
+        if (found)
+        {
+            RecordRouteToPeer(searchKey, pfrom->GetId());
+            CPubKey source;
+            if (GetRequestOrigin(nonce, source))
+            {
+                AddResponseToQueue(source, nonce, searchKey);
+            }
+        }
+    }
+
+    else if (strCommand == NetMsgType::RERR)
+    {
+        // intentionally left blank
+    }
+
     else
     {
         // Ignore unknown commands for extensibility
@@ -2108,7 +2206,7 @@ bool ProcessMessages(CNode *pfrom, CConnman &connman)
     // Checksum
     CDataStream &vRecv = msg.vRecv;
 
-#if 0 
+#if 0
     const uint256 &hash = msg.GetMessageHash();
     // Do not waste my CPU calculating a checksum provided by an untrusted node
     // TCP already has one that is sufficient for network errors.  The checksum does not increase security since
@@ -2623,5 +2721,29 @@ bool SendMessages(CNode *pto, CConnman &connman)
     {
         connman.PushMessage(pto, NetMsgType::GETDATA, vGetData);
     }
+
+    if (IsBetaEnabled())
+    {
+        std::set<RREQRESPONSE> responseQueue_copy;
+        {
+            RECURSIVEREADLOCK(g_aodvtable.cs_aodv);
+            for (const auto &response : g_aodvtable.responseQueue)
+            {
+                if (response.source == pto->routing_id)
+                {
+                    connman.PushMessage(pto, NetMsgType::RREP, response.nonce, response.pubkey, response.found);
+                }
+                else
+                {
+                    responseQueue_copy.emplace(response);
+                }
+            }
+        }
+        {
+            RECURSIVEWRITELOCK(g_aodvtable.cs_aodv);
+            g_aodvtable.responseQueue = responseQueue_copy;
+        }
+    }
+
     return true;
 }
