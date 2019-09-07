@@ -1,5 +1,5 @@
 ---
-name: "eccoin-osx-0.2.5.17"
+name: "eccoin-osx-0.2.5.18"
 enable_cache: true
 suites:
 - "bionic"
