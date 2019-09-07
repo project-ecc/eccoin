@@ -1,8 +1,8 @@
 // This file is part of the Eccoin project
-// Copyright (c) 2015-2016 The Bitcoin Core developers
+// Copyright (c) 2015-2018 The Bitcoin Core developers
+// Copyright (c) 2015-2019 The Bitcoin Unlimited developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-
 #ifndef _BITCOIN_PREVECTOR_H_
 #define _BITCOIN_PREVECTOR_H_
 
@@ -10,32 +10,26 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <cassert>
-#include <cstdint>
-#include <cstdlib>
-#include <cstring>
-
 #include <iterator>
 
 #pragma pack(push, 1)
-/**
- * Implements a drop-in replacement for std::vector<T> which stores up to N
- * elements directly (without heap allocation). The types Size and Diff are used
- * to store element counts, and can be any unsigned + signed type.
+/** Implements a drop-in replacement for std::vector<T> which stores up to N
+ *  elements directly (without heap allocation). The types Size and Diff are
+ *  used to store element counts, and can be any unsigned + signed type.
  *
- * Storage layout is either:
- * - Direct allocation:
- *   - Size _size: the number of used elements (between 0 and N)
- *   - T direct[N]: an array of N elements of type T
- *     (only the first _size are initialized).
- * - Indirect allocation:
- *   - Size _size: the number of used elements plus N + 1
- *   - Size capacity: the number of allocated elements
- *   - T* indirect: a pointer to an array of capacity elements of type T
- *     (only the first _size are initialized).
+ *  Storage layout is either:
+ *  - Direct allocation:
+ *    - Size _size: the number of used elements (between 0 and N)
+ *    - T direct[N]: an array of N elements of type T
+ *      (only the first _size are initialized).
+ *  - Indirect allocation:
+ *    - Size _size: the number of used elements plus N + 1
+ *    - Size capacity: the number of allocated elements
+ *    - T* indirect: a pointer to an array of capacity elements of type T
+ *      (only the first _size are initialized).
  *
- * The data type T must be movable by memmove/realloc(). Once we switch to C++,
- * move constructors can be used instead.
+ *  The data type T must be movable by memmove/realloc(). Once we switch to C++,
+ *  move constructors can be used instead.
  */
 template <unsigned int N, typename T, typename Size = uint32_t, typename Diff = int32_t>
 class prevector
@@ -59,7 +53,6 @@ public:
         typedef T *pointer;
         typedef T &reference;
         typedef std::random_access_iterator_tag iterator_category;
-        iterator() : ptr(nullptr) {}
         iterator(T *ptr_) : ptr(ptr_) {}
         T &operator*() const { return *ptr; }
         T *operator->() const { return ptr; }
@@ -118,7 +111,6 @@ public:
         typedef T *pointer;
         typedef T &reference;
         typedef std::bidirectional_iterator_tag iterator_category;
-        reverse_iterator() : ptr(nullptr) {}
         reverse_iterator(T *ptr_) : ptr(ptr_) {}
         T &operator*() { return *ptr; }
         const T &operator*() const { return *ptr; }
@@ -160,7 +152,6 @@ public:
         typedef const T *pointer;
         typedef const T &reference;
         typedef std::random_access_iterator_tag iterator_category;
-        const_iterator() : ptr(nullptr) {}
         const_iterator(const T *ptr_) : ptr(ptr_) {}
         const_iterator(iterator x) : ptr(&(*x)) {}
         const T &operator*() const { return *ptr; }
@@ -219,8 +210,7 @@ public:
         typedef const T *pointer;
         typedef const T &reference;
         typedef std::bidirectional_iterator_tag iterator_category;
-        const_reverse_iterator() : ptr(nullptr) {}
-        const_reverse_iterator(T *ptr_) : ptr(ptr_) {}
+        const_reverse_iterator(const T *ptr_) : ptr(ptr_) {}
         const_reverse_iterator(reverse_iterator x) : ptr(&(*x)) {}
         const T &operator*() const { return *ptr; }
         const T *operator->() const { return ptr; }
@@ -284,19 +274,12 @@ private:
         {
             if (!is_direct())
             {
-                // FIXME: Because malloc/realloc here won't call new_handler if
-                // allocation fails, assert success. These should instead use an
-                // allocator or new/delete so that handlers are called as
-                // necessary, but performance would be slightly degraded by
-                // doing so.
                 _union.indirect = static_cast<char *>(realloc(_union.indirect, ((size_t)sizeof(T)) * new_capacity));
-                assert(_union.indirect);
                 _union.capacity = new_capacity;
             }
             else
             {
                 char *new_indirect = static_cast<char *>(malloc(((size_t)sizeof(T)) * new_capacity));
-                assert(new_indirect);
                 T *src = direct_ptr(0);
                 T *dst = reinterpret_cast<T *>(new_indirect);
                 memcpy(dst, src, size() * sizeof(T));
@@ -378,7 +361,6 @@ public:
         }
     }
 
-    prevector(prevector<N, T, Size, Diff> &&other) : _size(0) { swap(other); }
     prevector &operator=(const prevector<N, T, Size, Diff> &other)
     {
         if (&other == this)
@@ -394,12 +376,6 @@ public:
             new (static_cast<void *>(item_ptr(size() - 1))) T(*it);
             ++it;
         }
-        return *this;
-    }
-
-    prevector &operator=(prevector<N, T, Size, Diff> &&other)
-    {
-        swap(other);
         return *this;
     }
 
@@ -507,6 +483,12 @@ public:
     iterator erase(iterator pos) { return erase(pos, pos + 1); }
     iterator erase(iterator first, iterator last)
     {
+        // Erase is not allowed to the change the object's capacity. That means
+        // that when starting with an indirectly allocated prevector with
+        // size and capacity > N, the result may be a still indirectly allocated
+        // prevector with size <= N and capacity > N. A shrink_to_fit() call is
+        // necessary to switch to the (more efficient) directly allocated
+        // representation (with capacity N and size <= N).
         iterator p = first;
         char *endp = (char *)&(*end());
         while (p != last)
@@ -618,6 +600,5 @@ public:
     const value_type *data() const { return item_ptr(0); }
 };
 #pragma pack(pop)
-
 
 #endif

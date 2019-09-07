@@ -263,10 +263,12 @@ extern UniValue getchaintips(const UniValue &params, bool fHelp);
 extern UniValue invalidateblock(const UniValue &params, bool fHelp);
 extern UniValue reconsiderblock(const UniValue &params, bool fHelp);
 
-extern UniValue getansrecord(const UniValue &params, bool fHelp);
-extern UniValue registerans(const UniValue &params, bool fHelp);
-extern UniValue renewans(const UniValue &params, bool fHelp);
-extern UniValue sendtoans(const UniValue &params, bool fHelp);
+extern UniValue getaodvtable(const UniValue &params, bool fHelp); // in rpcaodv.cpp
+extern UniValue getaodvkeyentry(const UniValue &params, bool fHelp);
+extern UniValue getaodvidentry(const UniValue &params, bool fHelp);
+extern UniValue getroutingpubkey(const UniValue &params, bool fHelp);
+extern UniValue findroute(const UniValue &params, bool fHelp);
+extern UniValue haveroute(const UniValue &params, bool fHelp);
 
 
 bool StartRPC();

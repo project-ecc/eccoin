@@ -182,8 +182,8 @@ void EnterCritical(const char *pszName,
     const char *pszFile,
     unsigned int nLine,
     void *cs,
-    LockType type,
-    bool isExclusive,
+    LockType locktype,
+    OwnershipType ownership,
     bool fTry = false);
 void LeaveCritical(void *cs);
 std::string LocksHeld();
@@ -204,8 +204,8 @@ void static inline EnterCritical(const char *pszName,
     const char *pszFile,
     unsigned int nLine,
     void *cs,
-    LockType type,
-    bool isExclusive,
+    LockType locktype,
+    OwnershipType ownership,
     bool fTry = false)
 {
 }
@@ -256,9 +256,9 @@ private:
         name = pszName;
         file = pszFile;
         line = nLine;
-        EnterCritical(pszName, pszFile, nLine, (void *)(lock.mutex()), type, true, false);
+        EnterCritical(pszName, pszFile, nLine, (void *)(lock.mutex()), type, OwnershipType::EXCLUSIVE, false);
         lock.lock();
-        SetWaitingToHeld((void *)(lock.mutex()), true);
+        SetWaitingToHeld((void *)(lock.mutex()), OwnershipType::EXCLUSIVE);
 #ifdef DEBUG_LOCKTIME
         lockedTime = GetStopwatch();
         if (lockedTime - startWait > LOCK_WARN_TIME)
@@ -273,7 +273,7 @@ private:
         name = pszName;
         file = pszFile;
         line = nLine;
-        EnterCritical(pszName, pszFile, nLine, (void *)(lock.mutex()), type, true, true);
+        EnterCritical(pszName, pszFile, nLine, (void *)(lock.mutex()), type, OwnershipType::EXCLUSIVE, true);
         lock.try_lock();
         if (!lock.owns_lock())
         {
@@ -286,12 +286,7 @@ private:
         else
             lockedTime = GetStopwatch();
 #endif
-        bool owned = lock.owns_lock();
-        if (owned)
-        {
-            SetWaitingToHeld((void *)(lock.mutex()), false);
-        }
-        return owned;
+        return lock.owns_lock();
     }
 
 public:
@@ -366,9 +361,9 @@ private:
         name = pszName;
         file = pszFile;
         line = nLine;
-        EnterCritical(pszName, pszFile, nLine, (void *)(lock.mutex()), type, false, false);
+        EnterCritical(pszName, pszFile, nLine, (void *)(lock.mutex()), type, OwnershipType::SHARED, false);
         lock.lock();
-        SetWaitingToHeld((void *)(lock.mutex()), false);
+        SetWaitingToHeld((void *)(lock.mutex()), OwnershipType::SHARED);
 #ifdef DEBUG_LOCKTIME
         lockedTime = GetStopwatch();
         if (lockedTime - startWait > LOCK_WARN_TIME)
@@ -383,7 +378,7 @@ private:
         name = pszName;
         file = pszFile;
         line = nLine;
-        EnterCritical(pszName, pszFile, nLine, (void *)(lock.mutex()), type, false, true);
+        EnterCritical(pszName, pszFile, nLine, (void *)(lock.mutex()), type, OwnershipType::SHARED, true);
         if (!lock.try_lock())
         {
 #ifdef DEBUG_LOCKTIME
@@ -395,12 +390,7 @@ private:
         else
             lockedTime = GetStopwatch();
 #endif
-        bool owned = lock.owns_lock();
-        if (owned)
-        {
-            SetWaitingToHeld((void *)(lock.mutex()), false);
-        }
-        return owned;
+        return lock.owns_lock();
     }
 
 public:
@@ -459,37 +449,37 @@ typedef CMutexReadLock<CRecursiveSharedCriticalSection> CRecursiveReadBlock;
 typedef CMutexLock<CRecursiveSharedCriticalSection> CRecursiveWriteBlock;
 
 #define RECURSIVEREADLOCK(cs) \
-    CRecursiveReadBlock UNIQUIFY(readblock)(cs, #cs, __FILE__, __LINE__, LockType::RECRUSIVESHARED)
+    CRecursiveReadBlock UNIQUIFY(readblock)(cs, #cs, __FILE__, __LINE__, LockType::RECURSIVE_SHARED_MUTEX)
 #define RECURSIVEWRITELOCK(cs) \
-    CRecursiveWriteBlock UNIQUIFY(writeblock)(cs, #cs, __FILE__, __LINE__, LockType::RECRUSIVESHARED)
-#define RECURSIVEREADLOCK2(cs1, cs2)                                                                    \
-    CRecursiveReadBlock UNIQUIFY(readblock1)(cs1, #cs1, __FILE__, __LINE__, LockType::RECRUSIVESHARED), \
-        UNIQUIFY(readblock2)(cs2, #cs2, __FILE__, __LINE__, LockType::RECRUSIVESHARED)
+    CRecursiveWriteBlock UNIQUIFY(writeblock)(cs, #cs, __FILE__, __LINE__, LockType::RECURSIVE_SHARED_MUTEX)
+#define RECURSIVEREADLOCK2(cs1, cs2)                                                                           \
+    CRecursiveReadBlock UNIQUIFY(readblock1)(cs1, #cs1, __FILE__, __LINE__, LockType::RECURSIVE_SHARED_MUTEX), \
+        UNIQUIFY(readblock2)(cs2, #cs2, __FILE__, __LINE__, LockType::RECURSIVE_SHARED_MUTEX)
 #define TRY_READ_LOCK_RECURSIVE(cs, name) \
-    CRecursiveReadBlock name(cs, #cs, __FILE__, __LINE__, LockType::RECRUSIVESHARED, true)
+    CRecursiveReadBlock name(cs, #cs, __FILE__, __LINE__, LockType::RECURSIVE_SHARED_MUTEX, true)
 
 typedef CMutexReadLock<CSharedCriticalSection> CReadBlock;
 typedef CMutexLock<CSharedCriticalSection> CWriteBlock;
 
-#define READLOCK(cs) CReadBlock UNIQUIFY(readblock)(cs, #cs, __FILE__, __LINE__, LockType::SHARED)
-#define WRITELOCK(cs) CWriteBlock UNIQUIFY(writeblock)(cs, #cs, __FILE__, __LINE__, LockType::SHARED)
-#define READLOCK2(cs1, cs2)                                                           \
-    CReadBlock UNIQUIFY(readblock1)(cs1, #cs1, __FILE__, __LINE__, LockType::SHARED), \
-        UNIQUIFY(readblock2)(cs2, #cs2, __FILE__, __LINE__, LockType::SHARED)
-#define TRY_READ_LOCK(cs, name) CReadBlock name(cs, #cs, __FILE__, __LINE__, LockType::SHARED, true)
+#define READLOCK(cs) CReadBlock UNIQUIFY(readblock)(cs, #cs, __FILE__, __LINE__, LockType::SHARED_MUTEX)
+#define WRITELOCK(cs) CWriteBlock UNIQUIFY(writeblock)(cs, #cs, __FILE__, __LINE__, LockType::SHARED_MUTEX)
+#define READLOCK2(cs1, cs2)                                                                 \
+    CReadBlock UNIQUIFY(readblock1)(cs1, #cs1, __FILE__, __LINE__, LockType::SHARED_MUTEX), \
+        UNIQUIFY(readblock2)(cs2, #cs2, __FILE__, __LINE__, LockType::SHARED_MUTEX)
+#define TRY_READ_LOCK(cs, name) CReadBlock name(cs, #cs, __FILE__, __LINE__, LockType::SHARED_MUTEX, true)
 
 typedef CMutexLock<CCriticalSection> CCriticalBlock;
 
-#define LOCK(cs) CCriticalBlock UNIQUIFY(criticalblock)(cs, #cs, __FILE__, __LINE__, LockType::RECURSIVE)
-#define LOCK2(cs1, cs2)                                                                          \
-    CCriticalBlock UNIQUIFY(criticalblock1)(cs1, #cs1, __FILE__, __LINE__, LockType::RECURSIVE), \
-        UNIQUIFY(criticalblock2)(cs2, #cs2, __FILE__, __LINE__, LockType::RECURSIVE)
-#define TRY_LOCK(cs, name) CCriticalBlock name(cs, #cs, __FILE__, __LINE__, LockType::RECURSIVE, true)
+#define LOCK(cs) CCriticalBlock UNIQUIFY(criticalblock)(cs, #cs, __FILE__, __LINE__, LockType::RECURSIVE_MUTEX)
+#define LOCK2(cs1, cs2)                                                                                \
+    CCriticalBlock UNIQUIFY(criticalblock1)(cs1, #cs1, __FILE__, __LINE__, LockType::RECURSIVE_MUTEX), \
+        UNIQUIFY(criticalblock2)(cs2, #cs2, __FILE__, __LINE__, LockType::RECURSIVE_MUTEX)
+#define TRY_LOCK(cs, name) CCriticalBlock name(cs, #cs, __FILE__, __LINE__, LockType::RECURSIVE_MUTEX, true)
 
-#define ENTER_CRITICAL_SECTION(cs)                                                        \
-    {                                                                                     \
-        EnterCritical(#cs, __FILE__, __LINE__, (void *)(&cs), LockType::RECURSIVE, true); \
-        (cs).lock();                                                                      \
+#define ENTER_CRITICAL_SECTION(cs)                                                                                  \
+    {                                                                                                               \
+        EnterCritical(#cs, __FILE__, __LINE__, (void *)(&cs), LockType::RECURSIVE_MUTEX, OwnershipType::EXCLUSIVE); \
+        (cs).lock();                                                                                                \
     }
 
 #define LEAVE_CRITICAL_SECTION(cs) \

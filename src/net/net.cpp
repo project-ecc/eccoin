@@ -9,6 +9,7 @@
 #include "net/net.h"
 
 #include "args.h"
+#include "beta.h"
 #include "chain/tx.h"
 #include "clientversion.h"
 #include "consensus/consensus.h"
@@ -2450,6 +2451,15 @@ bool CConnman::Start(std::string &strNodeError)
     }
     nMaxOutboundTimeframe = MAX_UPLOAD_TIMEFRAME;
 
+    LogPrintf("Generating random routing id...");
+
+    if (IsBetaEnabled())
+    {
+        pub_routing_key.MakeNewKey(true);
+        pub_routing_id = pub_routing_key.GetPubKey();
+        assert(pub_routing_key.VerifyPubKey(pub_routing_id));
+    }
+
     LogPrintf("Loading addresses...");
     // Load addresses from peers.dat
     int64_t nStart = GetTimeMillis();
@@ -2920,6 +2930,7 @@ CNode::CNode(NodeId idIn,
     fPauseRecv = false;
     fPauseSend = false;
     nProcessQueueSize = 0;
+    nNetworkServiceVersion = 0;
 
     for (const std::string &msg : getAllNetMessageTypes())
     {
@@ -3030,3 +3041,5 @@ uint64_t CConnman::CalculateKeyedNetGroup(const CAddress &ad) const
 
     return GetDeterministicRandomizer(RANDOMIZER_ID_NETGROUP).Write(&vchNetGroup[0], vchNetGroup.size()).Finalize();
 }
+
+CPubKey CConnman::GetRoutingKey() const { return pub_routing_id; }

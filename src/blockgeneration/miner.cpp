@@ -10,6 +10,7 @@
 #include "blockgeneration.h"
 #include "compare.h"
 #include "consensus/consensus.h"
+#include "consensus/tx_verify.h"
 #include "consensus/validation.h"
 #include "crypto/scrypt.h"
 #include "init.h"

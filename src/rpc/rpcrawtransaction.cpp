@@ -263,7 +263,7 @@ UniValue gettxoutproof(const UniValue &params, bool fHelp)
         LOCK(cs_main);
         CoinAccessor coin(*pcoinsTip, oneTxid);
         if (coin && !coin->IsSpent() && coin->nHeight > 0 &&
-            coin->nHeight <= pnetMan->getChainActive()->chainActive.Height())
+            coin->nHeight <= (unsigned int)pnetMan->getChainActive()->chainActive.Height())
         {
             pblockindex = pnetMan->getChainActive()->chainActive[coin->nHeight];
         }

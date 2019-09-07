@@ -2538,11 +2538,8 @@ DBErrors CWallet::ZapWalletTx(std::vector<CWalletTx> &vWtx)
 
 bool CWallet::SetAddressBook(const CTxDestination &address, const std::string &strType)
 {
-    bool fUpdated = false;
     {
         LOCK(cs_wallet); // mapAddressBook
-        std::map<CTxDestination, CAddressBookData>::iterator mi = mapAddressBook.find(address);
-        fUpdated = mi != mapAddressBook.end();
         if (!strType.empty()) /* update purpose only if requested */
             mapAddressBook[address].type = strType;
     }
