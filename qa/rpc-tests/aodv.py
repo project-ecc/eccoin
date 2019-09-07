@@ -80,14 +80,15 @@ class AodvTest (BitcoinTestFramework):
 
 
 if __name__ == '__main__':
-    AodvTest ().main ()
+    AodvTest().main(bitcoinConfDict={"beta": 1})
 
 # Create a convenient function for an interactive python debugging session
 def Test():
     t = AodvTest()
     bitcoinConf = {
         "debug": ["net", "blk", "thin", "mempool", "req", "bench", "evict"],
-        "blockprioritysize": 2000000  # we don't want any transactions rejected due to insufficient fees...
+        "blockprioritysize": 2000000,  # we don't want any transactions rejected due to insufficient fees...
+        "beta": 1
     }
 
 
