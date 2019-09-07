@@ -10,6 +10,7 @@
 
 #include "aodv.h"
 #include "args.h"
+#include "beta.h"
 #include "blockstorage/blockstorage.h"
 #include "chain/chain.h"
 #include "chain/tx.h"
@@ -1166,7 +1167,7 @@ bool static ProcessMessage(CNode *pfrom,
         // nodes)
         connman.PushMessage(pfrom, NetMsgType::SENDHEADERS);
 
-        if (pfrom->nVersion >= NETWORK_SERVICE_PROTOCOL_VERSION)
+        if (pfrom->nVersion >= NETWORK_SERVICE_PROTOCOL_VERSION && IsBetaEnabled())
         {
             connman.PushMessage(pfrom, NetMsgType::NSVERSION, NETWORK_SERVICE_VERSION);
         }
@@ -1191,22 +1192,28 @@ bool static ProcessMessage(CNode *pfrom,
     }
     else if (strCommand == NetMsgType::NSVERSION)
     {
-        uint64_t netservice = 0;
-        vRecv >> netservice;
-        pfrom->nNetworkServiceVersion = netservice;
-        if (netservice >= MIN_AODV_VERSION)
+        if (IsBetaEnabled())
         {
-            connman.PushMessage(pfrom, NetMsgType::NSVERACK, g_connman->GetRoutingKey());
+            uint64_t netservice = 0;
+            vRecv >> netservice;
+            pfrom->nNetworkServiceVersion = netservice;
+            if (netservice >= MIN_AODV_VERSION)
+            {
+                connman.PushMessage(pfrom, NetMsgType::NSVERACK, g_connman->GetRoutingKey());
+            }
         }
     }
 
     else if (strCommand == NetMsgType::NSVERACK)
     {
-        CPubKey peerPubKey;
-        vRecv >> peerPubKey;
-        pfrom->routing_id = peerPubKey;
-        g_aodvtable.AddPeerKeyId(peerPubKey, pfrom->GetId(), true);
-        g_aodvtable.AddPeerKeyId(peerPubKey, pfrom->GetId(), true);
+        if (IsBetaEnabled())
+        {
+            CPubKey peerPubKey;
+            vRecv >> peerPubKey;
+            pfrom->routing_id = peerPubKey;
+            g_aodvtable.AddPeerKeyId(peerPubKey, pfrom->GetId(), true);
+            g_aodvtable.AddPeerKeyId(peerPubKey, pfrom->GetId(), true);
+        }
     }
 
     else if (strCommand == NetMsgType::ADDR)
@@ -2055,6 +2062,10 @@ bool static ProcessMessage(CNode *pfrom,
 
     else if (strCommand == NetMsgType::RREQ)
     {
+        if (!IsBetaEnabled())
+        {
+            return true;
+        }
         /**
          * A peer has requested a route to a specific id. we need to:
          * keep track of who sent the request, make sure it was unique,
@@ -2081,6 +2092,10 @@ bool static ProcessMessage(CNode *pfrom,
 
     else if (strCommand == NetMsgType::RREP)
     {
+        if (!IsBetaEnabled())
+        {
+            return true;
+        }
         uint64_t nonce = 0;
         CPubKey searchKey;
         bool found;
@@ -2191,7 +2206,7 @@ bool ProcessMessages(CNode *pfrom, CConnman &connman)
     // Checksum
     CDataStream &vRecv = msg.vRecv;
 
-#if 0 
+#if 0
     const uint256 &hash = msg.GetMessageHash();
     // Do not waste my CPU calculating a checksum provided by an untrusted node
     // TCP already has one that is sufficient for network errors.  The checksum does not increase security since
@@ -2707,24 +2722,27 @@ bool SendMessages(CNode *pto, CConnman &connman)
         connman.PushMessage(pto, NetMsgType::GETDATA, vGetData);
     }
 
-    std::set<RREQRESPONSE> responseQueue_copy;
+    if (IsBetaEnabled())
     {
-        RECURSIVEREADLOCK(g_aodvtable.cs_aodv);
-        for (const auto &response : g_aodvtable.responseQueue)
+        std::set<RREQRESPONSE> responseQueue_copy;
         {
-            if (response.source == pto->routing_id)
+            RECURSIVEREADLOCK(g_aodvtable.cs_aodv);
+            for (const auto &response : g_aodvtable.responseQueue)
             {
-                connman.PushMessage(pto, NetMsgType::RREP, response.nonce, response.pubkey, response.found);
-            }
-            else
-            {
-                responseQueue_copy.emplace(response);
+                if (response.source == pto->routing_id)
+                {
+                    connman.PushMessage(pto, NetMsgType::RREP, response.nonce, response.pubkey, response.found);
+                }
+                else
+                {
+                    responseQueue_copy.emplace(response);
+                }
             }
         }
-    }
-    {
-        RECURSIVEWRITELOCK(g_aodvtable.cs_aodv);
-        g_aodvtable.responseQueue = responseQueue_copy;
+        {
+            RECURSIVEWRITELOCK(g_aodvtable.cs_aodv);
+            g_aodvtable.responseQueue = responseQueue_copy;
+        }
     }
 
     return true;

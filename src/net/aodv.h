@@ -3,6 +3,9 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#ifndef ECCOIN_AODV_H
+#define ECCOIN_AODV_H
+
 #include <map>
 #include <utility>
 #include <vector>
@@ -86,3 +89,5 @@ void RecordRouteToPeer(const CPubKey &searchKey, const NodeId &node);
 void AddResponseToQueue(CPubKey source, uint64_t nonce, CPubKey pubkey);
 
 extern CAodvRouteTable g_aodvtable;
+
+#endif

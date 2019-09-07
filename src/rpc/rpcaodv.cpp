@@ -1,3 +1,9 @@
+// This file is part of the Eccoin project
+// Copyright (c) 2019 The Eccoin developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
+#include "beta.h"
 #include "net/aodv.h"
 #include "rpcserver.h"
 #include "util/logger.h"
@@ -8,6 +14,11 @@ extern CCriticalSection cs_main;
 
 UniValue getaodvtable(const UniValue &params, bool fHelp)
 {
+    if (!IsBetaEnabled())
+    {
+        return "This rpc call requires beta features to be enabled (-beta or beta=1) \n";
+    }
+
     if (fHelp || params.size() != 0)
         throw std::runtime_error(
             "getaodvtable\n"
@@ -49,6 +60,11 @@ UniValue getaodvtable(const UniValue &params, bool fHelp)
 
 UniValue getaodvkeyentry(const UniValue &params, bool fHelp)
 {
+    if (!IsBetaEnabled())
+    {
+        return "This rpc call requires beta features to be enabled (-beta or beta=1) \n";
+    }
+
     if (fHelp || params.size() != 1)
         throw std::runtime_error(
             "getaodvkeyentry \"keyhash\" \n"
@@ -67,6 +83,11 @@ UniValue getaodvkeyentry(const UniValue &params, bool fHelp)
 
 UniValue getaodvidentry(const UniValue &params, bool fHelp)
 {
+    if (!IsBetaEnabled())
+    {
+        return "This rpc call requires beta features to be enabled (-beta or beta=1) \n";
+    }
+
     if (fHelp || params.size() != 1)
         throw std::runtime_error(
             "getaodvidentry \"nodeid\" \n"
@@ -84,6 +105,11 @@ UniValue getaodvidentry(const UniValue &params, bool fHelp)
 
 UniValue getroutingpubkey(const UniValue &params, bool fHelp)
 {
+    if (!IsBetaEnabled())
+    {
+        return "This rpc call requires beta features to be enabled (-beta or beta=1) \n";
+    }
+
     if (fHelp || params.size() != 0)
         throw std::runtime_error(
             "getroutingpubkey\n"
@@ -107,6 +133,11 @@ UniValue getroutingpubkey(const UniValue &params, bool fHelp)
 
 UniValue findroute(const UniValue &params, bool fHelp)
 {
+    if (!IsBetaEnabled())
+    {
+        return "This rpc call requires beta features to be enabled (-beta or beta=1) \n";
+    }
+
     if (fHelp || params.size() != 1)
         throw std::runtime_error(
             "findroute\n"
@@ -142,6 +173,11 @@ UniValue findroute(const UniValue &params, bool fHelp)
 
 UniValue haveroute(const UniValue &params, bool fHelp)
 {
+    if (!IsBetaEnabled())
+    {
+        return "This rpc call requires beta features to be enabled (-beta or beta=1) \n";
+    }
+
     if (fHelp || params.size() != 1)
         throw std::runtime_error(
             "haveroute\n"

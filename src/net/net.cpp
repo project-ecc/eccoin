@@ -9,6 +9,7 @@
 #include "net/net.h"
 
 #include "args.h"
+#include "beta.h"
 #include "chain/tx.h"
 #include "clientversion.h"
 #include "consensus/consensus.h"
@@ -2452,9 +2453,12 @@ bool CConnman::Start(std::string &strNodeError)
 
     LogPrintf("Generating random routing id...");
 
-    pub_routing_key.MakeNewKey(true);
-    pub_routing_id = pub_routing_key.GetPubKey();
-    assert(pub_routing_key.VerifyPubKey(pub_routing_id));
+    if (IsBetaEnabled())
+    {
+        pub_routing_key.MakeNewKey(true);
+        pub_routing_id = pub_routing_key.GetPubKey();
+        assert(pub_routing_key.VerifyPubKey(pub_routing_id));
+    }
 
     LogPrintf("Loading addresses...");
     // Load addresses from peers.dat

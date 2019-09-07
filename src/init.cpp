@@ -9,6 +9,7 @@
 
 #include "amount.h"
 #include "args.h"
+#include "beta.h"
 #include "blockgeneration/blockgeneration.h"
 #include "blockstorage/blockstorage.h"
 #include "chain/chain.h"
@@ -973,6 +974,8 @@ bool AppInit2(thread_group &threadGroup)
     }
 
     // ********************************************************* Step 3: parameter-to-internal-flags
+
+    fBeta.store(gArgs.IsArgSet("-beta"));
 
     g_logger->fDebug = gArgs.IsArgSet("-debug");
     // Special-case: if -debug=0/-nodebug is set, turn off debugging messages
