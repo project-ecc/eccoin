@@ -52,6 +52,7 @@ BITCOIN_CORE_H = \
   args.h \
   arith_uint256.h \
   base58.h \
+  beta.h \
   blockgeneration/blockgeneration.h \
   blockgeneration/compare.h \
   blockgeneration/miner.h \
@@ -178,6 +179,7 @@ libbitcoin_server_a_SOURCES = \
   globals.cpp \
   threaddeadlock.cpp \
   sync.cpp \
+  beta.cpp \
   net/addrdb.cpp \
   net/addrman.cpp \
   blockgeneration/blockgeneration.cpp \
