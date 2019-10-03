@@ -836,3 +836,15 @@ std::string ParseJson(const std::string &str)
     }
     return parsed;
 }
+
+
+std::vector<uint8_t> StrToBytes(const std::string &str)
+{
+    std::vector<uint8_t> bytes;
+    bytes.reserve(str.size());
+    for (const auto &letter : str)
+    {
+        bytes.push_back((uint8_t)letter);
+    }
+    return bytes;
+}

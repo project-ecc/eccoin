@@ -52,6 +52,7 @@ std::string DecodeBase32(const std::string &str);
 std::string EncodeBase32(const unsigned char *pch, size_t len);
 std::string EncodeBase32(const std::string &str);
 std::string ParseJson(const std::string &str);
+std::vector<uint8_t> StrToBytes(const std::string &str);
 
 void SplitHostPort(std::string in, int &portOut, std::string &hostOut);
 
