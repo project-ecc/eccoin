@@ -5,6 +5,7 @@
 
 #include "beta.h"
 #include "net/aodv.h"
+#include "net/packetmanager.h"
 #include "rpcserver.h"
 #include "util/logger.h"
 #include "util/utilstrencodings.h"
@@ -204,4 +205,60 @@ UniValue haveroute(const UniValue &params, bool fHelp)
         return true;
     }
     return g_aodvtable.HaveKeyRoute(CPubKey(vPubKey.begin(), vPubKey.end()));
+}
+
+UniValue sendpacket(const UniValue &params, bool fHelp)
+{
+    if (fHelp || params.size() != 4)
+    {
+        throw std::runtime_error(
+            "sendpacket\n"
+            "\nattempts to send a network packet to the destination\n"
+            "\nArguments:\n"
+            "1. \"key\"   (string, required) The key of the desired recipient\n"
+            "2. \"protocolId\"   (number, required) The id of the protocol being used for the data\n"
+            "3. \"protocolVersion\"   (number, required) The protocol version being used\n"
+            "4. \"Data\"   (vector of bytes, required) The desired data to be sent \n"
+            "\nExamples:\n" +
+            HelpExampleCli("sendpacket", "\"1139d39a984a0ff431c467f738d534c36824401a4735850561f7ac64e4d49f5b\" 1 1 \"this is example data\"") +
+            HelpExampleRpc("sendpacket", "\"1139d39a984a0ff431c467f738d534c36824401a4735850561f7ac64e4d49f5b\", 1, 1, \"this is example data\"")
+        );
+    }
+    bool fInvalid = false;
+    std::vector<unsigned char> vPubKey = DecodeBase64(params[0].get_str().c_str(), &fInvalid);
+    // TODO : import unsigned values for univalue from upstream, change thse calls to get_uint8
+    uint8_t nProtocolId = (uint8_t)params[1].get_int();
+    uint8_t nProtocolVersion = (uint8_t)params[2].get_int();
+
+    std::vector<uint8_t> vData = StrToBytes(params[3].get_str());
+
+    bool result = g_packetman.SendPacket(vPubKey, nProtocolId, nProtocolVersion, vData);
+    return result;
+}
+
+UniValue readlastpacket(const UniValue &params, bool fHelp)
+{
+    if (fHelp || params.size() != 2)
+    {
+        throw std::runtime_error(
+            "sendpacket\n"
+            "\nattempts to send a network packet to the destination\n"
+            "\nArguments:\n"
+            "1. \"protocolId\"   (number, required) The id of the protocol being used for the data\n"
+            "2. \"protocolVersion\"   (number, required) The protocol version being used\n"
+            "\nExamples:\n" +
+            HelpExampleCli("sendpacket", " 1 1") +
+            HelpExampleRpc("sendpacket", "1, 1")
+        );
+    }
+    uint8_t nProtocolId = (uint8_t)params[0].get_int();
+    uint8_t nProtocolVersion = (uint8_t)params[1].get_int();
+    std::string result = "";
+    CPacket lastPacket(nProtocolId, nProtocolVersion);
+    if (g_packetman.GetLastPacket(lastPacket))
+    {
+        std::vector<uint8_t> data = lastPacket.GetData();
+        result = std::string(data.begin(), data.end());
+    }
+    return result;
 }
