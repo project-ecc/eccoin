@@ -104,6 +104,7 @@ BITCOIN_CORE_H = \
   net/netaddress.h \
   net/netbase.h \
   net/nodestate.h \
+  net/packetmanager.h \
   net/protocol.h \
   net/routingdb.h \
   networks/netman.h \
@@ -248,6 +249,7 @@ libbitcoin_server_a_SOURCES = \
   net/netbase.cpp \
   net/routingdb.cpp
   net/nodestate.cpp \
+  net/packetmanager.cpp \
   net/protocol.cpp \
   networks/netman.cpp \
   policy/fees.cpp \
