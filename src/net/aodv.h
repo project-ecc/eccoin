@@ -1,10 +1,11 @@
 // This file is part of the Eccoin project
-// Copyright (c) 2019 The Eccoin developers
+// Copyright (c) 2019 Greg Griffith
+// Copyright (c) 2019 The Eccoin Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef ECCOIN_AODV_H
-#define ECCOIN_AODV_H
+#ifndef ECCOIN_AODV_TABLE_H
+#define ECCOIN_AODV_TABLE_H
 
 #include <map>
 #include <utility>
@@ -44,9 +45,11 @@ struct RREQRESPONSE
 class CAodvRouteTable
 {
 private:
+    // known peers
     std::map<NodeId, CPubKey> mapIdKey;
     std::map<CPubKey, NodeId> mapKeyId;
 
+    // known routes
     std::map<NodeId, std::set<CPubKey> >mapRoutesByPeerId;
     std::map<CPubKey, NodeId>mapRoutesByPubKey;
 
