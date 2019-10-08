@@ -58,22 +58,33 @@ class SendPacketTest (BitcoinTestFramework):
         time.sleep(1)
         assert_equal(self.nodes[0].haveroute(key5), True)
         time.sleep(1)
-        sent = self.nodes[0].sendpacket(key5, 0, 0, "test string")
+        sent = self.nodes[0].sendpacket(key5, 0, 0, "test string1")
         time.sleep(1)
         assert_equal(sent, True)
         data = self.nodes[5].readlastpacket(0, 0)
-        assert_equal(data, "test string")
+        assert_equal(data, "7465737420737472696e6731")
+        sent = self.nodes[0].sendpacket(key5, 0, 0, "test string2")
+        time.sleep(1)
+        assert_equal(sent, True)
+        sent = self.nodes[0].sendpacket(key5, 0, 0, "test string3")
+        time.sleep(1)
+        assert_equal(sent, True)
+        buffer = self.nodes[5].getbuffer(0)
+        assert_equal(buffer['0'], "7465737420737472696e6731")
+        assert_equal(buffer['1'], "7465737420737472696e6732")
+        assert_equal(buffer['2'], "7465737420737472696e6733")
 
 
 if __name__ == '__main__':
-    SendPacketTest ().main ()
+    SendPacketTest().main(bitcoinConfDict={"beta": 1})
 
 # Create a convenient function for an interactive python debugging session
 def Test():
     t = SendPacketTest()
     bitcoinConf = {
         "debug": ["net", "blk", "thin", "mempool", "req", "bench", "evict"],
-        "blockprioritysize": 2000000  # we don't want any transactions rejected due to insufficient fees...
+        "blockprioritysize": 2000000,  # we don't want any transactions rejected due to insufficient fees...
+        "beta": 1
     }
 
 
