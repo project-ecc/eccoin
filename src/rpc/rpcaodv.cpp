@@ -214,6 +214,11 @@ UniValue haveroute(const UniValue &params, bool fHelp)
 
 UniValue sendpacket(const UniValue &params, bool fHelp)
 {
+    if (!IsBetaEnabled())
+    {
+        return "This rpc call requires beta features to be enabled (-beta or beta=1) \n";
+    }
+
     if (fHelp || params.size() != 4)
     {
         throw std::runtime_error(
@@ -243,6 +248,11 @@ UniValue sendpacket(const UniValue &params, bool fHelp)
 
 UniValue readlastpacket(const UniValue &params, bool fHelp)
 {
+    if (!IsBetaEnabled())
+    {
+        return "This rpc call requires beta features to be enabled (-beta or beta=1) \n";
+    }
+
     if (fHelp || params.size() != 2)
     {
         throw std::runtime_error(
