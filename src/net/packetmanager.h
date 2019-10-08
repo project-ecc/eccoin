@@ -20,13 +20,20 @@ static const int64_t DEFAULT_PACKET_TIMEOUT = 30; // 30 seconds
 
 extern CCriticalSection cs_main;
 
+struct PacketBuffer
+{
+    // vRecievedPackets should be partially stored on disk at some point
+    std::vector<CPacket> vRecievedPackets;
+    // the protocol id using this buffer
+    uint8_t nProtocolId;
+};
+
 class CPacketManager
 {
     // Data members
 private:
-    // vRecievedPackets should be partially stored on disk at some point
-    std::vector<CPacket> vRecievedPackets;
-
+    // protocolId : Buffer
+    std::map<uint8_t, PacketBuffer> mapBuffers;
     // partial packets waiting for all required data segments to reconstruct
     // map stores nonce, time and when packet is complete it is removed from this
     // map and stored in our messages vector
@@ -44,7 +51,17 @@ private:
     CPacketManager(const CPacketManager &pman){}
     void FinalizePacket(const uint64_t &nonce, std::map<uint64_t, CPacket>::iterator iter)
     {
-        vRecievedPackets.push_back(std::move(iter->second));
+        uint8_t &protocolId = iter->second.nProtocolId;
+        if (mapBuffers.count(protocolId) == 0)
+        {
+            PacketBuffer newBuffer;
+            newBuffer.vRecievedPackets.push_back(std::move(iter->second));
+            mapBuffers.emplace(protocolId, std::move(newBuffer));
+        }
+        else
+        {
+            mapBuffers[protocolId].vRecievedPackets.push_back(std::move(iter->second));
+        }
         mapPacketLastUpdated.erase(nonce);
         mapPartialPackets.erase(nonce);
     }
@@ -52,7 +69,7 @@ private:
 public:
     CPacketManager()
     {
-        vRecievedPackets.clear();
+        mapBuffers.clear();
         mapPacketLastUpdated.clear();
         mapPartialPackets.clear();
     }
@@ -125,11 +142,21 @@ public:
         return true;
     }
 
-    bool GetLastPacket(CPacket &readPacket)
+    bool GetLastPacket(uint8_t &protocolId, CPacket &readPacket)
     {
-        if (vRecievedPackets.size() > 0)
+        if (mapBuffers.count(protocolId) == 1)
         {
-            readPacket = vRecievedPackets.back();
+            readPacket = mapBuffers[protocolId].vRecievedPackets.back();
+            return true;
+        }
+        return false;
+    }
+
+    bool GetBuffer(uint8_t &protocolId, PacketBuffer &buffer)
+    {
+        if (mapBuffers.count(protocolId) == 1)
+        {
+            buffer = mapBuffers[protocolId];
             return true;
         }
         return false;

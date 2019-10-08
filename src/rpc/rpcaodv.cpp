@@ -258,7 +258,7 @@ UniValue readlastpacket(const UniValue &params, bool fHelp)
     uint8_t nProtocolVersion = (uint8_t)params[1].get_int();
     std::string result = "";
     CPacket lastPacket(nProtocolId, nProtocolVersion);
-    if (g_packetman.GetLastPacket(lastPacket))
+    if (g_packetman.GetLastPacket(nProtocolId, lastPacket))
     {
         std::vector<uint8_t> data = lastPacket.GetData();
         result = std::string(data.begin(), data.end());
