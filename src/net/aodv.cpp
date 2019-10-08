@@ -107,10 +107,15 @@ bool CAodvRouteTable::GetKeyNode(const CPubKey &key, NodeId &result)
     RECURSIVEREADLOCK(cs_aodv);
     if (!HaveKeyEntry(key))
     {
-        return false;
+        result = mapKeyId[key];
+        return true;
     }
-    result = mapKeyId[key];
-    return true;
+    else if(HaveKeyRoute(key))
+    {
+        result = mapRoutesByPubKey[key];
+        return true;
+    }
+    return false;
 }
 
 bool CAodvRouteTable::GetNodeKey(const NodeId &node, CPubKey &result)
