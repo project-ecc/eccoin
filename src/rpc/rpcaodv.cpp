@@ -39,14 +39,17 @@ UniValue getaodvtable(const UniValue &params, bool fHelp)
             HelpExampleCli("getaodvtable", "") +
             HelpExampleRpc("getaodvtable", "")
         );
-    std::map<NodeId, CPubKey> IdKey;
+    std::map<NodeId, std::set<CPubKey> > IdKey;
     std::map<CPubKey, NodeId> KeyId;
     g_aodvtable.GetRoutingTables(IdKey, KeyId);
     UniValue obj(UniValue::VOBJ);
     UniValue IdKeyObj(UniValue::VOBJ);
     for (auto &entry : IdKey)
     {
-        IdKeyObj.push_back(Pair(std::to_string(entry.first), entry.second.Raw64Encoded()));
+        for (auto &path : entry.second)
+        {
+            IdKeyObj.push_back(Pair(std::to_string(entry.first), path.Raw64Encoded()));
+        }
     }
     UniValue KeyIdObj(UniValue::VOBJ);
     for (auto &entry : KeyId)
@@ -160,7 +163,7 @@ UniValue findroute(const UniValue &params, bool fHelp)
     std::vector<unsigned char> vPubKey = DecodeBase64(params[0].get_str().c_str(), &fInvalid);
     if (fInvalid)
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Malformed pubkey base64 encoding");
-    if (g_aodvtable.HaveKeyEntry(CPubKey(vPubKey.begin(), vPubKey.end())))
+    if (g_aodvtable.HaveRoute(CPubKey(vPubKey.begin(), vPubKey.end())))
     {
         return NullUniValue;
     }
@@ -200,11 +203,11 @@ UniValue haveroute(const UniValue &params, bool fHelp)
     std::vector<unsigned char> vPubKey = DecodeBase64(params[0].get_str().c_str(), &fInvalid);
     if (fInvalid)
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Malformed pubkey base64 encoding");
-    if (g_aodvtable.HaveKeyEntry(CPubKey(vPubKey.begin(), vPubKey.end())))
+    if (g_aodvtable.HaveRoute(CPubKey(vPubKey.begin(), vPubKey.end())))
     {
         return true;
     }
-    return g_aodvtable.HaveKeyRoute(CPubKey(vPubKey.begin(), vPubKey.end()));
+    return g_aodvtable.HaveRoute(CPubKey(vPubKey.begin(), vPubKey.end()));
 }
 
 UniValue sendpacket(const UniValue &params, bool fHelp)

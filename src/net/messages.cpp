@@ -1212,8 +1212,7 @@ bool static ProcessMessage(CNode *pfrom,
             CPubKey peerPubKey;
             vRecv >> peerPubKey;
             pfrom->routing_id = peerPubKey;
-            g_aodvtable.AddPeerKeyId(peerPubKey, pfrom->GetId(), true);
-            g_aodvtable.AddPeerKeyId(peerPubKey, pfrom->GetId(), true);
+            g_aodvtable.AddRoute(peerPubKey, pfrom->GetId());
         }
     }
 
@@ -2079,7 +2078,7 @@ bool static ProcessMessage(CNode *pfrom,
         CPubKey searchKey;
         vRecv >> nonce;
         vRecv >> searchKey;
-        bool peerKnown = g_aodvtable.HaveKeyEntry(searchKey) || connman.GetRoutingKey() == searchKey;
+        bool peerKnown = g_aodvtable.HaveRoute(searchKey) || connman.GetRoutingKey() == searchKey;
         if (peerKnown)
         {
             connman.PushMessage(pfrom, NetMsgType::RREP, nonce, searchKey, peerKnown);

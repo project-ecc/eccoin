@@ -10,57 +10,7 @@
 
 CAodvRouteTable g_aodvtable;
 
-
-void CAodvRouteTable::GetRoutingTables(std::map<NodeId, CPubKey> &IdKey, std::map<CPubKey, NodeId> &KeyId)
-{
-    RECURSIVEREADLOCK(cs_aodv);
-    IdKey = mapIdKey;
-    KeyId = mapKeyId;
-    return;
-}
-
-bool CAodvRouteTable::HaveKeyEntry(const CPubKey &key)
-{
-    RECURSIVEREADLOCK(cs_aodv);
-    return (mapKeyId.find(key) != mapKeyId.end());
-}
-
-bool CAodvRouteTable::HaveIdEntry(const NodeId &node)
-{
-    RECURSIVEREADLOCK(cs_aodv);
-    return (mapIdKey.find(node) != mapIdKey.end());
-}
-
-void CAodvRouteTable::AddPeerKeyId(const CPubKey &key, const NodeId &node, bool update)
-{
-    RECURSIVEWRITELOCK(cs_aodv);
-    bool haveId = HaveIdEntry(node);
-    bool haveKey = HaveKeyEntry(key);
-    if (!update)
-    {
-        if (haveKey || haveId)
-        {
-            return;
-        }
-    }
-    if (haveId)
-    {
-        mapIdKey[node] = key;
-    }
-    else
-    {
-        mapIdKey.emplace(node, key);
-    }
-
-    if (haveKey)
-    {
-        mapKeyId[key] = node;
-    }
-    else
-    {
-        mapKeyId.emplace(key, node);
-    }
-}
+///////// PRIVATE ////////////
 
 bool CAodvRouteTable::HaveKeyRoute(const CPubKey &key)
 {
@@ -74,16 +24,36 @@ bool CAodvRouteTable::HaveIdRoute(const NodeId &node)
     return (mapRoutesByPeerId.find(node) != mapRoutesByPeerId.end());
 }
 
-void CAodvRouteTable::AddRouteKeyId(const CPubKey &key, const NodeId &node)
+///////// PUBLIC ////////////
+
+bool CAodvRouteTable::HaveRoute(const CPubKey &key)
+{
+    RECURSIVEREADLOCK(cs_aodv);
+    return (mapRoutesByPubKey.find(key) != mapRoutesByPubKey.end());
+}
+
+bool CAodvRouteTable::HaveRoute(const NodeId &node)
+{
+    RECURSIVEREADLOCK(cs_aodv);
+    return (mapRoutesByPeerId.find(node) != mapRoutesByPeerId.end());
+}
+
+void CAodvRouteTable::GetRoutingTables(std::map<NodeId, std::set<CPubKey> > &IdKey, std::map<CPubKey, NodeId> &KeyId)
+{
+    RECURSIVEREADLOCK(cs_aodv);
+    IdKey = mapRoutesByPeerId;
+    KeyId = mapRoutesByPubKey;
+    return;
+}
+
+void CAodvRouteTable::AddRoute(const CPubKey &key, const NodeId &node)
 {
     RECURSIVEWRITELOCK(cs_aodv);
     bool haveId = HaveIdRoute(node);
     bool haveKey = HaveKeyRoute(key);
     if (haveId)
     {
-        std::set<CPubKey> keys = mapRoutesByPeerId[node];
-        keys.emplace(key);
-        mapRoutesByPeerId[node] = keys;
+        mapRoutesByPeerId[node].emplace(key);
     }
     else
     {
@@ -91,7 +61,6 @@ void CAodvRouteTable::AddRouteKeyId(const CPubKey &key, const NodeId &node)
         keys.emplace(key);
         mapRoutesByPeerId.emplace(node, keys);
     }
-
     if (haveKey)
     {
         mapRoutesByPubKey[key] = node;
@@ -105,27 +74,11 @@ void CAodvRouteTable::AddRouteKeyId(const CPubKey &key, const NodeId &node)
 bool CAodvRouteTable::GetKeyNode(const CPubKey &key, NodeId &result)
 {
     RECURSIVEREADLOCK(cs_aodv);
-    if (!HaveKeyEntry(key))
-    {
-        result = mapKeyId[key];
-        return true;
-    }
-    else if(HaveKeyRoute(key))
-    {
-        result = mapRoutesByPubKey[key];
-        return true;
-    }
-    return false;
-}
-
-bool CAodvRouteTable::GetNodeKey(const NodeId &node, CPubKey &result)
-{
-    RECURSIVEREADLOCK(cs_aodv);
-    if (!HaveIdEntry(node))
+    if(!HaveKeyRoute(key))
     {
         return false;
     }
-    result = mapIdKey[node];
+    result = mapRoutesByPubKey[key];
     return true;
 }
 
@@ -199,7 +152,7 @@ void RequestRouteToPeer(CConnman *connman, const CPubKey &source, const uint64_t
 
 void RecordRouteToPeer(const CPubKey &searchKey, const NodeId &node)
 {
-    g_aodvtable.AddRouteKeyId(searchKey, node);
+    g_aodvtable.AddRoute(searchKey, node);
 }
 
 void AddResponseToQueue(CPubKey source, uint64_t nonce, CPubKey pubkey)

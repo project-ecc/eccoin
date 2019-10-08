@@ -45,38 +45,37 @@ struct RREQRESPONSE
 class CAodvRouteTable
 {
 private:
-    // known peers
-    std::map<NodeId, CPubKey> mapIdKey;
-    std::map<CPubKey, NodeId> mapKeyId;
-
-    // known routes
-    std::map<NodeId, std::set<CPubKey> >mapRoutesByPeerId;
-    std::map<CPubKey, NodeId>mapRoutesByPubKey;
+    // a set of known pubkey routes by the node ids that know about them
+    std::map<NodeId, std::set<CPubKey> > mapRoutesByPeerId;
+    // a map of what pubkeys have are known by which nodes
+    std::map<CPubKey, NodeId> mapRoutesByPubKey;
 
     // nonce, GetTimeMillis
-    std::map<uint64_t, uint64_t>mapRequestTime;
+    std::map<uint64_t, uint64_t> mapRequestTime;
     // nonce, nodeId
-    std::map<uint64_t, CPubKey>mapRequestSource;
+    std::map<uint64_t, CPubKey> mapRequestSource;
+
 public:
     mutable CRecursiveSharedCriticalSection cs_aodv;
     std::set<RREQRESPONSE>responseQueue;
 
+private:
+    bool HaveKeyRoute(const CPubKey &key);
+    bool HaveIdRoute(const NodeId &node);
 
 public:
     CAodvRouteTable()
     {
-        mapIdKey.clear();
-        mapKeyId.clear();
+        mapRoutesByPeerId.clear();
+        mapRoutesByPubKey.clear();
+        mapRequestTime.clear();
+        mapRequestSource.clear();
     }
-    void GetRoutingTables(std::map<NodeId, CPubKey> &IdKey, std::map<CPubKey, NodeId> &KeyId);
-    bool HaveKeyEntry(const CPubKey &key);
-    bool HaveIdEntry(const NodeId &node);
-    void AddPeerKeyId(const CPubKey &key, const NodeId &node, bool update = false);
-    bool HaveKeyRoute(const CPubKey &key);
-    bool HaveIdRoute(const NodeId &node);
-    void AddRouteKeyId(const CPubKey &key, const NodeId &node);
+    bool HaveRoute(const CPubKey &key);
+    bool HaveRoute(const NodeId &node);
+    void GetRoutingTables(std::map<NodeId, std::set<CPubKey> > &IdKey, std::map<CPubKey, NodeId> &KeyId);
+    void AddRoute(const CPubKey &key, const NodeId &node);
     bool GetKeyNode(const CPubKey &key, NodeId &result);
-    bool GetNodeKey(const NodeId &node, CPubKey &result);
     void AddNewRequestTimeData(const uint64_t &nonce);
     bool IsOldRequest(const uint64_t &nonce);
     void AddNewRequestSource(const uint64_t &nonce, const CPubKey &nodeId);
