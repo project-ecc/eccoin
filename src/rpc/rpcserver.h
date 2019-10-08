@@ -275,6 +275,7 @@ extern UniValue findroute(const UniValue &params, bool fHelp);
 extern UniValue haveroute(const UniValue &params, bool fHelp);
 extern UniValue sendpacket(const UniValue &params, bool fHelp);
 extern UniValue readlastpacket(const UniValue &params, bool fHelp);
+extern UniValue getbuffer(const UniValue &params, bool fHelp);
 
 #if ENABLE_ZMQ
 extern UniValue getzmqnotifications(const UniValue &params, bool fHelp);

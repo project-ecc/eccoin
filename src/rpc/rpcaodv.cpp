@@ -11,6 +11,8 @@
 #include "util/utilstrencodings.h"
 #include <univalue.h>
 
+#include <sstream>
+
 extern CCriticalSection cs_main;
 
 UniValue getaodvtable(const UniValue &params, bool fHelp)
@@ -261,7 +263,53 @@ UniValue readlastpacket(const UniValue &params, bool fHelp)
     if (g_packetman.GetLastPacket(nProtocolId, lastPacket))
     {
         std::vector<uint8_t> data = lastPacket.GetData();
-        result = std::string(data.begin(), data.end());
+        std::stringstream hexstream;
+        hexstream << std::hex;
+        for (uint8_t &byte : data)
+        {
+            hexstream << std::setw(2) << std::setfill('0') << static_cast<int>(byte);
+        }
+        result = hexstream.str();
     }
     return result;
+}
+
+UniValue getbuffer(const UniValue &params, bool fHelp)
+{
+    if (!IsBetaEnabled())
+    {
+        return "This rpc call requires beta features to be enabled (-beta or beta=1) \n";
+    }
+
+    if (fHelp || params.size() != 1)
+    {
+        throw std::runtime_error(
+            "getbuffer\n"
+            "\nattempts to get the buffer for a network service protocol\n"
+            "\nArguments:\n"
+            "1. \"protocolId\"   (number, required) The id of the protocol being requested\n"
+            "\nExamples:\n" +
+            HelpExampleCli("getbuffer", "1") +
+            HelpExampleRpc("getbuffer", "1")
+        );
+    }
+    uint8_t nProtocolId = (uint8_t)params[0].get_int();
+    PacketBuffer buffer;
+    UniValue obj(UniValue::VOBJ);
+    if (g_packetman.GetBuffer(nProtocolId, buffer))
+    {
+        uint64_t counter = 0;
+        for (auto &entry: buffer.vRecievedPackets)
+        {
+            std::stringstream hexstream;
+            hexstream << std::hex;
+            for (uint8_t &byte : entry.GetData())
+            {
+                hexstream << std::setw(2) << std::setfill('0') << static_cast<int>(byte);
+            }
+            obj.push_back(Pair(std::to_string(counter), hexstream.str()));
+            counter++;
+        }
+    }
+    return obj;
 }
