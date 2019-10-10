@@ -7,9 +7,6 @@
 #include "aodv.h"
 #include "net.h"
 
-
-CAodvRouteTable g_aodvtable;
-
 ///////// PRIVATE ////////////
 
 bool CAodvRouteTable::HaveKeyRoute(const CPubKey &key)

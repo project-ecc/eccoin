@@ -4,5 +4,3 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "packetmanager.h"
-
-CPacketManager g_packetman;
