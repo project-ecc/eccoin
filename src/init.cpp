@@ -62,8 +62,7 @@
 #include <openssl/crypto.h>
 
 #if ENABLE_ZMQ
-#include "zmq/zmqnotificationinterface.h"
-static CZMQNotificationInterface *pzmqNotificationInterface = nullptr;
+#include <zmq/zmqnotificationinterface.h>
 #endif
 
 extern std::unique_ptr<PeerLogicValidation> peerLogic;
@@ -257,11 +256,11 @@ void Shutdown(thread_group &threadGroup)
     }
 
 #if ENABLE_ZMQ
-    if (pzmqNotificationInterface)
+    if (g_zmq_notification_interface)
     {
-        UnregisterValidationInterface(pzmqNotificationInterface);
-        delete pzmqNotificationInterface;
-        pzmqNotificationInterface = NULL;
+        UnregisterValidationInterface(g_zmq_notification_interface);
+        delete g_zmq_notification_interface;
+        g_zmq_notification_interface = NULL;
     }
 #endif
 
@@ -1592,10 +1591,10 @@ bool AppInit2(thread_group &threadGroup)
     }
 
 #if ENABLE_ZMQ
-    pzmqNotificationInterface = CZMQNotificationInterface::CreateWithArguments(gArgs.GetMapArgs());
-    if (pzmqNotificationInterface)
+    g_zmq_notification_interface = CZMQNotificationInterface::CreateWithArguments(gArgs.GetMapArgs());
+    if (g_zmq_notification_interface)
     {
-        RegisterValidationInterface(pzmqNotificationInterface);
+        RegisterValidationInterface(g_zmq_notification_interface);
     }
 #endif
 

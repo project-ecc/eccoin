@@ -361,6 +361,11 @@ static const CRPCCommand vRPCCommands[] = {
     {"wallet", "settxfee", &settxfee, true}, {"wallet", "signmessage", &signmessage, true},
     {"wallet", "walletlock", &walletlock, true}, {"wallet", "walletpassphrasechange", &walletpassphrasechange, true},
     {"wallet", "walletpassphrase", &walletpassphrase, true},
+
+#if ENABLE_ZMQ
+    /* ZMQ */
+    {"zmq", "getzmqnotifications", &getzmqnotifications, true},
+#endif
 };
 
 CRPCTable::CRPCTable()
