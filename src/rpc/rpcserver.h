@@ -21,6 +21,10 @@
 
 #include <univalue.h>
 
+#ifdef HAVE_CONFIG_H
+#include "config/bitcoin-config.h"
+#endif
+
 class CRPCCommand;
 
 namespace RPCServer
@@ -270,6 +274,9 @@ extern UniValue getroutingpubkey(const UniValue &params, bool fHelp);
 extern UniValue findroute(const UniValue &params, bool fHelp);
 extern UniValue haveroute(const UniValue &params, bool fHelp);
 
+#if ENABLE_ZMQ
+extern UniValue getzmqnotifications(const UniValue &params, bool fHelp);
+#endif
 
 bool StartRPC();
 void InterruptRPC();

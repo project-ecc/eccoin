@@ -161,7 +161,7 @@ BITCOIN_CORE_H = \
   wallet/wallet_ismine.h \
   wallet/walletdb.h \
   zmq/zmqabstractnotifier.h \
-  zmq/zmqconfig.h\
+  zmq/zmqconfig.h \
   zmq/zmqnotificationinterface.h \
   zmq/zmqpublishnotifier.h
 
@@ -298,7 +298,8 @@ libbitcoin_zmq_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 libbitcoin_zmq_a_SOURCES = \
   zmq/zmqabstractnotifier.cpp \
   zmq/zmqnotificationinterface.cpp \
-  zmq/zmqpublishnotifier.cpp
+  zmq/zmqpublishnotifier.cpp \
+  zmq/zmqrpc.cpp
 endif
 
 if GLIBC_BACK_COMPAT
