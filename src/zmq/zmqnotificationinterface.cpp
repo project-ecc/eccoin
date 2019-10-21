@@ -110,6 +110,9 @@ bool CZMQNotificationInterface::Initialize()
         return false;
     }
 
+    // This sleep is needed so that any zmq messages published immediately after the ZMQ bind call are not dropped
+    MilliSleep(100);
+
     return true;
 }
 

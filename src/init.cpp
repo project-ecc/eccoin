@@ -1596,8 +1596,6 @@ bool AppInit2(thread_group &threadGroup)
     if (g_zmq_notification_interface)
     {
         RegisterValidationInterface(g_zmq_notification_interface);
-        // this sleep is needed so that any zmq messages published immediately after the bind call are not dropped
-        MilliSleep(100);
     }
 #endif
 
