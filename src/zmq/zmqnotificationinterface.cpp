@@ -185,5 +185,4 @@ void CZMQNotificationInterface::SystemMessage(const std::string &message)
     }
 }
 
-
 CZMQNotificationInterface* g_zmq_notification_interface = NULL;
