@@ -89,6 +89,7 @@ BITCOIN_CORE_H = \
   init.h \
   kernel.h \
   key.h \
+  keypoolentry.h \
   keystore.h \
   limitedmap.h \
   main.h \

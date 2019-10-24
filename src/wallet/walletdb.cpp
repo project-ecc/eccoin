@@ -155,12 +155,12 @@ bool CWalletDB::WriteDefaultKey(const CPubKey &vchPubKey)
     return Write(std::string("defaultkey"), vchPubKey);
 }
 
-bool CWalletDB::ReadPool(int64_t nPool, CKeyPool &keypool)
+bool CWalletDB::ReadPool(int64_t nPool, CKeyPoolEntry &keypool)
 {
     return Read(std::make_pair(std::string("pool"), nPool), keypool);
 }
 
-bool CWalletDB::WritePool(int64_t nPool, const CKeyPool &keypool)
+bool CWalletDB::WritePool(int64_t nPool, const CKeyPoolEntry &keypool)
 {
     nWalletDBUpdated++;
     return Write(std::make_pair(std::string("pool"), nPool), keypool);
@@ -443,7 +443,7 @@ bool ReadKeyValue(CWallet *pwallet,
         {
             int64_t nIndex;
             ssKey >> nIndex;
-            CKeyPool keypool;
+            CKeyPoolEntry keypool;
             ssValue >> keypool;
             pwallet->setKeyPool.insert(nIndex);
 

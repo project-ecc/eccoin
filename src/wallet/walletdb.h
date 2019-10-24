@@ -20,7 +20,7 @@
 
 static const bool DEFAULT_FLUSHWALLET = true;
 
-class CKeyPool;
+class CKeyPoolEntry;
 class CMasterKey;
 class CScript;
 class CWallet;
@@ -108,8 +108,8 @@ public:
 
     bool WriteDefaultKey(const CPubKey &vchPubKey);
 
-    bool ReadPool(int64_t nPool, CKeyPool &keypool);
-    bool WritePool(int64_t nPool, const CKeyPool &keypool);
+    bool ReadPool(int64_t nPool, CKeyPoolEntry &keypool);
+    bool WritePool(int64_t nPool, const CKeyPoolEntry &keypool);
     bool ErasePool(int64_t nPool);
 
     bool WriteMinVersion(int nVersion);
