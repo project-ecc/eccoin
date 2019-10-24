@@ -78,6 +78,31 @@ class AodvTest (BitcoinTestFramework):
         time.sleep(1)
         assert_equal(self.nodes[0].haveroute(key5), True)
 
+        stop_nodes(self.nodes)
+        wait_bitcoinds()
+
+        self.nodes = start_nodes(6, self.options.tmpdir)
+        connect_nodes_bi(self.nodes,0,1)
+        connect_nodes_bi(self.nodes,1,2)
+        connect_nodes_bi(self.nodes,2,3)
+        connect_nodes_bi(self.nodes,3,4)
+        connect_nodes_bi(self.nodes,4,5)
+        self.is_network_split=False
+        self.sync_all()
+
+        for x in range(0, 1):
+            self.nodes[0].generate(1);
+            self.sync_blocks()
+        self.sync_all()
+
+        assert_equal(self.nodes[0].getroutingpubkey(), key0)
+        assert_equal(self.nodes[1].getroutingpubkey(), key1)
+        assert_equal(self.nodes[2].getroutingpubkey(), key2)
+        assert_equal(self.nodes[3].getroutingpubkey(), key3)
+        assert_equal(self.nodes[4].getroutingpubkey(), key4)
+        assert_equal(self.nodes[5].getroutingpubkey(), key5)
+
+
 
 if __name__ == '__main__':
     AodvTest().main(bitcoinConfDict={"beta": 1})
