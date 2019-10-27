@@ -2452,7 +2452,7 @@ bool CConnman::Start(std::string &strNodeError)
     }
     nMaxOutboundTimeframe = MAX_UPLOAD_TIMEFRAME;
 
-    LogPrintf("Generating random routing id...");
+    LogPrintf("Generating random routing id...\n");
 
     if (IsBetaEnabled())
     {
@@ -2460,7 +2460,7 @@ bool CConnman::Start(std::string &strNodeError)
         pub_routing_id = routingKeypool->GetPublicRoutingId();
     }
 
-    LogPrintf("Loading addresses...");
+    LogPrintf("Loading addresses...\n");
     // Load addresses from peers.dat
     int64_t nStart = GetTimeMillis();
     {
@@ -2477,7 +2477,7 @@ bool CConnman::Start(std::string &strNodeError)
             DumpAddresses();
         }
     }
-    LogPrintf("Loading banlist...");
+    LogPrintf("Loading banlist...\n");
     // Load addresses from banlist.dat
     nStart = GetTimeMillis();
     CBanDB bandb;
@@ -2502,7 +2502,7 @@ bool CConnman::Start(std::string &strNodeError)
         DumpBanlist();
     }
 
-    LogPrintf("Starting network threads...");
+    LogPrintf("Starting network threads...\n");
 
     fAddressesInitialized = true;
 

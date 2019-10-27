@@ -5,10 +5,13 @@
 
 #include "beta.h"
 #include "net/aodv.h"
+#include "net/packetmanager.h"
 #include "rpcserver.h"
 #include "util/logger.h"
 #include "util/utilstrencodings.h"
 #include <univalue.h>
+
+#include <sstream>
 
 extern CCriticalSection cs_main;
 
@@ -38,14 +41,17 @@ UniValue getaodvtable(const UniValue &params, bool fHelp)
             HelpExampleCli("getaodvtable", "") +
             HelpExampleRpc("getaodvtable", "")
         );
-    std::map<NodeId, CPubKey> IdKey;
+    std::map<NodeId, std::set<CPubKey> > IdKey;
     std::map<CPubKey, NodeId> KeyId;
     g_aodvtable.GetRoutingTables(IdKey, KeyId);
     UniValue obj(UniValue::VOBJ);
     UniValue IdKeyObj(UniValue::VOBJ);
     for (auto &entry : IdKey)
     {
-        IdKeyObj.push_back(Pair(std::to_string(entry.first), entry.second.Raw64Encoded()));
+        for (auto &path : entry.second)
+        {
+            IdKeyObj.push_back(Pair(std::to_string(entry.first), path.Raw64Encoded()));
+        }
     }
     UniValue KeyIdObj(UniValue::VOBJ);
     for (auto &entry : KeyId)
@@ -159,7 +165,7 @@ UniValue findroute(const UniValue &params, bool fHelp)
     std::vector<unsigned char> vPubKey = DecodeBase64(params[0].get_str().c_str(), &fInvalid);
     if (fInvalid)
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Malformed pubkey base64 encoding");
-    if (g_aodvtable.HaveKeyEntry(CPubKey(vPubKey.begin(), vPubKey.end())))
+    if (g_aodvtable.HaveRoute(CPubKey(vPubKey.begin(), vPubKey.end())))
     {
         return NullUniValue;
     }
@@ -199,9 +205,121 @@ UniValue haveroute(const UniValue &params, bool fHelp)
     std::vector<unsigned char> vPubKey = DecodeBase64(params[0].get_str().c_str(), &fInvalid);
     if (fInvalid)
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Malformed pubkey base64 encoding");
-    if (g_aodvtable.HaveKeyEntry(CPubKey(vPubKey.begin(), vPubKey.end())))
+    if (g_aodvtable.HaveRoute(CPubKey(vPubKey.begin(), vPubKey.end())))
     {
         return true;
     }
-    return g_aodvtable.HaveKeyRoute(CPubKey(vPubKey.begin(), vPubKey.end()));
+    return g_aodvtable.HaveRoute(CPubKey(vPubKey.begin(), vPubKey.end()));
+}
+
+UniValue sendpacket(const UniValue &params, bool fHelp)
+{
+    if (!IsBetaEnabled())
+    {
+        return "This rpc call requires beta features to be enabled (-beta or beta=1) \n";
+    }
+
+    if (fHelp || params.size() != 4)
+    {
+        throw std::runtime_error(
+            "sendpacket\n"
+            "\nattempts to send a network packet to the destination\n"
+            "\nArguments:\n"
+            "1. \"key\"   (string, required) The key of the desired recipient\n"
+            "2. \"protocolId\"   (number, required) The id of the protocol being used for the data\n"
+            "3. \"protocolVersion\"   (number, required) The protocol version being used\n"
+            "4. \"Data\"   (vector of bytes, required) The desired data to be sent \n"
+            "\nExamples:\n" +
+            HelpExampleCli("sendpacket", "\"1139d39a984a0ff431c467f738d534c36824401a4735850561f7ac64e4d49f5b\" 1 1 \"this is example data\"") +
+            HelpExampleRpc("sendpacket", "\"1139d39a984a0ff431c467f738d534c36824401a4735850561f7ac64e4d49f5b\", 1, 1, \"this is example data\"")
+        );
+    }
+    bool fInvalid = false;
+    std::vector<unsigned char> vPubKey = DecodeBase64(params[0].get_str().c_str(), &fInvalid);
+    // TODO : import unsigned values for univalue from upstream, change thse calls to get_uint8
+    uint8_t nProtocolId = (uint8_t)params[1].get_int();
+    uint8_t nProtocolVersion = (uint8_t)params[2].get_int();
+
+    std::vector<uint8_t> vData = StrToBytes(params[3].get_str());
+
+    bool result = g_packetman.SendPacket(vPubKey, nProtocolId, nProtocolVersion, vData);
+    return result;
+}
+
+UniValue readlastpacket(const UniValue &params, bool fHelp)
+{
+    if (!IsBetaEnabled())
+    {
+        return "This rpc call requires beta features to be enabled (-beta or beta=1) \n";
+    }
+
+    if (fHelp || params.size() != 2)
+    {
+        throw std::runtime_error(
+            "sendpacket\n"
+            "\nattempts to send a network packet to the destination\n"
+            "\nArguments:\n"
+            "1. \"protocolId\"   (number, required) The id of the protocol being used for the data\n"
+            "2. \"protocolVersion\"   (number, required) The protocol version being used\n"
+            "\nExamples:\n" +
+            HelpExampleCli("sendpacket", " 1 1") +
+            HelpExampleRpc("sendpacket", "1, 1")
+        );
+    }
+    uint8_t nProtocolId = (uint8_t)params[0].get_int();
+    uint8_t nProtocolVersion = (uint8_t)params[1].get_int();
+    std::string result = "";
+    CPacket lastPacket(nProtocolId, nProtocolVersion);
+    if (g_packetman.GetLastPacket(nProtocolId, lastPacket))
+    {
+        std::vector<uint8_t> data = lastPacket.GetData();
+        std::stringstream hexstream;
+        hexstream << std::hex;
+        for (uint8_t &byte : data)
+        {
+            hexstream << std::setw(2) << std::setfill('0') << static_cast<int>(byte);
+        }
+        result = hexstream.str();
+    }
+    return result;
+}
+
+UniValue getbuffer(const UniValue &params, bool fHelp)
+{
+    if (!IsBetaEnabled())
+    {
+        return "This rpc call requires beta features to be enabled (-beta or beta=1) \n";
+    }
+
+    if (fHelp || params.size() != 1)
+    {
+        throw std::runtime_error(
+            "getbuffer\n"
+            "\nattempts to get the buffer for a network service protocol\n"
+            "\nArguments:\n"
+            "1. \"protocolId\"   (number, required) The id of the protocol being requested\n"
+            "\nExamples:\n" +
+            HelpExampleCli("getbuffer", "1") +
+            HelpExampleRpc("getbuffer", "1")
+        );
+    }
+    uint8_t nProtocolId = (uint8_t)params[0].get_int();
+    PacketBuffer buffer;
+    UniValue obj(UniValue::VOBJ);
+    if (g_packetman.GetBuffer(nProtocolId, buffer))
+    {
+        uint64_t counter = 0;
+        for (auto &entry: buffer.vRecievedPackets)
+        {
+            std::stringstream hexstream;
+            hexstream << std::hex;
+            for (uint8_t &byte : entry.GetData())
+            {
+                hexstream << std::setw(2) << std::setfill('0') << static_cast<int>(byte);
+            }
+            obj.push_back(Pair(std::to_string(counter), hexstream.str()));
+            counter++;
+        }
+    }
+    return obj;
 }

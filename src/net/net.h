@@ -502,6 +502,20 @@ public:
     }
 
     template <typename... Args>
+    void PushMessageToId(const NodeId &dest, const std::string sCommand, Args &&... args)
+    {
+        LOCK(cs_vNodes);
+        for (auto &&node : vNodes)
+        {
+            if (NodeFullyConnected(node) && node->GetId() == dest)
+            {
+                PushMessage(node, sCommand, std::forward<Args>(args)...);
+                break;
+            }
+        }
+    }
+
+    template <typename... Args>
     void PushMessageAll(const std::string sCommand, Args &&... args)
     {
         LOCK(cs_vNodes);
