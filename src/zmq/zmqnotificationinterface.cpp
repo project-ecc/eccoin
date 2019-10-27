@@ -23,10 +23,10 @@ CZMQNotificationInterface::~CZMQNotificationInterface()
     }
 }
 
-std::list<const CZMQAbstractNotifier*> CZMQNotificationInterface::GetActiveNotifiers() const
+std::list<const CZMQAbstractNotifier *> CZMQNotificationInterface::GetActiveNotifiers() const
 {
-    std::list<const CZMQAbstractNotifier*> result;
-    for (const auto* n : notifiers)
+    std::list<const CZMQAbstractNotifier *> result;
+    for (const auto *n : notifiers)
     {
         result.push_back(n);
     }
@@ -164,4 +164,4 @@ void CZMQNotificationInterface::SyncTransaction(const CTransactionRef &ptx, cons
     }
 }
 
-CZMQNotificationInterface* g_zmq_notification_interface = NULL;
+CZMQNotificationInterface *g_zmq_notification_interface = NULL;
