@@ -14,20 +14,8 @@
 #include <mutex>
 #include <string>
 
+#include "locklocation.h"
 #include "util/utilstrencodings.h"
-
-enum LockType
-{
-    RECURSIVE_MUTEX, // CCriticalSection
-    SHARED_MUTEX, // CSharedCriticalSection
-    RECURSIVE_SHARED_MUTEX, // CRecursiveSharedCriticalSection
-};
-
-enum OwnershipType
-{
-    SHARED,
-    EXCLUSIVE
-};
 
 #ifdef DEBUG_LOCKORDER
 #include <sys/syscall.h>
@@ -46,62 +34,6 @@ inline uint64_t getTid(void)
     return tid;
 }
 #endif
-
-struct CLockLocation
-{
-    CLockLocation(const char *pszName,
-        const char *pszFile,
-        int nLine,
-        bool fTryIn,
-        OwnershipType eOwnershipIn,
-        LockType eLockTypeIn)
-    {
-        mutexName = pszName;
-        sourceFile = pszFile;
-        sourceLine = nLine;
-        fTry = fTryIn;
-        eOwnership = eOwnershipIn;
-        eLockType = eLockTypeIn;
-        fWaiting = true;
-    }
-
-    std::string ToString() const
-    {
-        return mutexName + "  " + sourceFile + ":" + itostr(sourceLine) + (fTry ? " (TRY)" : "") +
-               (eOwnership == OwnershipType::EXCLUSIVE ? " (EXCLUSIVE)" : "") + (fWaiting ? " (WAITING)" : "");
-    }
-
-    bool GetTry() const { return fTry; }
-    OwnershipType GetOwnershipType() const { return eOwnership; }
-    bool GetWaiting() const { return fWaiting; }
-    void ChangeWaitingToHeld() { fWaiting = false; }
-    LockType GetLockType() const { return eLockType; }
-private:
-    bool fTry;
-    std::string mutexName;
-    std::string sourceFile;
-    int sourceLine;
-    OwnershipType eOwnership; // signifies Exclusive Ownership, this is always true for a CCriticalSection
-    LockType eLockType;
-    bool fWaiting; // determines if lock is held or is waiting to be held
-};
-
-// pair ( cs : lock location )
-typedef std::pair<void *, CLockLocation> LockStackEntry;
-typedef std::vector<LockStackEntry> LockStack;
-
-// cs : set of thread ids
-typedef std::map<void *, std::set<uint64_t> > ReadLocksHeld;
-// cs : set of thread ids
-typedef std::map<void *, std::set<uint64_t> > WriteLocksHeld;
-
-// cs : set of thread ids
-typedef std::map<void *, std::set<uint64_t> > ReadLocksWaiting;
-// cs : set of thread ids
-typedef std::map<void *, std::set<uint64_t> > WriteLocksWaiting;
-
-// thread id : vector of locks held (both shared and exclusive, waiting and held)
-typedef std::map<uint64_t, LockStack> LocksHeldByThread;
 
 
 struct LockData
