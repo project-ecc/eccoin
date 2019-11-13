@@ -6,7 +6,9 @@
 #include "coins.h"
 #include "fs.h"
 #include "main.h"
+#include "net/aodv.h"
 #include "net/messages.h"
+#include "net/packetmanager.h"
 #include "threaddeadlock.h"
 #include "txdb.h"
 #include "wallet/wallet.h"
@@ -75,3 +77,6 @@ CWallet *pwalletMain = nullptr;
 CNetworkManager *pnetMan = nullptr;
 std::unique_ptr<CConnman> g_connman;
 std::unique_ptr<PeerLogicValidation> peerLogic;
+
+CAodvRouteTable g_aodvtable;
+CPacketManager g_packetman;

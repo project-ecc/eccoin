@@ -89,30 +89,6 @@ enum WalletFeature
     FEATURE_LATEST = 60000
 };
 
-
-/** A key pool entry */
-class CKeyPool
-{
-public:
-    int64_t nTime;
-    CPubKey vchPubKey;
-
-    CKeyPool();
-    CKeyPool(const CPubKey &vchPubKeyIn);
-
-    ADD_SERIALIZE_METHODS
-
-    template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream &s, Operation ser_action)
-    {
-        int nVersion = s.GetVersion();
-        if (!(s.GetType() & SER_GETHASH))
-            READWRITE(nVersion);
-        READWRITE(nTime);
-        READWRITE(vchPubKey);
-    }
-};
-
 namespace AddressBookType
 {
 extern const char *UNKNOWN;
@@ -726,7 +702,7 @@ public:
 
     bool NewKeyPool();
     bool TopUpKeyPool(unsigned int kpSize = 0);
-    void ReserveKeyFromKeyPool(int64_t &nIndex, CKeyPool &keypool);
+    void ReserveKeyFromKeyPool(int64_t &nIndex, CKeyPoolEntry &keypool);
     void KeepKey(int64_t nIndex);
     void ReturnKey(int64_t nIndex);
     bool GetKeyFromPool(CPubKey &key);

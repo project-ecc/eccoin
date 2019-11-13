@@ -21,6 +21,7 @@
 #include "merkleblock.h"
 #include "net/addrman.h"
 #include "net/nodestate.h"
+#include "net/packetmanager.h"
 #include "net/protocol.h"
 #include "networks/netman.h"
 #include "networks/networktemplate.h"
@@ -1211,8 +1212,7 @@ bool static ProcessMessage(CNode *pfrom,
             CPubKey peerPubKey;
             vRecv >> peerPubKey;
             pfrom->routing_id = peerPubKey;
-            g_aodvtable.AddPeerKeyId(peerPubKey, pfrom->GetId(), true);
-            g_aodvtable.AddPeerKeyId(peerPubKey, pfrom->GetId(), true);
+            g_aodvtable.AddRoute(peerPubKey, pfrom->GetId());
         }
     }
 
@@ -2078,7 +2078,7 @@ bool static ProcessMessage(CNode *pfrom,
         CPubKey searchKey;
         vRecv >> nonce;
         vRecv >> searchKey;
-        bool peerKnown = g_aodvtable.HaveKeyEntry(searchKey) || connman.GetRoutingKey() == searchKey;
+        bool peerKnown = g_aodvtable.HaveRoute(searchKey) || connman.GetRoutingKey() == searchKey;
         if (peerKnown)
         {
             connman.PushMessage(pfrom, NetMsgType::RREP, nonce, searchKey, peerKnown);
@@ -2122,6 +2122,59 @@ bool static ProcessMessage(CNode *pfrom,
     else if (strCommand == NetMsgType::RERR)
     {
         // intentionally left blank
+        // to be used for error reporting later
+    }
+
+    else if (strCommand == NetMsgType::SPH)
+    {
+        uint64_t nonce = 0;
+        CPubKey searchKey;
+        CPacketHeader newHeader;
+        vRecv >> nonce;
+        vRecv >> searchKey;
+        vRecv >> newHeader;
+        bool ours = connman.GetRoutingKey() == searchKey;
+        if (ours)
+        {
+            if (!g_packetman.ProcessPacketHeader(nonce, newHeader))
+            {
+                // TODO : send an error back to the sender if possible
+            }
+        }
+        else
+        {
+            NodeId peerNode;
+            if (g_aodvtable.GetKeyNode(searchKey, peerNode))
+            {
+                connman.PushMessageToId(peerNode, NetMsgType::SPH, nonce, searchKey, newHeader);
+            }
+        }
+    }
+
+    else if (strCommand == NetMsgType::SPD)
+    {
+        uint64_t nonce = 0;
+        CPubKey searchKey;
+        CPacketDataSegment newSegment;
+        vRecv >> nonce;
+        vRecv >> searchKey;
+        vRecv >> newSegment;
+        bool ours = connman.GetRoutingKey() == searchKey;
+        if (ours)
+        {
+            if (!g_packetman.ProcessDataSegment(nonce, newSegment))
+            {
+                // TODO : send an error back to the sender if possible
+            }
+        }
+        else
+        {
+            NodeId peerNode;
+            if (g_aodvtable.GetKeyNode(searchKey, peerNode))
+            {
+                connman.PushMessageToId(peerNode, NetMsgType::SPD, nonce, searchKey, newSegment);
+            }
+        }
     }
 
     else

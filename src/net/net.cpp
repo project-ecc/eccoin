@@ -2413,6 +2413,7 @@ CConnman::CConnman(uint64_t nSeed0In, uint64_t nSeed1In) : nSeed0(nSeed0In), nSe
     nMaxAddnode = 0;
     nBestHeight = 0;
     interruptNet.store(false);
+    routingKeypool = new CNetKeyStore(strRoutingFile);
 }
 
 NodeId CConnman::GetNewNodeId() { return nLastNodeId.fetch_add(1, std::memory_order_relaxed); }
@@ -2451,16 +2452,15 @@ bool CConnman::Start(std::string &strNodeError)
     }
     nMaxOutboundTimeframe = MAX_UPLOAD_TIMEFRAME;
 
-    LogPrintf("Generating random routing id...");
+    LogPrintf("Generating random routing id...\n");
 
     if (IsBetaEnabled())
     {
-        pub_routing_key.MakeNewKey(true);
-        pub_routing_id = pub_routing_key.GetPubKey();
-        assert(pub_routing_key.VerifyPubKey(pub_routing_id));
+        routingKeypool->Load();
+        pub_routing_id = routingKeypool->GetPublicRoutingId();
     }
 
-    LogPrintf("Loading addresses...");
+    LogPrintf("Loading addresses...\n");
     // Load addresses from peers.dat
     int64_t nStart = GetTimeMillis();
     {
@@ -2477,7 +2477,7 @@ bool CConnman::Start(std::string &strNodeError)
             DumpAddresses();
         }
     }
-    LogPrintf("Loading banlist...");
+    LogPrintf("Loading banlist...\n");
     // Load addresses from banlist.dat
     nStart = GetTimeMillis();
     CBanDB bandb;
@@ -2502,7 +2502,7 @@ bool CConnman::Start(std::string &strNodeError)
         DumpBanlist();
     }
 
-    LogPrintf("Starting network threads...");
+    LogPrintf("Starting network threads...\n");
 
     fAddressesInitialized = true;
 

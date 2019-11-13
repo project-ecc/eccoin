@@ -25,6 +25,7 @@
 #include "net/addrman.h"
 #include "net/netbase.h"
 #include "net/protocol.h"
+#include "net/routingdb.h"
 #include "networks/netman.h"
 #include "random.h"
 #include "streams.h"
@@ -94,6 +95,8 @@ static const ServiceFlags REQUIRED_SERVICES = ServiceFlags(NODE_NETWORK);
 // Default 24-hour ban.
 // NOTE: When adjusting this, update rpcnet:setban's help ("24h")
 static const unsigned int DEFAULT_MISBEHAVING_BANTIME = 60 * 60 * 24;
+
+static const std::string strRoutingFile = "routing.dat";
 
 /** Subversion as sent to the P2P network in `version` messages */
 extern std::string strSubVersion;
@@ -499,6 +502,20 @@ public:
     }
 
     template <typename... Args>
+    void PushMessageToId(const NodeId &dest, const std::string sCommand, Args &&... args)
+    {
+        LOCK(cs_vNodes);
+        for (auto &&node : vNodes)
+        {
+            if (NodeFullyConnected(node) && node->GetId() == dest)
+            {
+                PushMessage(node, sCommand, std::forward<Args>(args)...);
+                break;
+            }
+        }
+    }
+
+    template <typename... Args>
     void PushMessageAll(const std::string sCommand, Args &&... args)
     {
         LOCK(cs_vNodes);
@@ -754,7 +771,7 @@ private:
     std::atomic<bool> interruptNet;
     thread_group netThreads;
 
-    CKey pub_routing_key;
+    CNetKeyStore *routingKeypool;
     CPubKey pub_routing_id;
 };
 
