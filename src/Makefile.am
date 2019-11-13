@@ -84,6 +84,7 @@ BITCOIN_CORE_H = \
   crypto/hash.h \
   dbwrapper.h \
   deadlock-detection/locklocation.h \
+  deadlock-detection/lockorder.h \
   deadlock-detection/threaddeadlock.h \
   fs.h \
   httprpc.h \
@@ -182,7 +183,7 @@ libbitcoin_server_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES) $(MINIUPNPC_CP
 libbitcoin_server_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIC_FLAGS) $(PIE_FLAGS)
 libbitcoin_server_a_SOURCES = \
   globals.cpp \
-  deadlock-detection/locklocation.cpp \
+  deadlock-detection/lockorder.cpp \
   deadlock-detection/threaddeadlock.cpp \
   sync.cpp \
   amount.cpp \

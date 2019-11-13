@@ -14,7 +14,7 @@
 #include <mutex>
 #include <string>
 
-#include "locklocation.h"
+#include "lockorder.h"
 #include "util/utilstrencodings.h"
 
 #ifdef DEBUG_LOCKORDER
@@ -51,6 +51,7 @@ struct LockData
     ReadLocksHeld readlocksheld;
     WriteLocksHeld writelocksheld;
     LocksHeldByThread locksheldbythread;
+    CLockOrderTracker ordertracker;
     std::mutex dd_mutex;
 };
 
@@ -58,11 +59,9 @@ extern LockData lockdata;
 
 void push_lock(void *c, const CLockLocation &locklocation, LockType type, OwnershipType isExclusive, bool fTry);
 void DeleteLock(void *cs);
-void _remove_lock_critical_exit(void *cs);
 void remove_lock_critical_exit(void *cs);
 std::string LocksHeld();
 void SetWaitingToHeld(void *c, OwnershipType isExclusive);
-bool HasAnyOwners(void *c);
 std::string _LocksHeld();
 
 #else // NOT DEBUG_LOCKORDER

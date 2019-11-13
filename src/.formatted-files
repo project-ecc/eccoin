@@ -62,8 +62,9 @@ crypto/hash.cpp
 crypto/hash.h
 dbwrapper.cpp
 dbwrapper.h
-deadlock-detection/locklocation.cpp
 deadlock-detection/locklocation.h
+deadlock-detection/lockorder.cpp
+deadlock-detection/lockorder.h
 deadlock-detection/threaddeadlock.cpp
 deadlock-detection/threaddeadlock.h
 eccoind.cpp

@@ -38,85 +38,7 @@ enum OwnershipType
 
 struct CLockLocation
 {
-    /**
-     * Constructor that sets the
-     *
-     * @param pszName is a C String that is the name of the critical section being locked
-     * @param pszFile is a C String that is the name of the file in which the critical sction was locked
-     * @param nLine is a number that is the line of the file on which this lock occured
-     * @param fTryIn is a boolean that indicates if this was a lock() or a try_lock()
-     * @param eOwnershipIn is an OwnershipType enum value that describes if the lock is shared or exclusive in ownership
-     * @param eLockTypeIn is a LockType enum value that describes what type of critical section has been locked
-     */
-    CLockLocation(const char *pszName,
-        const char *pszFile,
-        int nLine,
-        bool fTryIn,
-        OwnershipType eOwnershipIn,
-        LockType eLockTypeIn);
-
-    /**
-     * Returns this as a descriptive readable string
-     *
-     * @return std::string
-     */
-    std::string ToString() const;
-
-    /**
-     * Returns a boolean that describes if ownership of this mutex was taken by a lock or a try lock
-     *
-     * @return boolean
-     */
-    bool GetTry() const;
-
-    /**
-     * Returns the ownership type of the lock used to lock the mutex
-     *
-     * @return OwnershipType
-     */
-    OwnershipType GetOwnershipType() const;
-
-    /**
-     * Returns a boolean that describes if this lock is held or is waiting
-     *
-     * @return boolean
-     */
-    bool GetWaiting() const;
-
-    /**
-     * Changes the status of the lock from waiting to held
-     */
-    void ChangeWaitingToHeld();
-
-    /**
-     * Returns the tpye of lock being locked
-     *
-     * @return LockType
-     */
-    LockType GetLockType() const;
-
-    /**
-     * Returns the file name this mutex was locked in as a string
-     *
-     * @return std::string
-     */
-    std::string GetFileName() const;
-
-    /**
-     * Returns the line number of the file in which this mutex was locked as a string
-     *
-     * @return std::string
-     */
-    int GetLineNumber() const;
-
-    /**
-     * Returns the name of this mutex as a string
-     *
-     * @return std::string
-     */
-    std::string GetMutexName() const;
-
-protected:
+public:
     /// @var boolean fTry
     /// Determines if this CLockLocation was created by locking or try locking a critical section
     bool fTry;
@@ -138,6 +60,48 @@ protected:
     /// @var boolean fWaiting
     /// determines if lock is held or is waiting to be held
     bool fWaiting;
+
+public:
+    /**
+     * Constructor that sets the
+     *
+     * @param pszName is a C String that is the name of the critical section being locked
+     * @param pszFile is a C String that is the name of the file in which the critical sction was locked
+     * @param nLine is a number that is the line of the file on which this lock occured
+     * @param fTryIn is a boolean that indicates if this was a lock() or a try_lock()
+     * @param eOwnershipIn is an OwnershipType enum value that describes if the lock is shared or exclusive in ownership
+     * @param eLockTypeIn is a LockType enum value that describes what type of critical section has been locked
+     */
+    CLockLocation(const char *pszName,
+        const char *pszFile,
+        int nLine,
+        bool fTryIn,
+        OwnershipType eOwnershipIn,
+        LockType eLockTypeIn)
+    {
+        mutexName = pszName;
+        sourceFile = pszFile;
+        sourceLine = nLine;
+        fTry = fTryIn;
+        eOwnership = eOwnershipIn;
+        eLockType = eLockTypeIn;
+        fWaiting = true;
+    }
+
+    /**
+     * Changes the status of the lock from waiting to held
+     */
+    void ChangeWaitingToHeld() { fWaiting = false; }
+    /**
+     * Returns this as a descriptive readable string
+     *
+     * @return std::string
+     */
+    std::string ToString() const
+    {
+        return mutexName + "  " + sourceFile + ":" + std::to_string(sourceLine) + (fTry ? " (TRY)" : "") +
+               (eOwnership == OwnershipType::EXCLUSIVE ? " (EXCLUSIVE)" : "") + (fWaiting ? " (WAITING)" : "");
+    }
 };
 
 /// @typedef std::pair <cs : CLockLocation struct holding info about the cs>
