@@ -44,6 +44,7 @@ CZMQNotificationInterface *CZMQNotificationInterface::CreateWithArguments(
     factories["pubhashtx"] = CZMQAbstractNotifier::Create<CZMQPublishHashTransactionNotifier>;
     factories["pubrawblock"] = CZMQAbstractNotifier::Create<CZMQPublishRawBlockNotifier>;
     factories["pubrawtx"] = CZMQAbstractNotifier::Create<CZMQPublishRawTransactionNotifier>;
+    factories["pubsystem"] = CZMQAbstractNotifier::Create<CZMQPublishSystemNotifier>;
 
     for (std::map<std::string, CZMQNotifierFactory>::const_iterator i = factories.begin(); i != factories.end(); ++i)
     {
@@ -109,6 +110,9 @@ bool CZMQNotificationInterface::Initialize()
         return false;
     }
 
+    // This sleep is needed so that any zmq messages published immediately after the ZMQ bind call are not dropped
+    MilliSleep(100);
+
     return true;
 }
 
@@ -153,6 +157,23 @@ void CZMQNotificationInterface::SyncTransaction(const CTransactionRef &ptx, cons
     {
         CZMQAbstractNotifier *notifier = *i;
         if (notifier->NotifyTransaction(ptx))
+        {
+            i++;
+        }
+        else
+        {
+            notifier->Shutdown();
+            i = notifiers.erase(i);
+        }
+    }
+}
+
+void CZMQNotificationInterface::SystemMessage(const std::string &message)
+{
+    for (std::list<CZMQAbstractNotifier *>::iterator i = notifiers.begin(); i != notifiers.end();)
+    {
+        CZMQAbstractNotifier *notifier = *i;
+        if (notifier->NotifySystem(message))
         {
             i++;
         }

@@ -173,6 +173,7 @@ void Interrupt(thread_group &threadGroup)
 
 void Shutdown(thread_group &threadGroup)
 {
+    GetMainSignals().SystemMessage("SHUTDOWN: INITIATED");
     LogPrintf("%s: In progress...\n", __func__);
     static CCriticalSection cs_Shutdown;
     TRY_LOCK(cs_Shutdown, lockShutdown);
@@ -1644,6 +1645,7 @@ bool AppInit2(thread_group &threadGroup)
 
     SetRPCWarmupFinished();
     LogPrintf("Done loading\n");
+    GetMainSignals().SystemMessage("STARTUP: RPC AVAILABLE");
 
 
     if (pwalletMain)
