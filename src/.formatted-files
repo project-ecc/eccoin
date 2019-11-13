@@ -62,6 +62,8 @@ crypto/hash.cpp
 crypto/hash.h
 dbwrapper.cpp
 dbwrapper.h
+deadlock-detection/threaddeadlock.cpp
+deadlock-detection/threaddeadlock.h
 eccoind.cpp
 fs.cpp
 fs.h
@@ -161,8 +163,6 @@ support/pagelocker.cpp
 support/pagelocker.h
 sync.cpp
 sync.h
-threaddeadlock.cpp
-threaddeadlock.h
 threadgroup.h
 threadsafety.h
 timedata.cpp
