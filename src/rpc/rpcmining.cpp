@@ -1287,12 +1287,6 @@ UniValue estimatefee(const UniValue &params, bool fHelp)
     if (nBlocks < 1)
         nBlocks = 1;
 
-    /* This is a temporary fix pending fee estimation working correctly and/or properly handling empty blocks */
-
-    return 1;
-
-    /* End of temporary fix */
-
     CFeeRate feeRate = mempool.estimateFee(nBlocks);
     if (feeRate == CFeeRate(0))
         return -1.0;
