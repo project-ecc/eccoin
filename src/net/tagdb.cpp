@@ -166,6 +166,11 @@ bool ReadKeyValue(CNetTagStore *pwallet,
         else if (strType == "lastpublictag")
         {
             ssValue >> pwallet->publicRoutingTag;
+            if (!pwallet->LoadTag(pwallet->publicRoutingTag))
+            {
+                strErr = "Error reading tag database: lastpublictag LoadTag failed";
+                return false;
+            }
         }
         else if (strType == "pool")
         {

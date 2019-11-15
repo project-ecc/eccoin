@@ -1200,7 +1200,7 @@ bool static ProcessMessage(CNode *pfrom,
             pfrom->nNetworkServiceVersion = netservice;
             if (netservice >= MIN_AODV_VERSION)
             {
-                connman.PushMessage(pfrom, NetMsgType::NSVERACK, g_connman->GetRoutingKey());
+                connman.PushMessage(pfrom, NetMsgType::NSVERACK, g_connman->GetPublicTagPubKey());
             }
         }
     }
@@ -2078,7 +2078,7 @@ bool static ProcessMessage(CNode *pfrom,
         CPubKey searchKey;
         vRecv >> nonce;
         vRecv >> searchKey;
-        bool peerKnown = g_aodvtable.HaveRoute(searchKey) || connman.GetRoutingKey() == searchKey;
+        bool peerKnown = g_aodvtable.HaveRoute(searchKey) || connman.GetPublicTagPubKey() == searchKey;
         if (peerKnown)
         {
             connman.PushMessage(pfrom, NetMsgType::RREP, nonce, searchKey, peerKnown);
@@ -2133,7 +2133,7 @@ bool static ProcessMessage(CNode *pfrom,
         vRecv >> nonce;
         vRecv >> searchKey;
         vRecv >> newHeader;
-        bool ours = connman.GetRoutingKey() == searchKey;
+        bool ours = connman.GetPublicTagPubKey() == searchKey;
         if (ours)
         {
             if (!g_packetman.ProcessPacketHeader(nonce, newHeader))
@@ -2159,7 +2159,7 @@ bool static ProcessMessage(CNode *pfrom,
         vRecv >> nonce;
         vRecv >> searchKey;
         vRecv >> newSegment;
-        bool ours = connman.GetRoutingKey() == searchKey;
+        bool ours = connman.GetPublicTagPubKey() == searchKey;
         if (ours)
         {
             if (!g_packetman.ProcessDataSegment(nonce, newSegment))
