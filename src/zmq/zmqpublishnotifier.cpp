@@ -150,7 +150,6 @@ bool CZMQPublishRawBlockNotifier::NotifyBlock(const CBlockIndex *pindex)
     const Consensus::Params &consensusParams = pnetMan->getActivePaymentNetwork()->GetConsensus();
     CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
     {
-        LOCK(cs_blockstorage);
         CBlock block;
         if (!ReadBlockFromDisk(block, pindex, consensusParams))
         {

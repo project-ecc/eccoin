@@ -147,7 +147,6 @@ bool CChainManager::InitBlockIndex(const CNetworkTemplate &chainparams)
             if (!FindBlockPos(state, blockPos, nBlockSize + 8, 0, block.GetBlockTime()))
                 return error("InitBlockIndex(): FindBlockPos failed");
             {
-                LOCK(cs_blockstorage);
                 if (!WriteBlockToDisk(block, blockPos, chainparams.MessageStart()))
                     return error("InitBlockIndex(): writing genesis block to disk failed");
             }
@@ -415,7 +414,6 @@ bool CChainManager::LoadExternalBlockFile(const CNetworkTemplate &chainparams, F
                     std::pair<std::multimap<uint256, CDiskBlockPos>::iterator,
                         std::multimap<uint256, CDiskBlockPos>::iterator>
                         range = mapBlocksUnknownParent.equal_range(head);
-                    LOCK(cs_blockstorage);
                     while (range.first != range.second)
                     {
                         std::multimap<uint256, CDiskBlockPos>::iterator it = range.first;

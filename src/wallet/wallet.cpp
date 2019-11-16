@@ -1249,7 +1249,6 @@ int CWallet::ScanForWalletTransactions(CBlockIndex *pindexStart, bool fUpdate)
         {
             CBlock block;
             {
-                LOCK(cs_blockstorage);
                 ReadBlockFromDisk(block, pindex, pnetMan->getActivePaymentNetwork()->GetConsensus());
             }
             for (auto &ptx : block.vtx)
@@ -3301,7 +3300,6 @@ bool CWallet::CreateCoinStake(const CKeyStore &keystore,
         // Read block header
         CBlock block;
         {
-            LOCK(cs_blockstorage);
             CDiskBlockPos blockPos(txindex.nFile, txindex.nPos);
             if (!ReadBlockFromDisk(block, blockPos, pnetMan->getActivePaymentNetwork()->GetConsensus()))
                 continue;

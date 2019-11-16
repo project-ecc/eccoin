@@ -829,7 +829,6 @@ void static ProcessGetData(CNode *pfrom, CConnman &connman, const Consensus::Par
                 // Send block from disk
                 CBlock block;
                 {
-                    LOCK(cs_blockstorage);
                     if (!ReadBlockFromDisk(block, pindex, consensusParams))
                     {
                         LogPrint("net", "cannot load block from disk, no response");
