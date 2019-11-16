@@ -1035,6 +1035,10 @@ bool ReceivedBlockTransactions(const CBlock &block,
     CBlockIndex *pindexNew,
     const CDiskBlockPos &pos)
 {
+    // for setBlockIndexCandidates
+    AssertLockHeld(cs_main);
+    // for nStatus and nSequenceId
+    RECURSIVEWRITELOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
     pindexNew->nTx = block.vtx.size();
     pindexNew->nChainTx = 0;
     pindexNew->nFile = pos.nFile;
