@@ -46,6 +46,7 @@ protected:
     virtual void BlockChecked(const CBlock &, const CValidationState &) {}
     virtual void GetScriptForMining(boost::shared_ptr<CReserveScript> &){};
     virtual void NewPoWValidBlock(CBlockIndex *pindex, const CBlock *block) {}
+    virtual void SystemMessage(const std::string &message) {}
     friend void ::RegisterValidationInterface(CValidationInterface *);
     friend void ::UnregisterValidationInterface(CValidationInterface *);
     friend void ::UnregisterAllValidationInterfaces();
@@ -73,6 +74,8 @@ struct CMainSignals
      * yet.
      */
     boost::signals2::signal<void(CBlockIndex *, const CBlock *)> NewPoWValidBlock;
+    /** Notifies listeners that a system message notification has been raised */
+    boost::signals2::signal<void(const std::string &)> SystemMessage;
 };
 
 CMainSignals &GetMainSignals();

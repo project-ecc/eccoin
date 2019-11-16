@@ -34,6 +34,7 @@ public:
 
     virtual bool NotifyBlock(const CBlockIndex *pindex);
     virtual bool NotifyTransaction(const CTransactionRef &ptx);
+    virtual bool NotifySystem(const std::string &message);
 
 protected:
     void *psocket;

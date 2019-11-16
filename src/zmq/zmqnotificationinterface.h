@@ -29,6 +29,7 @@ protected:
     // CValidationInterface
     void SyncTransaction(const CTransactionRef &ptx, const CBlock *pblock, int txIndex = -1);
     void UpdatedBlockTip(const CBlockIndex *pindex);
+    void SystemMessage(const std::string &message);
 
 private:
     CZMQNotificationInterface();

@@ -174,3 +174,12 @@ bool CZMQPublishRawTransactionNotifier::NotifyTransaction(const CTransactionRef 
     int rc = zmq_send_multipart(psocket, "rawtx", 5, &(*ss.begin()), ss.size(), 0);
     return rc == 0;
 }
+
+bool CZMQPublishSystemNotifier::NotifySystem(const std::string &message)
+{
+    LogPrint("zmq", "zmq: Publish system %s\n", message);
+    CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
+    ss << message;
+    int rc = zmq_send_multipart(psocket, "system", 6, &(*ss.begin()), ss.size(), 0);
+    return rc == 0;
+}
