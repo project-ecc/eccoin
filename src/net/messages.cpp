@@ -240,7 +240,7 @@ static void Misbehaving(CNode *node, int howmuch, const std::string &reason)
 // Returns a bool indicating whether we requested this block.
 bool MarkBlockAsReceived(const uint256 &hash)
 {
-    LOCK(cs_main);
+    AssertLockHeld(cs_main);
     std::map<uint256, std::pair<NodeId, std::list<QueuedBlock>::iterator> >::iterator itInFlight =
         mapBlocksInFlight.find(hash);
     if (itInFlight != mapBlocksInFlight.end())
@@ -447,6 +447,7 @@ void MarkBlockAsInFlight(NodeId nodeid,
     const Consensus::Params &consensusParams,
     const CBlockIndex *pindex = nullptr)
 {
+    AssertLockHeld(cs_main);
     CNodeStateAccessor state(nodestateman, nodeid);
     assert(state.IsNull() == false);
 
@@ -2741,6 +2742,7 @@ bool SendMessages(CNode *pto, CConnman &connman)
         {
             uint32_t nFetchFlags = GetFetchFlags(pto, pindex->pprev, consensusParams);
             vGetData.push_back(CInv(MSG_BLOCK | nFetchFlags, pindex->GetBlockHash()));
+            LOCK(cs_main);
             MarkBlockAsInFlight(pto->GetId(), pindex->GetBlockHash(), consensusParams, pindex);
             LogPrint("net", "Requesting block %s (%d) peer=%d\n", pindex->GetBlockHash().ToString(), pindex->nHeight,
                 pto->id);
