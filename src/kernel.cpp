@@ -118,7 +118,6 @@ bool ComputeNextStakeModifier(const CBlockIndex *pindexPrev, const CTransaction 
     CBlockIndex *index = pnetMan->getChainActive()->LookupBlockIndex(blockHashOfTx);
 
     {
-        LOCK(cs_blockstorage);
         if (!ReadBlockFromDisk(block, index, pnetMan->getActivePaymentNetwork()->GetConsensus()))
         {
             // unable to read block of previous transaction
@@ -275,9 +274,7 @@ bool CheckProofOfStake(int nHeight, const CTransaction &tx, uint256 &hashProofOf
     // Read block header
     CBlock block;
     CBlockIndex *index = pnetMan->getChainActive()->LookupBlockIndex(blockHashOfTx);
-
     {
-        LOCK(cs_blockstorage);
         if (!ReadBlockFromDisk(block, index, pnetMan->getActivePaymentNetwork()->GetConsensus()))
         {
             LogPrint("kernel", "CheckProofOfStake() : read block failed");

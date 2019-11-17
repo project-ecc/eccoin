@@ -1,4 +1,5 @@
 // Copyright (c) 2019 Greg Griffith
+// Copyright (c) 2019 The Bitcoin Unlimited developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -16,69 +17,45 @@
 #include <shared_mutex>
 #include <thread>
 
-BOOST_FIXTURE_TEST_SUITE(deadlock_test6, EmptySuite)
+BOOST_FIXTURE_TEST_SUITE(deadlock_test10, EmptySuite)
 
 #ifdef DEBUG_LOCKORDER // this ifdef covers the rest of the file
 
 CSharedCriticalSection mutexA;
 CSharedCriticalSection mutexB;
-std::atomic<bool> done{false};
-std::atomic<int> lock_exceptions{0};
-std::atomic<int> writelocks{0};
-std::atomic<int> readlocks{0};
 
 void Thread1()
 {
-    READLOCK(mutexA);
-    readlocks++;
-    while (writelocks != 1)
-        ;
-    try
     {
-        READLOCK(mutexB);
+    WRITELOCK(mutexA);
+    WRITELOCK(mutexB);
     }
-    catch (const std::logic_error &)
-    {
-        lock_exceptions++;
-    }
-    while (!done)
-        ;
 }
 
 void Thread2()
 {
-    while (readlocks != 1)
-        ;
+    {
     WRITELOCK(mutexB);
-    writelocks++;
-    try
-    {
-        WRITELOCK(mutexA);
+    BOOST_CHECK_THROW(WRITELOCK(mutexA), std::logic_error);
     }
-    catch (const std::logic_error &)
-    {
-        lock_exceptions++;
-    }
-    while (!done)
-        ;
 }
 
-BOOST_AUTO_TEST_CASE(TEST_6)
+
+BOOST_AUTO_TEST_CASE(TEST_10)
 {
     std::thread thread1(Thread1);
-    std::thread thread2(Thread2);
-    while (!lock_exceptions)
-        ;
-    done = true;
     thread1.join();
+    std::thread thread2(Thread2);
     thread2.join();
-    BOOST_CHECK(lock_exceptions == 1);
     lockdata.ordertracker.clear();
 }
 
 #else
 
-BOOST_AUTO_TEST_CASE(EMPTY_TEST_6) {}
+BOOST_AUTO_TEST_CASE(EMPTY_TEST_10)
+{
+
+}
 
 #endif
 

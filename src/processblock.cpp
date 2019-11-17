@@ -74,7 +74,6 @@ bool DisconnectTip(CValidationState &state, const Consensus::Params &consensusPa
     std::shared_ptr<CBlock> pblock = std::make_shared<CBlock>();
     CBlock &block = *pblock;
     {
-        LOCK(cs_blockstorage);
         if (!ReadBlockFromDisk(block, pindexDelete, consensusParams))
             return AbortNode(state, "Failed to read block");
     }
@@ -139,7 +138,6 @@ bool ConnectTip(CValidationState &state,
     CBlock block;
     if (!pblock)
     {
-        LOCK(cs_blockstorage);
         if (!ReadBlockFromDisk(block, pindexNew, chainparams.GetConsensus()))
         {
             return AbortNode(state, "Failed to read block");
@@ -1135,7 +1133,6 @@ bool ConnectBlock(const CBlock &block,
             if (!FindUndoPos(state, pindex->nFile, _pos, ::GetSerializeSize(blockundo, SER_DISK, CLIENT_VERSION) + 40))
                 return error("ConnectBlock(): FindUndoPos failed");
             {
-                LOCK(cs_blockstorage);
                 if (!UndoWriteToDisk(blockundo, _pos, pindex->pprev->GetBlockHash(), chainparams.MessageStart()))
                     return AbortNode(state, "Failed to write undo data");
             }
@@ -1209,7 +1206,6 @@ DisconnectResult DisconnectBlock(const CBlock &block, const CBlockIndex *pindex,
         return DISCONNECT_FAILED;
     }
     {
-        LOCK(cs_blockstorage);
         if (!UndoReadFromDisk(blockUndo, pos, pindex->pprev->GetBlockHash()))
         {
             error("DisconnectBlock(): failure reading undo data");
@@ -1355,7 +1351,6 @@ bool AcceptBlock(const CBlock *pblock,
             return error("AcceptBlock(): FindBlockPos failed");
         if (dbp == NULL)
         {
-            LOCK(cs_blockstorage);
             if (!WriteBlockToDisk(*pblock, blockPos, chainparams.MessageStart()))
                 AbortNode(state, "Failed to write block");
         }
