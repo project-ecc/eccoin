@@ -48,7 +48,6 @@ bool CVerifyDB::VerifyDB(const CNetworkTemplate &chainparams, CCoinsView *coinsv
         CBlock block;
         // check level 0: read from disk
         {
-            LOCK(cs_blockstorage);
             if (!ReadBlockFromDisk(block, pindex, chainparams.GetConsensus()))
                 return error("VerifyDB(): *** ReadBlockFromDisk failed at %d, hash=%s", pindex->nHeight,
                     pindex->GetBlockHash().ToString());
@@ -64,7 +63,6 @@ bool CVerifyDB::VerifyDB(const CNetworkTemplate &chainparams, CCoinsView *coinsv
             CDiskBlockPos pos = pindex->GetUndoPos();
             if (!pos.IsNull())
             {
-                LOCK(cs_blockstorage);
                 if (!UndoReadFromDisk(undo, pos, pindex->pprev->GetBlockHash()))
                     return error("VerifyDB(): *** found bad undo data at %d, hash=%s\n", pindex->nHeight,
                         pindex->GetBlockHash().ToString());
@@ -113,7 +111,6 @@ bool CVerifyDB::VerifyDB(const CNetworkTemplate &chainparams, CCoinsView *coinsv
             pindex = pnetMan->getChainActive()->chainActive.Next(pindex);
             CBlock block;
             {
-                LOCK(cs_blockstorage);
                 if (!ReadBlockFromDisk(block, pindex, chainparams.GetConsensus()))
                     return error("VerifyDB(): *** ReadBlockFromDisk failed at %d, hash=%s", pindex->nHeight,
                         pindex->GetBlockHash().ToString());

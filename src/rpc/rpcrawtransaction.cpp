@@ -283,7 +283,6 @@ UniValue gettxoutproof(const UniValue &params, bool fHelp)
 
     CBlock block;
     {
-        LOCK(cs_blockstorage);
         if (!ReadBlockFromDisk(block, pblockindex, pnetMan->getActivePaymentNetwork()->GetConsensus()))
         {
             throw JSONRPCError(RPC_INTERNAL_ERROR, "Can't read block from disk");

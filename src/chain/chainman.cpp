@@ -138,7 +138,6 @@ bool CChainManager::InitBlockIndex(const CNetworkTemplate &chainparams)
     {
         try
         {
-            RECURSIVEWRITELOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
             CBlock block = chainparams.GenesisBlock();
             // Start new block file
             unsigned int nBlockSize = ::GetSerializeSize(block, SER_DISK, CLIENT_VERSION);
@@ -147,28 +146,35 @@ bool CChainManager::InitBlockIndex(const CNetworkTemplate &chainparams)
             if (!FindBlockPos(state, blockPos, nBlockSize + 8, 0, block.GetBlockTime()))
                 return error("InitBlockIndex(): FindBlockPos failed");
             {
-                LOCK(cs_blockstorage);
                 if (!WriteBlockToDisk(block, blockPos, chainparams.MessageStart()))
                     return error("InitBlockIndex(): writing genesis block to disk failed");
             }
             CBlockIndex *pindex = AddToBlockIndex(block);
-
-            // ppcoin: compute stake entropy bit for stake modifier
-            if (!pindex->SetStakeEntropyBit(block.GetStakeEntropyBit()))
             {
-                return error("InitBlockIndex() : SetStakeEntropyBit() failed");
+                RECURSIVEWRITELOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+                // ppcoin: compute stake entropy bit for stake modifier
+                if (!pindex->SetStakeEntropyBit(block.GetStakeEntropyBit()))
+                {
+                    return error("InitBlockIndex() : SetStakeEntropyBit() failed");
+                }
+                // ppcoin: compute stake modifier
+                uint256 nStakeModifier;
+                nStakeModifier.SetNull();
+                CTransaction nullTx;
+                if (!ComputeNextStakeModifier(pindex->pprev, nullTx, nStakeModifier))
+                {
+                    return error("InitBlockIndex() : ComputeNextStakeModifier() failed");
+                }
+                pindex->SetStakeModifier(nStakeModifier);
             }
-            // ppcoin: compute stake modifier
-            uint256 nStakeModifier;
-            nStakeModifier.SetNull();
-            CTransaction nullTx;
-            if (!ComputeNextStakeModifier(pindex->pprev, nullTx, nStakeModifier))
-                return error("InitBlockIndex() : ComputeNextStakeModifier() failed");
-            pindex->SetStakeModifier(nStakeModifier);
             if (!ReceivedBlockTransactions(block, state, pindex, blockPos))
+            {
                 return error("InitBlockIndex(): genesis block not accepted");
+            }
             if (!ActivateBestChain(state, chainparams, &block))
+            {
                 return error("InitBlockIndex(): genesis block cannot be activated");
+            }
             // Force a chainstate write so that when we VerifyDB in a moment, it doesn't check stale data
             return FlushStateToDisk(state, FLUSH_STATE_ALWAYS);
         }
@@ -415,7 +421,6 @@ bool CChainManager::LoadExternalBlockFile(const CNetworkTemplate &chainparams, F
                     std::pair<std::multimap<uint256, CDiskBlockPos>::iterator,
                         std::multimap<uint256, CDiskBlockPos>::iterator>
                         range = mapBlocksUnknownParent.equal_range(head);
-                    LOCK(cs_blockstorage);
                     while (range.first != range.second)
                     {
                         std::multimap<uint256, CDiskBlockPos>::iterator it = range.first;

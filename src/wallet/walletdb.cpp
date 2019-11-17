@@ -246,6 +246,7 @@ public:
         fIsEncrypted = false;
         fAnyUnordered = false;
         nFileVersion = 0;
+        vWalletUpgrade.clear();
     }
 };
 

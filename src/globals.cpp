@@ -9,7 +9,7 @@
 #include "net/aodv.h"
 #include "net/messages.h"
 #include "net/packetmanager.h"
-#include "threaddeadlock.h"
+#include "deadlock-detection/threaddeadlock.h"
 #include "txdb.h"
 #include "wallet/wallet.h"
 

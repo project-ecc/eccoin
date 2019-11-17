@@ -75,7 +75,7 @@ bool CRoutingDB::ErasePool(int64_t nPool)
     return Erase(std::make_pair(std::string("pool"), nPool));
 }
 
-class CWalletScanState
+class CRoutingDBState
 {
 public:
     unsigned int nKeys;
@@ -83,18 +83,19 @@ public:
     bool fIsEncrypted;
     std::vector<uint256> vWalletUpgrade;
 
-    CWalletScanState()
+    CRoutingDBState()
     {
         nKeys = 0;
         nCKeys = 0;
         fIsEncrypted = false;
+        vWalletUpgrade.clear();
     }
 };
 
 bool ReadKeyValue(CNetKeyStore *pwallet,
     CDataStream &ssKey,
     CDataStream &ssValue,
-    CWalletScanState &wss,
+    CRoutingDBState &wss,
     std::string &strType,
     std::string &strErr)
 {
@@ -230,7 +231,7 @@ static bool IsKeyType(std::string strType)
 bool CRoutingDB::LoadWallet(CNetKeyStore *pwallet)
 {
     pwallet->vchDefaultKey = CPubKey();
-    CWalletScanState wss;
+    CRoutingDBState wss;
     try
     {
         // Get cursor
@@ -332,7 +333,7 @@ bool CRoutingDB::Recover(CDBEnv &dbenv, const std::string &filename, bool fOnlyK
         return false;
     }
     CNetKeyStore dummyWallet;
-    CWalletScanState wss;
+    CRoutingDBState wss;
 
     DbTxn *ptxn = dbenv.TxnBegin();
     for (auto &row : salvagedData)

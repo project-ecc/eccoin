@@ -244,7 +244,6 @@ uint64_t CTransaction::GetCoinAge(uint64_t nCoinAge, bool byValue) const
         CBlock block;
         CDiskBlockPos blockPos(txindex.nFile, txindex.nPos);
         {
-            LOCK(cs_blockstorage);
             if (!ReadBlockFromDisk(block, blockPos, pnetMan->getActivePaymentNetwork()->GetConsensus()))
                 return false; // unable to read block of previous transaction
         }
@@ -300,7 +299,6 @@ bool CTransaction::GetCoinAge(uint64_t &nCoinAge) const
         CBlock block;
         CDiskBlockPos blockPos(txindex.nFile, txindex.nPos);
         {
-            LOCK(cs_blockstorage);
             if (!ReadBlockFromDisk(block, blockPos, pnetMan->getActivePaymentNetwork()->GetConsensus()))
                 return false; // unable to read block of previous transaction
         }
@@ -391,7 +389,6 @@ bool GetTransaction(const uint256 &hash,
     if (pindexSlow)
     {
         CBlock block;
-        LOCK(cs_blockstorage);
         if (ReadBlockFromDisk(block, pindexSlow, consensusParams))
         {
             for (auto const &tx : block.vtx)

@@ -12,6 +12,8 @@
 #include "streams.h"
 #include "util/logger.h"
 
+extern CCriticalSection cs_blockstorage;
+
 fs::path GetBlockPosFilename(const CDiskBlockPos &pos, const char *prefix)
 {
     return GetDataDir() / "blocks" / strprintf("%s%05u.dat", prefix, pos.nFile);
@@ -46,9 +48,8 @@ FILE *OpenDiskFile(const CDiskBlockPos &pos, const char *prefix, bool fReadOnly)
 FILE *OpenBlockFile(const CDiskBlockPos &pos, bool fReadOnly) { return OpenDiskFile(pos, "blk", fReadOnly); }
 FILE *OpenUndoFile(const CDiskBlockPos &pos, bool fReadOnly) { return OpenDiskFile(pos, "rev", fReadOnly); }
 bool WriteBlockToDisk(const CBlock &block, CDiskBlockPos &pos, const CMessageHeader::MessageMagic &messageStart)
-    EXCLUSIVE_LOCKS_REQUIRED(cs_blockstorage)
 {
-    AssertLockHeld(cs_blockstorage);
+    LOCK(cs_blockstorage);
     // Open history file to append
     CAutoFile fileout(OpenBlockFile(pos), SER_DISK, CLIENT_VERSION);
     if (fileout.IsNull())
@@ -69,9 +70,8 @@ bool WriteBlockToDisk(const CBlock &block, CDiskBlockPos &pos, const CMessageHea
 }
 
 bool ReadBlockFromDisk(CBlock &block, const CDiskBlockPos &pos, const Consensus::Params &consensusParams)
-    EXCLUSIVE_LOCKS_REQUIRED(cs_blockstorage)
 {
-    AssertLockHeld(cs_blockstorage);
+    LOCK(cs_blockstorage);
     block.SetNull();
 
     // Open history file to read
@@ -99,9 +99,8 @@ bool ReadBlockFromDisk(CBlock &block, const CDiskBlockPos &pos, const Consensus:
 }
 
 bool ReadBlockFromDisk(CBlock &block, const CBlockIndex *pindex, const Consensus::Params &consensusParams)
-    EXCLUSIVE_LOCKS_REQUIRED(cs_blockstorage)
 {
-    AssertLockHeld(cs_blockstorage);
+    LOCK(cs_blockstorage);
     if (!pindex)
     {
         return false;
@@ -121,9 +120,9 @@ bool ReadBlockFromDisk(CBlock &block, const CBlockIndex *pindex, const Consensus
 bool UndoWriteToDisk(const CBlockUndo &blockundo,
     CDiskBlockPos &pos,
     const uint256 &hashBlock,
-    const CMessageHeader::MessageMagic &messageStart) EXCLUSIVE_LOCKS_REQUIRED(cs_blockstorage)
+    const CMessageHeader::MessageMagic &messageStart)
 {
-    AssertLockHeld(cs_blockstorage);
+    LOCK(cs_blockstorage);
     // Open history file to append
     CAutoFile fileout(OpenUndoFile(pos), SER_DISK, CLIENT_VERSION);
     if (fileout.IsNull())
@@ -150,9 +149,8 @@ bool UndoWriteToDisk(const CBlockUndo &blockundo,
 }
 
 bool UndoReadFromDisk(CBlockUndo &blockundo, const CDiskBlockPos &pos, const uint256 &hashBlock)
-    EXCLUSIVE_LOCKS_REQUIRED(cs_blockstorage)
 {
-    AssertLockHeld(cs_blockstorage);
+    LOCK(cs_blockstorage);
     // Open history file to read
     CAutoFile filein(OpenUndoFile(pos, true), SER_DISK, CLIENT_VERSION);
     if (filein.IsNull())

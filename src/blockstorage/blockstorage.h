@@ -15,8 +15,6 @@
 #include "sync.h"
 #include "undo.h"
 
-extern CCriticalSection cs_blockstorage;
-
 /** Translation to a filesystem path */
 fs::path GetBlockPosFilename(const CDiskBlockPos &pos, const char *prefix);
 /** Open a block file (blk?????.dat) */
@@ -24,21 +22,17 @@ FILE *OpenBlockFile(const CDiskBlockPos &pos, bool fReadOnly = false);
 /** Open an undo file (rev?????.dat) */
 FILE *OpenUndoFile(const CDiskBlockPos &pos, bool fReadOnly = false);
 /** Functions for disk access for blocks */
-bool WriteBlockToDisk(const CBlock &block, CDiskBlockPos &pos, const CMessageHeader::MessageMagic &messageStart)
-    EXCLUSIVE_LOCKS_REQUIRED(cs_blockstorage);
+bool WriteBlockToDisk(const CBlock &block, CDiskBlockPos &pos, const CMessageHeader::MessageMagic &messageStart);
 
-bool ReadBlockFromDisk(CBlock &block, const CDiskBlockPos &pos, const Consensus::Params &consensusParams)
-    EXCLUSIVE_LOCKS_REQUIRED(cs_blockstorage);
+bool ReadBlockFromDisk(CBlock &block, const CDiskBlockPos &pos, const Consensus::Params &consensusParams);
 
-bool ReadBlockFromDisk(CBlock &block, const CBlockIndex *pindex, const Consensus::Params &consensusParams)
-    EXCLUSIVE_LOCKS_REQUIRED(cs_blockstorage);
+bool ReadBlockFromDisk(CBlock &block, const CBlockIndex *pindex, const Consensus::Params &consensusParams);
 
 bool UndoWriteToDisk(const CBlockUndo &blockundo,
     CDiskBlockPos &pos,
     const uint256 &hashBlock,
-    const CMessageHeader::MessageMagic &messageStart) EXCLUSIVE_LOCKS_REQUIRED(cs_blockstorage);
+    const CMessageHeader::MessageMagic &messageStart);
 
-bool UndoReadFromDisk(CBlockUndo &blockundo, const CDiskBlockPos &pos, const uint256 &hashBlock)
-    EXCLUSIVE_LOCKS_REQUIRED(cs_blockstorage);
+bool UndoReadFromDisk(CBlockUndo &blockundo, const CDiskBlockPos &pos, const uint256 &hashBlock);
 
 #endif
