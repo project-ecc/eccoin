@@ -45,6 +45,7 @@ CZMQNotificationInterface *CZMQNotificationInterface::CreateWithArguments(
     factories["pubrawblock"] = CZMQAbstractNotifier::Create<CZMQPublishRawBlockNotifier>;
     factories["pubrawtx"] = CZMQAbstractNotifier::Create<CZMQPublishRawTransactionNotifier>;
     factories["pubsystem"] = CZMQAbstractNotifier::Create<CZMQPublishSystemNotifier>;
+    factories["pubpacket"] = CZMQAbstractNotifier::Create<CZMQPublishPacketNotifier>;
 
     for (std::map<std::string, CZMQNotifierFactory>::const_iterator i = factories.begin(); i != factories.end(); ++i)
     {
@@ -174,6 +175,23 @@ void CZMQNotificationInterface::SystemMessage(const std::string &message)
     {
         CZMQAbstractNotifier *notifier = *i;
         if (notifier->NotifySystem(message))
+        {
+            i++;
+        }
+        else
+        {
+            notifier->Shutdown();
+            i = notifiers.erase(i);
+        }
+    }
+}
+
+void CZMQNotificationInterface::PacketComplete(const uint8_t nProtocolId)
+{
+    for (std::list<CZMQAbstractNotifier *>::iterator i = notifiers.begin(); i != notifiers.end();)
+    {
+        CZMQAbstractNotifier *notifier = *i;
+        if (notifier->NotifyPacket(nProtocolId))
         {
             i++;
         }

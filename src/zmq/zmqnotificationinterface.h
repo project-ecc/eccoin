@@ -30,6 +30,7 @@ protected:
     void SyncTransaction(const CTransactionRef &ptx, const CBlock *pblock, int txIndex = -1);
     void UpdatedBlockTip(const CBlockIndex *pindex);
     void SystemMessage(const std::string &message);
+    void PacketComplete(const uint8_t nProtocolId);
 
 private:
     CZMQNotificationInterface();
