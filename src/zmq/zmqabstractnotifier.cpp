@@ -11,3 +11,4 @@ CZMQAbstractNotifier::~CZMQAbstractNotifier() { assert(!psocket); }
 bool CZMQAbstractNotifier::NotifyBlock(const CBlockIndex * /*CBlockIndex*/) { return true; }
 bool CZMQAbstractNotifier::NotifyTransaction(const CTransactionRef & /*transaction*/) { return true; }
 bool CZMQAbstractNotifier::NotifySystem(const std::string & /*message*/) { return true; }
+bool CZMQAbstractNotifier::NotifyPacket(const uint8_t /*nProtocolId*/) { return true; }

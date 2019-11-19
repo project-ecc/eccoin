@@ -47,6 +47,7 @@ protected:
     virtual void GetScriptForMining(boost::shared_ptr<CReserveScript> &){};
     virtual void NewPoWValidBlock(CBlockIndex *pindex, const CBlock *block) {}
     virtual void SystemMessage(const std::string &message) {}
+    virtual void PacketComplete(const uint8_t nProtocolId) {}
     friend void ::RegisterValidationInterface(CValidationInterface *);
     friend void ::UnregisterValidationInterface(CValidationInterface *);
     friend void ::UnregisterAllValidationInterfaces();
@@ -76,6 +77,8 @@ struct CMainSignals
     boost::signals2::signal<void(CBlockIndex *, const CBlock *)> NewPoWValidBlock;
     /** Notifies listeners that a system message notification has been raised */
     boost::signals2::signal<void(const std::string &)> SystemMessage;
+    /** Notifies listeners that a received packet is complete */
+    boost::signals2::signal<void(const uint8_t)> PacketComplete;
 };
 
 CMainSignals &GetMainSignals();
