@@ -45,6 +45,7 @@ unsigned int nTxConfirmTarget = DEFAULT_TX_CONFIRM_TARGET;
 bool bSpendZeroConfChange = DEFAULT_SPEND_ZEROCONF_CHANGE;
 bool fSendFreeTransactions = DEFAULT_SEND_FREE_TRANSACTIONS;
 bool fWalletUnlockStakingOnly = false;
+std::atomic<bool> fAllowKeypoolRefills{DEFAULT_ALLOW_KEYPOOL_REFILLS};
 
 /**
  * Fees smaller than this (in satoshi) are considered zero fee (for transaction creation)
@@ -2580,7 +2581,7 @@ bool CWallet::NewKeyPool()
             walletdb.ErasePool(nIndex);
         setKeyPool.clear();
 
-        if (IsLocked())
+        if (IsLocked() || fAllowKeypoolRefills == false)
             return false;
 
         int64_t nKeys = std::max(gArgs.GetArg("-keypool", DEFAULT_KEYPOOL_SIZE), (int64_t)0);
@@ -2633,7 +2634,7 @@ void CWallet::ReserveKeyFromKeyPool(int64_t &nIndex, CKeyPoolEntry &keypool)
     {
         LOCK(cs_wallet);
 
-        if (!IsLocked())
+        if (!IsLocked() && fAllowKeypoolRefills == true)
             TopUpKeyPool();
 
         // Get the oldest key
@@ -2683,8 +2684,10 @@ bool CWallet::GetKeyFromPool(CPubKey &result)
         ReserveKeyFromKeyPool(nIndex, keypool);
         if (nIndex == -1)
         {
-            if (IsLocked())
+            if (IsLocked() || fAllowKeypoolRefills == false)
+            {
                 return false;
+            }
             result = GenerateNewKey();
             return true;
         }
@@ -3461,6 +3464,7 @@ void static UIWarning(const std::string &str) { LogPrintf("Wallet Warning: %s\n"
 bool CWallet::InitLoadWallet()
 {
     std::string walletFile = gArgs.GetArg("-wallet", DEFAULT_WALLET_DAT);
+    fAllowKeypoolRefills = gArgs.GetBoolArg("-allownewkeys", DEFAULT_ALLOW_KEYPOOL_REFILLS);
 
     // needed to restore wallet transaction meta data after -zapwallettxes
     std::vector<CWalletTx> vWtx;

@@ -112,7 +112,7 @@ UniValue getnewaddress(const UniValue &params, bool fHelp)
 
     LOCK2(cs_main, pwalletMain->cs_wallet);
 
-    if (!pwalletMain->IsLocked())
+    if (!pwalletMain->IsLocked() && fAllowKeypoolRefills == true)
         pwalletMain->TopUpKeyPool();
 
     // Generate a new key that is added to wallet
@@ -141,7 +141,7 @@ UniValue getrawchangeaddress(const UniValue &params, bool fHelp)
 
     LOCK2(cs_main, pwalletMain->cs_wallet);
 
-    if (!pwalletMain->IsLocked())
+    if (!pwalletMain->IsLocked() && fAllowKeypoolRefills == true)
         pwalletMain->TopUpKeyPool();
 
     CReserveKey reservekey(pwalletMain);
@@ -1361,7 +1361,10 @@ UniValue walletpassphrase(const UniValue &params, bool fHelp)
         throw std::runtime_error("walletpassphrase <passphrase> <timeout>\n"
                                  "Stores the wallet decryption key in memory for <timeout> seconds.");
 
-    pwalletMain->TopUpKeyPool();
+    if (fAllowKeypoolRefills == true)
+    {
+        pwalletMain->TopUpKeyPool();
+    }
 
     int64_t nSleepTime = params[1].get_int64();
     LOCK(cs_nWalletUnlockTime);
