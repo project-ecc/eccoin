@@ -61,8 +61,6 @@ class SendPacketTest (BitcoinTestFramework):
         sent = self.nodes[0].sendpacket(key5, 0, 0, "test string1")
         time.sleep(1)
         assert_equal(sent, True)
-        data = self.nodes[5].readlastpacket(0, 0)
-        assert_equal(data, "7465737420737472696e6731")
         sent = self.nodes[0].sendpacket(key5, 0, 0, "test string2")
         time.sleep(1)
         assert_equal(sent, True)
