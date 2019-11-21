@@ -15,6 +15,7 @@
 #include "net.h"
 #include "pubkey.h"
 #include "util/utiltime.h"
+#include "validationinterface.h"
 
 static const int64_t DEFAULT_PACKET_TIMEOUT = 30; // 30 seconds
 
@@ -64,6 +65,7 @@ private:
         }
         mapPacketLastUpdated.erase(nonce);
         mapPartialPackets.erase(nonce);
+        GetMainSignals().PacketComplete(protocolId);
     }
 
 public:
