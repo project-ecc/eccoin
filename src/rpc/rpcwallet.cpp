@@ -914,6 +914,7 @@ void ListTransactions(const CWalletTx &wtx, int nMinDepth, bool fLong, UniValue 
     wtx.GetAmounts(listReceived, listSent, nFee, filter);
 
     bool involvesWatchonly = wtx.IsFromMe(ISMINE_WATCH_ONLY);
+    bool possibleChange = wtx.IsFromMe(ISMINE_ALL);
 
     // Sent
     if ((!listSent.empty() || nFee != 0))
@@ -971,7 +972,14 @@ void ListTransactions(const CWalletTx &wtx, int nMinDepth, bool fLong, UniValue 
             }
             else
             {
-                entry.push_back(Pair("category", "receive"));
+                if (possibleChange && ::IsMine(*pwalletMain, r.destination) == ISMINE_ALL)
+                {
+                    entry.push_back(Pair("category", "change"));
+                }
+                else
+                {
+                    entry.push_back(Pair("category", "receive"));
+                }
             }
             if (!wtx.tx->IsCoinStake())
                 entry.push_back(Pair("amount", ValueFromAmount(r.amount)));
