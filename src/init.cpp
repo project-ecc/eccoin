@@ -454,6 +454,9 @@ std::string HelpMessage()
 
 
     strUsage += HelpMessageGroup(("Wallet options:"));
+    strUsage += HelpMessageOpt(
+        "-allownewkeys", strprintf(("Allow the wallet to generate new keys if the keypool runs out <n> (default: %u)"),
+                             DEFAULT_ALLOW_KEYPOOL_REFILLS));
     strUsage +=
         HelpMessageOpt("-keypool=<n>", strprintf(("Set key pool size to <n> (default: %u)"), DEFAULT_KEYPOOL_SIZE));
     strUsage += HelpMessageOpt("-fallbackfee=<amt>",

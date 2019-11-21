@@ -41,6 +41,9 @@ extern unsigned int nTxConfirmTarget;
 extern bool bSpendZeroConfChange;
 extern bool fSendFreeTransactions;
 extern bool fWalletUnlockStakingOnly;
+extern std::atomic<bool> fAllowKeypoolRefills;
+
+static const bool DEFAULT_ALLOW_KEYPOOL_REFILLS = true;
 
 static const unsigned int DEFAULT_KEYPOOL_SIZE = 1000;
 //! -paytxfee default
