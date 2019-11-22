@@ -400,6 +400,7 @@ public:
     CScript(const unsigned char *pbegin, const unsigned char *pend) : CScriptBase(pbegin, pend) {}
     CScript &operator+=(const CScript &b)
     {
+        reserve(size() + b.size());
         insert(end(), b.begin(), b.end());
         return *this;
     }
@@ -622,7 +623,8 @@ public:
     void clear()
     {
         // The default std::vector::clear() does not release memory.
-        CScriptBase().swap(*this);
+        CScriptBase::clear();
+        shrink_to_fit();
     }
 };
 

@@ -857,7 +857,6 @@ void ThreadScriptCheck()
     scriptcheckqueue.Thread();
 }
 
-void InterruptScriptCheck() { scriptcheckqueue.Stop(); }
 bool ConnectBlock(const CBlock &block,
     CValidationState &state,
     CBlockIndex *pindex,

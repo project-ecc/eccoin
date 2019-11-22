@@ -241,7 +241,7 @@ public:
     };
 
 private:
-    size_type _size;
+    size_type _size = 0;
     union direct_or_indirect {
         char direct[sizeof(T) * N];
         struct
@@ -249,7 +249,7 @@ private:
             size_type capacity;
             char *indirect;
         };
-    } _union;
+    } _union = {};
 
     T *direct_ptr(difference_type pos) { return reinterpret_cast<T *>(_union.direct) + pos; }
     const T *direct_ptr(difference_type pos) const { return reinterpret_cast<const T *>(_union.direct) + pos; }

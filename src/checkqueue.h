@@ -14,8 +14,6 @@
 #include <boost/thread/locks.hpp>
 #include <boost/thread/mutex.hpp>
 
-extern std::atomic<bool> shutdown_threads;
-
 template <typename T>
 class CCheckQueueControl;
 
@@ -107,10 +105,6 @@ private:
                     nIdle++;
                     cond.wait(lock); // wait
                     nIdle--;
-                    if (shutdown_threads.load() == true)
-                    {
-                        return true;
-                    }
                 }
                 // Decide how many work units to process now.
                 // * Do not try to do everything at once, but aim for increasingly smaller batches so
@@ -130,17 +124,27 @@ private:
                 fOk = fAllOk;
             }
             // execute work
-            for (auto &check : vChecks)
+            for (T &check : vChecks)
+            {
                 if (fOk)
+                {
                     fOk = check();
+                }
+            }
             vChecks.clear();
-
         } while (true);
     }
 
 public:
+    //! Mutex to ensure only one concurrent CCheckQueueControl
+    boost::mutex ControlMutex;
+
     //! Create a new check queue
-    CCheckQueue(unsigned int nBatchSizeIn) : nIdle(0), nTotal(0), fAllOk(true), nTodo(0), nBatchSize(nBatchSizeIn) {}
+    explicit CCheckQueue(unsigned int nBatchSizeIn)
+        : nIdle(0), nTotal(0), fAllOk(true), nTodo(0), nBatchSize(nBatchSizeIn)
+    {
+    }
+
     //! Worker thread
     void Thread() { Loop(); }
     //! Wait until execution finishes, and return whether all evaluations were successful.
@@ -149,25 +153,23 @@ public:
     void Add(std::vector<T> &vChecks)
     {
         boost::unique_lock<boost::mutex> lock(mutex);
-        for (auto &check : vChecks)
+        for (T &check : vChecks)
         {
             queue.push_back(T());
             check.swap(queue.back());
         }
         nTodo += vChecks.size();
         if (vChecks.size() == 1)
+        {
             condWorker.notify_one();
+        }
         else if (vChecks.size() > 1)
+        {
             condWorker.notify_all();
+        }
     }
 
-    void Stop() { condWorker.notify_all(); }
     ~CCheckQueue() {}
-    bool IsIdle()
-    {
-        boost::unique_lock<boost::mutex> lock(mutex);
-        return (nTotal == nIdle && nTodo == 0 && fAllOk == true);
-    }
 };
 
 /**
@@ -178,23 +180,25 @@ template <typename T>
 class CCheckQueueControl
 {
 private:
-    CCheckQueue<T> *pqueue;
+    CCheckQueue<T> *const pqueue;
     bool fDone;
 
 public:
-    CCheckQueueControl(CCheckQueue<T> *pqueueIn) : pqueue(pqueueIn), fDone(false)
+    CCheckQueueControl() = delete;
+    CCheckQueueControl(const CCheckQueueControl &) = delete;
+    CCheckQueueControl &operator=(const CCheckQueueControl &) = delete;
+    explicit CCheckQueueControl(CCheckQueue<T> *const pqueueIn) : pqueue(pqueueIn), fDone(false)
     {
-        // passed queue is supposed to be unused, or NULL
-        if (pqueue != NULL)
+        // passed queue is supposed to be unused, or nullptr
+        if (pqueue != nullptr)
         {
-            bool isIdle = pqueue->IsIdle();
-            assert(isIdle);
+            ENTER_CRITICAL_SECTION(pqueue->ControlMutex);
         }
     }
 
     bool Wait()
     {
-        if (pqueue == NULL)
+        if (pqueue == nullptr)
             return true;
         bool fRet = pqueue->Wait();
         fDone = true;
@@ -203,7 +207,7 @@ public:
 
     void Add(std::vector<T> &vChecks)
     {
-        if (pqueue != NULL)
+        if (pqueue != nullptr)
             pqueue->Add(vChecks);
     }
 
@@ -211,6 +215,10 @@ public:
     {
         if (!fDone)
             Wait();
+        if (pqueue != nullptr)
+        {
+            LEAVE_CRITICAL_SECTION(pqueue->ControlMutex);
+        }
     }
 };
 
