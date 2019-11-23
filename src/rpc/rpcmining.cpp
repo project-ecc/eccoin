@@ -1297,21 +1297,25 @@ UniValue estimatefee(const UniValue &params, bool fHelp)
 UniValue estimatesmartfee(const UniValue &params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
-        throw std::runtime_error("estimatesmartfee nblocks\n"
-                                 "\nWARNING: This interface is unstable and may disappear or change!\n"
-                                 "\nThis rpc call now does the same thing as estimatefee, It has not been removed for\n"
-                                 "compatibility reasons\n"
-                                 "\nEstimates the approximate fee per kilobyte needed for a transaction to begin\n"
-                                 "confirmation within nblocks blocks.\n"
-                                 "\nArguments:\n"
-                                 "1. nblocks     (numeric)\n"
-                                 "\nResult:\n"
-                                 "n              (numeric) estimated fee-per-kilobyte\n"
-                                 "\n"
-                                 "A negative value is returned if not enough transactions and blocks\n"
-                                 "have been observed to make an estimate.\n"
-                                 "\nExample:\n" +
-                                 HelpExampleCli("estimatesmartfee", "6"));
+        throw std::runtime_error(
+            "estimatesmartfee nblocks\n"
+            "\nWARNING: This interface is unstable and may disappear or change!\n"
+            "\nThis rpc call now does the same thing as estimatefee, It has not been removed for\n"
+            "compatibility reasons\n"
+            "\nEstimates the approximate fee per kilobyte needed for a transaction to begin\n"
+            "confirmation within nblocks blocks.\n"
+            "\nArguments:\n"
+            "1. nblocks     (numeric)\n"
+            "\nResult:\n"
+            "{\n"
+            "  \"feerate\" : x.x,     (numeric) estimate fee-per-kilobyte (in BCH)\n"
+            "  \"blocks\" : 1         (numeric) hard coded to return the number 1 for compatibility reasons\n"
+            "}\n"
+            "\n"
+            "A negative value is returned if not enough transactions and blocks\n"
+            "have been observed to make an estimate.\n"
+            "\nExample:\n" +
+            HelpExampleCli("estimatesmartfee", "6"));
 
     RPCTypeCheck(params, boost::assign::list_of(UniValue::VNUM));
 
@@ -1319,9 +1323,9 @@ UniValue estimatesmartfee(const UniValue &params, bool fHelp)
     if (nBlocks < 1)
         nBlocks = 1;
 
+    UniValue result(UniValue::VOBJ);
     CFeeRate feeRate = mempool.estimateFee(nBlocks);
-    if (feeRate == CFeeRate(0))
-        return -1.0;
-
-    return ValueFromAmount(feeRate.GetFeePerK());
+    result.pushKV("feerate", feeRate == CFeeRate(0) ? -1.0 : ValueFromAmount(feeRate.GetFeePerK()));
+    result.pushKV("blocks", 1);
+    return result;
 }

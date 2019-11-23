@@ -101,6 +101,8 @@ def check_estimates(node, fees_seen, max_invalid, print_estimates = True):
     meet certain invariants.
     '''
     all_estimates = [ node.estimatefee(i) for i in range(1,26) ]
+    all_smartestimates = [ node.estimatesmartfee(i)['feerate'] for i in range(1,26) ]
+    assert_equal(all_estimates, all_smartestimates)
     if print_estimates:
         print([str(all_estimates[e-1]) for e in [1,2,3,6,15,25]])
     delta = 1.0e-6 # account for rounding error
