@@ -168,7 +168,6 @@ void Interrupt(thread_group &threadGroup)
     InterruptHTTPRPC();
     InterruptRPC();
     InterruptTorControl();
-    InterruptScriptCheck();
 }
 
 void Shutdown(thread_group &threadGroup)
