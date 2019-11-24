@@ -178,11 +178,7 @@ if ENABLE_ZMQ:
 
 #Tests
 testScripts = [ RpcTest(t) for t in [
-    #'rawtransactions', ???
-    'multi_rpc',
-    # 'fundrawtransaction', ???
-    'reindex',
-    Disabled('getchaintips', "issue with syncpoints getting stuck"),
+    #'getchaintips', #TIMEOUT
     'httpbasics',
     'keypool',
     'listtransactions',
@@ -191,14 +187,21 @@ testScripts = [ RpcTest(t) for t in [
     #'mempool_resurrect_test',
     #'mempool_spendcoinbase',
     'mintingtest',
+    'multi_rpc',
     'nodehandling',
+    'notify',
     'proxy_test',
     'receivedby',
+    'reindex',
+    #'sendheaders', #rpc missing
     'txpropagate',
     'verifydb',
     'wallet',
-    Disabled('walletbackup', "TIMEOUT"), # issue with restarting nodes mid test
+    'walletbackup',
+    #'wallet-dump',
     'zapwallettxes',
+    #'rawtransactions', ???
+    #'fundrawtransaction', ???
     #
     Disabled('mempool_limit', "FAILS"),
     Disabled('mempool_reorg', "FAILS"),
@@ -211,13 +214,10 @@ testScripts = [ RpcTest(t) for t in [
     Disabled('invalidtxrequest', "FAILS"),
     Disabled('merkle_blocks', "FAILS"),
     Disabled('miningtest', "FAILS"),
-    Disabled('sendheaders', "FAILS"),
     Disabled('signrawtransactions', "FAILS"),
     #
-    Disabled('wallet-dump', "TIMEOUT"),
     Disabled('txn_doublespend --mineblock', "TIMEOUT"),
     Disabled('txn_clone', "TIMEOUT"),
-    Disabled('notify', "TIMEOUT"),
     Disabled('validateblocktemplate', "TIMEOUT"),
     Disabled('blockchain', "TIMEOUT"),
     #
