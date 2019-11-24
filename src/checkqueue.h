@@ -31,6 +31,8 @@ template <typename T>
 class CCheckQueue
 {
 private:
+    //!  Bool to signal to threads to end execution when they are done
+    std::atomic<bool> fShutdown;
     //! Mutex to protect the inner state
     boost::mutex mutex;
 
@@ -105,6 +107,10 @@ private:
                     nIdle++;
                     cond.wait(lock); // wait
                     nIdle--;
+                    if (nTodo == 0 && fShutdown.load() == true)
+                    {
+                        return true;
+                    }
                 }
                 // Decide how many work units to process now.
                 // * Do not try to do everything at once, but aim for increasingly smaller batches so
@@ -143,12 +149,19 @@ public:
     explicit CCheckQueue(unsigned int nBatchSizeIn)
         : nIdle(0), nTotal(0), fAllOk(true), nTodo(0), nBatchSize(nBatchSizeIn)
     {
+        fShutdown.store(false);
     }
 
     //! Worker thread
     void Thread() { Loop(); }
     //! Wait until execution finishes, and return whether all evaluations were successful.
     bool Wait() { return Loop(true); }
+    void Interrupt()
+    {
+        fShutdown.store(true);
+        condWorker.notify_all();
+        condMaster.notify_all();
+    }
     //! Add a batch of checks to the queue
     void Add(std::vector<T> &vChecks)
     {

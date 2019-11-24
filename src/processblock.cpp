@@ -851,6 +851,7 @@ bool FindUndoPos(CValidationState &state, int nFile, CDiskBlockPos &pos, unsigne
 
 static CCheckQueue<CScriptCheck> scriptcheckqueue(128);
 
+void InterruptScriptCheck() { scriptcheckqueue.Interrupt(); }
 void ThreadScriptCheck()
 {
     RenameThread("bitcoin-scriptch");

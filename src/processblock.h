@@ -29,6 +29,7 @@ bool DisconnectTip(CValidationState &state, const Consensus::Params &consensusPa
 void InvalidChainFound(CBlockIndex *pindexNew);
 void InvalidBlockFound(CBlockIndex *pindex, const CValidationState &state);
 
+void InterruptScriptCheck();
 /** Run an instance of the script checking thread */
 void ThreadScriptCheck();
 
