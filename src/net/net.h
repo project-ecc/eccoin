@@ -117,7 +117,6 @@ struct AddedNodeInfo
 
 class CTransaction;
 class CNodeStats;
-class CClientUIInterface;
 
 
 class CNetMessage

@@ -36,6 +36,9 @@ class ListTransactionsTest(BitcoinTestFramework):
         self.sync_all()
 
     def run_test(self):
+        self.sync_all()
+        self.nodes[0].generate(1)
+        self.sync_all()
         for i in range (4):
             self.nodes[0].generate(25)
             self.sync_all()
