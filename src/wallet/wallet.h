@@ -786,9 +786,6 @@ public:
     //! Verify the wallet database and perform salvage if required
     static bool Verify(const std::string &walletFile, std::string &warningString, std::string &errorString);
 
-    /** Show progress e.g. for rescan */
-    boost::signals2::signal<void(const std::string &title, int nProgress)> ShowProgress;
-
     /** Watch-only address added */
     boost::signals2::signal<void(bool fHaveWatchOnly)> NotifyWatchonlyChanged;
 

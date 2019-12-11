@@ -1243,9 +1243,7 @@ int CWallet::ScanForWalletTransactions(CBlockIndex *pindexStart, bool fUpdate)
         {
             pindex = pnetMan->getChainActive()->chainActive.Next(pindex);
         }
-
-        // show rescan progress in GUI as dialog or on splashscreen, if -rescan on startup
-        ShowProgress(("Rescanning..."), 0);
+        GetMainSignals().SystemMessage("RESCAN: STARTED");
         while (pindex)
         {
             CBlock block;
@@ -1264,9 +1262,10 @@ int CWallet::ScanForWalletTransactions(CBlockIndex *pindexStart, bool fUpdate)
             {
                 nNow = GetTime();
                 LogPrintf("Still rescanning. At block %d out of %d\n", pindex->nHeight, nEndHeight);
+                GetMainSignals().SystemMessage(strprintf("RESCAN: BLOCK %d of %d", pindex->nHeight, nEndHeight));
             }
         }
-        ShowProgress(("Rescanning..."), 100); // hide progress dialog in GUI
+        GetMainSignals().SystemMessage("RESCAN: COMPLETE");
     }
     return ret;
 }
