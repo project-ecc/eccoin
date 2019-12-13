@@ -144,21 +144,12 @@ public:
         return true;
     }
 
-    bool GetLastPacket(uint8_t &protocolId, CPacket &readPacket)
-    {
-        if (mapBuffers.count(protocolId) == 1)
-        {
-            readPacket = mapBuffers[protocolId].vRecievedPackets.back();
-            return true;
-        }
-        return false;
-    }
-
     bool GetBuffer(uint8_t &protocolId, PacketBuffer &buffer)
     {
         if (mapBuffers.count(protocolId) == 1)
         {
             buffer = mapBuffers[protocolId];
+            mapBuffers[protocolId].vRecievedPackets.clear();
             return true;
         }
         return false;
