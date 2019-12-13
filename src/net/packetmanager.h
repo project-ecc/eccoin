@@ -159,6 +159,7 @@ public:
         if (mapBuffers.count(protocolId) == 1)
         {
             buffer = mapBuffers[protocolId];
+            mapBuffers[protocolId].vRecievedPackets.clear();
             return true;
         }
         return false;
