@@ -109,7 +109,8 @@ BITCOIN_CORE_H = \
   net/nodestate.h \
   net/packetmanager.h \
   net/protocol.h \
-  net/routingdb.h \
+  net/routingtag.h \
+  net/tagdb.h \
   networks/netman.h \
   networks/network.h \
   networks/networktemplate.h \
@@ -250,7 +251,8 @@ libbitcoin_server_a_SOURCES = \
   net/net.cpp \
   net/netaddress.cpp \
   net/netbase.cpp \
-  net/routingdb.cpp \
+  net/routingtag.cpp \
+  net/tagdb.cpp \
   net/nodestate.cpp \
   net/packetmanager.cpp \
   net/protocol.cpp \

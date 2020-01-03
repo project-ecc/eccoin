@@ -2413,7 +2413,7 @@ CConnman::CConnman(uint64_t nSeed0In, uint64_t nSeed1In) : nSeed0(nSeed0In), nSe
     nMaxAddnode = 0;
     nBestHeight = 0;
     interruptNet.store(false);
-    routingKeypool = new CNetKeyStore(strRoutingFile);
+    routingKeypool = new CNetTagStore(strRoutingFile);
 }
 
 NodeId CConnman::GetNewNodeId() { return nLastNodeId.fetch_add(1, std::memory_order_relaxed); }
@@ -2457,7 +2457,7 @@ bool CConnman::Start(std::string &strNodeError)
     if (IsBetaEnabled())
     {
         routingKeypool->Load();
-        pub_routing_id = routingKeypool->GetPublicRoutingId();
+        pub_routing_id = routingKeypool->GetCurrentPublicTag();
     }
 
     LogPrintf("Loading addresses...\n");
