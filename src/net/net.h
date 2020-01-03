@@ -25,7 +25,7 @@
 #include "net/addrman.h"
 #include "net/netbase.h"
 #include "net/protocol.h"
-#include "net/routingdb.h"
+#include "net/routingtag.h"
 #include "networks/netman.h"
 #include "random.h"
 #include "streams.h"
@@ -770,7 +770,7 @@ private:
     std::atomic<bool> interruptNet;
     thread_group netThreads;
 
-    CNetKeyStore *routingKeypool;
+    CNetTagStore *routingKeypool;
     CPubKey pub_routing_id;
 };
 

@@ -5,12 +5,13 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "routingdb.h"
+#include "tagdb.h"
 
 #include "args.h"
 #include "base58.h"
 #include "keystore.h"
 #include "net/protocol.h"
+#include "routingtag.h"
 #include "serialize.h"
 #include "sync.h"
 #include "util/util.h"
@@ -18,62 +19,6 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/scoped_ptr.hpp>
-
-extern std::atomic<bool> shutdown_threads;
-
-//
-// CRoutingDB
-//
-
-bool CRoutingDB::WriteKey(const CPubKey &vchPubKey, const CPrivKey &vchPrivKey)
-{
-    // hash pubkey/privkey to accelerate wallet load
-    std::vector<unsigned char> vchKey;
-    vchKey.reserve(vchPubKey.size() + vchPrivKey.size());
-    vchKey.insert(vchKey.end(), vchPubKey.begin(), vchPubKey.end());
-    vchKey.insert(vchKey.end(), vchPrivKey.begin(), vchPrivKey.end());
-
-    return Write(std::make_pair(std::string("key"), vchPubKey),
-        std::make_pair(vchPrivKey, Hash(vchKey.begin(), vchKey.end())), false);
-}
-
-bool CRoutingDB::WriteCryptedKey(const CPubKey &vchPubKey,
-    const std::vector<unsigned char> &vchCryptedSecret)
-{
-    const bool fEraseUnencryptedKey = true;
-    if (!Write(std::make_pair(std::string("ckey"), vchPubKey), vchCryptedSecret, false))
-        return false;
-    if (fEraseUnencryptedKey)
-    {
-        Erase(std::make_pair(std::string("key"), vchPubKey));
-    }
-    return true;
-}
-
-bool CRoutingDB::WriteMasterKey(unsigned int nID, const CMasterKey &kMasterKey)
-{
-    return Write(std::make_pair(std::string("mkey"), nID), kMasterKey, true);
-}
-
-bool CRoutingDB::WriteDefaultKey(const CPubKey &vchPubKey)
-{
-    return Write(std::string("defaultkey"), vchPubKey);
-}
-
-bool CRoutingDB::ReadPool(int64_t nPool, CKeyPoolEntry &keypool)
-{
-    return Read(std::make_pair(std::string("pool"), nPool), keypool);
-}
-
-bool CRoutingDB::WritePool(int64_t nPool, const CKeyPoolEntry &keypool)
-{
-    return Write(std::make_pair(std::string("pool"), nPool), keypool);
-}
-
-bool CRoutingDB::ErasePool(int64_t nPool)
-{
-    return Erase(std::make_pair(std::string("pool"), nPool));
-}
 
 class CRoutingDBState
 {
@@ -92,7 +37,50 @@ public:
     }
 };
 
-bool ReadKeyValue(CNetKeyStore *pwallet,
+extern std::atomic<bool> shutdown_threads;
+
+bool CRoutingTagDB::WriteKey(const CPubKey &vchPubKey, const CPrivKey &vchPrivKey)
+{
+    // hash pubkey/privkey to accelerate wallet load
+    std::vector<unsigned char> vchKey;
+    vchKey.reserve(vchPubKey.size() + vchPrivKey.size());
+    vchKey.insert(vchKey.end(), vchPubKey.begin(), vchPubKey.end());
+    vchKey.insert(vchKey.end(), vchPrivKey.begin(), vchPrivKey.end());
+
+    return Write(std::make_pair(std::string("key"), vchPubKey),
+        std::make_pair(vchPrivKey, Hash(vchKey.begin(), vchKey.end())), false);
+}
+
+bool CRoutingTagDB::WriteCryptedKey(const CPubKey &vchPubKey, const std::vector<unsigned char> &vchCryptedSecret)
+{
+    const bool fEraseUnencryptedKey = true;
+    if (!Write(std::make_pair(std::string("ckey"), vchPubKey), vchCryptedSecret, false))
+        return false;
+    if (fEraseUnencryptedKey)
+    {
+        Erase(std::make_pair(std::string("key"), vchPubKey));
+    }
+    return true;
+}
+
+bool CRoutingTagDB::WriteMasterKey(unsigned int nID, const CMasterKey &kMasterKey)
+{
+    return Write(std::make_pair(std::string("mkey"), nID), kMasterKey, true);
+}
+
+bool CRoutingTagDB::WriteDefaultKey(const CPubKey &vchPubKey) { return Write(std::string("defaultkey"), vchPubKey); }
+bool CRoutingTagDB::ReadPool(int64_t nPool, CKeyPoolEntry &keypool)
+{
+    return Read(std::make_pair(std::string("pool"), nPool), keypool);
+}
+
+bool CRoutingTagDB::WritePool(int64_t nPool, const CKeyPoolEntry &keypool)
+{
+    return Write(std::make_pair(std::string("pool"), nPool), keypool);
+}
+
+bool CRoutingTagDB::ErasePool(int64_t nPool) { return Erase(std::make_pair(std::string("pool"), nPool)); }
+bool ReadKeyValue(CNetTagStore *pwallet,
     CDataStream &ssKey,
     CDataStream &ssValue,
     CRoutingDBState &wss,
@@ -223,12 +211,8 @@ bool ReadKeyValue(CNetKeyStore *pwallet,
     return true;
 }
 
-static bool IsKeyType(std::string strType)
-{
-    return (strType == "key" || strType == "mkey" || strType == "ckey");
-}
-
-bool CRoutingDB::LoadWallet(CNetKeyStore *pwallet)
+static bool IsKeyType(std::string strType) { return (strType == "key" || strType == "mkey" || strType == "ckey"); }
+bool CRoutingTagDB::LoadTags(CNetTagStore *pwallet)
 {
     pwallet->vchDefaultKey = CPubKey();
     CRoutingDBState wss;
@@ -282,15 +266,14 @@ bool CRoutingDB::LoadWallet(CNetKeyStore *pwallet)
     {
         return false;
     }
-    LogPrintf("Keys: %u plaintext, %u encrypted, %u total\n", wss.nKeys, wss.nCKeys,
-        wss.nKeys + wss.nCKeys);
+    LogPrintf("Keys: %u plaintext, %u encrypted, %u total\n", wss.nKeys, wss.nCKeys, wss.nKeys + wss.nCKeys);
     return true;
 }
 
 //
 // Try to (very carefully!) recover wallet.dat if there is a problem.
 //
-bool CRoutingDB::Recover(CDBEnv &dbenv, const std::string &filename, bool fOnlyKeys)
+bool CRoutingTagDB::Recover(CDBEnv &dbenv, const std::string &filename, bool fOnlyKeys)
 {
     // Recovery procedure:
     // move wallet.dat to wallet.timestamp.bak
@@ -332,7 +315,7 @@ bool CRoutingDB::Recover(CDBEnv &dbenv, const std::string &filename, bool fOnlyK
         LogPrintf("Cannot create database file %s\n", filename);
         return false;
     }
-    CNetKeyStore dummyWallet;
+    CNetTagStore dummyWallet;
     CRoutingDBState wss;
 
     DbTxn *ptxn = dbenv.TxnBegin();
@@ -368,7 +351,7 @@ bool CRoutingDB::Recover(CDBEnv &dbenv, const std::string &filename, bool fOnlyK
     return fSuccess;
 }
 
-bool CRoutingDB::Recover(CDBEnv &dbenv, const std::string &filename)
+bool CRoutingTagDB::Recover(CDBEnv &dbenv, const std::string &filename)
 {
-    return CRoutingDB::Recover(dbenv, filename, false);
+    return CRoutingTagDB::Recover(dbenv, filename, false);
 }
