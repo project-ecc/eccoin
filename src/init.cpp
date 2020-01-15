@@ -687,6 +687,7 @@ void ThreadImport(std::vector<fs::path> vImportFiles)
     {
         CImportingNow imp;
         int nFile = 0;
+        GetMainSignals().SystemMessage("REINDEX: STARTED");
         while (true)
         {
             CDiskBlockPos pos(nFile, 0);
@@ -700,12 +701,14 @@ void ThreadImport(std::vector<fs::path> vImportFiles)
                 break; // This error is logged in OpenBlockFile
             }
             LogPrintf("Reindexing block file blk%05u.dat...\n", (unsigned int)nFile);
+            GetMainSignals().SystemMessage(strprintf("REINDEX: BLOCK FILE blk%05u.dat", (unsigned int)nFile));
             pnetMan->getChainActive()->LoadExternalBlockFile(chainparams, file, &pos);
             nFile++;
         }
         pblocktree->WriteReindexing(false);
         fReindex = false;
         LogPrintf("Reindexing finished\n");
+        GetMainSignals().SystemMessage("REINDEX: COMPLETE");
         // To avoid ending up in a situation without genesis block, re-try initializing (no-op if reindexing worked):
         pnetMan->getChainActive()->InitBlockIndex(chainparams);
     }
