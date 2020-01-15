@@ -515,7 +515,9 @@ UniValue listaddresses(const UniValue &params, bool fHelp)
     EnsureWalletIsUnlocked();
 
     std::map<CKeyID, int64_t> mapKeyBirth;
+    std::set<CKeyID> setKeyPool;
     pwalletMain->GetKeyBirthTimes(mapKeyBirth);
+    pwalletMain->GetAllReserveKeys(setKeyPool);
 
     // sort time/key pairs
     std::vector<std::pair<int64_t, CKeyID> > vKeyBirth;
@@ -535,6 +537,14 @@ UniValue listaddresses(const UniValue &params, bool fHelp)
         if (pwalletMain->GetKey(keyid, key))
         {
             if (pwalletMain->mapAddressBook.count(keyid))
+            {
+                ret.push_back(strprintf("%s", strAddr));
+            }
+            else if (setKeyPool.count(keyid))
+            {
+                continue;
+            }
+            else
             {
                 ret.push_back(strprintf("%s", strAddr));
             }
