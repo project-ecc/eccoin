@@ -11,64 +11,58 @@
 #include "base58.h"
 #include "keystore.h"
 #include "net/protocol.h"
-#include "routingtag.h"
 #include "serialize.h"
 #include "sync.h"
+#include "tagstore.h"
 #include "util/util.h"
 #include "util/utiltime.h"
 
 #include <boost/filesystem.hpp>
 #include <boost/scoped_ptr.hpp>
 
-class CRoutingDBState
+class CTagDBState
 {
 public:
     unsigned int nKeys;
     unsigned int nCKeys;
     bool fIsEncrypted;
-    std::vector<uint256> vWalletUpgrade;
 
-    CRoutingDBState()
+    CTagDBState()
     {
         nKeys = 0;
         nCKeys = 0;
         fIsEncrypted = false;
-        vWalletUpgrade.clear();
     }
 };
 
-extern std::atomic<bool> shutdown_threads;
-
-bool CRoutingTagDB::WriteKey(const CPubKey &vchPubKey, const CPrivKey &vchPrivKey)
+bool CRoutingTagDB::WriteTag(const CRoutingTag &tag)
 {
     // hash pubkey/privkey to accelerate wallet load
-    std::vector<unsigned char> vchKey;
-    vchKey.reserve(vchPubKey.size() + vchPrivKey.size());
-    vchKey.insert(vchKey.end(), vchPubKey.begin(), vchPubKey.end());
-    vchKey.insert(vchKey.end(), vchPrivKey.begin(), vchPrivKey.end());
+    // std::vector<unsigned char> vchKey;
+    // vchKey.reserve(tag.vchPubKey.size() + tag.vchPrivKey.size());
+    // vchKey.insert(tag.vchKey.end(), tag.vchPubKey.begin(), tag.vchPubKey.end());
+    // vchKey.insert(tag.vchKey.end(), tag.vchPrivKey.begin(), tag.vchPrivKey.end());
 
-    return Write(std::make_pair(std::string("key"), vchPubKey),
-        std::make_pair(vchPrivKey, Hash(vchKey.begin(), vchKey.end())), false);
+    return Write(std::make_pair(std::string("tag"), tag.vchPubKey), tag, false);
+    // std::make_pair(tag.vchPrivKey, Hash(vchKey.begin(), vchKey.end())), false);
 }
 
-bool CRoutingTagDB::WriteCryptedKey(const CPubKey &vchPubKey, const std::vector<unsigned char> &vchCryptedSecret)
+bool CRoutingTagDB::WriteCryptedTag(const CRoutingTag &tag)
 {
-    const bool fEraseUnencryptedKey = true;
-    if (!Write(std::make_pair(std::string("ckey"), vchPubKey), vchCryptedSecret, false))
-        return false;
-    if (fEraseUnencryptedKey)
+    if (!Write(std::make_pair(std::string("ctag"), tag.vchPubKey), tag, false))
     {
-        Erase(std::make_pair(std::string("key"), vchPubKey));
+        return false;
     }
+    Erase(std::make_pair(std::string("tag"), tag.vchPubKey));
     return true;
 }
 
-bool CRoutingTagDB::WriteMasterKey(unsigned int nID, const CMasterKey &kMasterKey)
+bool CRoutingTagDB::WriteMasterTag(unsigned int nID, const CMasterKey &kMasterKey)
 {
     return Write(std::make_pair(std::string("mkey"), nID), kMasterKey, true);
 }
 
-bool CRoutingTagDB::WriteDefaultKey(const CPubKey &vchPubKey) { return Write(std::string("defaultkey"), vchPubKey); }
+bool CRoutingTagDB::WriteDefaultTag(const CPubKey &vchPubKey) { return Write(std::string("defaultkey"), vchPubKey); }
 bool CRoutingTagDB::ReadPool(int64_t nPool, CKeyPoolEntry &keypool)
 {
     return Read(std::make_pair(std::string("pool"), nPool), keypool);
@@ -83,7 +77,7 @@ bool CRoutingTagDB::ErasePool(int64_t nPool) { return Erase(std::make_pair(std::
 bool ReadKeyValue(CNetTagStore *pwallet,
     CDataStream &ssKey,
     CDataStream &ssValue,
-    CRoutingDBState &wss,
+    CTagDBState &wss,
     std::string &strType,
     std::string &strErr)
 {
@@ -93,66 +87,34 @@ bool ReadKeyValue(CNetTagStore *pwallet,
         // Taking advantage of the fact that pair serialization
         // is just the two items serialized one after the other
         ssKey >> strType;
-        if (strType == "key")
+        if (strType == "tag")
         {
             CPubKey vchPubKey;
             ssKey >> vchPubKey;
             if (!vchPubKey.IsValid())
             {
-                strErr = "Error reading wallet database: CPubKey corrupt";
+                strErr = "Error reading tag database: A Tag CPubKey is corrupt";
                 return false;
             }
-            CKey key;
-            CPrivKey pkey;
+            CRoutingTag tag;
             uint256 hash;
 
-            if (strType == "key")
+            if (strType == "tag")
             {
                 wss.nKeys++;
-                ssValue >> pkey;
+                ssValue >> tag;
             }
 
-            // Old wallets store keys as "key" [pubkey] => [privkey]
-            // ... which was slow for wallets with lots of keys, because the public key is re-derived from the private
-            // key
-            // using EC operations as a checksum.
-            // Newer wallets store keys as "key"[pubkey] => [privkey][hash(pubkey,privkey)], which is much faster while
-            // remaining backwards-compatible.
-            try
-            {
-                ssValue >> hash;
-            }
-            catch (...)
-            {
-            }
-
-            bool fSkipCheck = false;
-
-            if (!hash.IsNull())
-            {
-                // hash pubkey/privkey to accelerate wallet load
-                std::vector<unsigned char> vchKey;
-                vchKey.reserve(vchPubKey.size() + pkey.size());
-                vchKey.insert(vchKey.end(), vchPubKey.begin(), vchPubKey.end());
-                vchKey.insert(vchKey.end(), pkey.begin(), pkey.end());
-
-                if (Hash(vchKey.begin(), vchKey.end()) != hash)
+            /*
+                if (!key.Load(pkey, vchPubKey, false))
                 {
-                    strErr = "Error reading wallet database: CPubKey/CPrivKey corrupt";
+                    strErr = "Error reading wallet database: CPrivKey corrupt";
                     return false;
                 }
-
-                fSkipCheck = true;
-            }
-
-            if (!key.Load(pkey, vchPubKey, fSkipCheck))
+            */
+            if (!pwallet->LoadTag(tag))
             {
-                strErr = "Error reading wallet database: CPrivKey corrupt";
-                return false;
-            }
-            if (!pwallet->LoadKey(key, vchPubKey))
-            {
-                strErr = "Error reading wallet database: LoadKey failed";
+                strErr = "Error reading tag database: LoadTag failed";
                 return false;
             }
         }
@@ -164,29 +126,29 @@ bool ReadKeyValue(CNetTagStore *pwallet,
             ssValue >> kMasterKey;
             if (pwallet->mapMasterKeys.count(nID) != 0)
             {
-                strErr = strprintf("Error reading wallet database: duplicate CMasterKey id %u", nID);
+                strErr = strprintf("Error reading tag database: duplicate CMasterKey id %u", nID);
                 return false;
             }
             pwallet->mapMasterKeys[nID] = kMasterKey;
             if (pwallet->nMasterKeyMaxID < nID)
                 pwallet->nMasterKeyMaxID = nID;
         }
-        else if (strType == "ckey")
+        else if (strType == "ctag")
         {
             CPubKey vchPubKey;
             ssKey >> vchPubKey;
             if (!vchPubKey.IsValid())
             {
-                strErr = "Error reading wallet database: CPubKey corrupt";
+                strErr = "Error reading tag database: a crypted tag's CPubKey is corrupt";
                 return false;
             }
-            std::vector<unsigned char> vchPrivKey;
-            ssValue >> vchPrivKey;
+            CRoutingTag tag;
+            ssValue >> tag;
             wss.nCKeys++;
 
-            if (!pwallet->LoadCryptedKey(vchPubKey, vchPrivKey))
+            if (!pwallet->LoadCryptedTag(tag))
             {
-                strErr = "Error reading wallet database: LoadCryptedKey failed";
+                strErr = "Error reading tag database: LoadCryptedTag failed";
                 return false;
             }
             wss.fIsEncrypted = true;
@@ -215,14 +177,14 @@ static bool IsKeyType(std::string strType) { return (strType == "key" || strType
 bool CRoutingTagDB::LoadTags(CNetTagStore *pwallet)
 {
     pwallet->vchDefaultKey = CPubKey();
-    CRoutingDBState wss;
+    CTagDBState wss;
     try
     {
         // Get cursor
         Dbc *pcursor = GetCursor();
         if (!pcursor)
         {
-            LogPrintf("Error getting wallet database cursor\n");
+            LogPrintf("Error getting tag database cursor\n");
             return false;
         }
 
@@ -236,7 +198,7 @@ bool CRoutingTagDB::LoadTags(CNetTagStore *pwallet)
                 break;
             else if (ret != 0)
             {
-                LogPrintf("Error reading next record from routing key database\n");
+                LogPrintf("Error reading next record from tag database\n");
                 return false;
             }
 
@@ -266,7 +228,7 @@ bool CRoutingTagDB::LoadTags(CNetTagStore *pwallet)
     {
         return false;
     }
-    LogPrintf("Keys: %u plaintext, %u encrypted, %u total\n", wss.nKeys, wss.nCKeys, wss.nKeys + wss.nCKeys);
+    LogPrintf("Tags: %u plaintext, %u encrypted, %u total\n", wss.nKeys, wss.nCKeys, wss.nKeys + wss.nCKeys);
     return true;
 }
 
@@ -316,7 +278,7 @@ bool CRoutingTagDB::Recover(CDBEnv &dbenv, const std::string &filename, bool fOn
         return false;
     }
     CNetTagStore dummyWallet;
-    CRoutingDBState wss;
+    CTagDBState wss;
 
     DbTxn *ptxn = dbenv.TxnBegin();
     for (auto &row : salvagedData)
@@ -335,7 +297,7 @@ bool CRoutingTagDB::Recover(CDBEnv &dbenv, const std::string &filename, bool fOn
                 continue;
             if (!fReadOK)
             {
-                LogPrintf("WARNING: CWalletDB::Recover skipping %s: %s\n", strType, strErr);
+                LogPrintf("WARNING:[Tags] CWalletDB::Recover skipping %s: %s\n", strType, strErr);
                 continue;
             }
         }

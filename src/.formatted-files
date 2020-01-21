@@ -58,6 +58,8 @@ core_io.h
 core_memusage.h
 core_read.cpp
 core_write.cpp
+crypter.cpp
+crypter.h
 crypto/hash.cpp
 crypto/hash.h
 dbwrapper.cpp
@@ -106,10 +108,11 @@ net/nodestate.cpp
 net/nodestate.h
 net/protocol.cpp
 net/protocol.h
-net/routingtag.cpp
 net/routingtag.h
 net/tagdb.cpp
 net/tagdb.h
+net/tagstore.cpp
+net/tagstore.h
 networks/netman.cpp
 networks/netman.h
 networks/network.h
@@ -197,8 +200,8 @@ validationinterface.h
 verifydb.cpp
 verifydb.h
 version.h
-wallet/crypter.cpp
-wallet/crypter.h
+wallet/cryptokeystore.cpp
+wallet/cryptokeystore.h
 wallet/db.cpp
 wallet/db.h
 wallet/wallet_ismine.cpp

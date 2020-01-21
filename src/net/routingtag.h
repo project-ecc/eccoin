@@ -1,42 +1,60 @@
 // This file is part of the Eccoin project
-// Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2016 The Bitcoin Core developers
-// Copyright (c) 2014-2019 The Eccoin developers
+// Copyright (c) 2019 The Eccoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #ifndef ECCOIN_ROUTINGTAG_H
 #define ECCOIN_ROUTINGTAG_H
 
-#include "tagdb.h"
+#include "key.h"
+#include "pubkey.h"
 
-class CNetTagStore : public CCryptoKeyStore
+/// CRoutingTag is its own class instead of a pair holding isPrivate and a CKey
+/// or something similar to allow the addition of more data in the future if
+/// needed without needing to restructure a lot of the code around it.
+class CRoutingTag
 {
 public:
-    bool fFileBacked;
-    std::string strRoutingFile;
-    std::set<int64_t> setKeyPool;
-    typedef std::map<unsigned int, CMasterKey> MasterKeyMap;
-    MasterKeyMap mapMasterKeys;
-    unsigned int nMasterKeyMaxID;
-    CPubKey vchDefaultKey;
-    CPubKey publicRoutingTag;
+    // memory and disk
+    bool isPrivate;
+    CPubKey vchPubKey;
+    CPrivKey vchPrivKey;
 
-private:
-    CRoutingTagDB *proutingdbEncryption;
+    // memory only
+    // this make the privkey redundant but makes calling ckey members a lot easier
+    CKey key;
 
+    CRoutingTag() : key() { isPrivate = true; }
+    CRoutingTag(const CKey &_key) : key(_key)
+    {
+        isPrivate = true;
+        vchPubKey = key.GetPubKey();
+        vchPrivKey = key.GetPrivKey();
+    }
 
-public:
-    CNetTagStore();
-    CNetTagStore(const std::string &strRoutingFileIn);
-    ~CNetTagStore();
-    void SetNull();
-    bool AddCryptedKey(const CPubKey &vchPubKey, const std::vector<unsigned char> &vchCryptedSecret);
-    bool Load();
-    CPubKey GetCurrentPublicTag();
-    bool LoadCryptedKey(const CPubKey &vchPubKey, const std::vector<unsigned char> &vchCryptedSecret);
-    //! Adds a key to the store, without saving it to disk (used by LoadWallet)
-    bool LoadKey(const CKey &key, const CPubKey &pubkey);
+    CRoutingTag(CKey &_key) : key(_key)
+    {
+        isPrivate = true;
+        vchPubKey = key.GetPubKey();
+        vchPrivKey = key.GetPrivKey();
+    }
+
+    ADD_SERIALIZE_METHODS
+
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action)
+    {
+        READWRITE(isPrivate);
+        READWRITE(vchPubKey);
+        READWRITE(vchPrivKey);
+    }
+
+    void MakeNewKey(bool fCompressed)
+    {
+        key.MakeNewKey(fCompressed);
+        vchPubKey = key.GetPubKey();
+        vchPrivKey = key.GetPrivKey();
+    }
 };
 
 #endif // ECCOIN_ROUTINGTAG_H
