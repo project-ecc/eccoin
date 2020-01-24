@@ -15,9 +15,9 @@
 #include "streams.h"
 #include "tinyformat.h"
 
+#include "crypter.h"
 #include "util/utilstrencodings.h"
 #include "validationinterface.h"
-#include "wallet/crypter.h"
 #include "wallet/wallet_ismine.h"
 #include "wallet/walletdb.h"
 

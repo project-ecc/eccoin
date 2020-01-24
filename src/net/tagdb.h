@@ -8,10 +8,12 @@
 #ifndef ECCOIN_TAGDB_H
 #define ECCOIN_TAGDB_H
 
+#include "crypter.h"
 #include "key.h"
 #include "keypoolentry.h"
 #include "keystore.h"
-#include "wallet/crypter.h"
+#include "routingtag.h"
+#include "wallet/cryptokeystore.h"
 #include "wallet/db.h"
 
 // #include <list>
@@ -31,10 +33,12 @@ public:
     {
     }
 
-    bool WriteKey(const CPubKey &vchPubKey, const CPrivKey &vchPrivKey);
-    bool WriteCryptedKey(const CPubKey &vchPubKey, const std::vector<unsigned char> &vchCryptedSecret);
-    bool WriteMasterKey(unsigned int nID, const CMasterKey &kMasterKey);
-    bool WriteDefaultKey(const CPubKey &vchPubKey);
+    bool WriteTag(const CRoutingTag &tag);
+    bool WriteCryptedTag(const CRoutingTag &tag);
+    bool WriteMasterTag(unsigned int nID, const CMasterKey &kMasterKey);
+
+    bool WriteLastUsedPublicTag(CRoutingTag &publicRoutingTag);
+    bool ReadLastUsedPublicTag(CRoutingTag &publicRoutingTag);
 
     bool ReadPool(int64_t nPool, CKeyPoolEntry &keypool);
     bool WritePool(int64_t nPool, const CKeyPoolEntry &keypool);

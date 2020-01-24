@@ -81,6 +81,7 @@ BITCOIN_CORE_H = \
   consensus/validation.h \
   core_io.h \
   core_memusage.h \
+  crypter.h \
   crypto/hash.h \
   dbwrapper.h \
   deadlock-detection/locklocation.h \
@@ -111,6 +112,7 @@ BITCOIN_CORE_H = \
   net/protocol.h \
   net/routingtag.h \
   net/tagdb.h \
+  net/tagstore.h \
   networks/netman.h \
   networks/network.h \
   networks/networktemplate.h \
@@ -162,7 +164,7 @@ BITCOIN_CORE_H = \
   validationinterface.h \
   verifydb.h \
   version.h \
-  wallet/crypter.h \
+  wallet/cryptokeystore.h \
   wallet/db.h \
   wallet/wallet.h \
   wallet/wallet_ismine.h \
@@ -213,6 +215,7 @@ libbitcoin_server_a_SOURCES = \
   compressor.cpp \
   core_read.cpp \
   core_write.cpp \
+  crypter.cpp \
   crypto/aes.cpp \
   crypto/aes.h \
   crypto/chacha20.cpp \
@@ -251,8 +254,8 @@ libbitcoin_server_a_SOURCES = \
   net/net.cpp \
   net/netaddress.cpp \
   net/netbase.cpp \
-  net/routingtag.cpp \
   net/tagdb.cpp \
+  net/tagstore.cpp \
   net/nodestate.cpp \
   net/packetmanager.cpp \
   net/protocol.cpp \
@@ -296,7 +299,7 @@ libbitcoin_server_a_SOURCES = \
   util/utilstrencodings.cpp \
   util/utiltime.cpp \
   verifydb.cpp \
-  wallet/crypter.cpp \
+  wallet/cryptokeystore.cpp \
   wallet/db.cpp \
   wallet/wallet.cpp \
   wallet/wallet_ismine.cpp \

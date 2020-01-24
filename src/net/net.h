@@ -25,7 +25,7 @@
 #include "net/addrman.h"
 #include "net/netbase.h"
 #include "net/protocol.h"
-#include "net/routingtag.h"
+#include "net/tagstore.h"
 #include "networks/netman.h"
 #include "random.h"
 #include "streams.h"
