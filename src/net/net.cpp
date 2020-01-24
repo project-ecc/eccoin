@@ -2457,7 +2457,7 @@ bool CConnman::Start(std::string &strNodeError)
     if (IsBetaEnabled())
     {
         routingKeypool->Load();
-        pub_routing_id = routingKeypool->GetCurrentPublicTag();
+        pub_routing_id = routingKeypool->GetCurrentPublicTagPubKey();
     }
 
     LogPrintf("Loading addresses...\n");

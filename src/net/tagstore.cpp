@@ -289,7 +289,6 @@ bool CNetTagStore::Load()
 {
     proutingdbEncryption = new CRoutingTagDB(strRoutingFile, "cr+");
     assert(proutingdbEncryption != nullptr);
-    CKeyPoolEntry keypool;
 
     bool nLoadWalletRet = proutingdbEncryption->LoadTags(this);
     assert(nLoadWalletRet == true);
@@ -322,33 +321,24 @@ bool CNetTagStore::Load()
     }
     // Get the oldest key
     assert(setKeyPool.empty() == false);
-    if (vchDefaultKey == CPubKey())
+    if (!proutingdbEncryption->ReadLastUsedPublicTag(publicRoutingTag))
     {
+        // assign new public routing tag from pool
         int64_t nIndex = -1;
-        keypool.vchPubKey = CPubKey();
         nIndex = *(setKeyPool.begin());
+        setKeyPool.erase(setKeyPool.begin());
+        CKeyPoolEntry keypool;
         if (!proutingdbEncryption->ReadPool(nIndex, keypool))
-        {
             throw std::runtime_error("ReserveKeyFromKeyPool(): read failed");
-        }
         if (!HaveTag(keypool.vchPubKey.GetID()))
-        {
             throw std::runtime_error("ReserveKeyFromKeyPool(): unknown key in key pool");
-        }
         assert(keypool.vchPubKey.IsValid());
-        LogPrint("net", "routing keypool reserve %d\n", nIndex);
-        if (!proutingdbEncryption->WriteDefaultTag(keypool.vchPubKey))
-        {
-            assert(false);
-        }
+        assert(GetTag(keypool.vchPubKey.GetID(), publicRoutingTag));
+        proutingdbEncryption->WriteLastUsedPublicTag(publicRoutingTag);
     }
-    publicRoutingTag = vchDefaultKey;
-    assert(vchDefaultKey != CPubKey());
-    assert(publicRoutingTag != CPubKey());
-    assert(publicRoutingTag == vchDefaultKey);
     return true;
 }
 
-CPubKey CNetTagStore::GetCurrentPublicTag() { return publicRoutingTag; }
+CPubKey CNetTagStore::GetCurrentPublicTagPubKey() { return publicRoutingTag.vchPubKey; }
 bool CNetTagStore::LoadCryptedTag(const CRoutingTag &tag) { return AddCryptedTagToTagMap(tag); }
 bool CNetTagStore::LoadTag(const CRoutingTag &tag) { return AddTagToTagMap(tag); }

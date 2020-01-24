@@ -36,7 +36,9 @@ public:
     bool WriteTag(const CRoutingTag &tag);
     bool WriteCryptedTag(const CRoutingTag &tag);
     bool WriteMasterTag(unsigned int nID, const CMasterKey &kMasterKey);
-    bool WriteDefaultTag(const CPubKey &vchPubKey);
+
+    bool WriteLastUsedPublicTag(CRoutingTag &publicRoutingTag);
+    bool ReadLastUsedPublicTag(CRoutingTag &publicRoutingTag);
 
     bool ReadPool(int64_t nPool, CKeyPoolEntry &keypool);
     bool WritePool(int64_t nPool, const CKeyPoolEntry &keypool);

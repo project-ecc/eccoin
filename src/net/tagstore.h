@@ -42,8 +42,7 @@ public:
     typedef std::map<unsigned int, CMasterKey> MasterKeyMap;
     MasterKeyMap mapMasterKeys;
     unsigned int nMasterKeyMaxID;
-    CPubKey vchDefaultKey;
-    CPubKey publicRoutingTag;
+    CRoutingTag publicRoutingTag;
 
 private:
     CRoutingTagDB *proutingdbEncryption;
@@ -75,7 +74,7 @@ public:
     void GetTagIds(std::set<CKeyID> &setAddress) const;
     bool AddCryptedTag(const CRoutingTag &tag);
     bool Load();
-    CPubKey GetCurrentPublicTag();
+    CPubKey GetCurrentPublicTagPubKey();
     bool LoadCryptedTag(const CRoutingTag &tag);
     //! Adds a key to the store, without saving it to disk (used by LoadWallet)
     bool LoadTag(const CRoutingTag &tag);

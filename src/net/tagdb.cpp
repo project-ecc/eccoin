@@ -62,7 +62,17 @@ bool CRoutingTagDB::WriteMasterTag(unsigned int nID, const CMasterKey &kMasterKe
     return Write(std::make_pair(std::string("mkey"), nID), kMasterKey, true);
 }
 
-bool CRoutingTagDB::WriteDefaultTag(const CPubKey &vchPubKey) { return Write(std::string("defaultkey"), vchPubKey); }
+bool CRoutingTagDB::WriteLastUsedPublicTag(CRoutingTag &publicRoutingTag)
+{
+    publicRoutingTag.isPrivate = false;
+    return Write(std::string("lastpublictag"), publicRoutingTag);
+}
+
+bool CRoutingTagDB::ReadLastUsedPublicTag(CRoutingTag &publicRoutingTag)
+{
+    return Read(std::string("lastpublictag"), publicRoutingTag);
+}
+
 bool CRoutingTagDB::ReadPool(int64_t nPool, CKeyPoolEntry &keypool)
 {
     return Read(std::make_pair(std::string("pool"), nPool), keypool);
@@ -153,9 +163,9 @@ bool ReadKeyValue(CNetTagStore *pwallet,
             }
             wss.fIsEncrypted = true;
         }
-        else if (strType == "defaultkey")
+        else if (strType == "lastpublictag")
         {
-            ssValue >> pwallet->vchDefaultKey;
+            ssValue >> pwallet->publicRoutingTag;
         }
         else if (strType == "pool")
         {
@@ -176,7 +186,7 @@ bool ReadKeyValue(CNetTagStore *pwallet,
 static bool IsKeyType(std::string strType) { return (strType == "key" || strType == "mkey" || strType == "ckey"); }
 bool CRoutingTagDB::LoadTags(CNetTagStore *pwallet)
 {
-    pwallet->vchDefaultKey = CPubKey();
+    pwallet->publicRoutingTag = CRoutingTag();
     CTagDBState wss;
     try
     {
