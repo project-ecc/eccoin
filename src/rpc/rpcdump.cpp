@@ -315,7 +315,6 @@ UniValue importwallet(const UniValue &params, bool fHelp)
 
     bool fGood = true;
 
-    int64_t nFilesize = std::max((int64_t)1, (int64_t)file.tellg());
     file.seekg(0, file.beg);
 
     while (file.good())
