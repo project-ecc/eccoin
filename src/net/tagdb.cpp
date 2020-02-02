@@ -43,17 +43,17 @@ bool CRoutingTagDB::WriteTag(const CRoutingTag &tag)
     // vchKey.insert(tag.vchKey.end(), tag.vchPubKey.begin(), tag.vchPubKey.end());
     // vchKey.insert(tag.vchKey.end(), tag.vchPrivKey.begin(), tag.vchPrivKey.end());
 
-    return Write(std::make_pair(std::string("tag"), tag.vchPubKey), tag, false);
+    return Write(std::make_pair(std::string("tag"), tag.GetPubKey()), tag, false);
     // std::make_pair(tag.vchPrivKey, Hash(vchKey.begin(), vchKey.end())), false);
 }
 
 bool CRoutingTagDB::WriteCryptedTag(const CRoutingTag &tag)
 {
-    if (!Write(std::make_pair(std::string("ctag"), tag.vchPubKey), tag, false))
+    if (!Write(std::make_pair(std::string("ctag"), tag.GetPubKey()), tag, false))
     {
         return false;
     }
-    Erase(std::make_pair(std::string("tag"), tag.vchPubKey));
+    Erase(std::make_pair(std::string("tag"), tag.GetPubKey()));
     return true;
 }
 
@@ -64,7 +64,7 @@ bool CRoutingTagDB::WriteMasterTag(unsigned int nID, const CMasterKey &kMasterKe
 
 bool CRoutingTagDB::WriteLastUsedPublicTag(CRoutingTag &publicRoutingTag)
 {
-    publicRoutingTag.isPrivate = false;
+    publicRoutingTag.ConvertToPublicTag();
     return Write(std::string("lastpublictag"), publicRoutingTag);
 }
 

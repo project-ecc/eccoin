@@ -108,6 +108,7 @@ net/nodestate.cpp
 net/nodestate.h
 net/protocol.cpp
 net/protocol.h
+net/routingtag.cpp
 net/routingtag.h
 net/tagdb.cpp
 net/tagdb.h
