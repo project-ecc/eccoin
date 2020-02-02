@@ -121,10 +121,31 @@ bool CRoutingTag::Sign(const uint256 &hash, std::vector<unsigned char> &vchSig, 
     unsigned char extra_entropy[32] = {0};
     WriteLE32(extra_entropy, test_case);
     secp256k1_ecdsa_signature sig;
-    int ret = secp256k1_ecdsa_sign(secp256k1_context_sign, &sig, hash.begin(), (unsigned char *)&vch[0],
+    int ret = secp256k1_ecdsa_sign(secp256k1_context_sign, &sig, hash.begin(), (unsigned char *)&vch,
         secp256k1_nonce_function_rfc6979, test_case ? extra_entropy : NULL);
     assert(ret);
     secp256k1_ecdsa_signature_serialize_der(secp256k1_context_sign, (unsigned char *)&vchSig[0], &nSigLen, &sig);
     vchSig.resize(nSigLen);
+    return true;
+}
+
+bool CRoutingTag::SignCompact(const uint256 &hash, std::vector<unsigned char> &vchSig) const
+{
+    unsigned char vch[32];
+    if (!ec_privkey_import_der(secp256k1_context_sign, (unsigned char *)vch, &vchPrivKey[0], vchPrivKey.size()))
+    {
+        return false;
+    }
+    vchSig.resize(65);
+    int rec = -1;
+    secp256k1_ecdsa_recoverable_signature sig;
+    int ret = secp256k1_ecdsa_sign_recoverable(
+        secp256k1_context_sign, &sig, hash.begin(), (unsigned char *)&vch, secp256k1_nonce_function_rfc6979, NULL);
+    assert(ret);
+    secp256k1_ecdsa_recoverable_signature_serialize_compact(
+        secp256k1_context_sign, (unsigned char *)&vchSig[1], &rec, &sig);
+    assert(ret);
+    assert(rec != -1);
+    vchSig[0] = 27 + rec;
     return true;
 }

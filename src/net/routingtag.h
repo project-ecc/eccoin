@@ -49,6 +49,7 @@ public:
     bool VerifyPubKey(const CPubKey &pubkey) const;
     bool CheckIfValid() const;
     bool Sign(const uint256 &hash, std::vector<unsigned char> &vchSig, uint32_t test_case = 0) const;
+    bool SignCompact(const uint256 &hash, std::vector<unsigned char> &vchSig) const;
 };
 
 #endif // ECCOIN_ROUTINGTAG_H
