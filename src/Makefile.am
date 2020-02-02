@@ -259,6 +259,7 @@ libbitcoin_server_a_SOURCES = \
   net/nodestate.cpp \
   net/packetmanager.cpp \
   net/protocol.cpp \
+  net/routingtag.cpp \
   networks/netman.cpp \
   policy/fees.cpp \
   policy/policy.cpp \

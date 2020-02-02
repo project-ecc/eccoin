@@ -34,22 +34,18 @@ static bool DecryptSecret(const CKeyingMaterial &vMasterKey,
     return cKeyCrypter.Decrypt(vchCiphertext, *((CKeyingMaterial *)&vchPlaintext));
 }
 
-static bool DecryptKey(const CKeyingMaterial &vMasterKey,
-    const CCryptedPrivKey &vchCryptedSecret,
-    const CPubKey &vchPubKey,
-    CRoutingTag &tag)
+static bool DecryptTag(const CKeyingMaterial &vMasterKey, const CRoutingTag &tagIn, CRoutingTag &tagOut)
 {
     CKeyingMaterial vchSecret;
-    if (!DecryptSecret(vMasterKey, vchCryptedSecret, vchPubKey.GetHash(), vchSecret))
+    if (!DecryptSecret(vMasterKey, tagIn.GetPrivKey(), tagIn.GetPubKey().GetHash(), vchSecret))
         return false;
 
     if (vchSecret.size() != 32)
         return false;
 
-    tag.key.Set(vchSecret.begin(), vchSecret.end(), vchPubKey.IsCompressed());
-    tag.vchPubKey = vchPubKey;
-    tag.vchPrivKey = vchSecret;
-    return tag.key.VerifyPubKey(vchPubKey);
+    tagOut = CRoutingTag(tagIn.IsPrivate(), tagIn.GetPubKey(), vchSecret);
+    // TODO : we probably dont need to verify the pubkey here
+    return tagOut.VerifyPubKey(tagIn.GetPubKey());
 }
 
 ///////////////////////////////////////////////////
@@ -77,15 +73,13 @@ bool CNetTagStore::EncryptKeys(CKeyingMaterial &vMasterKeyIn)
         for (auto &mTag : mapTags)
         {
             const CRoutingTag &tag = mTag.second;
-            CPubKey vchPubKey = tag.vchPubKey;
-            CKeyingMaterial vchSecret(tag.vchPrivKey.begin(), tag.vchPrivKey.end());
+            CPubKey vchPubKey = tag.GetPubKey();
+            const CPrivKey tagprivkey = tag.GetPrivKey();
+            CKeyingMaterial vchSecret(tagprivkey.begin(), tagprivkey.end());
             CCryptedPrivKey vchCryptedSecret;
             if (!EncryptSecret(vMasterKeyIn, vchSecret, vchPubKey.GetHash(), vchCryptedSecret))
                 return false;
-            CRoutingTag cryptedTag;
-            cryptedTag.isPrivate = tag.isPrivate;
-            cryptedTag.vchPubKey = tag.vchPubKey;
-            cryptedTag.vchPrivKey = vchCryptedSecret;
+            CRoutingTag cryptedTag(tag.IsPrivate(), tag.GetPubKey(), vchCryptedSecret);
             if (!AddCryptedTagToTagMap(cryptedTag))
                 return false;
         }
@@ -106,10 +100,9 @@ bool CNetTagStore::Unlock(const CKeyingMaterial &vMasterKeyIn)
         TagMap::const_iterator mi = mapTags.begin();
         for (; mi != mapTags.end(); ++mi)
         {
-            const CPubKey &vchPubKey = (*mi).second.vchPubKey;
-            const CCryptedPrivKey &vchCryptedSecret = (*mi).second.vchPrivKey;
-            CRoutingTag tag;
-            if (!DecryptKey(vMasterKeyIn, vchCryptedSecret, vchPubKey, tag))
+            const CRoutingTag tagIn = (*mi).second;
+            CRoutingTag tagOut;
+            if (!DecryptTag(vMasterKeyIn, tagIn, tagOut))
             {
                 keyFail = true;
                 break;
@@ -138,7 +131,7 @@ bool CNetTagStore::AddCryptedTagToTagMap(const CRoutingTag &tag)
     {
         return false;
     }
-    mapTags[tag.vchPubKey.GetID()] = tag;
+    mapTags[tag.GetPubKey().GetID()] = tag;
     return true;
 }
 
@@ -148,7 +141,7 @@ bool CNetTagStore::AddTagToTagMap(const CRoutingTag &tag)
         LOCK(cs_TagStore);
         if (!IsCrypted())
         {
-            mapTags[tag.vchPubKey.GetID()] = tag;
+            mapTags[tag.GetPubKey().GetID()] = tag;
             return true;
         }
 
@@ -156,14 +149,12 @@ bool CNetTagStore::AddTagToTagMap(const CRoutingTag &tag)
             return false;
 
         CCryptedPrivKey vchCryptedSecret;
-        CKeyingMaterial vchSecret(tag.vchPrivKey.begin(), tag.vchPrivKey.end());
-        if (!EncryptSecret(vMasterKey, vchSecret, tag.vchPubKey.GetHash(), vchCryptedSecret))
+        CPrivKey tagprivkey = tag.GetPrivKey();
+        CKeyingMaterial vchSecret(tagprivkey.begin(), tagprivkey.end());
+        if (!EncryptSecret(vMasterKey, vchSecret, tag.GetPubKey().GetHash(), vchCryptedSecret))
             return false;
 
-        CRoutingTag cryptedTag;
-        cryptedTag.isPrivate = tag.isPrivate;
-        cryptedTag.vchPubKey = tag.vchPubKey;
-        cryptedTag.vchPrivKey = vchCryptedSecret;
+        CRoutingTag cryptedTag(tag.IsPrivate(), tag.GetPubKey(), vchCryptedSecret);
         if (!AddCryptedTagToTagMap(cryptedTag))
             return false;
     }
@@ -242,9 +233,8 @@ bool CNetTagStore::GetTag(const CKeyID &address, CRoutingTag &tagOut) const
         TagMap::const_iterator mi = mapTags.find(address);
         if (mi != mapTags.end())
         {
-            const CPubKey &vchPubKey = (*mi).second.vchPubKey;
-            const CCryptedPrivKey &vchCryptedSecret = (*mi).second.vchPrivKey;
-            return DecryptKey(vMasterKey, vchCryptedSecret, vchPubKey, tagOut);
+            const CRoutingTag tagIn = (*mi).second;
+            return DecryptTag(vMasterKey, tagIn, tagOut);
         }
     }
     return false;
@@ -255,7 +245,7 @@ bool CNetTagStore::GetTagPubKey(const CKeyID &address, CPubKey &vchPubKeyOut) co
     TagMap::const_iterator mi = mapTags.find(address);
     if (mi != mapTags.end())
     {
-        vchPubKeyOut = (*mi).second.vchPubKey;
+        vchPubKeyOut = (*mi).second.GetPubKey();
         return true;
     }
     return false;
@@ -304,9 +294,9 @@ bool CNetTagStore::Load()
                 nEnd = *(--setKeyPool.end()) + 1;
             }
             CRoutingTag tag;
-            tag.MakeNewKey(false);
-            CPubKey pubkey = tag.vchPubKey;
-            assert(tag.key.VerifyPubKey(pubkey));
+            tag.MakeNewKey();
+            CPubKey pubkey = tag.GetPubKey();
+            assert(tag.VerifyPubKey(pubkey));
             if (!AddTagToTagMap(tag))
             {
                 throw std::runtime_error("CWallet::GenerateNewKey(): AddKey failed");
@@ -339,6 +329,6 @@ bool CNetTagStore::Load()
     return true;
 }
 
-CPubKey CNetTagStore::GetCurrentPublicTagPubKey() { return publicRoutingTag.vchPubKey; }
+CPubKey CNetTagStore::GetCurrentPublicTagPubKey() { return publicRoutingTag.GetPubKey(); }
 bool CNetTagStore::LoadCryptedTag(const CRoutingTag &tag) { return AddCryptedTagToTagMap(tag); }
 bool CNetTagStore::LoadTag(const CRoutingTag &tag) { return AddTagToTagMap(tag); }
