@@ -316,7 +316,6 @@ bool CNetTagStore::Load()
         // assign new public routing tag from pool
         int64_t nIndex = -1;
         nIndex = *(setKeyPool.begin());
-        setKeyPool.erase(setKeyPool.begin());
         CKeyPoolEntry keypool;
         if (!proutingdbEncryption->ReadPool(nIndex, keypool))
             throw std::runtime_error("ReserveKeyFromKeyPool(): read failed");

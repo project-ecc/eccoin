@@ -662,7 +662,7 @@ public:
 
     unsigned int GetReceiveFloodSize() const;
 
-    CPubKey GetRoutingKey() const;
+    CPubKey GetPublicTagPubKey() const;
 
 private:
     struct ListenSocket
@@ -770,7 +770,8 @@ private:
     std::atomic<bool> interruptNet;
     thread_group netThreads;
 
-    CNetTagStore *routingKeypool;
+public:
+    CNetTagStore *tagstore;
     CPubKey pub_routing_id;
 };
 
