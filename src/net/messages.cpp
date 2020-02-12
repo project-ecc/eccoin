@@ -23,6 +23,7 @@
 #include "net/nodestate.h"
 #include "net/packetmanager.h"
 #include "net/protocol.h"
+#include "net/versionmessage.h"
 #include "networks/netman.h"
 #include "networks/networktemplate.h"
 #include "policy/fees.h"
@@ -113,6 +114,43 @@ void PushNodeVersion(CNode *pnode, CConnman &connman, int64_t nTime)
     else
     {
         LogPrintf("send version message: version %d, blocks=%d, us=%s, peer=%d\n", PROTOCOL_VERSION,
+            nNodeStartingHeight, addrMe.ToString(), nodeid);
+    }
+}
+
+// should currently send the exact same data aside from nTime as version message
+void PushDynamicVersion(CNode *pnode, CConnman &connman, int64_t nTime)
+{
+    uint64_t nLocalNodeServices = (uint64_t)pnode->GetLocalServices();
+    int nNodeStartingHeight = pnetMan->getChainActive()->chainActive.Height();
+    NodeId nodeid = pnode->GetId();
+    CAddress addr = pnode->addr;
+
+    CAddress addrYou = (addr.IsRoutable() && !IsProxy(addr) ? addr : CAddress(CService(), addr.nServices));
+    CAddress addrMe = CAddress(CService(), nLocalNodeServices);
+
+    CDynamicVersionMessage versionmsg;
+    versionmsg.write(VersionMsgCode::VERSION, PROTOCOL_VERSION);
+    versionmsg.write(VersionMsgCode::LOCAL_NODE_SERVICES, nLocalNodeServices);
+    versionmsg.write(VersionMsgCode::TIME, nTime);
+    versionmsg.write(VersionMsgCode::ADDR_YOU, addrYou);
+    versionmsg.write(VersionMsgCode::ADDR_ME, addrMe);
+    versionmsg.write(VersionMsgCode::NONCE, nLocalHostNonce);
+    versionmsg.write(VersionMsgCode::SUBVERSION, strSubVersion);
+    versionmsg.write(VersionMsgCode::NODE_START_HEIGHT, nNodeStartingHeight);
+    versionmsg.write(VersionMsgCode::RELAY_TXES, ::fRelayTxes);
+
+    connman.PushMessage(pnode, NetMsgType::DYNAMICVERSION, versionmsg);
+
+    if (g_logger->fLogIPs)
+    {
+        LogPrintf("send dynamic version message: version %d, blocks=%d, "
+                  "us=%s, them=%s, peer=%d\n",
+            PROTOCOL_VERSION, nNodeStartingHeight, addrMe.ToString(), addrYou.ToString(), nodeid);
+    }
+    else
+    {
+        LogPrintf("send dynamic version message: version %d, blocks=%d, us=%s, peer=%d\n", PROTOCOL_VERSION,
             nNodeStartingHeight, addrMe.ToString(), nodeid);
     }
 }
@@ -1064,7 +1102,16 @@ bool static ProcessMessage(CNode *pfrom,
             PushNodeVersion(pfrom, connman, GetAdjustedTime());
         }
 
-        connman.PushMessage(pfrom, NetMsgType::VERACK);
+        if (pfrom->nVersion >= MIN_NETVERSION_EXTENSION_VERSION)
+        {
+            // until this replaces the version message completely, a lot of this message is
+            // duplicated data as the version message
+            PushDynamicVersion(pfrom, connman, GetAdjustedTime());
+        }
+        else
+        {
+            connman.PushMessage(pfrom, NetMsgType::VERACK);
+        }
 
         pfrom->nServices = nServices;
         pfrom->SetAddrLocal(addrMe);
@@ -1141,6 +1188,115 @@ bool static ProcessMessage(CNode *pfrom,
         return true;
     }
 
+    else if (strCommand == NetMsgType::DYNAMICVERSION)
+    {
+        CDynamicVersionMessage versionmsg;
+        vRecv >> versionmsg;
+
+        int64_t nTime;
+        CAddress addrMe;
+        CAddress addrFrom;
+        uint64_t nNonce = 1;
+        uint64_t nServiceInt;
+        ServiceFlags nServices;
+        int nVersion;
+        std::string strSubVer;
+        std::string cleanSubVer;
+        int nStartingHeight = -1;
+        bool fRelay = true;
+
+        // get the value from the map
+        int *temp_version = (int *)versionmsg.read(VersionMsgCode::VERSION);
+        nVersion = *temp_version;
+        free(temp_version);
+        //verify it with the current version message
+        if (nVersion != pfrom->nVersion)
+        {
+            LogPrint("NET", "there is a mismatch between the version message and dynamic version message nVersion field \n");
+        }
+
+        uint64_t *temp_serviceint = (uint64_t *)versionmsg.read(VersionMsgCode::LOCAL_NODE_SERVICES);
+        nServiceInt = *temp_serviceint;
+        free(temp_serviceint);
+        nServices = ServiceFlags(nServiceInt);
+        if (nServices != pfrom->nServices)
+        {
+            LogPrint("NET", "there is a mismatch between the version message and dynamic version message nServices field \n");
+        }
+
+        int64_t *temp_time = (int64_t *)versionmsg.read(VersionMsgCode::TIME);
+        nTime = *temp_time;
+        free(temp_time);
+        int64_t nTimeOffset = nTime - GetTime();
+        if (nTimeOffset != pfrom->nTimeOffset)
+        {
+            LogPrint("NET", "there is a mismatch between the version message and dynamic version message nTime field \n");
+        }
+
+
+        CAddress *temp_addryou = (CAddress *)versionmsg.read(VersionMsgCode::ADDR_YOU);
+        addrMe = *temp_addryou;
+        free(temp_addryou);
+        if (addrMe != pfrom->GetAddrLocal())
+        {
+            LogPrint("NET", "there is a mismatch between the version message and dynamic version message addrMe field \n");
+        }
+
+
+        if (!vRecv.empty())
+        {
+            CAddress *temp_addrme = (CAddress *)versionmsg.read(VersionMsgCode::ADDR_ME);
+            addrFrom = *temp_addrme;
+            free(temp_addrme);
+
+            uint64_t *temp_nonce = (uint64_t *)versionmsg.read(VersionMsgCode::NONCE);
+            nNonce = *temp_nonce;
+            free(temp_nonce);
+            // no need to check nonce
+        }
+        if (!vRecv.empty())
+        {
+            char *temp_substr = (char *)versionmsg.read(VersionMsgCode::SUBVERSION);
+            strSubVer = std::string(temp_substr);
+            cleanSubVer = SanitizeString(strSubVer);
+            free(temp_substr);
+            // this should never trigger because it was previously checked by version
+            if (strSubVer.size() > MAX_SUBVERSION_LENGTH)
+            {
+                LogPrintf("ERROR WITH DYNAMIC VERSION STRSUBVER CHECKS, ASSERTING FALSE \n");
+                assert(false);
+                LOCK(cs_main);
+                Misbehaving(pfrom, 50, "bad strsubver");
+                return false;
+            }
+            if (cleanSubVer != pfrom->cleanSubVer)
+            {
+                LogPrint("NET", "there is a mismatch between the version message and dynamic version message cleanSubVer field \n");
+            }
+        }
+        if (!vRecv.empty())
+        {
+            int *temp_startheight = (int *)versionmsg.read(VersionMsgCode::NODE_START_HEIGHT);
+            nStartingHeight = *temp_startheight;
+            free(temp_startheight);
+            if (nStartingHeight != pfrom->nStartingHeight)
+            {
+                LogPrint("NET", "there is a mismatch between the version message and dynamic version message nStartingHeight field \n");
+            }
+        }
+        if (!vRecv.empty())
+        {
+            bool *temp_relay = (bool *)versionmsg.read(VersionMsgCode::RELAY_TXES);
+            fRelay = *temp_relay;
+            free(temp_relay);
+            if (fRelay != pfrom->fRelayTxes)
+            {
+                LogPrint("NET", "there is a mismatch between the version message and dynamic version message fRelay field \n");
+            }
+        }
+
+        connman.PushMessage(pfrom, NetMsgType::DYNAMICVERACK);
+    }
 
     else if (pfrom->nVersion == 0)
     {
@@ -1149,8 +1305,7 @@ bool static ProcessMessage(CNode *pfrom,
         return false;
     }
 
-
-    if (strCommand == NetMsgType::VERACK)
+    else if (strCommand == NetMsgType::VERACK)
     {
         pfrom->SetRecvVersion(std::min(pfrom->nVersion.load(), PROTOCOL_VERSION));
 
@@ -1172,7 +1327,32 @@ bool static ProcessMessage(CNode *pfrom,
         {
             connman.PushMessage(pfrom, NetMsgType::NSVERSION, NETWORK_SERVICE_VERSION);
         }
+        pfrom->fSuccessfullyConnected = true;
+    }
 
+    // dynamic verack is the same as a verack for now
+    else if (strCommand == NetMsgType::DYNAMICVERACK)
+    {
+        pfrom->SetRecvVersion(std::min(pfrom->nVersion.load(), PROTOCOL_VERSION));
+
+        if (!pfrom->fInbound)
+        {
+            // Mark this node as currently connected, so we update its timestamp
+            // later.
+            CNodeStateAccessor state(nodestateman, pfrom->GetId());
+            state->fCurrentlyConnected = true;
+        }
+
+        // Tell our peer we prefer to receive headers rather than inv's
+        // We send this to non-NODE NETWORK peers as well, because even
+        // non-NODE NETWORK peers can announce blocks (such as pruning
+        // nodes)
+        connman.PushMessage(pfrom, NetMsgType::SENDHEADERS);
+
+        if (pfrom->nVersion >= NETWORK_SERVICE_PROTOCOL_VERSION && IsBetaEnabled())
+        {
+            connman.PushMessage(pfrom, NetMsgType::NSVERSION, NETWORK_SERVICE_VERSION);
+        }
         pfrom->fSuccessfullyConnected = true;
     }
 

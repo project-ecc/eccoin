@@ -13,15 +13,17 @@
  */
 
 
-static const int PROTOCOL_VERSION = 60040;
+static const int PROTOCOL_VERSION = 60042;
 
 // earlier versions not supported as of Feb 2012, and are disconnected
-static const int MIN_PROTO_VERSION = 60037;
+static const int MIN_PROTO_VERSION = 60041;
 
 //! "filter*" commands are disabled without NODE_BLOOM after and including this version
 static const int NO_BLOOM_VERSION = 60034;
 
 static const int NETWORK_SERVICE_PROTOCOL_VERSION = 60040;
+
+static const int MIN_NETVERSION_EXTENSION_VERSION = 60042;
 
 /**
  * Versioning for network services
