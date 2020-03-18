@@ -189,7 +189,7 @@ class CAddrMan
 {
 private:
     //! critical section to protect the inner data structures
-    mutable CCriticalSection cs;
+    mutable CCriticalSection cs_addrman;
 
     //! last used nId
     int nIdCount;
@@ -311,7 +311,7 @@ public:
     template <typename Stream>
     void Serialize(Stream &s) const
     {
-        LOCK(cs);
+        LOCK(cs_addrman);
 
         uint8_t nVersion = 1;
         s << nVersion;
@@ -371,7 +371,7 @@ public:
     template <typename Stream>
     void Unserialize(Stream &s)
     {
-        LOCK(cs);
+        LOCK(cs_addrman);
 
         Clear();
 
@@ -530,7 +530,7 @@ public:
     size_t size() const
     {
         // TODO: Cache this in an atomic to avoid this overhead
-        LOCK(cs);
+        LOCK(cs_addrman);
         return vRandom.size();
     }
 
@@ -539,7 +539,7 @@ public:
     {
 #ifdef DEBUG_ADDRMAN
         {
-            LOCK(cs);
+            LOCK(cs_addrman);
             int err;
             if ((err = Check_()))
                 LogPrintf("ADDRMAN CONSISTENCY CHECK FAILED!!! err=%i\n", err);
@@ -550,7 +550,7 @@ public:
     //! Add a single address.
     bool Add(const CAddress &addr, const CNetAddr &source, int64_t nTimePenalty = 0)
     {
-        LOCK(cs);
+        LOCK(cs_addrman);
         bool fRet = false;
         Check();
         fRet |= Add_(addr, source, nTimePenalty);
@@ -564,7 +564,7 @@ public:
     //! Add multiple addresses.
     bool Add(const std::vector<CAddress> &vAddr, const CNetAddr &source, int64_t nTimePenalty = 0)
     {
-        LOCK(cs);
+        LOCK(cs_addrman);
         int nAdd = 0;
         Check();
         for (std::vector<CAddress>::const_iterator it = vAddr.begin(); it != vAddr.end(); it++)
@@ -579,7 +579,7 @@ public:
     //! Mark an entry as accessible.
     void Good(const CService &addr, int64_t nTime = GetAdjustedTime())
     {
-        LOCK(cs);
+        LOCK(cs_addrman);
         Check();
         Good_(addr, nTime);
         Check();
@@ -588,7 +588,7 @@ public:
     //! Mark an entry as connection attempted to.
     void Attempt(const CService &addr, bool fCountFailure, int64_t nTime = GetAdjustedTime())
     {
-        LOCK(cs);
+        LOCK(cs_addrman);
         Check();
         Attempt_(addr, fCountFailure, nTime);
         Check();
@@ -601,7 +601,7 @@ public:
     {
         CAddrInfo addrRet;
         {
-            LOCK(cs);
+            LOCK(cs_addrman);
             Check();
             addrRet = Select_(newOnly);
             Check();
@@ -615,7 +615,7 @@ public:
         Check();
         std::vector<CAddress> vAddr;
         {
-            LOCK(cs);
+            LOCK(cs_addrman);
             GetAddr_(vAddr);
         }
         Check();
@@ -625,7 +625,7 @@ public:
     //! Mark an entry as currently-connected-to.
     void Connected(const CService &addr, int64_t nTime = GetAdjustedTime())
     {
-        LOCK(cs);
+        LOCK(cs_addrman);
         Check();
         Connected_(addr, nTime);
         Check();
@@ -633,7 +633,7 @@ public:
 
     void SetServices(const CService &addr, ServiceFlags nServices)
     {
-        LOCK(cs);
+        LOCK(cs_addrman);
         Check();
         SetServices_(addr, nServices);
         Check();

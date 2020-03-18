@@ -150,7 +150,7 @@ std::unique_ptr<CBlockTemplate> CreateNewPoWBlock(CWallet *pwallet, const CScrip
     // Collect memory pool transactions into the block
     {
         LOCK(cs_main);
-        READLOCK(mempool.cs);
+        READLOCK(mempool.cs_txmempool);
         CBlockIndex *_pindexPrev = pnetMan->getChainActive()->chainActive.Tip();
         const int nHeight = _pindexPrev->nHeight + 1;
         pblock->nTime = GetAdjustedTime();
@@ -518,9 +518,9 @@ void EccMiner(CWallet *pwallet)
                 nHashCounter += nHashesDone;
             if (GetTimeMillis() - nHPSTimerStart > 4000)
             {
-                static CCriticalSection cs;
+                static CCriticalSection cs_miner;
                 {
-                    LOCK(cs);
+                    LOCK(cs_miner);
                     if (GetTimeMillis() - nHPSTimerStart > 4000)
                     {
                         dHashesPerSec = 1000.0 * nHashCounter / (GetTimeMillis() - nHPSTimerStart);

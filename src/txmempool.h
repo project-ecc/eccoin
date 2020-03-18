@@ -475,7 +475,7 @@ public:
                 CompareTxMemPoolEntryByScore> > >
         indexed_transaction_set;
 
-    mutable CSharedCriticalSection cs;
+    mutable CSharedCriticalSection cs_txmempool;
     indexed_transaction_set mapTx;
     typedef indexed_transaction_set::nth_index<0>::type::iterator txiter;
     struct CompareIteratorByHash
@@ -591,7 +591,7 @@ public:
      *  fSearchForParents = whether to search a tx's vin for in-mempool parents, or
      *    look up parents from mapLinks. Must be true for entries not in the mempool
      *
-     *  If you actually want the ancestor set returned, you must LOCK(this->cs) for the duration of your
+     *  If you actually want the ancestor set returned, you must LOCK(this->cs_txmempool) for the duration of your
      *  use of the returned setEntries.  Therefore only the lockless version returns the ancestor set.
      */
     bool CalculateMemPoolAncestors(const CTxMemPoolEntry &entry,
@@ -644,19 +644,19 @@ public:
 
     unsigned long size()
     {
-        READLOCK(cs);
+        READLOCK(cs_txmempool);
         return mapTx.size();
     }
     unsigned long _size() { return mapTx.size(); }
     uint64_t GetTotalTxSize()
     {
-        READLOCK(cs);
+        READLOCK(cs_txmempool);
         return totalTxSize;
     }
 
     bool exists(uint256 hash) const
     {
-        READLOCK(cs);
+        READLOCK(cs_txmempool);
         return (mapTx.count(hash) != 0);
     }
     bool _exists(uint256 hash) const { return (mapTx.count(hash) != 0); }
@@ -668,7 +668,7 @@ public:
 
     bool exists(const COutPoint &outpoint) const
     {
-        READLOCK(cs);
+        READLOCK(cs_txmempool);
         auto it = mapTx.find(outpoint.hash);
         return (it != mapTx.end() && outpoint.n < it->GetTx().vout.size());
     }

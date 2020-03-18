@@ -91,7 +91,7 @@ struct CNodeState
 class CNodesStateManager
 {
 protected:
-    CCriticalSection cs;
+    CCriticalSection cs_nodestateman;
     std::map<NodeId, CNodeState> mapNodeState;
     friend class CNodeStateAccessor;
 
@@ -107,14 +107,14 @@ public:
     /** Clear the entire nodestate map */
     void Clear()
     {
-        LOCK(cs);
+        LOCK(cs_nodestateman);
         mapNodeState.clear();
     }
 
     /** Is mapNodestate empty */
     bool Empty()
     {
-        LOCK(cs);
+        LOCK(cs_nodestateman);
         return mapNodeState.empty();
     }
 };
@@ -132,7 +132,7 @@ public:
     }
     CNodeStateAccessor(CNodesStateManager &ns, const NodeId id)
     {
-        cs = &ns.cs;
+        cs = &ns.cs_nodestateman;
         EnterCritical("CNodeStateAccessor.cs", __FILE__, __LINE__, (void *)(&cs), LockType::RECURSIVE_MUTEX,
             OwnershipType::EXCLUSIVE);
         obj = ns._GetNodeState(id);

@@ -24,11 +24,11 @@ BOOST_FIXTURE_TEST_SUITE(util_tests, BasicTestingSetup)
 
 BOOST_AUTO_TEST_CASE(util_criticalsection)
 {
-    CCriticalSection cs;
+    CCriticalSection cs_utiltest;
 
     do
     {
-        LOCK(cs);
+        LOCK(cs_utiltest);
         break;
 
         BOOST_ERROR("break was swallowed!");
@@ -36,7 +36,7 @@ BOOST_AUTO_TEST_CASE(util_criticalsection)
 
     do
     {
-        TRY_LOCK(cs, lockTest);
+        TRY_LOCK(cs_utiltest, lockTest);
         if (lockTest)
             break;
 
@@ -60,11 +60,11 @@ void ThreadSharedCritTest(CSharedCriticalSection *cs)
 
 BOOST_AUTO_TEST_CASE(util_sharedcriticalsection)
 {
-    CSharedCriticalSection cs;
+    CSharedCriticalSection cs_shared_util_test;
 
     do
     {
-        READLOCK(cs);
+        READLOCK(cs_shared_util_test);
         break;
 
         BOOST_ERROR("break was swallowed!");
@@ -72,7 +72,7 @@ BOOST_AUTO_TEST_CASE(util_sharedcriticalsection)
 
     do
     {
-        WRITELOCK(cs);
+        WRITELOCK(cs_shared_util_test);
         break;
 
         BOOST_ERROR("break was swallowed!");
@@ -80,8 +80,8 @@ BOOST_AUTO_TEST_CASE(util_sharedcriticalsection)
 
     { // If the read lock does not allow simultaneous locking, this code will hang in the join_all
         thread_group thrds;
-        READLOCK(cs);
-        thrds.create_thread(boost::bind(ThreadSharedCritTest, &cs));
+        READLOCK(cs_shared_util_test);
+        thrds.create_thread(boost::bind(ThreadSharedCritTest, &cs_shared_util_test));
         thrds.join_all();
     }
 
@@ -92,8 +92,8 @@ BOOST_AUTO_TEST_CASE(util_sharedcriticalsection)
         critVal = 1;
         thread_group thrds;
         {
-            WRITELOCK(cs);
-            thrds.create_thread(boost::bind(ThreadSharedCritTest, &cs));
+            WRITELOCK(cs_shared_util_test);
+            thrds.create_thread(boost::bind(ThreadSharedCritTest, &cs_shared_util_test));
             MilliSleep(250); // give thread a chance to run.
             BOOST_CHECK(threadStarted == true);
             BOOST_CHECK(threadExited == false);

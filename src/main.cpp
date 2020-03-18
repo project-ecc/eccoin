@@ -191,7 +191,7 @@ bool TestLockPointValidity(const LockPoints *lp)
 bool CheckSequenceLocks(const CTransaction &tx, int flags, LockPoints *lp, bool useExistingLockPoints)
 {
     AssertLockHeld(cs_main);
-    AssertLockHeld(mempool.cs);
+    AssertLockHeld(mempool.cs_txmempool);
 
     CBlockIndex *tip = pnetMan->getChainActive()->chainActive.Tip();
     CBlockIndex index;
@@ -341,7 +341,7 @@ bool AcceptToMemoryPoolWorker(CTxMemPool &pool,
 
     // Check for conflicts with in-memory transactions
     {
-        READLOCK(pool.cs); // protect pool.mapNextTx
+        READLOCK(pool.cs_txmempool); // protect pool.mapNextTx
         for (auto const &txin : tx.vin)
         {
             auto itConflicting = pool.mapNextTx.find(txin.prevout);
@@ -360,7 +360,7 @@ bool AcceptToMemoryPoolWorker(CTxMemPool &pool,
         CAmount nValueIn = 0;
         LockPoints lp;
         {
-            WRITELOCK(pool.cs);
+            WRITELOCK(pool.cs_txmempool);
             CCoinsViewMemPool viewMemPool(pcoinsTip.get(), pool);
             view.SetBackend(viewMemPool);
 
@@ -406,7 +406,7 @@ bool AcceptToMemoryPoolWorker(CTxMemPool &pool,
             // Only accept BIP68 sequence locked transactions that can be mined in the next
             // block; we don't want our mempool filled up with transactions that can't
             // be mined yet.
-            // Must keep pool.cs for this unless we change CheckSequenceLocks to take a
+            // Must keep pool.cs_txmempool for this unless we change CheckSequenceLocks to take a
             // CoinsViewCache instead of create its own
             if (!CheckSequenceLocks(tx, STANDARD_LOCKTIME_VERIFY_FLAGS, &lp))
             {
@@ -595,7 +595,7 @@ bool AcceptToMemoryPoolWorker(CTxMemPool &pool,
                 __func__, hash.ToString(), FormatStateMessage(state));
         }
         {
-            WRITELOCK(pool.cs);
+            WRITELOCK(pool.cs_txmempool);
             if (!pool._CalculateMemPoolAncestors(entry, setAncestors, nLimitAncestors, nLimitAncestorSize,
                     nLimitDescendants, nLimitDescendantSize, errString))
             {
@@ -604,7 +604,7 @@ bool AcceptToMemoryPoolWorker(CTxMemPool &pool,
         }
 
         {
-            WRITELOCK(pool.cs);
+            WRITELOCK(pool.cs_txmempool);
             // Store transaction in memory
             pool.addUnchecked(hash, entry, setAncestors, !pnetMan->getChainActive()->IsInitialBlockDownload());
         }
