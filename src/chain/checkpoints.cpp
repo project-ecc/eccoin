@@ -10,7 +10,6 @@
 #include "chain.h"
 #include "init.h"
 #include "main.h"
-#include "networks/networktemplate.h"
 #include "uint256.h"
 
 #include <boost/foreach.hpp>
@@ -18,24 +17,20 @@
 
 namespace Checkpoints
 {
-int GetTotalBlocksEstimate(const CCheckpointData &data)
+int GetTotalBlocksEstimate(const MapCheckpoints &checkpoints)
 {
-    const MapCheckpoints &checkpoints = data.mapCheckpoints;
-
     if (checkpoints.empty())
         return 0;
 
     return checkpoints.rbegin()->first;
 }
 
-CBlockIndex *GetLastCheckpoint(const CCheckpointData &data)
+CBlockIndex *GetLastCheckpoint(const MapCheckpoints &checkpoints)
 {
-    const MapCheckpoints &checkpoints = data.mapCheckpoints;
-
     BOOST_REVERSE_FOREACH (const MapCheckpoints::value_type &i, checkpoints)
     {
         const uint256 &hash = i.second;
-        CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(hash);
+        CBlockIndex *pindex = g_chainman.LookupBlockIndex(hash);
         if (pindex)
         {
             return pindex;

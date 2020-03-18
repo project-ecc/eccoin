@@ -3,6 +3,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include "chain/chainman.h"
 #include "coins.h"
 #include "fs.h"
 #include "main.h"
@@ -72,11 +73,12 @@ fs::path pathCached;
 fs::path pathCachedNetSpecific;
 
 
-
 CWallet *pwalletMain = nullptr;
-CNetworkManager *pnetMan = nullptr;
 std::unique_ptr<CConnman> g_connman;
 std::unique_ptr<PeerLogicValidation> peerLogic;
 
 CAodvRouteTable g_aodvtable;
 CPacketManager g_packetman;
+
+CChainParams chainparams;
+CChainManager g_chainman;

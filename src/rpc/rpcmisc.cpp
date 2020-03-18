@@ -89,14 +89,14 @@ UniValue getinfo(const UniValue &params, bool fHelp)
         obj.push_back(Pair("newmint", ValueFromAmount(pwalletMain->GetNewMint())));
         obj.push_back(Pair("stake", ValueFromAmount(pwalletMain->GetStake())));
     }
-    obj.push_back(Pair("blocks", (int)pnetMan->getChainActive()->chainActive.Height()));
-    obj.push_back(Pair("headers", (int)pnetMan->getChainActive()->pindexBestHeader.load()->nHeight));
-    obj.push_back(Pair("moneysupply", ValueFromAmount(pnetMan->getChainActive()->chainActive.Tip()->nMoneySupply)));
+    obj.push_back(Pair("blocks", (int)g_chainman.chainActive.Height()));
+    obj.push_back(Pair("headers", (int)g_chainman.pindexBestHeader.load()->nHeight));
+    obj.push_back(Pair("moneysupply", ValueFromAmount(g_chainman.chainActive.Tip()->nMoneySupply)));
     obj.push_back(Pair("timeoffset", GetTimeOffset()));
     obj.push_back(Pair("connections", (int)g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL)));
     obj.push_back(Pair("proxy", (proxy.IsValid() ? proxy.proxy.ToStringIPPort() : std::string())));
     obj.push_back(Pair("difficulty", (double)GetDifficulty()));
-    obj.push_back(Pair("testnet", pnetMan->getActivePaymentNetwork()->TestnetToBeDeprecatedFieldRPC()));
+    obj.push_back(Pair("testnet", Params().TestnetToBeDeprecatedFieldRPC()));
     if (pwalletMain)
     {
         obj.push_back(Pair("keypoololdest", pwalletMain->GetOldestKeyPoolTime()));
@@ -371,7 +371,7 @@ UniValue setmocktime(const UniValue &params, bool fHelp)
                                  "1. timestamp  (integer, required) Unix seconds-since-epoch timestamp\n"
                                  "   Pass 0 to go back to using the system time.");
 
-    if (!pnetMan->getActivePaymentNetwork()->MineBlocksOnDemand())
+    if (!Params().MineBlocksOnDemand())
         throw std::runtime_error("setmocktime for regression testing (-regtest mode) only");
 
     // cs_vNodes is locked and node send/receive times are updated

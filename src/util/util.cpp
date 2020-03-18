@@ -9,7 +9,7 @@
 #include "args.h"
 
 #include "init.h"
-#include "networks/netman.h"
+#include "chain/chainparams.h"
 #include "random.h"
 #include "serialize.h"
 #include "sync.h"
@@ -247,7 +247,7 @@ const fs::path &GetDataDir(bool fNetSpecific)
     }
     if (fNetSpecific)
     {
-        path /= pnetMan->getActivePaymentNetwork()->DataDir();
+        path /= Params().NetworkDataDir();
     }
 
     fs::create_directories(path);

@@ -142,7 +142,7 @@ UniValue importprivkey(const UniValue &params, bool fHelp)
 
         if (fRescan)
         {
-            pwalletMain->ScanForWalletTransactions(pnetMan->getChainActive()->chainActive.Genesis(), true);
+            pwalletMain->ScanForWalletTransactions(g_chainman.chainActive.Genesis(), true);
         }
     }
 
@@ -232,7 +232,7 @@ UniValue importaddress(const UniValue &params, bool fHelp)
 
     if (fRescan)
     {
-        pwalletMain->ScanForWalletTransactions(pnetMan->getChainActive()->chainActive.Genesis(), true);
+        pwalletMain->ScanForWalletTransactions(g_chainman.chainActive.Genesis(), true);
         pwalletMain->ReacceptWalletTransactions();
     }
 
@@ -278,7 +278,7 @@ UniValue importpubkey(const UniValue &params, bool fHelp)
 
     if (fRescan)
     {
-        pwalletMain->ScanForWalletTransactions(pnetMan->getChainActive()->chainActive.Genesis(), true);
+        pwalletMain->ScanForWalletTransactions(g_chainman.chainActive.Genesis(), true);
         pwalletMain->ReacceptWalletTransactions();
     }
 
@@ -311,7 +311,7 @@ UniValue importwallet(const UniValue &params, bool fHelp)
     if (!file.is_open())
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Cannot open wallet dump file");
 
-    int64_t nTimeBegin = pnetMan->getChainActive()->chainActive.Tip()->GetBlockTime();
+    int64_t nTimeBegin = g_chainman.chainActive.Tip()->GetBlockTime();
 
     bool fGood = true;
 
@@ -370,14 +370,14 @@ UniValue importwallet(const UniValue &params, bool fHelp)
     }
     file.close();
 
-    CBlockIndex *pindex = pnetMan->getChainActive()->chainActive.Tip();
+    CBlockIndex *pindex = g_chainman.chainActive.Tip();
     while (pindex && pindex->pprev && pindex->GetBlockTime() > nTimeBegin - 7200)
         pindex = pindex->pprev;
 
     if (!pwalletMain->nTimeFirstKey || nTimeBegin < pwalletMain->nTimeFirstKey)
         pwalletMain->nTimeFirstKey = nTimeBegin;
 
-    LogPrintf("Rescanning last %i blocks\n", pnetMan->getChainActive()->chainActive.Height() - pindex->nHeight + 1);
+    LogPrintf("Rescanning last %i blocks\n", g_chainman.chainActive.Height() - pindex->nHeight + 1);
     pwalletMain->ScanForWalletTransactions(pindex);
     pwalletMain->MarkDirty();
 
@@ -463,10 +463,10 @@ UniValue dumpwallet(const UniValue &params, bool fHelp)
     file << strprintf("# Wallet dump created by Eccoin %s (%s)\n", CLIENT_BUILD, CLIENT_DATE);
     file << strprintf("# * Created on %s\n", EncodeDumpTime(GetTime()));
     file << strprintf("# * Best block at time of backup was %i (%s),\n",
-        pnetMan->getChainActive()->chainActive.Height(),
-        pnetMan->getChainActive()->chainActive.Tip()->GetBlockHash().ToString());
+        g_chainman.chainActive.Height(),
+        g_chainman.chainActive.Tip()->GetBlockHash().ToString());
     file << strprintf(
-        "#   mined on %s\n", EncodeDumpTime(pnetMan->getChainActive()->chainActive.Tip()->GetBlockTime()));
+        "#   mined on %s\n", EncodeDumpTime(g_chainman.chainActive.Tip()->GetBlockTime()));
     file << "\n";
     for (std::vector<std::pair<int64_t, CKeyID> >::const_iterator it = vKeyBirth.begin(); it != vKeyBirth.end(); it++)
     {

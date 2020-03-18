@@ -15,8 +15,7 @@
 #include "kernel.h"
 #include "main.h"
 #include "net/net.h"
-#include "networks/netman.h"
-#include "networks/networktemplate.h"
+#include "chain/chainparams.h"
 #include "script/stakescript.h"
 #include "timedata.h"
 #include "txdb.h"
@@ -28,19 +27,19 @@
 static bool GetKernelStakeModifier(uint256 hashBlockFrom, uint256 &nStakeModifier)
 {
     nStakeModifier.SetNull();
-    const CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(hashBlockFrom);
+    const CBlockIndex *pindex = g_chainman.LookupBlockIndex(hashBlockFrom);
     if (!pindex)
     {
         return error("GetKernelStakeModifier() : block not indexed");
     }
     int blocksToGo = 5;
-    if (pnetMan->getChainActive()->chainActive.Tip()->nHeight >= 1504350)
+    if (g_chainman.chainActive.Tip()->nHeight >= 1504350)
     {
         blocksToGo = 180;
     }
-    while (pnetMan->getChainActive()->chainActive.Next(pindex) && blocksToGo > 0)
+    while (g_chainman.chainActive.Next(pindex) && blocksToGo > 0)
     {
-        pindex = pnetMan->getChainActive()->chainActive.Next(pindex);
+        pindex = g_chainman.chainActive.Next(pindex);
         blocksToGo = blocksToGo - 1;
     }
     if (blocksToGo > 0)
@@ -109,16 +108,16 @@ bool ComputeNextStakeModifier(const CBlockIndex *pindexPrev, const CTransaction 
     // First try finding the previous transaction in database
     CTransaction txPrev;
     uint256 blockHashOfTx;
-    if (!GetTransaction(txin.prevout.hash, txPrev, pnetMan->getActivePaymentNetwork()->GetConsensus(), blockHashOfTx))
+    if (!GetTransaction(txin.prevout.hash, txPrev, Params().GetConsensus(), blockHashOfTx))
         // previous transaction not in main chain, may occur during initial download
         return error("ComputeNextStakeModifier() : INFO: read txPrev failed");
 
     // Read block header
     CBlock block;
-    CBlockIndex *index = pnetMan->getChainActive()->LookupBlockIndex(blockHashOfTx);
+    CBlockIndex *index = g_chainman.LookupBlockIndex(blockHashOfTx);
 
     {
-        if (!ReadBlockFromDisk(block, index, pnetMan->getActivePaymentNetwork()->GetConsensus()))
+        if (!ReadBlockFromDisk(block, index, Params().GetConsensus()))
         {
             // unable to read block of previous transaction
             LogPrint("kernel", "ComputeNextStakeModifier() : read block failed");
@@ -170,7 +169,7 @@ bool CheckStakeKernelHash(int nHeight,
         return error("CheckStakeKernelHash() : nTime violation");
 
     unsigned int nTimeBlockFrom = blockFrom.GetBlockTime();
-    if (nTimeBlockFrom + pnetMan->getActivePaymentNetwork()->getStakeMinAge() > nTimeTx) // Min age requirement
+    if (nTimeBlockFrom + Params().getStakeMinAge() > nTimeTx) // Min age requirement
         return error("CheckStakeKernelHash() : min age violation");
 
     int64_t nValueIn = txPrev.vout[prevout.n].nValue;
@@ -178,7 +177,7 @@ bool CheckStakeKernelHash(int nHeight,
     // v0.3 protocol kernel hash weight starts from 0 at the min age
     // this change increases active coins participating the hash and helps
     // to secure the network when proof-of-stake difficulty is low
-    int64_t nTimeWeight = ((int64_t)nTimeTx - txPrev.nTime) - pnetMan->getActivePaymentNetwork()->getStakeMinAge();
+    int64_t nTimeWeight = ((int64_t)nTimeTx - txPrev.nTime) - Params().getStakeMinAge();
 
     if (nTimeWeight <= 0)
     {
@@ -222,9 +221,9 @@ bool CheckStakeKernelHash(int nHeight,
         bool fNegative;
         bool fOverflow;
         hashTarget.SetCompact(
-            GetNextTargetRequired(pnetMan->getChainActive()->chainActive.Tip(), true), &fNegative, &fOverflow);
+            GetNextTargetRequired(g_chainman.chainActive.Tip(), true), &fNegative, &fOverflow);
         if (fNegative || hashTarget == 0 || fOverflow ||
-            hashTarget > UintToArith256(pnetMan->getActivePaymentNetwork()->GetConsensus().posLimit))
+            hashTarget > UintToArith256(Params().GetConsensus().posLimit))
             return error("CheckStakeKernelHash(): nBits below minimum work for proof of stake");
 
         std::string reductionHex = reduction.GetHex();
@@ -264,7 +263,7 @@ bool CheckProofOfStake(int nHeight, const CTransaction &tx, uint256 &hashProofOf
     // First try finding the previous transaction in database
     CTransaction txPrev;
     uint256 blockHashOfTx;
-    if (!GetTransaction(txin.prevout.hash, txPrev, pnetMan->getActivePaymentNetwork()->GetConsensus(), blockHashOfTx))
+    if (!GetTransaction(txin.prevout.hash, txPrev, Params().GetConsensus(), blockHashOfTx))
         // previous transaction not in main chain, may occur during initial download
         return error("CheckProofOfStake() : INFO: read txPrev failed");
     // Verify signature
@@ -273,9 +272,9 @@ bool CheckProofOfStake(int nHeight, const CTransaction &tx, uint256 &hashProofOf
 
     // Read block header
     CBlock block;
-    CBlockIndex *index = pnetMan->getChainActive()->LookupBlockIndex(blockHashOfTx);
+    CBlockIndex *index = g_chainman.LookupBlockIndex(blockHashOfTx);
     {
-        if (!ReadBlockFromDisk(block, index, pnetMan->getActivePaymentNetwork()->GetConsensus()))
+        if (!ReadBlockFromDisk(block, index, Params().GetConsensus()))
         {
             LogPrint("kernel", "CheckProofOfStake() : read block failed");
             return false;

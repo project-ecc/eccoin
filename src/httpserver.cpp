@@ -11,7 +11,7 @@
 #include "args.h"
 #include "init.h"
 #include "net/netbase.h"
-#include "networks/netman.h"
+#include "chain/chainparams.h"
 #include "rpc/rpcprotocol.h" // For HTTP status codes
 #include "sync.h"
 
@@ -337,7 +337,7 @@ static void ThreadHTTP(struct event_base *base, struct evhttp *http)
 /** Bind HTTP server to specified addresses */
 static bool HTTPBindAddresses(struct evhttp *http)
 {
-    int defaultPort = gArgs.GetArg("-rpcport", pnetMan->getActivePaymentNetwork()->GetRPCPort());
+    int defaultPort = gArgs.GetArg("-rpcport", Params().GetRPCPort());
     std::vector<std::pair<std::string, uint16_t> > endpoints;
 
     // Determine what addresses to bind to

@@ -14,8 +14,7 @@
 #include "crypto/hash.h"
 #include "init.h"
 #include "main.h"
-#include "networks/netman.h"
-#include "networks/networktemplate.h"
+#include "chain/chainparams.h"
 #include "timedata.h"
 #include "tinyformat.h"
 #include "txdb.h"
@@ -206,7 +205,7 @@ bool CTransaction::IsFinal(int nBlockHeight, int64_t nBlockTime) const
     if (nLockTime == 0)
         return true;
     if (nBlockHeight == 0)
-        nBlockHeight = pnetMan->getChainActive()->chainActive.Height();
+        nBlockHeight = g_chainman.chainActive.Height();
     if (nBlockTime == 0)
         nBlockTime = GetAdjustedTime();
     if ((int64_t)nLockTime < ((int64_t)nLockTime < LOCKTIME_THRESHOLD ? (int64_t)nBlockHeight : nBlockTime))
@@ -244,16 +243,16 @@ uint64_t CTransaction::GetCoinAge(uint64_t nCoinAge, bool byValue) const
         CBlock block;
         CDiskBlockPos blockPos(txindex.nFile, txindex.nPos);
         {
-            if (!ReadBlockFromDisk(block, blockPos, pnetMan->getActivePaymentNetwork()->GetConsensus()))
+            if (!ReadBlockFromDisk(block, blockPos, Params().GetConsensus()))
                 return false; // unable to read block of previous transaction
         }
-        if (block.GetBlockTime() + pnetMan->getActivePaymentNetwork()->getStakeMinAge() > nTime)
+        if (block.GetBlockTime() + Params().getStakeMinAge() > nTime)
             continue; // only count coins meeting min age requirement
 
         CTransaction txPrev;
         uint256 blockHashOfTx;
         if (!GetTransaction(
-                txin.prevout.hash, txPrev, pnetMan->getActivePaymentNetwork()->GetConsensus(), blockHashOfTx))
+                txin.prevout.hash, txPrev, Params().GetConsensus(), blockHashOfTx))
         {
             return false;
         }
@@ -299,16 +298,16 @@ bool CTransaction::GetCoinAge(uint64_t &nCoinAge) const
         CBlock block;
         CDiskBlockPos blockPos(txindex.nFile, txindex.nPos);
         {
-            if (!ReadBlockFromDisk(block, blockPos, pnetMan->getActivePaymentNetwork()->GetConsensus()))
+            if (!ReadBlockFromDisk(block, blockPos, Params().GetConsensus()))
                 return false; // unable to read block of previous transaction
         }
-        if (block.GetBlockTime() + pnetMan->getActivePaymentNetwork()->getStakeMinAge() > nTime)
+        if (block.GetBlockTime() + Params().getStakeMinAge() > nTime)
             continue; // only count coins meeting min age requirement
 
         CTransaction txPrev;
         uint256 blockHashOfTx;
         if (!GetTransaction(
-                txin.prevout.hash, txPrev, pnetMan->getActivePaymentNetwork()->GetConsensus(), blockHashOfTx))
+                txin.prevout.hash, txPrev, Params().GetConsensus(), blockHashOfTx))
         {
             return false;
         }
@@ -381,8 +380,8 @@ bool GetTransaction(const uint256 &hash,
         CoinAccessor coin(*(pcoinsTip), hash);
         if (!coin->IsSpent())
         {
-            RECURSIVEREADLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
-            pindexSlow = pnetMan->getChainActive()->chainActive[coin->nHeight];
+            RECURSIVEREADLOCK(g_chainman.cs_mapBlockIndex);
+            pindexSlow = g_chainman.chainActive[coin->nHeight];
         }
     }
 

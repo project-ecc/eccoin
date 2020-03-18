@@ -10,7 +10,7 @@
 #include "arith_uint256.h"
 #include "chain/chain.h"
 #include "main.h"
-#include "networks/netman.h"
+#include "chain/chainparams.h"
 #include "uint256.h"
 #include "util/util.h"
 
@@ -70,7 +70,7 @@ int64_t GetBlockProofEquivalentTime(const CBlockIndex &to,
         sign = -1;
     }
     int64_t targetSpacing = params.nTargetSpacing;
-    if (tip.GetMedianTimePast() > SERVICE_UPGRADE_HARDFORK)
+    if (tip.GetMedianTimePast() > LONGER_BLOCKTIME_HARDFORK)
     {
         targetSpacing = 150;
     }

@@ -26,8 +26,7 @@
 #include "main.h"
 #include "net/messages.h"
 #include "net/net.h"
-#include "networks/netman.h"
-#include "networks/networktemplate.h"
+#include "chain/chainparams.h"
 #include "policy/policy.h"
 #include "processblock.h"
 #include "processheader.h"
@@ -46,19 +45,18 @@ CBlockIndex *pindexBestForkBase = nullptr;
 /** Update chainActive and related internal data structures. */
 void UpdateTip(CBlockIndex *pindexNew)
 {
-    const CNetworkTemplate &chainParams = pnetMan->getActivePaymentNetwork();
-    pnetMan->getChainActive()->chainActive.SetTip(pindexNew);
+    g_chainman.chainActive.SetTip(pindexNew);
 
     // New best block
     nTimeBestReceived.store(GetTime());
     mempool.AddTransactionsUpdated(1);
 
     LogPrintf("%s: new best=%s  height=%d  log2_work=%.8g  tx=%lu  date=%s cache=%.1fMiB(%utx)\n", __func__,
-        pnetMan->getChainActive()->chainActive.Tip()->GetBlockHash().ToString(),
-        pnetMan->getChainActive()->chainActive.Height(),
-        log(pnetMan->getChainActive()->chainActive.Tip()->nChainWork.getdouble()) / log(2.0),
-        (unsigned long)(pnetMan->getChainActive()->chainActive.Tip()->nChainTx),
-        DateTimeStrFormat("%Y-%m-%d %H:%M:%S", pnetMan->getChainActive()->chainActive.Tip()->GetBlockTime()),
+        g_chainman.chainActive.Tip()->GetBlockHash().ToString(),
+        g_chainman.chainActive.Height(),
+        log(g_chainman.chainActive.Tip()->nChainWork.getdouble()) / log(2.0),
+        (unsigned long)(g_chainman.chainActive.Tip()->nChainTx),
+        DateTimeStrFormat("%Y-%m-%d %H:%M:%S", g_chainman.chainActive.Tip()->GetBlockTime()),
         pcoinsTip->DynamicMemoryUsage() * (1.0 / (1 << 20)), pcoinsTip->GetCacheSize());
 
     cvBlockChange.notify_all();
@@ -68,7 +66,7 @@ void UpdateTip(CBlockIndex *pindexNew)
  * after this, with cs_main held. */
 bool DisconnectTip(CValidationState &state, const Consensus::Params &consensusParams)
 {
-    CBlockIndex *pindexDelete = pnetMan->getChainActive()->chainActive.Tip();
+    CBlockIndex *pindexDelete = g_chainman.chainActive.Tip();
     assert(pindexDelete);
     // Read block from disk.
     std::shared_ptr<CBlock> pblock = std::make_shared<CBlock>();
@@ -128,12 +126,12 @@ bool DisconnectTip(CValidationState &state, const Consensus::Params &consensusPa
  * corresponding to pindexNew, to bypass loading it again from disk.
  */
 bool ConnectTip(CValidationState &state,
-    const CNetworkTemplate &chainparams,
+    const CChainParams &chainparams,
     CBlockIndex *pindexNew,
     const CBlock *pblock)
 {
     AssertLockHeld(cs_main);
-    assert(pindexNew->pprev == pnetMan->getChainActive()->chainActive.Tip());
+    assert(pindexNew->pprev == g_chainman.chainActive.Tip());
     // Read block from disk.
     CBlock block;
     if (!pblock)
@@ -165,7 +163,7 @@ bool ConnectTip(CValidationState &state,
     // Remove conflicting transactions from the mempool.
     std::list<CTransactionRef> txConflicted;
     mempool.removeForBlock(
-        pblock->vtx, pindexNew->nHeight, txConflicted, !pnetMan->getChainActive()->IsInitialBlockDownload());
+        pblock->vtx, pindexNew->nHeight, txConflicted, !g_chainman.IsInitialBlockDownload());
     // Update chainActive & related variables.
     UpdateTip(pindexNew);
 
@@ -208,18 +206,18 @@ void CheckForkWarningConditions()
     AssertLockHeld(cs_main);
     // Before we get past initial download, we cannot reliably alert about forks
     // (we assume we don't get stuck on a fork before the last checkpoint)
-    if (pnetMan->getChainActive()->IsInitialBlockDownload())
+    if (g_chainman.IsInitialBlockDownload())
         return;
 
     // If our best fork is no longer within 72 blocks (+/- 12 hours if no one mines it)
     // of our head, drop it
-    if (pindexBestForkTip && pnetMan->getChainActive()->chainActive.Height() - pindexBestForkTip->nHeight >= 72)
+    if (pindexBestForkTip && g_chainman.chainActive.Height() - pindexBestForkTip->nHeight >= 72)
         pindexBestForkTip = NULL;
 
     if (pindexBestForkTip ||
         (pindexBestInvalid &&
-            pindexBestInvalid->nChainWork > pnetMan->getChainActive()->chainActive.Tip()->nChainWork +
-                                                (GetBlockProof(*pnetMan->getChainActive()->chainActive.Tip()) * 6)))
+            pindexBestInvalid->nChainWork > g_chainman.chainActive.Tip()->nChainWork +
+                                                (GetBlockProof(*g_chainman.chainActive.Tip()) * 6)))
     {
         if (!fLargeWorkForkFound && pindexBestForkBase)
         {
@@ -255,7 +253,7 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex *pindexNewForkTip)
     AssertLockHeld(cs_main);
     // If we are on a fork that is sufficiently large, set a warning flag
     CBlockIndex *pfork = pindexNewForkTip;
-    CBlockIndex *plonger = pnetMan->getChainActive()->chainActive.Tip();
+    CBlockIndex *plonger = g_chainman.chainActive.Tip();
     while (pfork && pfork != plonger)
     {
         while (plonger && plonger->nHeight > pfork->nHeight)
@@ -275,7 +273,7 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex *pindexNewForkTip)
     if (pfork &&
         (!pindexBestForkTip || (pindexBestForkTip && pindexNewForkTip->nHeight > pindexBestForkTip->nHeight)) &&
         pindexNewForkTip->nChainWork - pfork->nChainWork > (GetBlockProof(*pfork) * 7) &&
-        pnetMan->getChainActive()->chainActive.Height() - pindexNewForkTip->nHeight < 72)
+        g_chainman.chainActive.Height() - pindexNewForkTip->nHeight < 72)
     {
         pindexBestForkTip = pindexNewForkTip;
         pindexBestForkBase = pfork;
@@ -289,18 +287,18 @@ void CheckForkWarningConditionsOnNewFork(CBlockIndex *pindexNewForkTip)
  * pblock is either NULL or a pointer to a CBlock corresponding to pindexMostWork.
  */
 bool ActivateBestChainStep(CValidationState &state,
-    const CNetworkTemplate &chainparams,
+    const CChainParams &chainparams,
     CBlockIndex *pindexMostWork,
     const CBlock *pblock)
 {
     AssertLockHeld(cs_main);
     bool fInvalidFound = false;
-    const CBlockIndex *pindexOldTip = pnetMan->getChainActive()->chainActive.Tip();
-    const CBlockIndex *pindexFork = pnetMan->getChainActive()->chainActive.FindFork(pindexMostWork);
+    const CBlockIndex *pindexOldTip = g_chainman.chainActive.Tip();
+    const CBlockIndex *pindexFork = g_chainman.chainActive.FindFork(pindexMostWork);
 
     // Disconnect active blocks which are no longer in the best chain.
     bool fBlocksDisconnected = false;
-    while (pnetMan->getChainActive()->chainActive.Tip() && pnetMan->getChainActive()->chainActive.Tip() != pindexFork)
+    while (g_chainman.chainActive.Tip() && g_chainman.chainActive.Tip() != pindexFork)
     {
         if (!DisconnectTip(state, chainparams.GetConsensus()))
             return false;
@@ -353,16 +351,16 @@ bool ActivateBestChainStep(CValidationState &state,
             else
             {
                 pindexNewTip = pindexConnect;
-                if (!pnetMan->getChainActive()->IsInitialBlockDownload())
+                if (!g_chainman.IsInitialBlockDownload())
                 {
                     // Notify external zmq listeners about the new tip.
                     GetMainSignals().UpdatedBlockTip(pindexConnect);
                 }
-                BlockNotifyCallback(pnetMan->getChainActive()->IsInitialBlockDownload(), pindexNewTip);
+                BlockNotifyCallback(g_chainman.IsInitialBlockDownload(), pindexNewTip);
 
                 PruneBlockIndexCandidates();
                 if (!pindexOldTip ||
-                    pnetMan->getChainActive()->chainActive.Tip()->nChainWork > pindexOldTip->nChainWork)
+                    g_chainman.chainActive.Tip()->nChainWork > pindexOldTip->nChainWork)
                 {
                     // We're in a better position than we were. Return temporarily to release the lock.
                     fContinue = false;
@@ -383,10 +381,10 @@ bool ActivateBestChainStep(CValidationState &state,
     }
 
     // Relay Inventory
-    CBlockIndex *pindexNewTip = pnetMan->getChainActive()->chainActive.Tip();
+    CBlockIndex *pindexNewTip = g_chainman.chainActive.Tip();
     if (pindexFork != pindexNewTip)
     {
-        if (!pnetMan->getChainActive()->IsInitialBlockDownload())
+        if (!g_chainman.IsInitialBlockDownload())
         {
             // Find the hashes of all blocks that weren't previously in the best chain.
             std::vector<uint256> vHashes;
@@ -420,7 +418,7 @@ bool ActivateBestChainStep(CValidationState &state,
     if (fBlocksDisconnected)
     {
         mempool.removeForReorg(
-            pcoinsTip.get(), pnetMan->getChainActive()->chainActive.Tip()->nHeight + 1, STANDARD_LOCKTIME_VERIFY_FLAGS);
+            pcoinsTip.get(), g_chainman.chainActive.Tip()->nHeight + 1, STANDARD_LOCKTIME_VERIFY_FLAGS);
         LimitMempoolSize(mempool, gArgs.GetArg("-maxmempool", DEFAULT_MAX_MEMPOOL_SIZE) * 1000000,
             gArgs.GetArg("-mempoolexpiry", DEFAULT_MEMPOOL_EXPIRY) * 60 * 60);
     }
@@ -443,7 +441,7 @@ bool ActivateBestChainStep(CValidationState &state,
  * or an activated best chain. pblock is either NULL or a pointer to a block
  * that is already loaded (to avoid loading it again from disk).
  */
-bool ActivateBestChain(CValidationState &state, const CNetworkTemplate &chainparams, const CBlock *pblock)
+bool ActivateBestChain(CValidationState &state, const CChainParams &chainparams, const CBlock *pblock)
 {
     CBlockIndex *pindexMostWork = nullptr;
     LOCK(cs_main);
@@ -462,9 +460,9 @@ bool ActivateBestChain(CValidationState &state, const CNetworkTemplate &chainpar
         }
 
         // Whether we have anything to do at all.
-        if (pnetMan->getChainActive()->chainActive.Tip() != nullptr)
+        if (g_chainman.chainActive.Tip() != nullptr)
         {
-            if (pindexMostWork->nChainWork <= pnetMan->getChainActive()->chainActive.Tip()->nChainWork)
+            if (pindexMostWork->nChainWork <= g_chainman.chainActive.Tip()->nChainWork)
                 return true;
         }
         if (!ActivateBestChainStep(state, chainparams, pindexMostWork,
@@ -476,7 +474,7 @@ bool ActivateBestChain(CValidationState &state, const CNetworkTemplate &chainpar
         if (!pindexMostWork)
             return false;
         pblock = nullptr;
-    } while (pindexMostWork->nChainWork > pnetMan->getChainActive()->chainActive.Tip()->nChainWork);
+    } while (pindexMostWork->nChainWork > g_chainman.chainActive.Tip()->nChainWork);
     CheckBlockIndex(chainparams.GetConsensus());
     // Write changes periodically to disk
     if (!FlushStateToDisk(state, FLUSH_STATE_PERIODIC))
@@ -495,26 +493,26 @@ void CheckBlockIndex(const Consensus::Params &consensusParams)
     }
 
     LOCK(cs_main);
-    RECURSIVEREADLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+    RECURSIVEREADLOCK(g_chainman.cs_mapBlockIndex);
 
     // During a reindex, we read the genesis block and call CheckBlockIndex before ActivateBestChain,
     // so we have the genesis block in mapBlockIndex but no active chain.  (A few of the tests when
     // iterating the block tree require that chainActive has been initialized.)
-    if (pnetMan->getChainActive()->chainActive.Height() < 0)
+    if (g_chainman.chainActive.Height() < 0)
     {
-        assert(pnetMan->getChainActive()->mapBlockIndex.size() <= 1);
+        assert(g_chainman.mapBlockIndex.size() <= 1);
         return;
     }
 
     // Build forward-pointing map of the entire block tree.
     std::multimap<CBlockIndex *, CBlockIndex *> forward;
-    for (BlockMap::iterator it = pnetMan->getChainActive()->mapBlockIndex.begin();
-         it != pnetMan->getChainActive()->mapBlockIndex.end(); it++)
+    for (BlockMap::iterator it = g_chainman.mapBlockIndex.begin();
+         it != g_chainman.mapBlockIndex.end(); it++)
     {
         forward.insert(std::make_pair(it->second->pprev, it->second));
     }
 
-    assert(forward.size() == pnetMan->getChainActive()->mapBlockIndex.size());
+    assert(forward.size() == g_chainman.mapBlockIndex.size());
 
     std::pair<std::multimap<CBlockIndex *, CBlockIndex *>::iterator,
         std::multimap<CBlockIndex *, CBlockIndex *>::iterator>
@@ -567,7 +565,7 @@ void CheckBlockIndex(const Consensus::Params &consensusParams)
             // Genesis block checks.
             assert(pindex->GetBlockHash() == consensusParams.hashGenesisBlock); // Genesis block's hash must match.
             // The current active chain's genesis block must be this block.
-            assert(pindex == pnetMan->getChainActive()->chainActive.Genesis());
+            assert(pindex == g_chainman.chainActive.Genesis());
         }
         // nSequenceId can't be set for blocks that aren't linked
         if (pindex->nChainTx == 0)
@@ -609,7 +607,7 @@ void CheckBlockIndex(const Consensus::Params &consensusParams)
             // The failed mask cannot be set for blocks without invalid parents.
             assert((pindex->nStatus & BLOCK_FAILED_MASK) == 0);
         }
-        if (!CBlockIndexWorkComparator()(pindex, pnetMan->getChainActive()->chainActive.Tip()) &&
+        if (!CBlockIndexWorkComparator()(pindex, g_chainman.chainActive.Tip()) &&
             pindexFirstNeverProcessed == NULL)
         {
             if (pindexFirstInvalid == NULL)
@@ -618,7 +616,7 @@ void CheckBlockIndex(const Consensus::Params &consensusParams)
                 // is valid and we have all data for its parents, it must be in
                 // setBlockIndexCandidates.  chainActive.Tip() must also be there
                 // even if some data has been pruned.
-                if (pindexFirstMissing == NULL || pindex == pnetMan->getChainActive()->chainActive.Tip())
+                if (pindexFirstMissing == NULL || pindex == g_chainman.chainActive.Tip())
                 {
                     assert(setBlockIndexCandidates.count(pindex));
                 }
@@ -759,7 +757,7 @@ CBlockIndex *FindMostWorkChain()
         // Just going until the active chain is an optimization, as we know all blocks in it are valid already.
         CBlockIndex *pindexTest = pindexNew;
         bool fInvalidAncestor = false;
-        while (pindexTest && !pnetMan->getChainActive()->chainActive.Contains(pindexTest))
+        while (pindexTest && !g_chainman.chainActive.Contains(pindexTest))
         {
             assert(pindexTest->nChainTx || pindexTest->nHeight == 0);
 
@@ -814,10 +812,10 @@ void InvalidChainFound(CBlockIndex *pindexNew)
     LogPrintf("%s: invalid block=%s  height=%d  log2_work=%.8g  date=%s\n", __func__,
         pindexNew->GetBlockHash().ToString(), pindexNew->nHeight, log(pindexNew->nChainWork.getdouble()) / log(2.0),
         DateTimeStrFormat("%Y-%m-%d %H:%M:%S", pindexNew->GetBlockTime()));
-    CBlockIndex *tip = pnetMan->getChainActive()->chainActive.Tip();
+    CBlockIndex *tip = g_chainman.chainActive.Tip();
     assert(tip);
     LogPrintf("%s:  current best=%s  height=%d  log2_work=%.8g  date=%s\n", __func__, tip->GetBlockHash().ToString(),
-        pnetMan->getChainActive()->chainActive.Height(), log(tip->nChainWork.getdouble()) / log(2.0),
+        g_chainman.chainActive.Height(), log(tip->nChainWork.getdouble()) / log(2.0),
         DateTimeStrFormat("%Y-%m-%d %H:%M:%S", tip->GetBlockTime()));
     CheckForkWarningConditions();
 }
@@ -882,13 +880,13 @@ bool ConnectBlock(const CBlock &block,
     CCoinsViewCache &view,
     bool fJustCheck)
 {
-    const CNetworkTemplate &chainparams = pnetMan->getActivePaymentNetwork();
+    const CChainParams &chainparams = Params();
     AssertLockHeld(cs_main);
 
     if (pindex->GetBlockHash() != chainparams.GetConsensus().hashGenesisBlock)
     {
         // need cs_mapBlockIndex to update the index
-        RECURSIVEWRITELOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+        RECURSIVEWRITELOCK(g_chainman.cs_mapBlockIndex);
         // once updateForPos runs the only flags that should be enabled are the ones that determine if PoS block or not
         // before this runs there should have been no flags set. so it is ok to reset the flags to 0
         pindex->updateForPos(block);
@@ -1087,7 +1085,7 @@ bool ConnectBlock(const CBlock &block,
     }
 
     {
-        RECURSIVEWRITELOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+        RECURSIVEWRITELOCK(g_chainman.cs_mapBlockIndex);
         // ppcoin: track money supply and mint amount info
         pindex->nMint = nValueOut - nValueIn + nFees;
         pindex->nMoneySupply = (pindex->pprev ? pindex->pprev->nMoneySupply : 0) + nValueOut - nValueIn;
@@ -1115,7 +1113,7 @@ bool ConnectBlock(const CBlock &block,
     }
 
     {
-        RECURSIVEWRITELOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+        RECURSIVEWRITELOCK(g_chainman.cs_mapBlockIndex);
         // ppcoin: record proof-of-stake hash value
         pindex->hashProofOfStake = hashProofOfStake;
     }
@@ -1136,7 +1134,7 @@ bool ConnectBlock(const CBlock &block,
                 "bad-stakemodifier-pow");
     }
     {
-        RECURSIVEWRITELOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+        RECURSIVEWRITELOCK(g_chainman.cs_mapBlockIndex);
         pindex->SetStakeModifier(nStakeModifier);
     }
     if (fJustCheck)
@@ -1296,7 +1294,7 @@ DisconnectResult DisconnectBlock(const CBlock &block, const CBlockIndex *pindex,
 /** Store block on disk. If dbp is non-NULL, the file is known to already reside on disk */
 bool AcceptBlock(const CBlock *pblock,
     CValidationState &state,
-    const CNetworkTemplate &chainparams,
+    const CChainParams &chainparams,
     CBlockIndex **ppindex,
     bool fRequested,
     CDiskBlockPos *dbp)
@@ -1312,15 +1310,15 @@ bool AcceptBlock(const CBlock *pblock,
     // process an unrequested block if it's new and has enough work to
     // advance our tip, and isn't too many blocks ahead.
     bool fAlreadyHave = pindex->nStatus & BLOCK_HAVE_DATA;
-    bool fHasMoreWork = (pnetMan->getChainActive()->chainActive.Tip() ?
-                             pindex->nChainWork > pnetMan->getChainActive()->chainActive.Tip()->nChainWork :
+    bool fHasMoreWork = (g_chainman.chainActive.Tip() ?
+                             pindex->nChainWork > g_chainman.chainActive.Tip()->nChainWork :
                              true);
     // Blocks that are too out-of-order needlessly limit the effectiveness of
     // pruning, because pruning will not delete block files that contain any
     // blocks which are too close in height to the tip.  Apply this test
     // regardless of whether pruning is enabled; it should generally be safe to
     // not process unrequested blocks.
-    bool fTooFarAhead = (pindex->nHeight > int(pnetMan->getChainActive()->chainActive.Height() + MIN_BLOCKS_TO_KEEP));
+    bool fTooFarAhead = (pindex->nHeight > int(g_chainman.chainActive.Height() + MIN_BLOCKS_TO_KEEP));
 
     // TODO: deal better with return value and error conditions for duplicate
     // and unrequested blocks.
@@ -1349,8 +1347,8 @@ bool AcceptBlock(const CBlock *pblock,
     // Header is valid/has work, merkle tree and segwit merkle tree are
     // good...RELAY NOW (but if it does not build on our best tip, let the
     // SendMessages loop relay it)
-    if (!pnetMan->getChainActive()->IsInitialBlockDownload() &&
-        pnetMan->getChainActive()->chainActive.Tip() == pindex->pprev)
+    if (!g_chainman.IsInitialBlockDownload() &&
+        g_chainman.chainActive.Tip() == pindex->pprev)
     {
         GetMainSignals().NewPoWValidBlock(pindex, pblock);
     }
@@ -1392,7 +1390,7 @@ bool CheckBlock(const CBlock &block, CValidationState &state, bool fCheckPOW, bo
     }
 
     if (block.IsProofOfWork() && fCheckPOW &&
-        !CheckProofOfWork(block.GetHash(), block.nBits, pnetMan->getActivePaymentNetwork()->GetConsensus()))
+        !CheckProofOfWork(block.GetHash(), block.nBits, Params().GetConsensus()))
     {
         return state.DoS(50, error("CheckBlockHeader(): proof of work failed"), REJECT_INVALID, "high-hash");
     }
@@ -1508,7 +1506,7 @@ bool CheckBlock(const CBlock &block, CValidationState &state, bool fCheckPOW, bo
 }
 
 bool ProcessNewBlock(CValidationState &state,
-    const CNetworkTemplate &chainparams,
+    const CChainParams &chainparams,
     const CNode *pfrom,
     const CBlock *pblock,
     bool fForceProcessing,
@@ -1519,7 +1517,7 @@ bool ProcessNewBlock(CValidationState &state,
 
     {
         LOCK(cs_main);
-        RECURSIVEWRITELOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+        RECURSIVEWRITELOCK(g_chainman.cs_mapBlockIndex);
         bool fRequested = MarkBlockAsReceived(pblock->GetHash());
         fRequested |= fForceProcessing;
         if (!checked)

@@ -972,7 +972,7 @@ bool EvalScript(std::vector<std::vector<unsigned char> > &stack,
 
                     // TODO: for backwards compatability, this should be implemented in a different way but for now it
                     // will do
-                    if (pnetMan->getChainActive()->chainActive.Tip()->nHeight > 1600000)
+                    if (g_chainman.chainActive.Tip()->nHeight > 1600000)
                     {
                         if (!CheckSignatureEncoding(vchSig, flags, serror) ||
                             !CheckPubKeyEncoding(vchPubKey, flags, serror))
@@ -1052,7 +1052,7 @@ bool EvalScript(std::vector<std::vector<unsigned char> > &stack,
                         // See the script_(in)valid tests for details.
                         // TODO: for backwards compatability, this should be implemented in a different way but for now
                         // it will do
-                        if (pnetMan->getChainActive()->chainActive.Tip()->nHeight > 1600000)
+                        if (g_chainman.chainActive.Tip()->nHeight > 1600000)
                         {
                             if (!CheckSignatureEncoding(vchSig, flags, serror) ||
                                 !CheckPubKeyEncoding(vchPubKey, flags, serror))

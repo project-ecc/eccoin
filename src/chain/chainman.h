@@ -9,9 +9,8 @@
 #include <unordered_map>
 
 #include "chain.h"
-#include "networks/networktemplate.h"
+#include "chain/chainparams.h"
 #include "txdb.h"
-
 
 struct BlockHasher
 {
@@ -20,7 +19,7 @@ struct BlockHasher
 typedef std::unordered_map<uint256, CBlockIndex *, BlockHasher> BlockMap;
 
 
-/** Manages the BlockMap and CChain's for a given protocol. */
+/** Manages the BlockMap and CChain's for the activated network ( Network() ). */
 class CChainManager
 {
 public:
@@ -79,7 +78,7 @@ public:
     bool IsInitialBlockDownload();
 
     /** Initialize a new block tree database + block data on disk */
-    bool InitBlockIndex(const CNetworkTemplate &chainparams);
+    bool InitBlockIndex(const CChainParams &chainparams);
 
     /** Create a new block index entry for a given block hash loaded from disk*/
     CBlockIndex *InsertBlockIndex(uint256 hash);
@@ -88,10 +87,12 @@ public:
     bool LoadBlockIndex();
 
     /** Import blocks from an external file */
-    bool LoadExternalBlockFile(const CNetworkTemplate &chainparams, FILE *fileIn, CDiskBlockPos *dbp = NULL);
+    bool LoadExternalBlockFile(const CChainParams &chainparams, FILE *fileIn, CDiskBlockPos *dbp = NULL);
 
     /** Unload database information */
     void UnloadBlockIndex();
 };
+
+extern CChainManager g_chainman;
 
 #endif // CHAINMAN_H

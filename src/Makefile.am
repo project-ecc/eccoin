@@ -113,9 +113,7 @@ BITCOIN_CORE_H = \
   net/routingtag.h \
   net/tagdb.h \
   net/tagstore.h \
-  networks/netman.h \
-  networks/network.h \
-  networks/networktemplate.h \
+  chain/chainparams.h \
   policy/fees.h \
   policy/policy.h \
   pow.h \
@@ -203,6 +201,7 @@ libbitcoin_server_a_SOURCES = \
   chain/blockindex.cpp \
   chain/chain.cpp \
   chain/chainman.cpp \
+  chain/chainparams.cpp \
   chain/checkpoints.cpp \
   chain/tx.cpp \
   clientversion.cpp \
@@ -260,7 +259,6 @@ libbitcoin_server_a_SOURCES = \
   net/packetmanager.cpp \
   net/protocol.cpp \
   net/routingtag.cpp \
-  networks/netman.cpp \
   policy/fees.cpp \
   policy/policy.cpp \
   pow.cpp \

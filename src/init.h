@@ -9,14 +9,12 @@
 #define BITCOIN_INIT_H
 
 #include "chain/chainman.h"
-#include "networks/netman.h"
 #include "wallet/wallet.h"
 #include <string>
 
 class CWallet;
 
 extern CWallet *pwalletMain;
-extern CNetworkManager *pnetMan;
 
 void StartShutdown();
 bool ShutdownRequested();
@@ -27,7 +25,6 @@ void Shutdown(thread_group &threadGroup);
 void InitLogging();
 //! Parameter interaction: change current parameters depending on various rules
 void InitParameterInteraction();
-void GenerateNetworkTemplates();
 bool AppInit2(thread_group &threadGroup);
 
 /** Help for options shared between UI and daemon (for -help) */

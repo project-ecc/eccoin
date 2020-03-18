@@ -67,10 +67,10 @@ void WalletTxToJSON(const CWalletTx &wtx, UniValue &entry)
     }
     if (confirms > 0)
     {
-        RECURSIVEREADLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
+        RECURSIVEREADLOCK(g_chainman.cs_mapBlockIndex);
         entry.push_back(Pair("blockhash", wtx.hashBlock.GetHex()));
         entry.push_back(Pair("blockindex", wtx.nIndex));
-        entry.push_back(Pair("blocktime", pnetMan->getChainActive()->mapBlockIndex[wtx.hashBlock]->GetBlockTime()));
+        entry.push_back(Pair("blocktime", g_chainman.mapBlockIndex[wtx.hashBlock]->GetBlockTime()));
     }
     else
     {
@@ -1090,7 +1090,7 @@ UniValue listsinceblock(const UniValue &params, bool fHelp)
         uint256 blockId;
 
         blockId.SetHex(params[0].get_str());
-        pindex = pnetMan->getChainActive()->LookupBlockIndex(blockId);
+        pindex = g_chainman.LookupBlockIndex(blockId);
     }
 
     if (params.size() > 1)
@@ -1105,7 +1105,7 @@ UniValue listsinceblock(const UniValue &params, bool fHelp)
         if (params[2].get_bool())
             filter = filter | ISMINE_WATCH_ONLY;
 
-    int depth = pindex ? (1 + pnetMan->getChainActive()->chainActive.Height() - pindex->nHeight) : -1;
+    int depth = pindex ? (1 + g_chainman.chainActive.Height() - pindex->nHeight) : -1;
 
     UniValue transactions(UniValue::VARR);
 
@@ -1119,7 +1119,7 @@ UniValue listsinceblock(const UniValue &params, bool fHelp)
     }
 
     CBlockIndex *pblockLast =
-        pnetMan->getChainActive()->chainActive[pnetMan->getChainActive()->chainActive.Height() + 1 - target_confirms];
+        g_chainman.chainActive[g_chainman.chainActive.Height() + 1 - target_confirms];
     uint256 lastblock = pblockLast ? pblockLast->GetBlockHash() : uint256();
 
     UniValue ret(UniValue::VOBJ);

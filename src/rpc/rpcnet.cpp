@@ -13,7 +13,7 @@
 #include "net/net.h"
 #include "net/netbase.h"
 #include "net/protocol.h"
-#include "networks/netman.h"
+#include "chain/chainparams.h"
 #include "sync.h"
 #include "timedata.h"
 

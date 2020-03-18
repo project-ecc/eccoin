@@ -10,7 +10,7 @@
 #include "data/base58_keys_valid.json.h"
 
 #include "key.h"
-#include "networks/netman.h"
+#include "chain/chainparams.h"
 #include "script/script.h"
 #include "test/test_bitcoin.h"
 #include "uint256.h"
@@ -23,7 +23,7 @@
 #include <univalue.h>
 
 extern UniValue read_json(const std::string &jsondata);
-extern CNetworkManager *pnetMan;
+
 BOOST_FIXTURE_TEST_SUITE(base58_tests, BasicTestingSetup)
 
 // Goal: test low-level base58 encoding functionality

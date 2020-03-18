@@ -147,7 +147,7 @@ bool CZMQPublishRawBlockNotifier::NotifyBlock(const CBlockIndex *pindex)
 {
     LogPrint("zmq", "zmq: Publish rawblock %s\n", pindex->GetBlockHash().GetHex());
 
-    const Consensus::Params &consensusParams = pnetMan->getActivePaymentNetwork()->GetConsensus();
+    const Consensus::Params &consensusParams = Params().GetConsensus();
     CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
     {
         CBlock block;

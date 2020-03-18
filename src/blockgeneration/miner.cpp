@@ -16,8 +16,7 @@
 #include "init.h"
 #include "kernel.h"
 #include "net/net.h"
-#include "networks/netman.h"
-#include "networks/networktemplate.h"
+#include "chain/chainparams.h"
 #include "policy/policy.h"
 #include "processblock.h"
 #include "timedata.h"
@@ -130,7 +129,7 @@ std::unique_ptr<CBlockTemplate> CreateNewPoWBlock(CWallet *pwallet, const CScrip
     // ppcoin: if coinstake available add coinstake tx
     // Commented out unused variable assuming no side effect within GetAdjustedTime()
     // static int64_t nLastCoinStakeSearchTime = GetAdjustedTime(); // only initialized at startup
-    CBlockIndex *pindexPrev = pnetMan->getChainActive()->chainActive.Tip();
+    CBlockIndex *pindexPrev = g_chainman.chainActive.Tip();
 
 
     // This vector will be sorted into a priority queue:
@@ -151,7 +150,7 @@ std::unique_ptr<CBlockTemplate> CreateNewPoWBlock(CWallet *pwallet, const CScrip
     {
         LOCK(cs_main);
         READLOCK(mempool.cs);
-        CBlockIndex *_pindexPrev = pnetMan->getChainActive()->chainActive.Tip();
+        CBlockIndex *_pindexPrev = g_chainman.chainActive.Tip();
         const int nHeight = _pindexPrev->nHeight + 1;
         pblock->nTime = GetAdjustedTime();
         const int64_t nMedianTimePast = _pindexPrev->GetMedianTimePast();
@@ -305,7 +304,7 @@ std::unique_ptr<CBlockTemplate> CreateNewPoWBlock(CWallet *pwallet, const CScrip
         pblock->hashPrevBlock = _pindexPrev->GetBlockHash();
         pblock->nTime = std::max(_pindexPrev->GetMedianTimePast() + 1, pblock->GetMaxTransactionTime());
         pblock->nTime = std::max(pblock->GetBlockTime(), _pindexPrev->GetBlockTime() - nMaxClockDrift);
-        UpdateTime(pblock, pnetMan->getActivePaymentNetwork()->GetConsensus(), _pindexPrev);
+        UpdateTime(pblock, Params().GetConsensus(), _pindexPrev);
         pblock->vtx[0]->vout[0].nValue =
             GetProofOfWorkReward(nFees, _pindexPrev->nHeight + 1, _pindexPrev->GetBlockHash());
         pblock->nNonce = 0;
@@ -373,7 +372,7 @@ bool CheckWork(const CBlock *pblock, CWallet &wallet, boost::shared_ptr<CReserve
 
     // Found a solution
     {
-        CBlockIndex *ptip = pnetMan->getChainActive()->chainActive.Tip();
+        CBlockIndex *ptip = g_chainman.chainActive.Tip();
         if (ptip == nullptr)
         {
             return false;
@@ -394,7 +393,7 @@ bool CheckWork(const CBlock *pblock, CWallet &wallet, boost::shared_ptr<CReserve
 
         // Process this block the same as if we had received it from another node
         CValidationState state;
-        const CNetworkTemplate &chainparams = pnetMan->getActivePaymentNetwork();
+        const CChainParams &chainparams = Params();
         if (!ProcessNewBlock(state, chainparams, NULL, pblock, true, NULL))
             return error("Miner : ProcessBlock, block not accepted");
     }
@@ -433,7 +432,7 @@ void EccMiner(CWallet *pwallet)
             if (shutdown_threads.load() || shutdown_miner_threads.load())
                 return;
         }
-        while (pnetMan->getChainActive()->IsInitialBlockDownload() || pwallet->IsLocked())
+        while (g_chainman.IsInitialBlockDownload() || pwallet->IsLocked())
         {
             MilliSleep(1000);
             if (shutdown_threads.load() || shutdown_miner_threads.load())
@@ -449,7 +448,7 @@ void EccMiner(CWallet *pwallet)
         // Create new block
         //
         unsigned int nTransactionsUpdatedLast = mempool.GetTransactionsUpdated();
-        CBlockIndex *pindexPrev = pnetMan->getChainActive()->chainActive.Tip();
+        CBlockIndex *pindexPrev = g_chainman.chainActive.Tip();
         std::unique_ptr<CBlockTemplate> pblocktemplate(CreateNewPoWBlock(pwallet, coinbaseScript->reserveScript));
         if (!pblocktemplate.get())
         {
@@ -538,12 +537,12 @@ void EccMiner(CWallet *pwallet)
                 break;
             if (mempool.GetTransactionsUpdated() != nTransactionsUpdatedLast && GetTime() - nStart > 60)
                 break;
-            if (pindexPrev != pnetMan->getChainActive()->chainActive.Tip())
+            if (pindexPrev != g_chainman.chainActive.Tip())
                 break;
             // Update nTime every few seconds
             pblock->nTime = std::max(pindexPrev->GetMedianTimePast() + 1, pblock->GetMaxTransactionTime());
             pblock->nTime = std::max(pblock->GetBlockTime(), pindexPrev->GetBlockTime() - nMaxClockDrift);
-            UpdateTime(pblock, pnetMan->getActivePaymentNetwork()->GetConsensus(), pindexPrev);
+            UpdateTime(pblock, Params().GetConsensus(), pindexPrev);
             nBlockTime = ByteReverse(pblock->nTime);
             if (pblock->GetBlockTime() >= (int64_t)pblock->vtx[0]->nTime + nMaxClockDrift)
                 break; // need to update coinbase timestamp

@@ -9,7 +9,7 @@
 #include "httprpc.h"
 #include "httpserver.h"
 #include "init.h"
-#include "networks/netman.h"
+#include "chain/chainparams.h"
 #include "rpc/rpcserver.h"
 #include "sync.h"
 #include "threadgroup.h"
@@ -56,7 +56,7 @@ bool AppInit(int argc, char *argv[])
     // Check for -testnet or -regtest parameter (Params() calls are only valid after this clause)
     try
     {
-        CheckParams(ChainNameFromCommandLine());
+        CheckAndSetParams(ChainNameFromCommandLine());
     }
     catch (const std::exception &e)
     {
@@ -72,8 +72,6 @@ bool AppInit(int argc, char *argv[])
         fprintf(stderr, "Error reading configuration file: %s\n", e.what());
         return false;
     }
-
-    GenerateNetworkTemplates();
 
     // Process help and version before taking care about datadir
     if (gArgs.IsArgSet("-?") || gArgs.IsArgSet("-h") || gArgs.IsArgSet("-help") || gArgs.IsArgSet("-version"))

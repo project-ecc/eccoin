@@ -16,26 +16,26 @@
 
 CVerifyDB::CVerifyDB() {}
 CVerifyDB::~CVerifyDB() {}
-bool CVerifyDB::VerifyDB(const CNetworkTemplate &chainparams, CCoinsView *coinsview, int nCheckLevel, int nCheckDepth)
+bool CVerifyDB::VerifyDB(const CChainParams &chainparams, CCoinsView *coinsview, int nCheckLevel, int nCheckDepth)
 {
-    if (pnetMan->getChainActive()->chainActive.Tip() == nullptr ||
-        pnetMan->getChainActive()->chainActive.Tip()->pprev == nullptr)
+    if (g_chainman.chainActive.Tip() == nullptr ||
+        g_chainman.chainActive.Tip()->pprev == nullptr)
         return true;
 
     // Verify blocks in the best chain
     if (nCheckDepth <= 0)
         nCheckDepth = 1000000000; // suffices until the year 19000
-    if (nCheckDepth > pnetMan->getChainActive()->chainActive.Height())
-        nCheckDepth = pnetMan->getChainActive()->chainActive.Height();
+    if (nCheckDepth > g_chainman.chainActive.Height())
+        nCheckDepth = g_chainman.chainActive.Height();
     nCheckLevel = std::max(0, std::min(4, nCheckLevel));
     LogPrintf("Verifying last %i blocks at level %i\n", nCheckDepth, nCheckLevel);
     CCoinsViewCache coins(coinsview);
-    CBlockIndex *pindexState = pnetMan->getChainActive()->chainActive.Tip();
+    CBlockIndex *pindexState = g_chainman.chainActive.Tip();
     CBlockIndex *pindexFailure = nullptr;
     int nGoodTransactions = 0;
     CValidationState state;
     LOCK(cs_main);
-    for (CBlockIndex *pindex = pnetMan->getChainActive()->chainActive.Tip(); pindex && pindex->pprev;
+    for (CBlockIndex *pindex = g_chainman.chainActive.Tip(); pindex && pindex->pprev;
          pindex = pindex->pprev)
     {
         if (shutdown_threads.load())
@@ -43,7 +43,7 @@ bool CVerifyDB::VerifyDB(const CNetworkTemplate &chainparams, CCoinsView *coinsv
             LogPrintf("VerifyDB(): Shutdown requested. Exiting.\n");
             return false;
         }
-        if (pindex->nHeight < pnetMan->getChainActive()->chainActive.Height() - nCheckDepth)
+        if (pindex->nHeight < g_chainman.chainActive.Height() - nCheckDepth)
             break;
         CBlock block;
         // check level 0: read from disk
@@ -95,20 +95,20 @@ bool CVerifyDB::VerifyDB(const CNetworkTemplate &chainparams, CCoinsView *coinsv
     if (pindexFailure)
         return error(
             "VerifyDB(): *** coin database inconsistencies found (last %i blocks, %i good transactions before that)\n",
-            pnetMan->getChainActive()->chainActive.Height() - pindexFailure->nHeight + 1, nGoodTransactions);
+            g_chainman.chainActive.Height() - pindexFailure->nHeight + 1, nGoodTransactions);
 
     // check level 4: try reconnecting blocks
     if (nCheckLevel >= 4)
     {
         CBlockIndex *pindex = pindexState;
-        while (pindex != pnetMan->getChainActive()->chainActive.Tip())
+        while (pindex != g_chainman.chainActive.Tip())
         {
             if (shutdown_threads.load())
             {
                 LogPrintf("VerifyDB(): [lower] Shutdown requested. Exiting.\n");
                 return false;
             }
-            pindex = pnetMan->getChainActive()->chainActive.Next(pindex);
+            pindex = g_chainman.chainActive.Next(pindex);
             CBlock block;
             {
                 if (!ReadBlockFromDisk(block, pindex, chainparams.GetConsensus()))
@@ -122,7 +122,7 @@ bool CVerifyDB::VerifyDB(const CNetworkTemplate &chainparams, CCoinsView *coinsv
     }
 
     LogPrintf("No coin database inconsistencies in last %i blocks (%i transactions)\n",
-        pnetMan->getChainActive()->chainActive.Height() - pindexState->nHeight, nGoodTransactions);
+        g_chainman.chainActive.Height() - pindexState->nHeight, nGoodTransactions);
 
     return true;
 }
