@@ -27,6 +27,12 @@ struct PacketBuffer
     std::vector<CPacket> vRecievedPackets;
     // the protocol id using this buffer
     uint16_t nProtocolId;
+    // the token needed for authentication to read vRecievedPackets
+    // TODO : use a different token method because this one is very expensive to use often
+    CPubKey boundPubkey;
+    // used in the request buffer method for authentication
+    uint64_t requestCount;
+
 };
 
 class CPacketManager
@@ -34,7 +40,7 @@ class CPacketManager
     // Data members
 private:
     // protocolId : Buffer
-    std::map<uint8_t, PacketBuffer> mapBuffers;
+    std::map<uint16_t, PacketBuffer> mapBuffers;
     // partial packets waiting for all required data segments to reconstruct
     // map stores nonce, time and when packet is complete it is removed from this
     // map and stored in our messages vector
@@ -50,23 +56,7 @@ public:
 private:
     // disallow copies
     CPacketManager(const CPacketManager &pman){}
-    void FinalizePacket(const uint64_t &nonce, std::map<uint64_t, CPacket>::iterator iter)
-    {
-        uint8_t &protocolId = iter->second.nProtocolId;
-        if (mapBuffers.count(protocolId) == 0)
-        {
-            PacketBuffer newBuffer;
-            newBuffer.vRecievedPackets.push_back(std::move(iter->second));
-            mapBuffers.emplace(protocolId, std::move(newBuffer));
-        }
-        else
-        {
-            mapBuffers[protocolId].vRecievedPackets.push_back(std::move(iter->second));
-        }
-        mapPacketLastUpdated.erase(nonce);
-        mapPartialPackets.erase(nonce);
-        GetMainSignals().PacketComplete(protocolId);
-    }
+    void FinalizePacket(const uint64_t &nonce, std::map<uint64_t, CPacket>::iterator iter);
 
 public:
     CPacketManager()
@@ -75,85 +65,17 @@ public:
         mapPacketLastUpdated.clear();
         mapPartialPackets.clear();
     }
+    bool BindBuffer(uint16_t protocolId, CPubKey authPubkey);
 
-    bool ProcessPacketHeader(const uint64_t &nonce, CPacketHeader &newHeader)
-    {
-        if (mapPartialPackets.find(nonce) != mapPartialPackets.end())
-        {
-            return false;
-        }
-        CPacket newPacket(newHeader);
-        mapPartialPackets.emplace(nonce, std::move(newPacket));
-        mapPacketLastUpdated.emplace(nonce, GetTime());
-        return true;
-    }
+    bool ProcessPacketHeader(const uint64_t &nonce, CPacketHeader &newHeader);
 
-    bool ProcessDataSegment(const uint64_t &nonce, CPacketDataSegment newSegment)
-    {
-        std::map<uint64_t, int64_t>::iterator updateIter;
-        std::map<uint64_t, CPacket>::iterator partialIter;
-        partialIter = mapPartialPackets.find(nonce);
-        updateIter = mapPacketLastUpdated.find(nonce);
-        if (partialIter == mapPartialPackets.end() || updateIter == mapPacketLastUpdated.end())
-        {
-            return false;
-        }
-        if (!partialIter->second.InsertData(newSegment))
-        {
-            return false;
-        }
-        updateIter->second = GetTime();
-        if (partialIter->second.IsComplete())
-        {
-            FinalizePacket(nonce, partialIter);
-        }
-        return true;
-    }
+    bool ProcessDataSegment(const uint64_t &nonce, CPacketDataSegment newSegment);
 
-    void CheckForTimeouts()
-    {
-        // TODO : implement a thread to check for packet timeouts once a minute,
-        // a timeout is any partial packet that hasnt been updated in 30 seconds or more
-    }
+    void CheckForTimeouts();
 
-    bool SendPacket(const std::vector<unsigned char> &vPubKey, const uint8_t &nProtocolId, const uint8_t &nProtocolVersion, const std::vector<uint8_t> vData)
-    {
-        NodeId peerNode;
-        if (!g_aodvtable.GetKeyNode(vPubKey, peerNode))
-        {
-            return false;
-        }
-        CPubKey searchKey(vPubKey);
-        CPacket newPacket(nProtocolId, nProtocolVersion);
-        newPacket.PushBackData(vData);
+    bool SendPacket(const std::vector<unsigned char> &vPubKey, const uint8_t &nProtocolId, const uint8_t &nProtocolVersion, const std::vector<uint8_t> vData);
 
-        uint64_t nonce = 0;
-        while (nonce == 0)
-        {
-            GetRandBytes((uint8_t *)&nonce, sizeof(nonce));
-        }
-        std::vector<CPacketDataSegment> segments = newPacket.GetSegments();
-        {
-            LOCK(cs_main);
-            g_connman->PushMessageToId(peerNode, NetMsgType::SPH, nonce, searchKey, newPacket.GetHeader());
-            for (auto segment : segments)
-            {
-                g_connman->PushMessageToId(peerNode, NetMsgType::SPD, nonce, searchKey, segment);
-            }
-        }
-        return true;
-    }
-
-    bool GetBuffer(uint8_t &protocolId, PacketBuffer &buffer)
-    {
-        if (mapBuffers.count(protocolId) == 1)
-        {
-            buffer = mapBuffers[protocolId];
-            mapBuffers[protocolId].vRecievedPackets.clear();
-            return true;
-        }
-        return false;
-    }
+    bool GetBuffer(uint8_t &protocolId, std::vector<CPacket> &bufferData, const std::string &sig);
 };
 
 extern CPacketManager g_packetman;

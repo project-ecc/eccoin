@@ -262,18 +262,20 @@ UniValue getbuffer(const UniValue &params, bool fHelp)
             "\nattempts to get the buffer for a network service protocol\n"
             "\nArguments:\n"
             "1. \"protocolId\"   (number, required) The id of the protocol being requested\n"
+            "2. \"signature\"   (string, required) The authentication signature required to request the buffer\n"
             "\nExamples:\n" +
-            HelpExampleCli("getbuffer", "1") +
-            HelpExampleRpc("getbuffer", "1")
+            HelpExampleCli("getbuffer", "1 \"BHcOxO9SxZshlmXffMFdJYuAXqusM3zVS7Ary66j5SiupLsnGeMONwmM/qG6zIEJpoGznWtmFFZ63mo5YXGWBcU=\"") +
+            HelpExampleRpc("getbuffer", "1, \"BHcOxO9SxZshlmXffMFdJYuAXqusM3zVS7Ary66j5SiupLsnGeMONwmM/qG6zIEJpoGznWtmFFZ63mo5YXGWBcU=\"")
         );
     }
     uint8_t nProtocolId = (uint8_t)params[0].get_int();
-    PacketBuffer buffer;
+    std::string sig = params[1].get_str();
+    std::vector<CPacket> bufferData;
     UniValue obj(UniValue::VOBJ);
-    if (g_packetman.GetBuffer(nProtocolId, buffer))
+    if (g_packetman.GetBuffer(nProtocolId, bufferData, sig))
     {
         uint64_t counter = 0;
-        for (auto &entry: buffer.vRecievedPackets)
+        for (auto &entry: bufferData)
         {
             std::stringstream hexstream;
             hexstream << std::hex;
