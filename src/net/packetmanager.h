@@ -26,7 +26,7 @@ struct PacketBuffer
     // vRecievedPackets should be partially stored on disk at some point
     std::vector<CPacket> vRecievedPackets;
     // the protocol id using this buffer
-    uint8_t nProtocolId;
+    uint16_t nProtocolId;
 };
 
 class CPacketManager
