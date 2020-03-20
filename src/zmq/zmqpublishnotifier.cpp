@@ -150,7 +150,6 @@ bool CZMQPublishRawBlockNotifier::NotifyBlock(const CBlockIndex *pindex)
     const Consensus::Params &consensusParams = pnetMan->getActivePaymentNetwork()->GetConsensus();
     CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
     {
-        LOCK(cs_blockstorage);
         CBlock block;
         if (!ReadBlockFromDisk(block, pindex, consensusParams))
         {
@@ -172,5 +171,24 @@ bool CZMQPublishRawTransactionNotifier::NotifyTransaction(const CTransactionRef 
     CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
     ss << *ptx;
     int rc = zmq_send_multipart(psocket, "rawtx", 5, &(*ss.begin()), ss.size(), 0);
+    return rc == 0;
+}
+
+bool CZMQPublishSystemNotifier::NotifySystem(const std::string &message)
+{
+    LogPrint("zmq", "zmq: Publish system %s\n", message);
+    CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
+    ss << message;
+    int rc = zmq_send_multipart(psocket, "system", 6, &(*ss.begin()), ss.size(), 0);
+    return rc == 0;
+}
+
+bool CZMQPublishPacketNotifier::NotifyPacket(const uint8_t nProtocolId)
+{
+    LogPrint("zmq", "zmq: Publish packet %d\n", nProtocolId);
+    CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
+    std::string str = std::to_string(nProtocolId);
+    ss << str;
+    int rc = zmq_send_multipart(psocket, "packet", 6, &(*ss.begin()), ss.size(), 0);
     return rc == 0;
 }

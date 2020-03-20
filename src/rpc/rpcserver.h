@@ -21,6 +21,10 @@
 
 #include <univalue.h>
 
+#ifdef HAVE_CONFIG_H
+#include "config/bitcoin-config.h"
+#endif
+
 class CRPCCommand;
 
 namespace RPCServer
@@ -201,6 +205,7 @@ extern UniValue prioritisetransaction(const UniValue &params, bool fHelp);
 extern UniValue getblocktemplate(const UniValue &params, bool fHelp);
 extern UniValue submitblock(const UniValue &params, bool fHelp);
 extern UniValue estimatefee(const UniValue &params, bool fHelp);
+extern UniValue estimatesmartfee(const UniValue &params, bool fHelp);
 
 extern UniValue getnewaddress(const UniValue &params, bool fHelp); // in rpcwallet.cpp
 extern UniValue getrawchangeaddress(const UniValue &params, bool fHelp);
@@ -269,7 +274,14 @@ extern UniValue getaodvidentry(const UniValue &params, bool fHelp);
 extern UniValue getroutingpubkey(const UniValue &params, bool fHelp);
 extern UniValue findroute(const UniValue &params, bool fHelp);
 extern UniValue haveroute(const UniValue &params, bool fHelp);
+extern UniValue sendpacket(const UniValue &params, bool fHelp);
+extern UniValue getbuffer(const UniValue &params, bool fHelp);
+extern UniValue tagsignmessage(const UniValue &params, bool fHelp);
+extern UniValue tagverifymessage(const UniValue &params, bool fHelp);
 
+#if ENABLE_ZMQ
+extern UniValue getzmqnotifications(const UniValue &params, bool fHelp);
+#endif
 
 bool StartRPC();
 void InterruptRPC();

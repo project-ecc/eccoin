@@ -15,9 +15,9 @@
 #include "streams.h"
 #include "tinyformat.h"
 
+#include "crypter.h"
 #include "util/utilstrencodings.h"
 #include "validationinterface.h"
-#include "wallet/crypter.h"
 #include "wallet/wallet_ismine.h"
 #include "wallet/walletdb.h"
 
@@ -41,6 +41,9 @@ extern unsigned int nTxConfirmTarget;
 extern bool bSpendZeroConfChange;
 extern bool fSendFreeTransactions;
 extern bool fWalletUnlockStakingOnly;
+extern std::atomic<bool> fAllowKeypoolRefills;
+
+static const bool DEFAULT_ALLOW_KEYPOOL_REFILLS = true;
 
 static const unsigned int DEFAULT_KEYPOOL_SIZE = 1000;
 //! -paytxfee default
@@ -87,30 +90,6 @@ enum WalletFeature
     FEATURE_COMPRPUBKEY = 60000, // compressed public keys
 
     FEATURE_LATEST = 60000
-};
-
-
-/** A key pool entry */
-class CKeyPool
-{
-public:
-    int64_t nTime;
-    CPubKey vchPubKey;
-
-    CKeyPool();
-    CKeyPool(const CPubKey &vchPubKeyIn);
-
-    ADD_SERIALIZE_METHODS
-
-    template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream &s, Operation ser_action)
-    {
-        int nVersion = s.GetVersion();
-        if (!(s.GetType() & SER_GETHASH))
-            READWRITE(nVersion);
-        READWRITE(nTime);
-        READWRITE(vchPubKey);
-    }
 };
 
 namespace AddressBookType
@@ -726,7 +705,7 @@ public:
 
     bool NewKeyPool();
     bool TopUpKeyPool(unsigned int kpSize = 0);
-    void ReserveKeyFromKeyPool(int64_t &nIndex, CKeyPool &keypool);
+    void ReserveKeyFromKeyPool(int64_t &nIndex, CKeyPoolEntry &keypool);
     void KeepKey(int64_t nIndex);
     void ReturnKey(int64_t nIndex);
     bool GetKeyFromPool(CPubKey &key);
@@ -806,9 +785,6 @@ public:
 
     //! Verify the wallet database and perform salvage if required
     static bool Verify(const std::string &walletFile, std::string &warningString, std::string &errorString);
-
-    /** Show progress e.g. for rescan */
-    boost::signals2::signal<void(const std::string &title, int nProgress)> ShowProgress;
 
     /** Watch-only address added */
     boost::signals2::signal<void(bool fHaveWatchOnly)> NotifyWatchonlyChanged;

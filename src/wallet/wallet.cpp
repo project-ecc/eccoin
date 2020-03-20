@@ -45,6 +45,7 @@ unsigned int nTxConfirmTarget = DEFAULT_TX_CONFIRM_TARGET;
 bool bSpendZeroConfChange = DEFAULT_SPEND_ZEROCONF_CHANGE;
 bool fSendFreeTransactions = DEFAULT_SEND_FREE_TRANSACTIONS;
 bool fWalletUnlockStakingOnly = false;
+std::atomic<bool> fAllowKeypoolRefills{DEFAULT_ALLOW_KEYPOOL_REFILLS};
 
 /**
  * Fees smaller than this (in satoshi) are considered zero fee (for transaction creation)
@@ -763,7 +764,8 @@ bool CWallet::AddToWallet(const CWalletTx &wtxIn, bool fFromLoadWallet, CWalletD
         if (!strCmd.empty())
         {
             boost::replace_all(strCmd, "%s", wtxIn.tx->GetHash().GetHex());
-            std::thread t(runCommand, strCmd); // thread runs free
+            std::thread t(runCommand, strCmd);
+            t.detach(); // thread runs free
         }
     }
     return true;
@@ -1241,14 +1243,11 @@ int CWallet::ScanForWalletTransactions(CBlockIndex *pindexStart, bool fUpdate)
         {
             pindex = pnetMan->getChainActive()->chainActive.Next(pindex);
         }
-
-        // show rescan progress in GUI as dialog or on splashscreen, if -rescan on startup
-        ShowProgress(("Rescanning..."), 0);
+        GetMainSignals().SystemMessage("RESCAN: STARTED");
         while (pindex)
         {
             CBlock block;
             {
-                LOCK(cs_blockstorage);
                 ReadBlockFromDisk(block, pindex, pnetMan->getActivePaymentNetwork()->GetConsensus());
             }
             for (auto &ptx : block.vtx)
@@ -1263,9 +1262,10 @@ int CWallet::ScanForWalletTransactions(CBlockIndex *pindexStart, bool fUpdate)
             {
                 nNow = GetTime();
                 LogPrintf("Still rescanning. At block %d out of %d\n", pindex->nHeight, nEndHeight);
+                GetMainSignals().SystemMessage(strprintf("RESCAN: BLOCK %d of %d", pindex->nHeight, nEndHeight));
             }
         }
-        ShowProgress(("Rescanning..."), 100); // hide progress dialog in GUI
+        GetMainSignals().SystemMessage("RESCAN: COMPLETE");
     }
     return ret;
 }
@@ -2580,14 +2580,14 @@ bool CWallet::NewKeyPool()
             walletdb.ErasePool(nIndex);
         setKeyPool.clear();
 
-        if (IsLocked())
+        if (IsLocked() || fAllowKeypoolRefills == false)
             return false;
 
         int64_t nKeys = std::max(gArgs.GetArg("-keypool", DEFAULT_KEYPOOL_SIZE), (int64_t)0);
         for (int i = 0; i < nKeys; i++)
         {
             int64_t nIndex = i + 1;
-            walletdb.WritePool(nIndex, CKeyPool(GenerateNewKey()));
+            walletdb.WritePool(nIndex, CKeyPoolEntry(GenerateNewKey()));
             setKeyPool.insert(nIndex);
         }
         LogPrintf("CWallet::NewKeyPool wrote %d new keys\n", nKeys);
@@ -2617,7 +2617,7 @@ bool CWallet::TopUpKeyPool(unsigned int kpSize)
             int64_t nEnd = 1;
             if (!setKeyPool.empty())
                 nEnd = *(--setKeyPool.end()) + 1;
-            if (!walletdb.WritePool(nEnd, CKeyPool(GenerateNewKey())))
+            if (!walletdb.WritePool(nEnd, CKeyPoolEntry(GenerateNewKey())))
                 throw std::runtime_error("TopUpKeyPool(): writing generated key failed");
             setKeyPool.insert(nEnd);
             LogPrint("wallet", "keypool added key %d, size=%u\n", nEnd, setKeyPool.size());
@@ -2626,14 +2626,14 @@ bool CWallet::TopUpKeyPool(unsigned int kpSize)
     return true;
 }
 
-void CWallet::ReserveKeyFromKeyPool(int64_t &nIndex, CKeyPool &keypool)
+void CWallet::ReserveKeyFromKeyPool(int64_t &nIndex, CKeyPoolEntry &keypool)
 {
     nIndex = -1;
     keypool.vchPubKey = CPubKey();
     {
         LOCK(cs_wallet);
 
-        if (!IsLocked())
+        if (!IsLocked() && fAllowKeypoolRefills == true)
             TopUpKeyPool();
 
         // Get the oldest key
@@ -2677,14 +2677,16 @@ void CWallet::ReturnKey(int64_t nIndex)
 bool CWallet::GetKeyFromPool(CPubKey &result)
 {
     int64_t nIndex = 0;
-    CKeyPool keypool;
+    CKeyPoolEntry keypool;
     {
         LOCK(cs_wallet);
         ReserveKeyFromKeyPool(nIndex, keypool);
         if (nIndex == -1)
         {
-            if (IsLocked())
+            if (IsLocked() || fAllowKeypoolRefills == false)
+            {
                 return false;
+            }
             result = GenerateNewKey();
             return true;
         }
@@ -2697,7 +2699,7 @@ bool CWallet::GetKeyFromPool(CPubKey &result)
 int64_t CWallet::GetOldestKeyPoolTime()
 {
     int64_t nIndex = 0;
-    CKeyPool keypool;
+    CKeyPoolEntry keypool;
     ReserveKeyFromKeyPool(nIndex, keypool);
     if (nIndex == -1)
         return GetTime();
@@ -2842,7 +2844,7 @@ bool CReserveKey::GetReservedKey(CPubKey &pubkey)
 {
     if (nIndex == -1)
     {
-        CKeyPool keypool;
+        CKeyPoolEntry keypool;
         pwallet->ReserveKeyFromKeyPool(nIndex, keypool);
         if (nIndex != -1)
             vchPubKey = keypool.vchPubKey;
@@ -2881,7 +2883,7 @@ void CWallet::GetAllReserveKeys(std::set<CKeyID> &setAddress) const
     LOCK(cs_wallet);
     for (auto const &id : setKeyPool)
     {
-        CKeyPool keypool;
+        CKeyPoolEntry keypool;
         if (!walletdb.ReadPool(id, keypool))
             throw std::runtime_error("GetAllReserveKeyHashes(): read failed");
         assert(keypool.vchPubKey.IsValid());
@@ -3042,8 +3044,8 @@ void CWallet::GetKeyBirthTimes(std::map<CKeyID, int64_t> &mapKeyBirth) const
         mapKeyBirth[it->first] = it->second->GetBlockTime() - 7200; // block times can be 2h off
 }
 
-CKeyPool::CKeyPool() { nTime = GetTime(); }
-CKeyPool::CKeyPool(const CPubKey &vchPubKeyIn)
+CKeyPoolEntry::CKeyPoolEntry() { nTime = GetTime(); }
+CKeyPoolEntry::CKeyPoolEntry(const CPubKey &vchPubKeyIn)
 {
     nTime = GetTime();
     vchPubKey = vchPubKeyIn;
@@ -3300,7 +3302,6 @@ bool CWallet::CreateCoinStake(const CKeyStore &keystore,
         // Read block header
         CBlock block;
         {
-            LOCK(cs_blockstorage);
             CDiskBlockPos blockPos(txindex.nFile, txindex.nPos);
             if (!ReadBlockFromDisk(block, blockPos, pnetMan->getActivePaymentNetwork()->GetConsensus()))
                 continue;
@@ -3462,6 +3463,7 @@ void static UIWarning(const std::string &str) { LogPrintf("Wallet Warning: %s\n"
 bool CWallet::InitLoadWallet()
 {
     std::string walletFile = gArgs.GetArg("-wallet", DEFAULT_WALLET_DAT);
+    fAllowKeypoolRefills = gArgs.GetBoolArg("-allownewkeys", DEFAULT_ALLOW_KEYPOOL_REFILLS);
 
     // needed to restore wallet transaction meta data after -zapwallettxes
     std::vector<CWalletTx> vWtx;

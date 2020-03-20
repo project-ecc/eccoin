@@ -72,6 +72,8 @@ BITCOIN_TESTS = \
   test/deadlock_tests/test6.cpp \
   test/deadlock_tests/test7.cpp \
   test/deadlock_tests/test8.cpp \
+  test/deadlock_tests/test9.cpp \
+  test/deadlock_tests/test10.cpp \
   test/deadlock_tests/suite.h \
   test/getarg_tests.cpp \
   test/jsonutil.h \

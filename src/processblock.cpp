@@ -74,7 +74,6 @@ bool DisconnectTip(CValidationState &state, const Consensus::Params &consensusPa
     std::shared_ptr<CBlock> pblock = std::make_shared<CBlock>();
     CBlock &block = *pblock;
     {
-        LOCK(cs_blockstorage);
         if (!ReadBlockFromDisk(block, pindexDelete, consensusParams))
             return AbortNode(state, "Failed to read block");
     }
@@ -139,7 +138,6 @@ bool ConnectTip(CValidationState &state,
     CBlock block;
     if (!pblock)
     {
-        LOCK(cs_blockstorage);
         if (!ReadBlockFromDisk(block, pindexNew, chainparams.GetConsensus()))
         {
             return AbortNode(state, "Failed to read block");
@@ -187,6 +185,23 @@ bool ConnectTip(CValidationState &state,
     return true;
 }
 
+// Execute a command, as given by -alertnotify, on certain events such as a long fork being seen
+void AlertNotify(const std::string &strMessage)
+{
+    std::string strCmd = gArgs.GetArg("-alertnotify", "");
+    if (strCmd.empty())
+        return;
+
+    // Alert text should be plain ascii coming from a trusted source, but to
+    // be safe we first strip anything not in safeChars, then add single quotes around
+    // the whole string before passing it to the shell:
+    std::string singleQuote("'");
+    std::string safeStatus = SanitizeString(strMessage);
+    safeStatus = singleQuote + safeStatus + singleQuote;
+    boost::replace_all(strCmd, "%s", safeStatus);
+
+    boost::thread t(runCommand, strCmd); // thread runs free
+}
 
 void CheckForkWarningConditions()
 {
@@ -210,6 +225,7 @@ void CheckForkWarningConditions()
         {
             std::string warning = std::string("'Warning: Large-work fork detected, forking after block ") +
                                   pindexBestForkBase->phashBlock->ToString() + std::string("'");
+            AlertNotify(warning);
         }
         if (pindexBestForkTip && pindexBestForkBase)
         {
@@ -853,13 +869,13 @@ bool FindUndoPos(CValidationState &state, int nFile, CDiskBlockPos &pos, unsigne
 
 static CCheckQueue<CScriptCheck> scriptcheckqueue(128);
 
+void InterruptScriptCheck() { scriptcheckqueue.Interrupt(); }
 void ThreadScriptCheck()
 {
     RenameThread("bitcoin-scriptch");
     scriptcheckqueue.Thread();
 }
 
-void InterruptScriptCheck() { scriptcheckqueue.Stop(); }
 bool ConnectBlock(const CBlock &block,
     CValidationState &state,
     CBlockIndex *pindex,
@@ -1135,7 +1151,6 @@ bool ConnectBlock(const CBlock &block,
             if (!FindUndoPos(state, pindex->nFile, _pos, ::GetSerializeSize(blockundo, SER_DISK, CLIENT_VERSION) + 40))
                 return error("ConnectBlock(): FindUndoPos failed");
             {
-                LOCK(cs_blockstorage);
                 if (!UndoWriteToDisk(blockundo, _pos, pindex->pprev->GetBlockHash(), chainparams.MessageStart()))
                     return AbortNode(state, "Failed to write undo data");
             }
@@ -1209,7 +1224,6 @@ DisconnectResult DisconnectBlock(const CBlock &block, const CBlockIndex *pindex,
         return DISCONNECT_FAILED;
     }
     {
-        LOCK(cs_blockstorage);
         if (!UndoReadFromDisk(blockUndo, pos, pindex->pprev->GetBlockHash()))
         {
             error("DisconnectBlock(): failure reading undo data");
@@ -1355,7 +1369,6 @@ bool AcceptBlock(const CBlock *pblock,
             return error("AcceptBlock(): FindBlockPos failed");
         if (dbp == NULL)
         {
-            LOCK(cs_blockstorage);
             if (!WriteBlockToDisk(*pblock, blockPos, chainparams.MessageStart()))
                 AbortNode(state, "Failed to write block");
         }

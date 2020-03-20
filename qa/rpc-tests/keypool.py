@@ -82,6 +82,29 @@ class KeyPoolTest(BitcoinTestFramework):
         except JSONRPCException as e:
             assert(e.error['code']==-12)
 
+        stop_nodes(self.nodes)
+        wait_bitcoinds()
+
+        self.nodes.append(start_node(0, self.options.tmpdir, ["-keypool=1", "-allownewkeys=0"]))
+        # need to unlock to sign mined blocks
+        nodes[0].walletpassphrase('test', 10000)
+        # drain the keys
+        addr = set()
+        addr.add(nodes[0].getrawchangeaddress())
+        addr.add(nodes[0].getrawchangeaddress())
+        addr.add(nodes[0].getrawchangeaddress())
+        addr.add(nodes[0].getrawchangeaddress())
+        # assert that four unique addresses were returned
+        assert(len(addr) == 4)
+        # the next one should fail because auto refilling keypool is not allowed
+        try:
+            nodes[0].generate(1)
+            # because we need to unlock we wont run out of keys while mining, not auto refilling keypool is a TODO
+            raise AssertionError('Keypool should be exhausted when not allowing new keys')
+        except JSONRPCException as e:
+            assert(e.error['code']==-12)
+
+
     # BU Removed, implemented in base class def setup_chain(self):
     #    print("Initializing test directory "+self.options.tmpdir)
     #    initialize_chain(self.options.tmpdir)

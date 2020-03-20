@@ -18,6 +18,8 @@ class CZMQNotificationInterface : public CValidationInterface
 public:
     virtual ~CZMQNotificationInterface();
 
+    std::list<const CZMQAbstractNotifier *> GetActiveNotifiers() const;
+
     static CZMQNotificationInterface *CreateWithArguments(const std::map<std::string, std::string> &args);
 
 protected:
@@ -27,6 +29,8 @@ protected:
     // CValidationInterface
     void SyncTransaction(const CTransactionRef &ptx, const CBlock *pblock, int txIndex = -1);
     void UpdatedBlockTip(const CBlockIndex *pindex);
+    void SystemMessage(const std::string &message);
+    void PacketComplete(const uint8_t nProtocolId);
 
 private:
     CZMQNotificationInterface();
@@ -34,5 +38,7 @@ private:
     void *pcontext;
     std::list<CZMQAbstractNotifier *> notifiers;
 };
+
+extern CZMQNotificationInterface *g_zmq_notification_interface;
 
 #endif // BITCOIN_ZMQ_ZMQNOTIFICATIONINTERFACE_H

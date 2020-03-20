@@ -228,6 +228,16 @@ extern const char *RREP; // ROUTE_REPLY
  */
 extern const char *RERR; // ROUTE_ERROR
 /**
+ * Forward a data packet header to the requested peer or process it if it belongs
+ * to us.
+ */
+extern const char *SPH;
+/**
+ * Forward a packet data segment to the requested peer or process it if it belongs
+ * to us.
+ */
+extern const char *SPD;
+/**
  * The nsversion message provides information the network services supported
  * by the transmitting node to the receiving node.
  */

@@ -23,6 +23,16 @@ CZMQNotificationInterface::~CZMQNotificationInterface()
     }
 }
 
+std::list<const CZMQAbstractNotifier *> CZMQNotificationInterface::GetActiveNotifiers() const
+{
+    std::list<const CZMQAbstractNotifier *> result;
+    for (const auto *n : notifiers)
+    {
+        result.push_back(n);
+    }
+    return result;
+}
+
 CZMQNotificationInterface *CZMQNotificationInterface::CreateWithArguments(
     const std::map<std::string, std::string> &args)
 {
@@ -34,6 +44,8 @@ CZMQNotificationInterface *CZMQNotificationInterface::CreateWithArguments(
     factories["pubhashtx"] = CZMQAbstractNotifier::Create<CZMQPublishHashTransactionNotifier>;
     factories["pubrawblock"] = CZMQAbstractNotifier::Create<CZMQPublishRawBlockNotifier>;
     factories["pubrawtx"] = CZMQAbstractNotifier::Create<CZMQPublishRawTransactionNotifier>;
+    factories["pubsystem"] = CZMQAbstractNotifier::Create<CZMQPublishSystemNotifier>;
+    factories["pubpacket"] = CZMQAbstractNotifier::Create<CZMQPublishPacketNotifier>;
 
     for (std::map<std::string, CZMQNotifierFactory>::const_iterator i = factories.begin(); i != factories.end(); ++i)
     {
@@ -99,6 +111,9 @@ bool CZMQNotificationInterface::Initialize()
         return false;
     }
 
+    // This sleep is needed so that any zmq messages published immediately after the ZMQ bind call are not dropped
+    MilliSleep(100);
+
     return true;
 }
 
@@ -153,3 +168,39 @@ void CZMQNotificationInterface::SyncTransaction(const CTransactionRef &ptx, cons
         }
     }
 }
+
+void CZMQNotificationInterface::SystemMessage(const std::string &message)
+{
+    for (std::list<CZMQAbstractNotifier *>::iterator i = notifiers.begin(); i != notifiers.end();)
+    {
+        CZMQAbstractNotifier *notifier = *i;
+        if (notifier->NotifySystem(message))
+        {
+            i++;
+        }
+        else
+        {
+            notifier->Shutdown();
+            i = notifiers.erase(i);
+        }
+    }
+}
+
+void CZMQNotificationInterface::PacketComplete(const uint8_t nProtocolId)
+{
+    for (std::list<CZMQAbstractNotifier *>::iterator i = notifiers.begin(); i != notifiers.end();)
+    {
+        CZMQAbstractNotifier *notifier = *i;
+        if (notifier->NotifyPacket(nProtocolId))
+        {
+            i++;
+        }
+        else
+        {
+            notifier->Shutdown();
+            i = notifiers.erase(i);
+        }
+    }
+}
+
+CZMQNotificationInterface *g_zmq_notification_interface = NULL;

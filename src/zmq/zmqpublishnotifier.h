@@ -41,4 +41,16 @@ public:
     bool NotifyTransaction(const CTransactionRef &ptx);
 };
 
+class CZMQPublishSystemNotifier : public CZMQAbstractPublishNotifier
+{
+public:
+    bool NotifySystem(const std::string &message);
+};
+
+class CZMQPublishPacketNotifier : public CZMQAbstractPublishNotifier
+{
+public:
+    bool NotifyPacket(const uint8_t nProtocolId);
+};
+
 #endif // BITCOIN_ZMQ_ZMQPUBLISHNOTIFIER_H

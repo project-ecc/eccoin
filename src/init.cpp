@@ -62,8 +62,7 @@
 #include <openssl/crypto.h>
 
 #if ENABLE_ZMQ
-#include "zmq/zmqnotificationinterface.h"
-static CZMQNotificationInterface *pzmqNotificationInterface = nullptr;
+#include <zmq/zmqnotificationinterface.h>
 #endif
 
 extern std::unique_ptr<PeerLogicValidation> peerLogic;
@@ -174,6 +173,7 @@ void Interrupt(thread_group &threadGroup)
 
 void Shutdown(thread_group &threadGroup)
 {
+    GetMainSignals().SystemMessage("SHUTDOWN: INITIATED");
     LogPrintf("%s: In progress...\n", __func__);
     static CCriticalSection cs_Shutdown;
     TRY_LOCK(cs_Shutdown, lockShutdown);
@@ -257,11 +257,11 @@ void Shutdown(thread_group &threadGroup)
     }
 
 #if ENABLE_ZMQ
-    if (pzmqNotificationInterface)
+    if (g_zmq_notification_interface)
     {
-        UnregisterValidationInterface(pzmqNotificationInterface);
-        delete pzmqNotificationInterface;
-        pzmqNotificationInterface = NULL;
+        UnregisterValidationInterface(g_zmq_notification_interface);
+        delete g_zmq_notification_interface;
+        g_zmq_notification_interface = NULL;
     }
 #endif
 
@@ -454,6 +454,9 @@ std::string HelpMessage()
 
 
     strUsage += HelpMessageGroup(("Wallet options:"));
+    strUsage += HelpMessageOpt(
+        "-allownewkeys", strprintf(("Allow the wallet to generate new keys if the keypool runs out <n> (default: %u)"),
+                             DEFAULT_ALLOW_KEYPOOL_REFILLS));
     strUsage +=
         HelpMessageOpt("-keypool=<n>", strprintf(("Set key pool size to <n> (default: %u)"), DEFAULT_KEYPOOL_SIZE));
     strUsage += HelpMessageOpt("-fallbackfee=<amt>",
@@ -656,7 +659,8 @@ void BlockNotifyCallback(bool initialSync, const CBlockIndex *pBlockIndex)
     std::string strCmd = gArgs.GetArg("-blocknotify", "");
 
     boost::replace_all(strCmd, "%s", pBlockIndex->GetBlockHash().GetHex());
-    std::thread t(runCommand, strCmd); // thread runs free
+    std::thread t(runCommand, strCmd);
+    t.detach(); // thread runs free
 }
 
 struct CImportingNow
@@ -683,6 +687,7 @@ void ThreadImport(std::vector<fs::path> vImportFiles)
     {
         CImportingNow imp;
         int nFile = 0;
+        GetMainSignals().SystemMessage("REINDEX: STARTED");
         while (true)
         {
             CDiskBlockPos pos(nFile, 0);
@@ -696,12 +701,14 @@ void ThreadImport(std::vector<fs::path> vImportFiles)
                 break; // This error is logged in OpenBlockFile
             }
             LogPrintf("Reindexing block file blk%05u.dat...\n", (unsigned int)nFile);
+            GetMainSignals().SystemMessage(strprintf("REINDEX: BLOCK FILE blk%05u.dat", (unsigned int)nFile));
             pnetMan->getChainActive()->LoadExternalBlockFile(chainparams, file, &pos);
             nFile++;
         }
         pblocktree->WriteReindexing(false);
         fReindex = false;
         LogPrintf("Reindexing finished\n");
+        GetMainSignals().SystemMessage("REINDEX: COMPLETE");
         // To avoid ending up in a situation without genesis block, re-try initializing (no-op if reindexing worked):
         pnetMan->getChainActive()->InitBlockIndex(chainparams);
     }
@@ -1591,10 +1598,10 @@ bool AppInit2(thread_group &threadGroup)
     }
 
 #if ENABLE_ZMQ
-    pzmqNotificationInterface = CZMQNotificationInterface::CreateWithArguments(gArgs.GetMapArgs());
-    if (pzmqNotificationInterface)
+    g_zmq_notification_interface = CZMQNotificationInterface::CreateWithArguments(gArgs.GetMapArgs());
+    if (g_zmq_notification_interface)
     {
-        RegisterValidationInterface(pzmqNotificationInterface);
+        RegisterValidationInterface(g_zmq_notification_interface);
     }
 #endif
 
@@ -1644,6 +1651,7 @@ bool AppInit2(thread_group &threadGroup)
 
     SetRPCWarmupFinished();
     LogPrintf("Done loading\n");
+    GetMainSignals().SystemMessage("STARTUP: RPC AVAILABLE");
 
 
     if (pwalletMain)

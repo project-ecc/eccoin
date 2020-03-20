@@ -297,7 +297,9 @@ static const CRPCCommand vRPCCommands[] = {
     {"network", "clearbanned", &clearbanned, true}, {"network", "getaodvtable", &getaodvtable, true},
     {"network", "getaodvkeyentry", &getaodvkeyentry, true}, {"network", "getaodvidentry", &getaodvidentry, true},
     {"network", "getroutingpubkey", &getroutingpubkey, true}, {"network", "findroute", &findroute, true},
-    {"network", "haveroute", &haveroute, true},
+    {"network", "haveroute", &haveroute, true}, {"network", "sendpacket", &sendpacket, true},
+    {"network", "getbuffer", &getbuffer, true}, {"network", "tagsignmessage", &tagsignmessage, true},
+    {"network", "tagverifymessage", &tagverifymessage, true},
 
     /* Block chain and UTXO */
     {"blockchain", "getblockchaininfo", &getblockchaininfo, true},
@@ -334,6 +336,7 @@ static const CRPCCommand vRPCCommands[] = {
     {"util", "createmultisig", &createmultisig, true},
     {"util", "validateaddress", &validateaddress, true}, /* uses wallet if enabled */
     {"util", "verifymessage", &verifymessage, true}, {"util", "estimatefee", &estimatefee, true},
+    {"util", "estimatesmartfee", &estimatesmartfee, true},
 
     /* Not shown in help */
     {"hidden", "invalidateblock", &invalidateblock, true}, {"hidden", "reconsiderblock", &reconsiderblock, true},
@@ -361,6 +364,11 @@ static const CRPCCommand vRPCCommands[] = {
     {"wallet", "settxfee", &settxfee, true}, {"wallet", "signmessage", &signmessage, true},
     {"wallet", "walletlock", &walletlock, true}, {"wallet", "walletpassphrasechange", &walletpassphrasechange, true},
     {"wallet", "walletpassphrase", &walletpassphrase, true},
+
+#if ENABLE_ZMQ
+    /* ZMQ */
+    {"zmq", "getzmqnotifications", &getzmqnotifications, true},
+#endif
 };
 
 CRPCTable::CRPCTable()
@@ -520,7 +528,7 @@ UniValue CRPCTable::execute(const std::string &strMethod, const UniValue &params
 
 std::string HelpExampleCli(const std::string &methodname, const std::string &args)
 {
-    return "> eccoin-cli " + methodname + " " + args + "\n";
+    return "> eccoind " + methodname + " " + args + "\n";
 }
 
 std::string HelpExampleRpc(const std::string &methodname, const std::string &args)

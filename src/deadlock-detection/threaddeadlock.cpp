@@ -23,6 +23,69 @@
 
 #ifdef DEBUG_LOCKORDER // covers the entire file
 
+void _remove_lock_critical_exit(void *cs)
+{
+    if (!lockdata.available)
+    {
+        // lockdata was already deleted
+        return;
+    }
+    uint64_t tid = getTid();
+    auto it = lockdata.locksheldbythread.find(tid);
+    if (it == lockdata.locksheldbythread.end())
+    {
+        throw std::logic_error("unlocking non-existant lock");
+    }
+    if (it->second.back().first != cs)
+    {
+        LogPrintf("got %s but was not expecting it\n", it->second.back().second.ToString().c_str());
+        throw std::logic_error("unlock order inconsistant with lock order");
+    }
+    LockType type = it->second.back().second.eLockType;
+    OwnershipType ownership = it->second.back().second.eOwnership;
+    // assuming we unlock in the reverse order of locks, we can simply pop back
+    it->second.pop_back();
+    // if we have no more locks on this critical section...
+    if (type != LockType::SHARED_MUTEX)
+    {
+        for (auto entry : it->second)
+        {
+            if (entry.first == cs)
+            {
+                // we have another lock on this critical section
+                return;
+            }
+        }
+    }
+    // remove from the other maps
+    if (ownership == OwnershipType::EXCLUSIVE)
+    {
+        auto iter = lockdata.writelocksheld.find(cs);
+        if (iter != lockdata.writelocksheld.end())
+        {
+            if (iter->second.empty())
+                return;
+            if (iter->second.count(tid) != 0)
+            {
+                iter->second.erase(tid);
+            }
+        }
+    }
+    else // !isExclusive
+    {
+        auto iter = lockdata.readlocksheld.find(cs);
+        if (iter != lockdata.readlocksheld.end())
+        {
+            if (iter->second.empty())
+                return;
+            if (iter->second.count(tid) != 0)
+            {
+                iter->second.erase(tid);
+            }
+        }
+    }
+}
+
 void potential_deadlock_detected(LockStackEntry now, LockStack &deadlocks, std::set<uint64_t> &threads)
 {
     LogPrintf("POTENTIAL DEADLOCK DETECTED\n");
@@ -85,6 +148,29 @@ void potential_deadlock_detected(LockStackEntry now, LockStack &deadlocks, std::
     // clean up the lock before throwing
     _remove_lock_critical_exit(now.first);
     throw std::logic_error("potential deadlock detected");
+}
+
+bool HasAnyOwners(void *c)
+{
+    auto iter = lockdata.writelocksheld.find(c);
+    if (iter != lockdata.writelocksheld.end())
+    {
+        if (!iter->second.empty())
+        {
+            return true;
+        }
+    }
+
+    auto iter2 = lockdata.readlocksheld.find(c);
+    if (iter2 != lockdata.readlocksheld.end())
+    {
+        if (!iter2->second.empty())
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 static bool RecursiveCheck(const uint64_t &tid,
@@ -157,7 +243,7 @@ static bool RecursiveCheck(const uint64_t &tid,
             if (HasAnyOwners(lock.first))
             {
                 // and their lock is waiting...
-                if (lock.second.GetWaiting() == true)
+                if (lock.second.fWaiting == true)
                 {
                     deadlocks.push_back(lock);
                     threads.emplace(other_iter->first);
@@ -185,29 +271,6 @@ static void self_deadlock_detected(LockStackEntry now, LockStackEntry previous)
     LogPrintf("Previous lock was: %s\n", previous.second.ToString());
     LogPrintf("Current lock is: %s\n", now.second.ToString());
     throw std::logic_error("self_deadlock_detected");
-}
-
-bool HasAnyOwners(void *c)
-{
-    auto iter = lockdata.writelocksheld.find(c);
-    if (iter != lockdata.writelocksheld.end())
-    {
-        if (!iter->second.empty())
-        {
-            return true;
-        }
-    }
-
-    auto iter2 = lockdata.readlocksheld.find(c);
-    if (iter2 != lockdata.readlocksheld.end())
-    {
-        if (!iter2->second.empty())
-        {
-            return true;
-        }
-    }
-
-    return false;
 }
 
 void AddNewLock(LockStackEntry newEntry, const uint64_t &tid)
@@ -410,7 +473,7 @@ void push_lock(void *c, const CLockLocation &locklocation, LockType locktype, Ow
                 {
                     // if we have a lock and it isnt exclusive and we are attempting to get exclusive
                     // then we will deadlock ourself
-                    if (lockStackLock.first == c && lockStackLock.second.GetOwnershipType() == OwnershipType::SHARED)
+                    if (lockStackLock.first == c && lockStackLock.second.eOwnership == OwnershipType::SHARED)
                     {
                         self_deadlock_detected(now, lockStackLock);
                     }
@@ -447,6 +510,42 @@ void push_lock(void *c, const CLockLocation &locklocation, LockType locktype, Ow
                     break;
                 }
             }
+        }
+    }
+    // check for lock ordering issues, skip if locking recursively because we already have an order
+    if (lockingRecursively == false)
+    {
+        // caluclate this locks name
+        const std::string lockname = locklocation.mutexName;
+        std::vector<CLockLocation> heldLocks;
+        // get a list of locks we have locked using this threads id
+        auto holdingIter = lockdata.locksheldbythread.find(tid);
+        if (holdingIter != lockdata.locksheldbythread.end())
+        {
+            // get the names of those locks
+            for (auto &entry : holdingIter->second)
+            {
+                heldLocks.push_back(entry.second);
+            }
+            if (lockdata.ordertracker.CanCheckForConflicts(lockname))
+            {
+                // we have seen the lock we are trying to lock before, check ordering
+                lockdata.ordertracker.CheckForConflict(locklocation, heldLocks, tid);
+            }
+            else
+            {
+                // we havent seen this lock before, add generic data for it
+                lockdata.ordertracker.AddNewLockInfo(lockname, heldLocks);
+            }
+            // track this locks exactly locking order info
+            lockdata.ordertracker.TrackLockOrderHistory(locklocation, heldLocks, tid);
+        }
+        else
+        {
+            // we havent seen this lock before, add generic data for it
+            lockdata.ordertracker.AddNewLockInfo(lockname, heldLocks);
+            // track this locks exactly locking order info
+            lockdata.ordertracker.TrackLockOrderHistory(locklocation, heldLocks, tid);
         }
     }
     AddNewLock(now, tid);
@@ -491,69 +590,6 @@ void DeleteLock(void *cs)
             }
         }
         std::swap(iter.second, newStack);
-    }
-}
-
-void _remove_lock_critical_exit(void *cs)
-{
-    if (!lockdata.available)
-    {
-        // lockdata was already deleted
-        return;
-    }
-    uint64_t tid = getTid();
-    auto it = lockdata.locksheldbythread.find(tid);
-    if (it == lockdata.locksheldbythread.end())
-    {
-        throw std::logic_error("unlocking non-existant lock");
-    }
-    if (it->second.back().first != cs)
-    {
-        LogPrintf("got %s but was not expecting it\n", it->second.back().second.ToString().c_str());
-        throw std::logic_error("unlock order inconsistant with lock order");
-    }
-    LockType type = it->second.back().second.GetLockType();
-    OwnershipType ownership = it->second.back().second.GetOwnershipType();
-    // assuming we unlock in the reverse order of locks, we can simply pop back
-    it->second.pop_back();
-    // if we have no more locks on this critical section...
-    if (type != LockType::SHARED_MUTEX)
-    {
-        for (auto entry : it->second)
-        {
-            if (entry.first == cs)
-            {
-                // we have another lock on this critical section
-                return;
-            }
-        }
-    }
-    // remove from the other maps
-    if (ownership == OwnershipType::EXCLUSIVE)
-    {
-        auto iter = lockdata.writelocksheld.find(cs);
-        if (iter != lockdata.writelocksheld.end())
-        {
-            if (iter->second.empty())
-                return;
-            if (iter->second.count(tid) != 0)
-            {
-                iter->second.erase(tid);
-            }
-        }
-    }
-    else // !isExclusive
-    {
-        auto iter = lockdata.readlocksheld.find(cs);
-        if (iter != lockdata.readlocksheld.end())
-        {
-            if (iter->second.empty())
-                return;
-            if (iter->second.count(tid) != 0)
-            {
-                iter->second.erase(tid);
-            }
-        }
     }
 }
 

@@ -315,14 +315,10 @@ UniValue importwallet(const UniValue &params, bool fHelp)
 
     bool fGood = true;
 
-    int64_t nFilesize = std::max((int64_t)1, (int64_t)file.tellg());
     file.seekg(0, file.beg);
 
-    pwalletMain->ShowProgress("Importing...", 0); // show progress dialog in GUI
     while (file.good())
     {
-        pwalletMain->ShowProgress(
-            "", std::max(1, std::min(99, (int)(((double)file.tellg() / (double)nFilesize) * 100))));
         std::string line;
         std::getline(file, line);
         if (line.empty() || line[0] == '#')
@@ -373,7 +369,6 @@ UniValue importwallet(const UniValue &params, bool fHelp)
         nTimeBegin = std::min(nTimeBegin, nTime);
     }
     file.close();
-    pwalletMain->ShowProgress("", 100); // hide progress dialog in GUI
 
     CBlockIndex *pindex = pnetMan->getChainActive()->chainActive.Tip();
     while (pindex && pindex->pprev && pindex->GetBlockTime() > nTimeBegin - 7200)
@@ -519,7 +514,9 @@ UniValue listaddresses(const UniValue &params, bool fHelp)
     EnsureWalletIsUnlocked();
 
     std::map<CKeyID, int64_t> mapKeyBirth;
+    std::set<CKeyID> setKeyPool;
     pwalletMain->GetKeyBirthTimes(mapKeyBirth);
+    pwalletMain->GetAllReserveKeys(setKeyPool);
 
     // sort time/key pairs
     std::vector<std::pair<int64_t, CKeyID> > vKeyBirth;
@@ -539,6 +536,14 @@ UniValue listaddresses(const UniValue &params, bool fHelp)
         if (pwalletMain->GetKey(keyid, key))
         {
             if (pwalletMain->mapAddressBook.count(keyid))
+            {
+                ret.push_back(strprintf("%s", strAddr));
+            }
+            else if (setKeyPool.count(keyid))
+            {
+                continue;
+            }
+            else
             {
                 ret.push_back(strprintf("%s", strAddr));
             }
