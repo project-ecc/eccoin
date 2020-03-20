@@ -208,41 +208,46 @@ struct timeval MillisToTimeval(int64_t nTimeout)
 }
 
 /** SOCKS version */
-enum SOCKSVersion: uint8_t {
+enum SOCKSVersion : uint8_t
+{
     SOCKS4 = 0x04,
     SOCKS5 = 0x05
 };
 
 /** Values defined for METHOD in RFC1928 */
-enum SOCKS5Method: uint8_t {
-    NOAUTH = 0x00,        //!< No authentication required
-    GSSAPI = 0x01,        //!< GSSAPI
-    USER_PASS = 0x02,     //!< Username/password
+enum SOCKS5Method : uint8_t
+{
+    NOAUTH = 0x00, //!< No authentication required
+    GSSAPI = 0x01, //!< GSSAPI
+    USER_PASS = 0x02, //!< Username/password
     NO_ACCEPTABLE = 0xff, //!< No acceptable methods
 };
 
 /** Values defined for CMD in RFC1928 */
-enum SOCKS5Command: uint8_t {
+enum SOCKS5Command : uint8_t
+{
     CONNECT = 0x01,
     BIND = 0x02,
     UDP_ASSOCIATE = 0x03
 };
 
 /** Values defined for REP in RFC1928 */
-enum SOCKS5Reply: uint8_t {
-    SUCCEEDED = 0x00,        //!< Succeeded
-    GENFAILURE = 0x01,       //!< General failure
-    NOTALLOWED = 0x02,       //!< Connection not allowed by ruleset
-    NETUNREACHABLE = 0x03,   //!< Network unreachable
-    HOSTUNREACHABLE = 0x04,  //!< Network unreachable
-    CONNREFUSED = 0x05,      //!< Connection refused
-    TTLEXPIRED = 0x06,       //!< TTL expired
-    CMDUNSUPPORTED = 0x07,   //!< Command not supported
+enum SOCKS5Reply : uint8_t
+{
+    SUCCEEDED = 0x00, //!< Succeeded
+    GENFAILURE = 0x01, //!< General failure
+    NOTALLOWED = 0x02, //!< Connection not allowed by ruleset
+    NETUNREACHABLE = 0x03, //!< Network unreachable
+    HOSTUNREACHABLE = 0x04, //!< Network unreachable
+    CONNREFUSED = 0x05, //!< Connection refused
+    TTLEXPIRED = 0x06, //!< TTL expired
+    CMDUNSUPPORTED = 0x07, //!< Command not supported
     ATYPEUNSUPPORTED = 0x08, //!< Address type not supported
 };
 
 /** Values defined for ATYPE in RFC1928 */
-enum SOCKS5Atyp: uint8_t {
+enum SOCKS5Atyp : uint8_t
+{
     IPV4 = 0x01,
     DOMAINNAME = 0x03,
     IPV6 = 0x04,
@@ -269,7 +274,7 @@ static bool InterruptibleRecv(uint8_t *data, size_t len, int timeout, SOCKET &hS
     while (len > 0 && curTime < endTime)
     {
         // Optimistically try the recv first
-        ssize_t ret = recv(hSocket, (char*)data, len, 0);
+        ssize_t ret = recv(hSocket, (char *)data, len, 0);
         if (ret > 0)
         {
             len -= ret;
