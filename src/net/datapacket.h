@@ -22,9 +22,9 @@ const uint8_t PACKET_VERSION = 1;
 class CPacketHeader
 {
 public:
-    uint8_t nPacketVersion;
-    uint8_t nProtocolId;
-    uint8_t nProtocolVersion;
+    uint8_t nPacketVersion; // versioning of the CPacketHeader and related classes
+    uint16_t nProtocolId; // protocolId, should match the protocolid in mapBuffers
+    uint8_t nProtocolVersion; // versioning for use by the protocol itself
     uint64_t nTotalLength; // header + data in bytes (does not include extra vector serialization bytes)
     uint16_t nIdenfitication; // randomly generated
     uint256 nDataChecksum; // sha256 checksum
@@ -146,7 +146,7 @@ public:
         ClearAndSetSize();
     }
 
-    CPacket(uint8_t nProtocolIdIn, uint8_t nProtocolVersionIn) : CPacketHeader(nProtocolIdIn, nProtocolVersionIn)
+    CPacket(uint16_t nProtocolIdIn, uint8_t nProtocolVersionIn) : CPacketHeader(nProtocolIdIn, nProtocolVersionIn)
     {
         vData.clear();
     }
