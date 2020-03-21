@@ -25,6 +25,8 @@ chain/chain.cpp
 chain/chain.h
 chain/chainman.cpp
 chain/chainman.h
+chain/chainparams.cpp
+chain/chainparams.h
 chain/checkpoints.cpp
 chain/checkpoints.h
 chain/outpoint.h
@@ -114,10 +116,6 @@ net/tagdb.cpp
 net/tagdb.h
 net/tagstore.cpp
 net/tagstore.h
-networks/netman.cpp
-networks/netman.h
-networks/network.h
-networks/networktemplate.h
 policy/fees.cpp
 policy/fees.h
 policy/policy.cpp

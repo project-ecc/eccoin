@@ -31,7 +31,7 @@
 class CBlockIndex;
 class CBlockTreeDB;
 class CBloomFilter;
-class CNetworkTemplate;
+class CChainParams;
 class CInv;
 class CScriptCheck;
 class CTxMemPool;
@@ -197,7 +197,7 @@ extern std::set<CBlockIndex *> setDirtyBlockIndex;
 void PruneBlockIndexCandidates();
 bool CheckIndexAgainstCheckpoint(const CBlockIndex *pindexPrev,
     CValidationState &state,
-    const CNetworkTemplate &chainparams,
+    const CChainParams &chainparams,
     const uint256 &hash);
 bool IsSuperMajority(int minVersion,
     const CBlockIndex *pstart,

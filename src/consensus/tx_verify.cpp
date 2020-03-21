@@ -5,6 +5,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include "chain/chainman.h"
 #include "consensus/tx_verify.h"
 #include "base58.h"
 #include "consensus/consensus.h"
@@ -79,9 +80,9 @@ bool CheckTransaction(const CTransaction &tx, CValidationState &state)
  */
 int GetSpendHeight(const CCoinsViewCache &inputs)
 {
-    RECURSIVEREADLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
-    BlockMap::iterator i = pnetMan->getChainActive()->mapBlockIndex.find(inputs.GetBestBlock());
-    if (i != pnetMan->getChainActive()->mapBlockIndex.end())
+    RECURSIVEREADLOCK(g_chainman.cs_mapBlockIndex);
+    BlockMap::iterator i = g_chainman.mapBlockIndex.find(inputs.GetBestBlock());
+    if (i != g_chainman.mapBlockIndex.end())
     {
         CBlockIndex *pindexPrev = i->second;
         if (pindexPrev)
@@ -117,7 +118,7 @@ bool Consensus::CheckTxInputs(const CTransaction &tx, CValidationState &state, c
             if (nSpendHeight == -1)
                 nSpendHeight = GetSpendHeight(inputs);
             if (nSpendHeight - coin.nHeight < COINBASE_MATURITY &&
-                pnetMan->getChainActive()->chainActive.Tip()->nHeight > 1600000)
+                g_chainman.chainActive.Tip()->nHeight > 1600000)
                 return state.Invalid(false, REJECT_INVALID, "bad-txns-premature-spend-of-coinbase",
                     strprintf("tried to spend coinbase at depth %d", nSpendHeight - coin.nHeight));
         }

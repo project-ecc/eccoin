@@ -3,7 +3,7 @@
 
 #include "fs.h"
 #include "key.h"
-#include "networks/netman.h"
+#include "chain/chainparams.h"
 #include "pubkey.h"
 #include "txdb.h"
 #include "txmempool.h"
@@ -13,7 +13,7 @@
 class CConnman;
 class CNode;
 
-extern CNetworkManager *pnetman;
+
 
 /** Basic testing setup.
  * This just configures logging and chain parameters.

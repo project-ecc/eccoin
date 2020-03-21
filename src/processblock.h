@@ -15,7 +15,7 @@
 class CValidationState;
 class CNode;
 class CBlock;
-class CNetworkTemplate;
+class CChainParams;
 class CDiskBlockPos;
 class CBlockIndex;
 
@@ -47,7 +47,7 @@ bool ConnectBlock(const CBlock &block,
 DisconnectResult DisconnectBlock(const CBlock &block, const CBlockIndex *pindex, CCoinsViewCache &coins);
 
 /** Find the best known block, and make it the tip of the block chain */
-bool ActivateBestChain(CValidationState &state, const CNetworkTemplate &chainparams, const CBlock *pblock = nullptr);
+bool ActivateBestChain(CValidationState &state, const CChainParams &chainparams, const CBlock *pblock = nullptr);
 
 /**
  * Process an incoming block. This only returns after the best known valid
@@ -68,7 +68,7 @@ bool ActivateBestChain(CValidationState &state, const CNetworkTemplate &chainpar
  * @return True if state.IsValid()
  */
 bool ProcessNewBlock(CValidationState &state,
-    const CNetworkTemplate &chainparams,
+    const CChainParams &chainparams,
     const CNode *pfrom,
     const CBlock *pblock,
     bool fForceProcessing,

@@ -11,8 +11,7 @@
 #include "crypto/scrypt.h"
 #include "init.h"
 #include "main.h"
-#include "networks/netman.h"
-#include "networks/networktemplate.h"
+#include "chain/chainparams.h"
 #include "timedata.h"
 #include "tinyformat.h"
 #include "util/util.h"
@@ -122,7 +121,7 @@ bool CBlock::SignScryptBlock(const CKeyStore &keystore)
 
 bool CBlock::CheckBlockSignature() const
 {
-    if (GetHash() == pnetMan->getActivePaymentNetwork()->GetConsensus().hashGenesisBlock)
+    if (GetHash() == Params().GetConsensus().hashGenesisBlock)
         return vchBlockSig.empty();
 
     std::vector<std::vector<unsigned char> > vSolutions;

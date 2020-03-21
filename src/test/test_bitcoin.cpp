@@ -9,6 +9,8 @@
 
 
 #include "blockgeneration/blockgeneration.h"
+#include "chain/chainman.h"
+#include "chain/chainparams.h"
 #include "consensus/consensus.h"
 #include "consensus/validation.h"
 #include "crypto/sha256.h"
@@ -39,9 +41,8 @@ BasicTestingSetup::BasicTestingSetup(const std::string &chainName)
     SetupNetworking();
     g_logger->fPrintToDebugLog = false; // don't want to write to debug.log file
     fCheckBlockIndex = true;
-    pnetMan = new CNetworkManager();
     pwallet = new CWallet("walletFile");
-    pnetMan->SetParams(chainName);
+    CheckAndSetParams(chainName);
     // Deterministic randomness for tests.
     g_connman = std::make_unique<CConnman>(0x1337, 0x1337);
 }
@@ -51,7 +52,7 @@ TestingSetup::TestingSetup(const std::string &chainName) : BasicTestingSetup(cha
 {
     // Ideally we'd move all the RPC tests to the functional testing framework
     // instead of unit tests, but for now we need these here.
-    const CNetworkTemplate &chainparams = pnetMan->getActivePaymentNetwork();
+    const CChainParams &chainparams = Params();
     // RegisterAllCoreRPCCommands(tableRPC);
     ClearDatadirCache();
     pathTemp = GetTempPathTest() / strprintf("test_bitcoin_%lu_%i", (unsigned long)GetTime(), (int)(GetRand(100000)));
@@ -59,7 +60,7 @@ TestingSetup::TestingSetup(const std::string &chainName) : BasicTestingSetup(cha
     pblocktree.reset(new CBlockTreeDB(1 << 20, true));
     pcoinsdbview = new CCoinsViewDB(1 << 23, true);
     pcoinsTip.reset(new CCoinsViewCache(pcoinsdbview));
-    bool worked = pnetMan->getChainActive()->InitBlockIndex(chainparams);
+    bool worked = g_chainman.InitBlockIndex(chainparams);
     assert(worked);
     RegisterNodeSignals(GetNodeSignals());
 }
@@ -69,7 +70,7 @@ TestingSetup::~TestingSetup()
     UnregisterNodeSignals(GetNodeSignals());
     threadGroup.interrupt_all();
     threadGroup.join_all();
-    pnetMan->getChainActive()->UnloadBlockIndex();
+    g_chainman.UnloadBlockIndex();
     pcoinsTip.reset();
     pcoinsdbview = nullptr;
     pblocktree.reset();
@@ -106,13 +107,13 @@ CBlock TestChain100Setup::CreateAndProcessBlock(const std::vector<CTransactionRe
         pblock->vtx.push_back(tx);
     // IncrementExtraNonce creates a valid coinbase and merkleRoot
     unsigned int extraNonce = 0;
-    IncrementExtraNonce(pblock, pnetMan->getChainActive()->chainActive.Tip(), extraNonce);
+    IncrementExtraNonce(pblock, g_chainman.chainActive.Tip(), extraNonce);
 
-    while (!CheckProofOfWork(pblock->GetHash(), pblock->nBits, pnetMan->getActivePaymentNetwork()->GetConsensus()))
+    while (!CheckProofOfWork(pblock->GetHash(), pblock->nBits, Params().GetConsensus()))
         ++pblock->nNonce;
 
     CValidationState state;
-    ProcessNewBlock(state, pnetMan->getActivePaymentNetwork(), NULL, pblock, true, NULL);
+    ProcessNewBlock(state, Params(), NULL, pblock, true, NULL);
 
     CBlock result = *pblock;
     pblocktemplate.reset();

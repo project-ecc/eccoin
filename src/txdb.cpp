@@ -14,7 +14,7 @@
 #include "crypto/hash.h"
 #include "init.h"
 #include "main.h"
-#include "networks/networktemplate.h"
+#include "chain/chainparams.h"
 #include "pow.h"
 #include "uint256.h"
 
@@ -274,8 +274,8 @@ bool CBlockTreeDB::LoadBlockIndexGuts()
             if (pcursor->GetValue(diskindex))
             {
                 // Construct block index object
-                CBlockIndex *pindexNew = pnetMan->getChainActive()->InsertBlockIndex(diskindex.hashBlock);
-                pindexNew->pprev = pnetMan->getChainActive()->InsertBlockIndex(diskindex.hashPrev);
+                CBlockIndex *pindexNew = g_chainman.InsertBlockIndex(diskindex.hashBlock);
+                pindexNew->pprev = g_chainman.InsertBlockIndex(diskindex.hashPrev);
                 pindexNew->nHeight = diskindex.nHeight;
                 pindexNew->nFile = diskindex.nFile;
                 pindexNew->nDataPos = diskindex.nDataPos;

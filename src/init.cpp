@@ -23,8 +23,7 @@
 #include "net/addrman.h"
 #include "net/messages.h"
 #include "net/net.h"
-#include "networks/netman.h"
-#include "networks/networktemplate.h"
+#include "chain/chainparams.h"
 #include "policy/policy.h"
 #include "processblock.h"
 #include "rpc/rpcserver.h"
@@ -412,7 +411,7 @@ std::string HelpMessage()
     strUsage += HelpMessageOpt("-peerbloomfilters",
         strprintf(("Support filtering of blocks and transaction with bloom filters (default: %u)"), 1));
     strUsage += HelpMessageOpt("-port=<port>", strprintf(("Listen for connections on <port> (default: %u)"),
-                                                   pnetMan->getActivePaymentNetwork()->GetDefaultPort()));
+                                                   Params().GetDefaultPort()));
     strUsage += HelpMessageOpt("-proxy=<ip:port>", ("Connect through SOCKS5 proxy"));
     strUsage += HelpMessageOpt("-proxyrandomize",
         strprintf(("Randomize credentials for every proxy connection. This enables Tor stream isolation (default: %u)"),
@@ -501,10 +500,10 @@ std::string HelpMessage()
         strUsage += HelpMessageOpt("-checkblockindex",
             strprintf("Do a full consistency check for mapBlockIndex, setBlockIndexCandidates, chainActive and "
                       "mapBlocksUnlinked occasionally. Also sets -checkmempool (default: %u)",
-                                       pnetMan->getActivePaymentNetwork()->DefaultConsistencyChecks()));
+                                       Params().DefaultConsistencyChecks()));
         strUsage +=
             HelpMessageOpt("-checkmempool=<n>", strprintf("Run checks every <n> transactions (default: %u)",
-                                                    pnetMan->getActivePaymentNetwork()->DefaultConsistencyChecks()));
+                                                    Params().DefaultConsistencyChecks()));
         strUsage += HelpMessageOpt(
             "-checkpoints", strprintf("Disable expensive verification for known chain history (default: %u)",
                                 DEFAULT_CHECKPOINTS_ENABLED));
@@ -615,7 +614,7 @@ std::string HelpMessage()
                               "format: <USERNAME>:<SALT>$<HASH>. A canonical python script is included in "
                               "share/rpcuser. This option can be specified multiple times"));
     strUsage += HelpMessageOpt("-rpcport=<port>", strprintf(("Listen for JSON-RPC connections on <port> (default: %u)"),
-                                                      pnetMan->getActivePaymentNetwork()->GetRPCPort()));
+                                                      Params().GetRPCPort()));
     strUsage += HelpMessageOpt(
         "-rpcallowip=<ip>", ("Allow JSON-RPC connections from specified source. Valid for <ip> are a single IP (e.g. "
                              "1.2.3.4), a network/netmask (e.g. 1.2.3.4/255.255.255.0) or a network/CIDR (e.g. "
@@ -680,7 +679,7 @@ struct CImportingNow
 
 void ThreadImport(std::vector<fs::path> vImportFiles)
 {
-    const CNetworkTemplate &chainparams = pnetMan->getActivePaymentNetwork();
+    const CChainParams &chainparams = Params();
     RenameThread("bitcoin-loadblk");
     // -reindex
     if (fReindex)
@@ -702,7 +701,7 @@ void ThreadImport(std::vector<fs::path> vImportFiles)
             }
             LogPrintf("Reindexing block file blk%05u.dat...\n", (unsigned int)nFile);
             GetMainSignals().SystemMessage(strprintf("REINDEX: BLOCK FILE blk%05u.dat", (unsigned int)nFile));
-            pnetMan->getChainActive()->LoadExternalBlockFile(chainparams, file, &pos);
+            g_chainman.LoadExternalBlockFile(chainparams, file, &pos);
             nFile++;
         }
         pblocktree->WriteReindexing(false);
@@ -710,7 +709,7 @@ void ThreadImport(std::vector<fs::path> vImportFiles)
         LogPrintf("Reindexing finished\n");
         GetMainSignals().SystemMessage("REINDEX: COMPLETE");
         // To avoid ending up in a situation without genesis block, re-try initializing (no-op if reindexing worked):
-        pnetMan->getChainActive()->InitBlockIndex(chainparams);
+        g_chainman.InitBlockIndex(chainparams);
     }
 
     // hardcoded $DATADIR/bootstrap.dat
@@ -723,7 +722,7 @@ void ThreadImport(std::vector<fs::path> vImportFiles)
             CImportingNow imp;
             fs::path pathBootstrapOld = GetDataDir() / "bootstrap.dat.old";
             LogPrintf("Importing bootstrap.dat...\n");
-            pnetMan->getChainActive()->LoadExternalBlockFile(chainparams, file);
+            g_chainman.LoadExternalBlockFile(chainparams, file);
             RenameOver(pathBootstrap, pathBootstrapOld);
         }
         else
@@ -740,7 +739,7 @@ void ThreadImport(std::vector<fs::path> vImportFiles)
         {
             CImportingNow imp;
             LogPrintf("Importing blocks file %s...\n", path.string());
-            pnetMan->getChainActive()->LoadExternalBlockFile(chainparams, file);
+            g_chainman.LoadExternalBlockFile(chainparams, file);
         }
         else
         {
@@ -891,13 +890,6 @@ int initMaxConnections;
 int initUserMaxConnections;
 int initFD;
 
-
-void GenerateNetworkTemplates()
-{
-    pnetMan = new CNetworkManager();
-    pnetMan->SetParams(ChainNameFromCommandLine());
-}
-
 /** Initialize bitcoin.
  *  @pre Parameters should be parsed and config file should be read.
  */
@@ -955,7 +947,7 @@ bool AppInit2(thread_group &threadGroup)
 #endif
 
     // ********************************************************* Step 2: parameter interactions
-    const CNetworkTemplate &chainparams = pnetMan->getActivePaymentNetwork();
+    const CChainParams &chainparams = Params();
 
     // also see: InitParameterInteraction()
 
@@ -1057,8 +1049,8 @@ bool AppInit2(thread_group &threadGroup)
                 gArgs.GetArg("-minrelaytxfee", DEFAULT_TRANSACTION_MINFEE)));
     }
 
-    fRequireStandard = !gArgs.GetBoolArg("-acceptnonstdtxn", !pnetMan->getActivePaymentNetwork()->RequireStandard());
-    if (pnetMan->getActivePaymentNetwork()->RequireStandard() && !fRequireStandard)
+    fRequireStandard = !gArgs.GetBoolArg("-acceptnonstdtxn", !Params().RequireStandard());
+    if (Params().RequireStandard() && !fRequireStandard)
         return InitError(
             strprintf("acceptnonstdtxn is not currently supported for %s chain", chainparams.NetworkIDString()));
     nBytesPerSigOp = gArgs.GetArg("-bytespersigop", nBytesPerSigOp);
@@ -1455,7 +1447,7 @@ bool AppInit2(thread_group &threadGroup)
         {
             try
             {
-                pnetMan->getChainActive()->UnloadBlockIndex();
+                g_chainman.UnloadBlockIndex();
                 pcoinsTip.reset();
                 pcoinsdbview.reset();
                 pcoinscatcher.reset();
@@ -1480,7 +1472,7 @@ bool AppInit2(thread_group &threadGroup)
                     }
                 }
 
-                if (!pnetMan->getChainActive()->LoadBlockIndex())
+                if (!g_chainman.LoadBlockIndex())
                 {
                     strLoadError = ("Error loading block database");
                     break;
@@ -1488,9 +1480,9 @@ bool AppInit2(thread_group &threadGroup)
                 // If the loaded chain has a wrong genesis, bail out immediately
                 // (we're likely using a testnet datadir, or the other way around).
                 {
-                    RECURSIVEREADLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
-                    if (!pnetMan->getChainActive()->mapBlockIndex.empty() &&
-                        pnetMan->getChainActive()->mapBlockIndex.count(chainparams.GetConsensus().hashGenesisBlock) ==
+                    RECURSIVEREADLOCK(g_chainman.cs_mapBlockIndex);
+                    if (!g_chainman.mapBlockIndex.empty() &&
+                        g_chainman.mapBlockIndex.count(chainparams.GetConsensus().hashGenesisBlock) ==
                             0)
                     {
                         return InitError("Incorrect or no genesis block found. Wrong datadir for network?");
@@ -1498,7 +1490,7 @@ bool AppInit2(thread_group &threadGroup)
                 }
 
                 // Initialize the block index (no-op if non-empty database was already loaded)
-                if (!pnetMan->getChainActive()->InitBlockIndex(chainparams))
+                if (!g_chainman.InitBlockIndex(chainparams))
                 {
                     strLoadError = ("Error initializing block database");
                     break;
@@ -1508,7 +1500,7 @@ bool AppInit2(thread_group &threadGroup)
                 LogPrintf("Verifying blocks...");
 
                 {
-                    CBlockIndex *tip = pnetMan->getChainActive()->chainActive.Tip();
+                    CBlockIndex *tip = g_chainman.chainActive.Tip();
                     if (tip && tip->nTime > GetAdjustedTime() + 2 * 60 * 60)
                     {
                         strLoadError = ("The block database contains a block which appears to be from the future. "
@@ -1588,10 +1580,10 @@ bool AppInit2(thread_group &threadGroup)
     }
     threadGroup.create_thread(&ThreadImport, vImportFiles);
 
-    if (pnetMan->getChainActive()->chainActive.Tip() == nullptr)
+    if (g_chainman.chainActive.Tip() == nullptr)
     {
         LogPrintf("Waiting for genesis block to be imported...\n");
-        while (!shutdown_threads.load() && pnetMan->getChainActive()->chainActive.Tip() == nullptr)
+        while (!shutdown_threads.load() && g_chainman.chainActive.Tip() == nullptr)
         {
             MilliSleep(10);
         }
@@ -1616,8 +1608,8 @@ bool AppInit2(thread_group &threadGroup)
     RandAddSeedPerfmon();
 
     //// debug print
-    LogPrintf("mapBlockIndex.size() = %u\n", pnetMan->getChainActive()->mapBlockIndex.size());
-    LogPrintf("nBestHeight = %d\n", pnetMan->getChainActive()->chainActive.Height());
+    LogPrintf("mapBlockIndex.size() = %u\n", g_chainman.mapBlockIndex.size());
+    LogPrintf("nBestHeight = %d\n", g_chainman.chainActive.Height());
 
     LogPrintf("setKeyPool.size() = %u\n", pwalletMain ? pwalletMain->setKeyPool.size() : 0);
     LogPrintf("mapWallet.size() = %u\n", pwalletMain ? pwalletMain->mapWallet.size() : 0);

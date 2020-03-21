@@ -14,14 +14,14 @@
 
 bool AcceptBlockHeader(const CBlockHeader &block,
     CValidationState &state,
-    const CNetworkTemplate &chainparams,
+    const CChainParams &chainparams,
     CBlockIndex **ppindex)
 {
     AssertLockHeld(cs_main);
-    // AssertRecursiveWriteLockHeld(pnetMan->getChainActive()->cs_mapBlockIndex);
+    // AssertRecursiveWriteLockHeld(g_chainman.cs_mapBlockIndex);
     // Check for duplicate
     uint256 hash = block.GetHash();
-    CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(hash);
+    CBlockIndex *pindex = g_chainman.LookupBlockIndex(hash);
     if (hash != chainparams.GetConsensus().hashGenesisBlock)
     {
         if (pindex)
@@ -38,7 +38,7 @@ bool AcceptBlockHeader(const CBlockHeader &block,
             return false;
 
         // Get prev block index
-        CBlockIndex *pindexPrev = pnetMan->getChainActive()->LookupBlockIndex(block.hashPrevBlock);
+        CBlockIndex *pindexPrev = g_chainman.LookupBlockIndex(block.hashPrevBlock);
         if (!pindexPrev)
         {
             return state.DoS(10, error("%s: prev block not found", __func__), 0, "bad-prevblk");
@@ -55,7 +55,7 @@ bool AcceptBlockHeader(const CBlockHeader &block,
     }
     if (pindex == nullptr)
     {
-        pindex = pnetMan->getChainActive()->AddToBlockIndex(block);
+        pindex = g_chainman.AddToBlockIndex(block);
     }
 
     if (ppindex)

@@ -29,7 +29,7 @@ bool CBanDB::Write(const banmap_t &banSet)
 
     // serialize banlist, checksum data up to that point, then append csum
     CDataStream ssBanlist(SER_DISK, CLIENT_VERSION);
-    ssBanlist << FLATDATA(pnetMan->getActivePaymentNetwork()->MessageStart());
+    ssBanlist << FLATDATA(Params().MessageStart());
     ssBanlist << banSet;
     uint256 hash = Hash(ssBanlist.begin(), ssBanlist.end());
     ssBanlist << hash;
@@ -104,7 +104,7 @@ bool CBanDB::Read(banmap_t &banSet)
         ssBanlist >> FLATDATA(pchMsgTmp);
 
         // ... verify the network matches ours
-        if (memcmp(pchMsgTmp, std::begin(pnetMan->getActivePaymentNetwork()->MessageStart()), sizeof(pchMsgTmp)))
+        if (memcmp(pchMsgTmp, std::begin(Params().MessageStart()), sizeof(pchMsgTmp)))
         {
             return error("%s: Invalid network magic number", __func__);
         }
@@ -130,7 +130,7 @@ bool CAddrDB::Write(const CAddrMan &addr)
 
     // serialize addresses, checksum data up to that point, then append csum
     CDataStream ssPeers(SER_DISK, CLIENT_VERSION);
-    ssPeers << FLATDATA(pnetMan->getActivePaymentNetwork()->MessageStart());
+    ssPeers << FLATDATA(Params().MessageStart());
     ssPeers << addr;
     uint256 hash = Hash(ssPeers.begin(), ssPeers.end());
     ssPeers << hash;
@@ -210,7 +210,7 @@ bool CAddrDB::Read(CAddrMan &addr, CDataStream &ssPeers)
         ssPeers >> FLATDATA(pchMsgTmp);
 
         // ... verify the network matches ours
-        if (memcmp(pchMsgTmp, std::begin(pnetMan->getActivePaymentNetwork()->MessageStart()), sizeof(pchMsgTmp)))
+        if (memcmp(pchMsgTmp, std::begin(Params().MessageStart()), sizeof(pchMsgTmp)))
         {
             return error("%s: Invalid network magic number", __func__);
         }

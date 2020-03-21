@@ -8,7 +8,7 @@
 #include "args.h"
 #include "util/util.h"
 
-#include "networks/netman.h"
+#include "chain/chainparams.h"
 #include "random.h"
 #include "serialize.h"
 #include "util/utilstrencodings.h"

@@ -11,7 +11,7 @@
 #include "base58.h"
 #include "crypto/hmac_sha256.h"
 #include "httpserver.h"
-#include "networks/networktemplate.h"
+#include "chain/chainparams.h"
 #include "random.h"
 #include "rpc/rpcprotocol.h"
 #include "rpc/rpcserver.h"

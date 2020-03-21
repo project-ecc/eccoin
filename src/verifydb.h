@@ -9,7 +9,7 @@
 #define VERIFYDB_H
 
 #include "coins.h"
-#include "networks/networktemplate.h"
+#include "chain/chainparams.h"
 
 /** RAII wrapper for VerifyDB: Verify consistency of the block and coin databases */
 class CVerifyDB
@@ -17,7 +17,7 @@ class CVerifyDB
 public:
     CVerifyDB();
     ~CVerifyDB();
-    bool VerifyDB(const CNetworkTemplate &chainparams, CCoinsView *coinsview, int nCheckLevel, int nCheckDepth);
+    bool VerifyDB(const CChainParams &chainparams, CCoinsView *coinsview, int nCheckLevel, int nCheckDepth);
 };
 
 #endif // VERIFYDB_H

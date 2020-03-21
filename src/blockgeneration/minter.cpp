@@ -36,7 +36,7 @@ bool CheckStake(const CBlock *pblock, CWallet &wallet, boost::shared_ptr<CReserv
 
     // Found a solution
     {
-        CBlockIndex *ptip = pnetMan->getChainActive()->chainActive.Tip();
+        CBlockIndex *ptip = g_chainman.chainActive.Tip();
         if (ptip == nullptr)
         {
             return false;
@@ -54,7 +54,7 @@ bool CheckStake(const CBlock *pblock, CWallet &wallet, boost::shared_ptr<CReserv
         }
         // Process this block the same as if we had received it from another node
         CValidationState state;
-        const CNetworkTemplate &chainparams = pnetMan->getActivePaymentNetwork();
+        const CChainParams &chainparams = Params();
         if (!ProcessNewBlock(state, chainparams, nullptr, pblock, true, nullptr))
         {
             return error("Minter : ProcessBlock, block not accepted");
@@ -97,7 +97,7 @@ std::unique_ptr<CBlockTemplate> CreateNewPoSBlock(CWallet *pwallet, const CScrip
 
     // ppcoin: if coinstake available add coinstake tx
     static int64_t nLastCoinStakeSearchTime = GetAdjustedTime(); // only initialized at startup
-    CBlockIndex *pindexPrev = pnetMan->getChainActive()->chainActive.Tip();
+    CBlockIndex *pindexPrev = g_chainman.chainActive.Tip();
 
 
     // This vector will be sorted into a priority queue:
@@ -146,7 +146,7 @@ std::unique_ptr<CBlockTemplate> CreateNewPoSBlock(CWallet *pwallet, const CScrip
     {
         LOCK(cs_main);
         READLOCK(mempool.cs);
-        CBlockIndex *_pindexPrev = pnetMan->getChainActive()->chainActive.Tip();
+        CBlockIndex *_pindexPrev = g_chainman.chainActive.Tip();
         const int nHeight = _pindexPrev->nHeight + 1;
         pblock->nTime = GetAdjustedTime();
         const int64_t nMedianTimePast = _pindexPrev->GetMedianTimePast();
@@ -340,7 +340,7 @@ void EccMinter(CWallet *pwallet)
             if (shutdown_threads.load() || shutdown_minter_threads.load())
                 return;
         }
-        while (pnetMan->getChainActive()->IsInitialBlockDownload() || pwallet->IsLocked())
+        while (g_chainman.IsInitialBlockDownload() || pwallet->IsLocked())
         {
             MilliSleep(1000);
             if (shutdown_threads.load() || shutdown_minter_threads.load())
@@ -352,7 +352,7 @@ void EccMinter(CWallet *pwallet)
             if (shutdown_threads.load() || shutdown_minter_threads.load())
                 return;
         }
-        CBlockIndex *pindexPrev = pnetMan->getChainActive()->chainActive.Tip();
+        CBlockIndex *pindexPrev = g_chainman.chainActive.Tip();
         std::unique_ptr<CBlockTemplate> pblocktemplate(CreateNewPoSBlock(pwallet, coinbaseScript->reserveScript));
         if (!pblocktemplate.get())
         {

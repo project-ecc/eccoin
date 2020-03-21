@@ -224,13 +224,13 @@ public:
 
 bool CBitcoinAddress::Set(const CKeyID &id)
 {
-    SetData(pnetMan->getActivePaymentNetwork()->Base58Prefix(CNetworkTemplate::PUBKEY_ADDRESS), &id, 20);
+    SetData(Params().Base58Prefix(CChainParams::PUBKEY_ADDRESS), &id, 20);
     return true;
 }
 
 bool CBitcoinAddress::Set(const CScriptID &id)
 {
-    SetData(pnetMan->getActivePaymentNetwork()->Base58Prefix(CNetworkTemplate::SCRIPT_ADDRESS), &id, 20);
+    SetData(Params().Base58Prefix(CChainParams::SCRIPT_ADDRESS), &id, 20);
     return true;
 }
 
@@ -239,12 +239,12 @@ bool CBitcoinAddress::Set(const CTxDestination &dest)
     return boost::apply_visitor(CBitcoinAddressVisitor(this), dest);
 }
 
-bool CBitcoinAddress::IsValid() const { return IsValid(pnetMan->getActivePaymentNetwork()); }
-bool CBitcoinAddress::IsValid(const CNetworkTemplate &params) const
+bool CBitcoinAddress::IsValid() const { return IsValid(Params()); }
+bool CBitcoinAddress::IsValid(const CChainParams &params) const
 {
     bool fCorrectSize = vchData.size() == 20;
-    bool fKnownVersion = vchVersion == params.Base58Prefix(CNetworkTemplate::PUBKEY_ADDRESS) ||
-                         vchVersion == params.Base58Prefix(CNetworkTemplate::SCRIPT_ADDRESS);
+    bool fKnownVersion = vchVersion == params.Base58Prefix(CChainParams::PUBKEY_ADDRESS) ||
+                         vchVersion == params.Base58Prefix(CChainParams::SCRIPT_ADDRESS);
     return fCorrectSize && fKnownVersion;
 }
 
@@ -254,9 +254,9 @@ CTxDestination CBitcoinAddress::Get() const
         return CNoDestination();
     uint160 id;
     memcpy(&id, &vchData[0], 20);
-    if (vchVersion == pnetMan->getActivePaymentNetwork()->Base58Prefix(CNetworkTemplate::PUBKEY_ADDRESS))
+    if (vchVersion == Params().Base58Prefix(CChainParams::PUBKEY_ADDRESS))
         return CKeyID(id);
-    else if (vchVersion == pnetMan->getActivePaymentNetwork()->Base58Prefix(CNetworkTemplate::SCRIPT_ADDRESS))
+    else if (vchVersion == Params().Base58Prefix(CChainParams::SCRIPT_ADDRESS))
         return CScriptID(id);
     else
         return CNoDestination();
@@ -264,7 +264,7 @@ CTxDestination CBitcoinAddress::Get() const
 
 bool CBitcoinAddress::GetKeyID(CKeyID &keyID) const
 {
-    if (!IsValid() || vchVersion != pnetMan->getActivePaymentNetwork()->Base58Prefix(CNetworkTemplate::PUBKEY_ADDRESS))
+    if (!IsValid() || vchVersion != Params().Base58Prefix(CChainParams::PUBKEY_ADDRESS))
         return false;
     uint160 id;
     memcpy(&id, &vchData[0], 20);
@@ -275,13 +275,13 @@ bool CBitcoinAddress::GetKeyID(CKeyID &keyID) const
 bool CBitcoinAddress::IsScript() const
 {
     return IsValid() &&
-           vchVersion == pnetMan->getActivePaymentNetwork()->Base58Prefix(CNetworkTemplate::SCRIPT_ADDRESS);
+           vchVersion == Params().Base58Prefix(CChainParams::SCRIPT_ADDRESS);
 }
 
 void CBitcoinSecret::SetKey(const CKey &vchSecret)
 {
     assert(vchSecret.IsValid());
-    SetData(pnetMan->getActivePaymentNetwork()->Base58Prefix(CNetworkTemplate::SECRET_KEY), vchSecret.begin(),
+    SetData(Params().Base58Prefix(CChainParams::SECRET_KEY), vchSecret.begin(),
         vchSecret.size());
     if (vchSecret.IsCompressed())
         vchData.push_back(1);
@@ -298,7 +298,7 @@ CKey CBitcoinSecret::GetKey()
 bool CBitcoinSecret::IsValid() const
 {
     bool fExpectedFormat = vchData.size() == 32 || (vchData.size() == 33 && vchData[32] == 1);
-    bool fCorrectVersion = vchVersion == pnetMan->getActivePaymentNetwork()->Base58Prefix(CNetworkTemplate::SECRET_KEY);
+    bool fCorrectVersion = vchVersion == Params().Base58Prefix(CChainParams::SECRET_KEY);
     return fExpectedFormat && fCorrectVersion;
 }
 

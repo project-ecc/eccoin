@@ -6,11 +6,14 @@
 #ifndef BITCOIN_CHAINPARAMS_H
 #define BITCOIN_CHAINPARAMS_H
 
+#include <map>
+#include <string>
+#include <vector>
+
 #include "chain/block.h"
+#include "chain/checkpoints.h"
 #include "consensus/params.h"
 #include "net/protocol.h"
-
-#include <vector>
 
 struct CDNSSeedData
 {
@@ -22,14 +25,6 @@ struct CDNSSeedData
     }
 };
 
-
-typedef std::map<int, uint256> MapCheckpoints;
-
-struct CCheckpointData
-{
-    MapCheckpoints mapCheckpoints;
-};
-
 /**
  * CChainParams defines various tweakable parameters of a given instance of the
  * Bitcoin system. There are three: the main network on which people trade goods
@@ -37,7 +32,7 @@ struct CCheckpointData
  * a regression test mode which is intended for private networks only. It has
  * minimal difficulty to ensure that blocks can be found instantly.
  */
-class CNetworkTemplate
+class CChainParams
 {
 public:
     enum Base58Type
@@ -51,8 +46,7 @@ public:
         MAX_BASE58_TYPES
     };
 
-    /// TODO: make all of the data members below this point protected and make setters for them all
-
+protected:
     Consensus::Params consensus;
     CMessageHeader::MessageMagic pchMessageStart;
     int nDefaultPort;
@@ -68,11 +62,12 @@ public:
     bool fRequireStandard;
     bool fMineBlocksOnDemand;
     bool fTestnetToBeDeprecatedFieldRPC;
-    CCheckpointData checkpointData;
+    MapCheckpoints mapCheckpoints;
     unsigned int nStakeMaxAge;
     unsigned int nStakeMinAge;
 
-
+public:
+    CChainParams() {}
     const Consensus::Params &GetConsensus() const { return consensus; }
     const CMessageHeader::MessageMagic &MessageStart() const { return pchMessageStart; }
     int GetDefaultPort() const { return nDefaultPort; }
@@ -94,50 +89,29 @@ public:
     std::string NetworkDataDir() const { return strNetworkDataDir; }
     const std::vector<CDNSSeedData> &DNSSeeds() const { return vSeeds; }
     const std::vector<unsigned char> &Base58Prefix(Base58Type type) const { return base58Prefixes[type]; }
-    const CCheckpointData &Checkpoints() const { return checkpointData; }
+    const MapCheckpoints &Checkpoints() const { return mapCheckpoints; }
     unsigned int getStakeMaxAge() const { return nStakeMaxAge; }
     unsigned int getStakeMinAge() const { return nStakeMinAge; }
     int getpch0() const { return pchMessageStart[0]; }
     int getpch1() const { return pchMessageStart[1]; }
     int getpch2() const { return pchMessageStart[2]; }
     int getpch3() const { return pchMessageStart[3]; }
-    CNetworkTemplate() {}
-    CNetworkTemplate(CNetworkTemplate *param_netTemplate)
-    {
-        this->consensus = param_netTemplate->GetConsensus();
-
-        this->pchMessageStart[0] = param_netTemplate->getpch0();
-        this->pchMessageStart[1] = param_netTemplate->getpch1();
-        this->pchMessageStart[2] = param_netTemplate->getpch2();
-        this->pchMessageStart[3] = param_netTemplate->getpch3();
-
-        this->base58Prefixes[CNetworkTemplate::PUBKEY_ADDRESS] =
-            param_netTemplate->Base58Prefix(CNetworkTemplate::PUBKEY_ADDRESS);
-        this->base58Prefixes[CNetworkTemplate::SCRIPT_ADDRESS] =
-            param_netTemplate->Base58Prefix(CNetworkTemplate::SCRIPT_ADDRESS);
-        this->base58Prefixes[CNetworkTemplate::SECRET_KEY] =
-            param_netTemplate->Base58Prefix(CNetworkTemplate::SECRET_KEY);
-        this->base58Prefixes[CNetworkTemplate::EXT_PUBLIC_KEY] =
-            param_netTemplate->Base58Prefix(CNetworkTemplate::EXT_PUBLIC_KEY);
-        this->base58Prefixes[CNetworkTemplate::EXT_SECRET_KEY] =
-            param_netTemplate->Base58Prefix(CNetworkTemplate::EXT_SECRET_KEY);
-
-        this->nDefaultPort = param_netTemplate->GetDefaultPort();
-        this->nRPCPort = param_netTemplate->GetRPCPort();
-        this->nMaxTipAge = param_netTemplate->MaxTipAge();
-        this->vSeeds = param_netTemplate->DNSSeeds();
-        this->strNetworkID = param_netTemplate->NetworkIDString();
-        this->strNetworkDataDir = param_netTemplate->NetworkDataDir();
-        this->genesis = param_netTemplate->GenesisBlock();
-        this->fMiningRequiresPeers = param_netTemplate->MiningRequiresPeers();
-        this->fDefaultConsistencyChecks = param_netTemplate->DefaultConsistencyChecks();
-        this->fRequireStandard = param_netTemplate->RequireStandard();
-        this->fMineBlocksOnDemand = param_netTemplate->MineBlocksOnDemand();
-        this->fTestnetToBeDeprecatedFieldRPC = param_netTemplate->TestnetToBeDeprecatedFieldRPC();
-        this->checkpointData = param_netTemplate->Checkpoints();
-        this->nStakeMaxAge = param_netTemplate->getStakeMaxAge();
-        this->nStakeMinAge = param_netTemplate->getStakeMinAge();
-    }
 };
+
+const CChainParams &Params();
+
+static const int64_t LONGER_BLOCKTIME_HARDFORK = 1525478400; // May 5th at 00:00:00 UTC
+
+// TODO : Fix this workaround that is used for RPC on command line. shuould either construct pnetMan earlier or find
+// another way to get this value
+int RPCPortFromCommandLine();
+
+/**
+ * Looks for -regtest, -testnet and returns the appropriate BIP70 chain name.
+ * @return CBaseChainParams::MAX_NETWORK_TYPES if an invalid combination is given. CBaseChainParams::MAIN by default.
+ */
+std::string ChainNameFromCommandLine();
+
+void CheckAndSetParams(const std::string &network);
 
 #endif // BITCOIN_CHAINPARAMS_H

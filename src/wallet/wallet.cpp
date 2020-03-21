@@ -674,8 +674,8 @@ bool CWallet::AddToWallet(const CWalletTx &wtxIn, bool fFromLoadWallet, CWalletD
             wtx.nTimeSmart = wtx.nTimeReceived;
             if (!wtxIn.hashUnset())
             {
-                RECURSIVEREADLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
-                if (pnetMan->getChainActive()->mapBlockIndex.count(wtxIn.hashBlock))
+                RECURSIVEREADLOCK(g_chainman.cs_mapBlockIndex);
+                if (g_chainman.mapBlockIndex.count(wtxIn.hashBlock))
                 {
                     int64_t latestNow = wtx.nTimeReceived;
                     int64_t latestEntry = 0;
@@ -705,7 +705,7 @@ bool CWallet::AddToWallet(const CWalletTx &wtxIn, bool fFromLoadWallet, CWalletD
                         }
                     }
 
-                    int64_t blocktime = pnetMan->getChainActive()->mapBlockIndex[wtxIn.hashBlock]->GetBlockTime();
+                    int64_t blocktime = g_chainman.mapBlockIndex[wtxIn.hashBlock]->GetBlockTime();
                     wtx.nTimeSmart = std::max(latestEntry, std::min(blocktime, latestNow));
                 }
                 else
@@ -888,13 +888,13 @@ void CWallet::MarkConflicted(const uint256 &hashBlock, const uint256 &hashTx)
 {
     LOCK(cs_wallet);
     int conflictconfirms = 0;
-    CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(hashBlock);
+    CBlockIndex *pindex = g_chainman.LookupBlockIndex(hashBlock);
     if (pindex)
     {
-        RECURSIVEREADLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
-        if (pnetMan->getChainActive()->chainActive.Contains(pindex))
+        RECURSIVEREADLOCK(g_chainman.cs_mapBlockIndex);
+        if (g_chainman.chainActive.Contains(pindex))
         {
-            conflictconfirms = -(pnetMan->getChainActive()->chainActive.Height() - pindex->nHeight + 1);
+            conflictconfirms = -(g_chainman.chainActive.Height() - pindex->nHeight + 1);
         }
     }
     // If number of conflict confirms cannot be determined, this means
@@ -1233,7 +1233,7 @@ int CWallet::ScanForWalletTransactions(CBlockIndex *pindexStart, bool fUpdate)
     int ret = 0;
     int64_t nNow = GetTime();
     CBlockIndex *pindex = pindexStart;
-    int nEndHeight = pnetMan->getChainActive()->chainActive.Tip()->nHeight;
+    int nEndHeight = g_chainman.chainActive.Tip()->nHeight;
     {
         LOCK(cs_wallet);
 
@@ -1241,14 +1241,14 @@ int CWallet::ScanForWalletTransactions(CBlockIndex *pindexStart, bool fUpdate)
         // our wallet birthday (as adjusted for block time variability)
         while (pindex && nTimeFirstKey && (pindex->GetBlockTime() < (nTimeFirstKey - 7200)))
         {
-            pindex = pnetMan->getChainActive()->chainActive.Next(pindex);
+            pindex = g_chainman.chainActive.Next(pindex);
         }
         GetMainSignals().SystemMessage("RESCAN: STARTED");
         while (pindex)
         {
             CBlock block;
             {
-                ReadBlockFromDisk(block, pindex, pnetMan->getActivePaymentNetwork()->GetConsensus());
+                ReadBlockFromDisk(block, pindex, Params().GetConsensus());
             }
             for (auto &ptx : block.vtx)
             {
@@ -1257,7 +1257,7 @@ int CWallet::ScanForWalletTransactions(CBlockIndex *pindexStart, bool fUpdate)
                     ret++;
                 }
             }
-            pindex = pnetMan->getChainActive()->chainActive.Next(pindex);
+            pindex = g_chainman.chainActive.Next(pindex);
             if (GetTime() >= nNow + 60)
             {
                 nNow = GetTime();
@@ -2129,7 +2129,7 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient> &vecSend,
     // enough, that fee sniping isn't a problem yet, but by implementing a fix
     // now we ensure code won't be written that makes assumptions about
     // nLockTime that preclude a fix later.
-    txNew.nLockTime = pnetMan->getChainActive()->chainActive.Height();
+    txNew.nLockTime = g_chainman.chainActive.Height();
 
     // Secondly occasionally randomly pick a nLockTime even further back, so
     // that transactions that are delayed after signing for whatever reason,
@@ -2138,7 +2138,7 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient> &vecSend,
     if (GetRandInt(10) == 0)
         txNew.nLockTime = std::max(0, (int)txNew.nLockTime - GetRandInt(100));
 
-    assert(txNew.nLockTime <= (unsigned int)(pnetMan->getChainActive()->chainActive.Height()));
+    assert(txNew.nLockTime <= (unsigned int)(g_chainman.chainActive.Height()));
     assert(txNew.nLockTime < LOCKTIME_THRESHOLD);
 
     {
@@ -2996,7 +2996,7 @@ void CWallet::GetKeyBirthTimes(std::map<CKeyID, int64_t> &mapKeyBirth) const
     // map in which we'll infer heights of other keys
     // the tip can be reorganised; use a 144-block safety margin
     CBlockIndex *pindexMax =
-        pnetMan->getChainActive()->chainActive[std::max(0, pnetMan->getChainActive()->chainActive.Height() - 144)];
+        g_chainman.chainActive[std::max(0, g_chainman.chainActive.Height() - 144)];
     std::map<CKeyID, CBlockIndex *> mapKeyFirstBlock;
     std::set<CKeyID> setKeys;
     GetKeys(setKeys);
@@ -3017,8 +3017,8 @@ void CWallet::GetKeyBirthTimes(std::map<CKeyID, int64_t> &mapKeyBirth) const
     {
         // iterate over all wallet transactions...
         const CWalletTx &wtx = (*it).second;
-        CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(wtx.hashBlock);
-        if (pindex && pnetMan->getChainActive()->chainActive.Contains(pindex))
+        CBlockIndex *pindex = g_chainman.LookupBlockIndex(wtx.hashBlock);
+        if (pindex && g_chainman.chainActive.Contains(pindex))
         {
             // ... which are already in a block
             int nHeight = pindex->nHeight;
@@ -3078,13 +3078,13 @@ int CMerkleTx::SetMerkleBranch(const CBlock &block)
     }
 
     // Is the tx in a block that's in the main chain
-    RECURSIVEREADLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
-    const CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(hashBlock);
-    if (!pindex || !pnetMan->getChainActive()->chainActive.Contains(pindex))
+    RECURSIVEREADLOCK(g_chainman.cs_mapBlockIndex);
+    const CBlockIndex *pindex = g_chainman.LookupBlockIndex(hashBlock);
+    if (!pindex || !g_chainman.chainActive.Contains(pindex))
     {
         return 0;
     }
-    return pnetMan->getChainActive()->chainActive.Height() - pindex->nHeight + 1;
+    return g_chainman.chainActive.Height() - pindex->nHeight + 1;
 }
 
 int CMerkleTx::GetDepthInMainChain(const CBlockIndex *&pindexRet) const
@@ -3094,16 +3094,16 @@ int CMerkleTx::GetDepthInMainChain(const CBlockIndex *&pindexRet) const
         return 0;
     }
     // Find the block it claims to be in
-    CBlockIndex *pindex = pnetMan->getChainActive()->LookupBlockIndex(hashBlock);
+    CBlockIndex *pindex = g_chainman.LookupBlockIndex(hashBlock);
     {
-        RECURSIVEREADLOCK(pnetMan->getChainActive()->cs_mapBlockIndex);
-        if (!pindex || !pnetMan->getChainActive()->chainActive.Contains(pindex))
+        RECURSIVEREADLOCK(g_chainman.cs_mapBlockIndex);
+        if (!pindex || !g_chainman.chainActive.Contains(pindex))
         {
             return 0;
         }
     }
     pindexRet = pindex;
-    return ((nIndex == -1) ? (-1) : 1) * (pnetMan->getChainActive()->chainActive.Height() - pindex->nHeight + 1);
+    return ((nIndex == -1) ? (-1) : 1) * (g_chainman.chainActive.Height() - pindex->nHeight + 1);
 }
 
 int CMerkleTx::GetBlocksToMaturity() const
@@ -3255,7 +3255,7 @@ bool CWallet::CreateCoinStake(const CKeyStore &keystore,
     // The following split & combine thresholds are important to security
     // Should not be adjusted if you don't understand the consequences
     static unsigned int nStakeSplitAge = (60 * 60 * 24 * 30);
-    const CBlockIndex *pIndex0 = GetLastBlockIndex(pnetMan->getChainActive()->chainActive.Tip(), false);
+    const CBlockIndex *pIndex0 = GetLastBlockIndex(g_chainman.chainActive.Tip(), false);
     int64_t nCombineThreshold = 0;
     if (pIndex0->pprev)
         nCombineThreshold =
@@ -3303,7 +3303,7 @@ bool CWallet::CreateCoinStake(const CKeyStore &keystore,
         CBlock block;
         {
             CDiskBlockPos blockPos(txindex.nFile, txindex.nPos);
-            if (!ReadBlockFromDisk(block, blockPos, pnetMan->getActivePaymentNetwork()->GetConsensus()))
+            if (!ReadBlockFromDisk(block, blockPos, Params().GetConsensus()))
                 continue;
         }
 
@@ -3311,7 +3311,7 @@ bool CWallet::CreateCoinStake(const CKeyStore &keystore,
 
         // LogPrintf(">> block.GetBlockTime() = %"PRI64d", nStakeMinAge = %d, txNew.nTime = %d\n", block.GetBlockTime(),
         // nStakeMinAge,txNew.nTime);
-        if (block.GetBlockTime() + pnetMan->getActivePaymentNetwork()->getStakeMinAge() >
+        if (block.GetBlockTime() + Params().getStakeMinAge() >
             txNew.nTime - nMaxStakeSearchInterval)
             continue; // only count coins meeting min age requirement
 
@@ -3322,7 +3322,7 @@ bool CWallet::CreateCoinStake(const CKeyStore &keystore,
             uint256 hashProofOfStake;
             hashProofOfStake.SetNull();
             COutPoint prevoutStake = COutPoint(pcoin.first->tx->GetHash(), pcoin.second);
-            if (CheckStakeKernelHash(pnetMan->getChainActive()->chainActive.Tip()->nHeight + 1, block,
+            if (CheckStakeKernelHash(g_chainman.chainActive.Tip()->nHeight + 1, block,
                     txindex.nTxOffset, *(pcoin.first->tx), prevoutStake, txNew.nTime, hashProofOfStake))
             {
                 // Found a kernel
@@ -3406,7 +3406,7 @@ bool CWallet::CreateCoinStake(const CKeyStore &keystore,
             // Do not add input that is still too young
             /// using stake max age here isnt a bug, its a feature i swear
             /// TODO fix that - 2017/10/29
-            if (pcoin.first->tx->nTime + pnetMan->getActivePaymentNetwork()->getStakeMaxAge() > txNew.nTime)
+            if (pcoin.first->tx->nTime + Params().getStakeMaxAge() > txNew.nTime)
                 continue;
             txNew.vin.push_back(CTxIn(pcoin.first->tx->GetHash(), pcoin.second));
             nCredit += pcoin.first->tx->vout[pcoin.second].nValue;
@@ -3416,7 +3416,7 @@ bool CWallet::CreateCoinStake(const CKeyStore &keystore,
     // Calculate coin age reward
     {
         uint64_t nCoinAge;
-        const CBlockIndex *_pIndex0 = GetLastBlockIndex(pnetMan->getChainActive()->chainActive.Tip(), false);
+        const CBlockIndex *_pIndex0 = GetLastBlockIndex(g_chainman.chainActive.Tip(), false);
 
         if (!txNew.GetCoinAge(nCoinAge))
         {
@@ -3549,31 +3549,31 @@ bool CWallet::InitLoadWallet()
                 return UIError("Cannot write default address \n");
         }
 
-        walletInstance->SetBestChain(pnetMan->getChainActive()->chainActive.GetLocator());
+        walletInstance->SetBestChain(g_chainman.chainActive.GetLocator());
     }
     LogPrintf(" wallet      %15dms\n", GetTimeMillis() - nStart);
     RegisterValidationInterface(walletInstance);
-    CBlockIndex *pindexRescan = pnetMan->getChainActive()->chainActive.Tip();
+    CBlockIndex *pindexRescan = g_chainman.chainActive.Tip();
     if (gArgs.GetBoolArg("-rescan", false))
-        pindexRescan = pnetMan->getChainActive()->chainActive.Genesis();
+        pindexRescan = g_chainman.chainActive.Genesis();
     else
     {
         CWalletDB walletdb(walletFile);
         CBlockLocator locator;
         if (walletdb.ReadBestBlock(locator))
             pindexRescan =
-                pnetMan->getChainActive()->FindForkInGlobalIndex(pnetMan->getChainActive()->chainActive, locator);
+                g_chainman.FindForkInGlobalIndex(g_chainman.chainActive, locator);
         else
-            pindexRescan = pnetMan->getChainActive()->chainActive.Genesis();
+            pindexRescan = g_chainman.chainActive.Genesis();
     }
-    if (pnetMan->getChainActive()->chainActive.Tip() && pnetMan->getChainActive()->chainActive.Tip() != pindexRescan)
+    if (g_chainman.chainActive.Tip() && g_chainman.chainActive.Tip() != pindexRescan)
     {
         LogPrintf("Rescanning last %i blocks (from block %i)...\n",
-            pnetMan->getChainActive()->chainActive.Height() - pindexRescan->nHeight, pindexRescan->nHeight);
+            g_chainman.chainActive.Height() - pindexRescan->nHeight, pindexRescan->nHeight);
         nStart = GetTimeMillis();
         walletInstance->ScanForWalletTransactions(pindexRescan, true);
         LogPrintf(" rescan      %15dms\n", GetTimeMillis() - nStart);
-        walletInstance->SetBestChain(pnetMan->getChainActive()->chainActive.GetLocator());
+        walletInstance->SetBestChain(g_chainman.chainActive.GetLocator());
         nWalletDBUpdated++;
 
         // Restore wallet transaction metadata after -zapwallettxes=1
