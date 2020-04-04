@@ -69,7 +69,7 @@ class WorkQueue
 {
 private:
     /** Mutex protects entire object */
-    CWaitableCriticalSection cs;
+    CWaitableCriticalSection cs_workqueue;
     CConditionVariable cond;
     /* XXX in C++11 we can use std::unique_ptr here and avoid manual cleanup */
     std::deque<WorkItem *> queue;
@@ -84,12 +84,12 @@ private:
         WorkQueue &wq;
         ThreadCounter(WorkQueue &w) : wq(w)
         {
-            std::lock_guard<std::mutex> lock(wq.cs);
+            std::lock_guard<std::mutex> lock(wq.cs_workqueue);
             wq.numThreads += 1;
         }
         ~ThreadCounter()
         {
-            std::lock_guard<std::mutex> lock(wq.cs);
+            std::lock_guard<std::mutex> lock(wq.cs_workqueue);
             wq.numThreads -= 1;
             wq.cond.notify_all();
         }
@@ -111,7 +111,7 @@ public:
     /** Enqueue a work item */
     bool Enqueue(WorkItem *item)
     {
-        std::unique_lock<std::mutex> lock(cs);
+        std::unique_lock<std::mutex> lock(cs_workqueue);
         if (queue.size() >= maxDepth)
         {
             return false;
@@ -128,7 +128,7 @@ public:
         {
             WorkItem *i = 0;
             {
-                std::unique_lock<std::mutex> lock(cs);
+                std::unique_lock<std::mutex> lock(cs_workqueue);
                 while (running && queue.empty())
                     cond.wait(lock);
                 if (!running)
@@ -143,14 +143,14 @@ public:
     /** Interrupt and exit loops */
     void Interrupt()
     {
-        std::unique_lock<std::mutex> lock(cs);
+        std::unique_lock<std::mutex> lock(cs_workqueue);
         running = false;
         cond.notify_all();
     }
     /** Wait for worker threads to exit */
     void WaitExit()
     {
-        std::unique_lock<std::mutex> lock(cs);
+        std::unique_lock<std::mutex> lock(cs_workqueue);
         while (numThreads > 0)
             cond.wait(lock);
     }
@@ -158,7 +158,7 @@ public:
     /** Return current depth of queue */
     size_t Depth()
     {
-        std::unique_lock<std::mutex> lock(cs);
+        std::unique_lock<std::mutex> lock(cs_workqueue);
         return queue.size();
     }
 };

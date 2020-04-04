@@ -188,7 +188,7 @@ UniValue mempoolToJSON(bool fVerbose = false)
 {
     if (fVerbose)
     {
-        READLOCK(mempool.cs);
+        READLOCK(mempool.cs_txmempool);
         UniValue o(UniValue::VOBJ);
         for (auto const &e : mempool.mapTx)
         {
@@ -584,7 +584,7 @@ UniValue gettxout(const UniValue &params, bool fHelp)
     Coin coin;
     if (fMempool)
     {
-        READLOCK(mempool.cs);
+        READLOCK(mempool.cs_txmempool);
         CCoinsViewMemPool view(pcoinsTip.get(), mempool);
         if (!view.GetCoin(out, coin) || mempool.isSpent(out))
         {
