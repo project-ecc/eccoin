@@ -19,7 +19,9 @@
 namespace NetMsgType
 {
 const char *VERSION = "version";
+const char *DYNAMICVERSION = "dversion";
 const char *VERACK = "verack";
+const char *DYNAMICVERACK = "dverack";
 const char *ADDR = "addr";
 const char *INV = "inv";
 const char *GETDATA = "getdata";
@@ -55,7 +57,8 @@ static const char *ppszTypeName[] = {
 /** All known message types. Keep this in the same order as the list of
  * messages above and in protocol.h.
  */
-const static std::string allNetMessageTypes[] = {NetMsgType::VERSION, NetMsgType::VERACK, NetMsgType::ADDR,
+const static std::string allNetMessageTypes[] = {NetMsgType::VERSION, NetMsgType::VERACK, NetMsgType::DYNAMICVERSION, NetMsgType::DYNAMICVERACK,
+     NetMsgType::ADDR,
     NetMsgType::INV, NetMsgType::GETDATA, NetMsgType::MERKLEBLOCK, NetMsgType::GETHEADERS, NetMsgType::TX,
     NetMsgType::HEADERS, NetMsgType::BLOCK, NetMsgType::GETADDR, NetMsgType::PING, NetMsgType::PONG,
     NetMsgType::NOTFOUND, NetMsgType::FILTERLOAD, NetMsgType::FILTERADD, NetMsgType::FILTERCLEAR, NetMsgType::REJECT,

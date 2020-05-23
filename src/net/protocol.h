@@ -87,6 +87,14 @@ extern const char *VERSION;
  * @see https://bitcoin.org/en/developer-reference#verack
  */
 extern const char *VERACK;
+
+// dynamic version is to replace the fixed version message at some future date
+extern const char *DYNAMICVERSION;
+
+// dynamic verack is to replace the verack message at some future date, corresponds
+// with dyamic version
+extern const char *DYNAMICVERACK;
+
 /**
  * The addr (IP address) message relays connection information for peers on the
  * network.
